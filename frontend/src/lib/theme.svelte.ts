@@ -6,6 +6,10 @@ export type Theme = "dark" | "light";
 const STORAGE_KEY = "gpu-dashboard-theme";
 
 function loadInitial(): Theme {
+  if (typeof window === "undefined") return "dark";
+  // URL override : ?theme=light|dark (useful for screenshots + bookmarkable shares)
+  const m = location.search.match(/[?&]theme=(light|dark)/i);
+  if (m) return m[1].toLowerCase() === "light" ? "light" : "dark";
   if (typeof localStorage === "undefined") return "dark";
   const v = localStorage.getItem(STORAGE_KEY);
   return v === "light" ? "light" : "dark";
