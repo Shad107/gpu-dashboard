@@ -26,21 +26,17 @@
     return "";
   }
 
-  let heatmapData = $state<Awaited<ReturnType<typeof api.powerHeatmap>> | null>(null);
-  let heatmapDays = $state(7);
-  async function loadHeatmap() {
-    try { heatmapData = await api.powerHeatmap(heatmapDays); } catch { heatmapData = null; }
-  }
-  const heatmapMaxCost = $derived(
-    heatmapData ? Math.max(0.001, ...heatmapData.hours.map(h => h.cost_per_hour)) : 1
-  );
-  function heatmapBg(cost: number): string {
-    const ratio = cost / heatmapMaxCost;
-    if (ratio < 0.05) return "#0e1014";
-    if (ratio < 0.25) return `rgba(96,165,250,${0.15 + ratio * 0.5})`;
-    if (ratio < 0.6)  return `rgba(251,191,36,${0.2 + ratio * 0.5})`;
-    return `rgba(251,146,60,${0.3 + ratio * 0.7})`;
-  }
+  // Heatmap moved to StatsView in cycle 76 (more thematic fit).
+
+  // Simple mode : detect whether LLM features are available, to filter
+  // Tokens/s + Tokens/W out of the metric dropdown otherwise.
+  let llmAvailable = $state(false);
+  (async () => {
+    try {
+      const r = await api.llmStats();
+      llmAvailable = r.available === true;
+    } catch { /* assume no LLM */ }
+  })();
 
   let historyLoading = $state(false);
   let historyAutoRefresh = $state(false);
@@ -128,14 +124,6 @@
     historyRange; historyCompareOffset;
     if (isActive && historySamples.length > 0) loadHistory();
   });
-  // Heatmap on demand
-  $effect(() => {
-    if (isActive && !heatmapData) loadHeatmap();
-  });
-  $effect(() => {
-    heatmapDays;
-    if (isActive && heatmapData) loadHeatmap();
-  });
   // Auto-refresh timer
   $effect(() => {
     if (historyTimer) { clearInterval(historyTimer); historyTimer = null; }
@@ -175,8 +163,10 @@
         <option value="temp">{i18n.t("history.metric_temp")}</option>
         <option value="fan_pct">{i18n.t("history.metric_fan")}</option>
         <option value="util_gpu">{i18n.t("history.metric_util")}</option>
-        <option value="tokens_per_sec">{i18n.t("history.metric_tps")}</option>
-        <option value="tokens_per_watt">{i18n.t("history.metric_tpw")}</option>
+        {#if llmAvailable}
+          <option value="tokens_per_sec">{i18n.t("history.metric_tps")}</option>
+          <option value="tokens_per_watt">{i18n.t("history.metric_tpw")}</option>
+        {/if}
       </select>
     </span>
   </div>
@@ -217,41 +207,6 @@
     </label>
     <span class="warn-text">{i18n.t("history.samples_count", { n: historySamples.length })}</span>
   </div>
-
-  {#if heatmapData}
-    {@const sym = heatmapData.currency === "EUR" ? "€" : heatmapData.currency === "USD" ? "$" : heatmapData.currency}
-    <h3 style="margin-top:1.6em;color:#cdd2da;font-size:.95em;font-weight:600">
-      ⏰ {i18n.t("heatmap.title")}
-    </h3>
-    <p class="sub" style="margin:0 0 .6em;font-size:.82em">
-      {i18n.t("heatmap.description", { days: heatmapData.days })}
-    </p>
-    <div class="form-row" style="margin-bottom:.6em">
-      <span class="form-lbl">{i18n.t("heatmap.days_label")}</span>
-      <span class="form-val">
-        <select bind:value={heatmapDays} class="al-input" style="max-width:120px">
-          <option value={1}>1 day</option>
-          <option value={7}>7 days</option>
-          <option value={14}>14 days</option>
-          <option value={30}>30 days</option>
-        </select>
-      </span>
-    </div>
-    {#if heatmapData.hours.every(h => h.sample_count === 0)}
-      <p class="sub">{i18n.t("heatmap.no_data")}</p>
-    {:else}
-      <div class="heatmap-grid">
-        {#each heatmapData.hours as cell}
-          <div class="heatmap-cell" style:background={heatmapBg(cell.cost_per_hour)}
-               title="{cell.hour}:00 — {cell.avg_watts}W · {cell.cost_per_hour.toFixed(3)}{sym}/h · {cell.sample_count} samples">
-            <div class="heatmap-hour">{cell.hour}h</div>
-            <div class="heatmap-watts">{cell.avg_watts.toFixed(0)}W</div>
-            <div class="heatmap-cost">{cell.cost_per_hour.toFixed(2)}{sym}</div>
-          </div>
-        {/each}
-      </div>
-    {/if}
-  {/if}
 </div>
 
 <style>
