@@ -310,7 +310,22 @@
       icon: "M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 7 7c-2.94 0-5.49-1.81-6.56-4.4l-1.89.61C5.84 18.45 9.16 21 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z" },
     { id: "about", labelKey: "modal.about" as const,
       icon: "M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z" },
+    { id: "diagnostics", labelKey: "modal.diagnostics" as const,
+      icon: "M14.6 16.6L19.2 12L14.6 7.4L16 6l6 6-6 6-1.4-1.4M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4z" },
   ];
+
+  // ── Diagnostics / logs state ──────────────────────────────────────────────
+  let logTail = $state(100);
+  let logsData = $state<Awaited<ReturnType<typeof api.logs>> | null>(null);
+  let logsLoading = $state(false);
+  async function loadLogs() {
+    logsLoading = true;
+    try { logsData = await api.logs(logTail); } catch { logsData = null; }
+    finally { logsLoading = false; }
+  }
+  $effect(() => {
+    if (modal.open && modal.section === "diagnostics" && !logsData) loadLogs();
+  });
 
   // ── About state ───────────────────────────────────────────────────────────
   let aboutData = $state<Awaited<ReturnType<typeof api.about>> | null>(null);
@@ -659,6 +674,45 @@
           </table>
         {:else}
           <p class="sub">{i18n.t("history.loading")}</p>
+        {/if}
+      </div>
+
+      <!-- Diagnostics / logs -->
+      <div class="modal-section" class:active={modal.section === "diagnostics"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[8].icon} /></svg>
+          <span>{i18n.t("diagnostics.title")}</span>
+        </h3>
+        <p class="sub" style="margin:0 0 .8em">{i18n.t("diagnostics.description")}</p>
+
+        <div class="btn-row" style="margin-bottom:.8em">
+          <button class="btn btn-primary" disabled={logsLoading} onclick={loadLogs}>
+            {logsLoading ? "…" : "🔍 " + i18n.t("diagnostics.refresh")}
+          </button>
+          <label style="display:flex;align-items:center;gap:.4em;font-size:.85em">
+            <span class="sub">{i18n.t("diagnostics.tail_lines", { n: "" })}</span>
+            <select bind:value={logTail} class="al-input" style="max-width:90px">
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={250}>250</option>
+              <option value={500}>500</option>
+            </select>
+          </label>
+          {#if logsData?.source}
+            <span class="sub" style="font-size:.78em">
+              📄 {logsData.source === "file" ? logsData.path : logsData.unit}
+            </span>
+          {/if}
+        </div>
+
+        {#if !logsData}
+          <p class="sub">{i18n.t("history.loading")}</p>
+        {:else if !logsData.ok}
+          <p class="sub" style="color:#fb923c">⚠ {logsData.reason}</p>
+        {:else if logsData.lines && logsData.lines.length === 0}
+          <p class="sub">{i18n.t("diagnostics.no_log")}</p>
+        {:else}
+          <pre class="logs-pre">{(logsData.lines || []).join("")}</pre>
         {/if}
       </div>
 

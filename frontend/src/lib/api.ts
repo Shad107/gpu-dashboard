@@ -226,4 +226,15 @@ export const api = {
       stderr?: string;
       dirty_files?: string[];
     }>),
+
+  logs: (tail = 100) =>
+    fetch(`/api/logs?tail=${tail}`).then(jsonOf<{
+      ok: boolean;
+      source?: "file" | "journalctl";
+      path?: string;
+      unit?: string;
+      lines?: string[];
+      reason?: string;
+      total?: number;
+    }>),
 };

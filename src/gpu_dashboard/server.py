@@ -247,6 +247,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_update_check(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/logs":
+                code, body = api.handle_logs(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/snapshot":
                 code, body = api.handle_snapshot(ctx)
                 if isinstance(body, bytes):

@@ -522,6 +522,71 @@ def handle_stop(ctx: dict) -> Response:
     return 200, {"ok": True, "message": "stopping"}
 
 
+# ────────────────────────── GET /api/logs ─────────────────────────────────
+
+
+def handle_logs(ctx: dict, params: dict) -> Response:
+    """Tail the dashboard log. Two backends in priority order :
+
+    1. LOG_FILE  — plain text file (typical: stdout-redirected from get.sh)
+    2. JOURNALCTL_UNIT — `journalctl --user -u <unit> -n <tail> --no-pager`
+
+    Returns {ok, source, lines: [str]} or {ok: False, reason: str}.
+    Tail defaults to 100 lines.
+    """
+    try:
+        tail = int(params.get("tail", 100))
+        if tail < 0:
+            return 400, {"ok": False, "error": "tail must be >= 0"}
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "tail must be integer"}
+
+    cfg = ctx.get("config")
+    log_file = (cfg.get("LOG_FILE", "") if cfg else "").strip()
+    journalctl_unit = (cfg.get("JOURNALCTL_UNIT", "") if cfg else "").strip()
+
+    if log_file:
+        log_file = os.path.expanduser(log_file)
+        if not os.path.isfile(log_file):
+            return 200, {"ok": False, "reason": f"log file does not exist: {log_file}"}
+        try:
+            with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+                all_lines = f.readlines()
+            return 200, {
+                "ok": True,
+                "source": "file",
+                "path": log_file,
+                "lines": all_lines[-tail:] if tail > 0 else [],
+                "total": len(all_lines),
+            }
+        except OSError as e:
+            return 200, {"ok": False, "reason": f"could not read log: {e}"}
+
+    if journalctl_unit:
+        try:
+            r = subprocess.run(
+                ["journalctl", "--user", "-u", journalctl_unit,
+                 "-n", str(max(1, tail)), "--no-pager", "--output=short-iso"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if r.returncode != 0:
+                return 200, {"ok": False, "reason": f"journalctl failed: {r.stderr.strip()}"}
+            lines = [l + "\n" for l in r.stdout.splitlines() if l]
+            return 200, {
+                "ok": True,
+                "source": "journalctl",
+                "unit": journalctl_unit,
+                "lines": lines[-tail:] if tail > 0 else [],
+            }
+        except (FileNotFoundError, subprocess.SubprocessError, OSError) as e:
+            return 200, {"ok": False, "reason": f"journalctl unavailable: {e}"}
+
+    return 200, {
+        "ok": False,
+        "reason": "no log source configured — set LOG_FILE or JOURNALCTL_UNIT in config.env",
+    }
+
+
 # ────────────────────────── /api/update/* ─────────────────────────────────
 
 
