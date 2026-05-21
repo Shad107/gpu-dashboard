@@ -67,3 +67,22 @@ User-facing strings (UI, install prompts, errors) are **English by default**, wi
 French as a maintained second language. Other languages welcome via PR — open an issue
 first so we can discuss the i18n approach (currently a simple dual-doc setup, may move
 to gettext if more languages are added).
+
+## 🎨 Frontend (Svelte 5 + Vite, v0.2+)
+
+The UI lives in `frontend/` and is built with Svelte 5 + TypeScript + Vite.
+Build artifacts are committed to `src/gpu_dashboard/static/` so end-users don't
+need Node to run the dashboard.
+
+```bash
+cd frontend
+pnpm install            # or: npm install
+pnpm build              # rebuild after any change
+pnpm dev                # dev server :5173 (proxies /api to :9999)
+```
+
+When you submit a PR that touches `frontend/src/`, **always commit the rebuilt
+`src/gpu_dashboard/static/` along with your source changes** so the project
+stays installable without Node.
+
+See `frontend/README.md` for the full layout + how to add a language.
