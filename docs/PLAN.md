@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 22:30 (cycle ~63)
-**Latest commit** : `e810e24` — VRAM threshold alert
-**Tests** : 428 passing · **CI** : ✅ green · **Bundle** : 50.89 KB gzip
+**Last updated** : 2026-05-21 22:36 (cycle 63 done)
+**Latest commit** : `668971a` — Phase A card hide/show toggle
+**Tests** : 428 passing · **CI** : ✅ green · **Bundle** : 51.90 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup at 22:32 will start **Phase A : Card hide/show**.
+Nothing — between cycles. Wakeup soon will start **Phase B : Drag-and-drop reorder**.
 
 ---
 
@@ -19,16 +19,7 @@ Nothing — between cycles. Wakeup at 22:32 will start **Phase A : Card hide/sho
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 63 (next) — Phase A : Card hide/show toggle (~1.5h)
-- New "Layout" tab in settings, group **Préférences**
-- 10 toggles : GPU, Power Limit, Fans, VRAM, OcuLink, Modèle LLM, Débit LLM, Électricité, Processus GPU, Tuning
-- `localStorage["gpu-dashboard-layout"]` = `{cards: {gpu: true, …}}`
-- Cards read visibility from a derived store (`$derived(layoutStore.visible(name))`)
-- Default = all visible (zero regression)
-- Tests : toggle persists across reload, default is all-on, hidden card not rendered
-- Screenshot dashboard with 2 cards hidden → SendUserFile
-
-### Cycle 64 — Phase B : Drag-and-drop card reorder (~2-3h)
+### Cycle 64 (next) — Phase B : Drag-and-drop card reorder (~2-3h)
 - Install `svelte-dnd-action` (~5 KB gzip)
 - Drag handle on each card (top-right tiny icon)
 - Order persisted in localStorage alongside visibility
@@ -67,6 +58,15 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 63 — Dashboard customization Phase A (1 commit)
+- `668971a` Phase A : card hide/show toggle in Layout tab
+  - New `frontend/src/lib/layout.svelte.ts` ($state store + localStorage)
+  - New 11th modal tab "Affichage" (group: Préférences)
+  - 10 cards toggleable via 2-col grid of checkboxes + reset-default button
+  - Cards.svelte wraps each card with `{#if layout.visible(name)}`
+  - Default = all visible (zero regression)
+  - i18n EN+FR : 6 new keys
 
 ### Loop iteration round 5 (commits 0411f5d → e810e24, 12 commits)
 - `e810e24` VRAM threshold alert (extends alert_monitor)
@@ -158,13 +158,13 @@ Rules :
 |---|---|
 | Tests | 428 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 146 KB raw / 50.89 KB gzip |
-| Bundle CSS | 14.66 KB raw / 3.65 KB gzip |
-| Commits since v0.1.0 | ~65 |
+| Bundle JS | 150 KB raw / 51.90 KB gzip |
+| Bundle CSS | 15.28 KB raw / 3.76 KB gzip |
+| Commits since v0.1.0 | ~66 |
 | API endpoints | 30+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
-| Modal tabs | 10 (grouped in 6 sections) |
+| Modal tabs | 11 (grouped in 6 sections) |
 | Languages | EN + FR (full coverage) |
 | GPU profiles bundled | 5 (3090, 3090 Ti, 4090, 5090, _generic) |
 
