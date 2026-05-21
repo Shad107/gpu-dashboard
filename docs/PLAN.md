@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:51 (cycle 86 done — multi-GPU schema v4)
-**Latest commit** : `1ef0dec` — schema v4 + gpu_index column
-**Tests** : 485 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 00:55 (cycle 87 done — sampler polls all GPUs)
+**Latest commit** : `e626c2e` — sampler multi-GPU
+**Tests** : 491 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 87 : Multi-GPU slice 2/6 — sampler polls all GPUs**.
+Nothing — between cycles. Wakeup soon will start **Cycle 88 : /api/state ?gpu_index= + history per-GPU (slice 3/6)**.
 
 ---
 
@@ -19,12 +19,12 @@ Nothing — between cycles. Wakeup soon will start **Cycle 87 : Multi-GPU slice 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 87 (next) — Multi-GPU slice 2/6 — sampler refactor
-- metrics.py Sampler polls ALL detected GPUs each tick (nvidia-smi -i N)
-- Each GPU's sample gets gpu_index field on persist
-- Snapshot/buffer keys by gpu_index so /api/state can pick
+### Cycle 88 (next) — Multi-GPU slice 3/6 — API per-GPU
+- /api/state accepts ?gpu_index= (default 0)
+- /api/history accepts ?gpu_index= (default 0)
+- /api/llm/perf, /api/thermal-stats, /api/power-stats also accept gpu_index
+- Tests for the new query param plumbing
 
-### Cycle 88 — Slice 3 : /api/state ?gpu_index= + /api/history per-GPU
 ### Cycle 89 — Slice 4 : Header picker dropdown UI
 ### Cycle 90 — Slice 5 : HistoryView + StatsView pass gpu_index
 ### Cycle 91 — Slice 6 : polish + screenshots + README
@@ -52,6 +52,15 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 87 — Multi-GPU sampler refactor (1 commit)
+- `e626c2e` Sampler polls all GPUs, persists with gpu_index
+  - _poll_all() iterates nvidia-smi CSV rows
+  - _poll() back-compat returns first GPU
+  - Live buffer keeps GPU 0 only (snapshot back-compat)
+  - Per-fan RPM + LLM tokens stay GPU-0-only (complexity vs payoff)
+  - 6 new TDD tests
+  - Tests : 485 → 491
 
 ### Cycle 86 — Multi-GPU schema v4 (1 commit)
 - `1ef0dec` Schema v4 : gpu_index column on samples
@@ -325,11 +334,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 485 passing on Py 3.9-3.13 |
+| Tests | 491 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~94 |
+| Commits since v0.1.0 | ~95 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
