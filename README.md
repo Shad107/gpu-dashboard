@@ -27,17 +27,45 @@
 
 ## What it does
 
-A small HTTP dashboard you point your browser at (`http://localhost:9999`) that shows:
+A small HTTP dashboard you point your browser at (`http://localhost:9999`).
+Built specifically for **headless/SSH'd Linux boxes running LLMs** on consumer NVIDIA
+cards — including marginal setups (eGPU over OcuLink/Thunderbolt).
 
-- **Live GPU state** — temperature, fan RPMs, power draw, clocks, VRAM
-- **OcuLink/eGPU watchdog** — uptime tracking, Telegram alerts on link drops
-- **Power-limit slider** — adjust GPU wattage cap from the UI (with live perf-% estimate per card)
-- **Clock-offset sliders** — undervolt or overclock with safe/moderate/aggressive/danger zones
-- **GPU profiles per card** — RTX 3090, 3090 Ti, 4090, 5090 bundled, generic fallback;
-  community contributes more via PR
+### Live monitoring
+- 🌡️ GPU temperature, fan RPMs, power draw, GPU/mem clocks, VRAM used
+- 🔥 Memory junction (GDDR hotspot) temperature — *the actual undervolt limiter on RTX 3080/3090/4090*
+- 🪙 **LLM throughput** — tokens/sec + **tokens/Watt** efficiency (queries your `llama-server /metrics`)
+- ⚡ **Electricity cost** — kWh/day + €/month at your configured rate
+- 📊 30-day history in local SQLite, exportable as CSV
+- 💤 Idle detection (>30 min) → banner suggesting to stop the server + €/month saved
+- 👀 Per-process VRAM tracker — see which model owns the memory
 
-Built specifically for headless/SSH'd Linux boxes running LLMs locally (Qwen, Llama, etc.)
-on consumer NVIDIA cards — including marginal setups (eGPU over OcuLink/Thunderbolt).
+### Tuning & automation
+- 🤫⭐🚀 **3 power profile presets** (Silent/Sweet/Boost) — one-click bundles of power-limit + offsets
+- 🤖 **Auto-profile switch** — daemon detects idle/inference/training and switches the profile automatically
+- 🎚️ Power-limit slider with live perf-% estimate from the card's `perf_curve`
+- ⏱️ Clock-offset sliders with safe/moderate/aggressive/danger risk zones
+- 🌀 **fan_curve** daemon — custom curve replacing the stock NVIDIA one
+
+### Integrations & alerts
+- 🔔 **Telegram bot** alerts (OcuLink drops, threshold breaches)
+- 🪝 **Webhook outbound** (Discord, Slack, n8n, Home Assistant — auto-detects payload shape)
+- 📈 **Prometheus exporter** at `/api/prom` (gauges + counter, plug into Grafana / VictoriaMetrics)
+- 🔥 **Threshold alerts** — gpu_temp / mem_temp / fan_pct, 3-consecutive + 5-min cooldown
+- 🛂 **OcuLink/eGPU watchdog** — uptime tracking, drop count, alerts on drops
+
+### Setup & operations
+- 🧙 **5-step web setup wizard** on first launch (no CLI gymnastics — copy-paste sudo commands with live recheck)
+- 🔄 **Restart / Stop / Snapshot / Update buttons** in Settings → Services (no shell needed for ops)
+- 🌐 **EN + FR i18n** with reactive language switcher
+- 📦 **Snapshot export** — config + secrets + DB as a single tar.gz for backup or migration
+- 🩺 **/api/health** — JSON status (gpu_alive, db_connected, sampler_running) for external monitoring
+- 📜 **Diagnostics tab** with log tail viewer (file or journalctl backends)
+- 🧰 **Profile override editor** — tune perf_curve / clocks / fans from the UI without forking the repo
+
+### GPU profiles per card
+Bundled : RTX 3090, 3090 Ti, 4090, 5090. Community contributes more via PR.
+JSON Schema validation at startup catches typos & malformed contributions.
 
 ## Why?
 
@@ -126,35 +154,108 @@ The wizard never runs sudo silently. For each module needing root, you'll see
 Each script supports `--check` (verify if already installed) and `--print`
 (show what it would write without writing) so you can audit before running.
 
+## API endpoints
+
+Pure stdlib HTTP server. JSON everywhere except `/api/export` (CSV) and `/api/snapshot` (tar.gz).
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/state` | Live snapshot (cards, sampler buffer, processes, modules state) |
+| GET | `/api/history?from=&to=&step=` | Historical samples from SQLite, resamplable |
+| GET | `/api/events?from=&kind=` | OcuLink drops, alerts, manual changes |
+| GET | `/api/export?since=` | Raw CSV download of samples |
+| GET | `/api/processes` | Per-process VRAM via `nvidia-smi --query-compute-apps` |
+| GET | `/api/prom` | Prometheus text exporter |
+| GET | `/api/health` | JSON health for monitoring (200 OK / 503 degraded) |
+| GET | `/api/about` | Version, paths, vBIOS, uptime |
+| GET | `/api/electricity` | kWh + €/month at configured rate |
+| GET | `/api/llm/stats` | tokens generated + tokens/Watt (from llama-server /metrics) |
+| GET | `/api/fan-curve` | Current fan curve + target % |
+| GET | `/api/auto-profile` | Auto-switch daemon status (current classification) |
+| GET | `/api/power-profiles` | List Silent/Sweet/Boost configured |
+| GET | `/api/setup/detect` | Wizard env detection |
+| GET | `/api/setup/recheck/<module>` | Re-run a module's `can_enable()` |
+| GET | `/api/logs?tail=N` | Tail dashboard log (file or journalctl) |
+| GET | `/api/update/check` | `git fetch` + commits-behind count |
+| GET | `/api/snapshot` | tar.gz of config + DB |
+| POST | `/api/set-power-limit` | Apply watts via sudoers wrapper |
+| POST | `/api/set-offsets` | Apply GPU/mem clock offsets |
+| POST | `/api/power-profiles/apply/<name>` | One-click profile (Silent/Sweet/Boost) |
+| POST | `/api/alerts-config` | Save Telegram config |
+| POST | `/api/alerts-test` | Send a test Telegram |
+| POST | `/api/electricity/config` | Update rate live (no restart) |
+| POST | `/api/profile/save` | Persist a profile override |
+| POST | `/api/setup/save` | Wizard saves config.env |
+| POST | `/api/restart` | Re-exec the server in place |
+| POST | `/api/stop` | Graceful sys.exit(0) |
+| POST | `/api/update/pull` | `git pull --ff-only` (refuses dirty tree) |
+
+## Optional modules
+
+Each feature is opt-in via `MODULE_*=1` in `config.env`. The wizard only proposes
+what your env supports.
+
+| Module | Requirement | What it adds |
+|---|---|---|
+| **power_limit** | sudoers wrapper installed | UI slider + 3 profile presets, live perf-% estimate |
+| **clock_offsets** | Coolbits ≥ 8 in xorg.conf | Sliders for GPU/mem clock offsets with risk zones |
+| **telegram_alerts** | bot token + chat ID | Push notifications on events |
+| **oculink_watchdog** | eGPU detected (PCIe x4 link) | Tracks link uptime, alerts on drops |
+| **fan_curve** | Coolbits ≥ 4 + Xorg | Custom fan curve replacing the stock NVIDIA one |
+| **auto_profile** | sampler running | Daemon classifies idle/inference/training, auto-switches profile |
+| **alert_monitor** | TG or webhook configured | gpu_temp / mem_temp / fan_pct threshold alerts |
+| **webhook** | a webhook URL configured | Discord / Slack / n8n / Home Assistant outbound |
+
+## Integrations
+
+```bash
+# Grafana / VictoriaMetrics — Prometheus scrape config
+- job_name: gpu-dashboard
+  static_configs: [{targets: ['localhost:9999']}]
+  metrics_path: /api/prom
+
+# Discord webhook
+WEBHOOK_ENABLED=1
+WEBHOOK_URL=https://discord.com/api/webhooks/.../...
+
+# Home Assistant / n8n
+WEBHOOK_URL=https://n8n.local/webhook/gpu-alert
+# Payload: {"text", "kind", "source": "gpu-dashboard", "timestamp"}
+
+# Uptime Kuma — HTTP keyword monitor
+URL : http://localhost:9999/api/health
+Keyword : "status":"ok"
+```
+
 ## Architecture
 
 ```
 gpu-dashboard/
-├── src/gpu_dashboard/          # Python source
-│   ├── perf.py                  # perf-curve interpolation
-│   ├── config.py                # layered .env config loader
-│   ├── profile.py               # GPU profile load + match + JSON Schema validation
-│   ├── detect.py                # env probing (OS, NVIDIA, Coolbits, OcuLink…)
-│   ├── install.py               # interactive installer logic
-│   └── modules/
-│       ├── power_limit.py       # sudoers wrapper for nvidia-smi -pl
-│       ├── clock_offsets.py     # nvidia-settings, no sudo via Coolbits
-│       └── telegram_alerts.py   # urllib stdlib, no `requests` dep
-├── profiles/                    # JSON profiles + JSON Schema
-└── tests/                       # pytest, 178 tests, no external services
+├── src/gpu_dashboard/                # Python backend (stdlib + jsonschema)
+│   ├── server.py                     # HTTP routes + daemon lifecycle
+│   ├── api.py                        # 20+ JSON handlers (handle_state, handle_history…)
+│   ├── storage.py                    # SQLite with WAL, thread-safe writes, schema versioning
+│   ├── retention.py                  # Daemon: hourly purge + weekly VACUUM
+│   ├── metrics.py                    # Sampler (5s interval, also writes to DB)
+│   ├── config.py                     # Layered .env loader (defaults → file → env vars)
+│   ├── profile.py                    # GPU profile load + match + JSON Schema validation
+│   ├── detect.py                     # Env probing (OS, NVIDIA, Coolbits, OcuLink…)
+│   ├── install.py                    # CLI installer logic (= scripts/install-*.sh in v0.3+)
+│   └── modules/                      # Opt-in features (each via MODULE_*=1)
+│       ├── power_limit.py            # Sudoers wrapper for nvidia-smi -pl
+│       ├── clock_offsets.py          # nvidia-settings, no-sudo via Coolbits
+│       ├── fan_curve.py              # Custom fan curve daemon
+│       ├── auto_profile.py           # Auto idle/inference/training switching
+│       ├── alert_monitor.py          # Threshold daemon + dedup
+│       ├── telegram_alerts.py        # Telegram via urllib (no requests dep)
+│       └── webhook.py                # Generic HTTP POST (Discord/Slack/n8n)
+├── frontend/                         # Svelte 5 + Vite + TypeScript
+│   └── src/                          # 11-tab settings modal + live cards + History chart
+├── profiles/                         # GPU JSON profiles + schema.json (Draft 2020-12)
+├── scripts/                          # get.sh + 3 sudo install scripts (audit-friendly)
+├── tests/                            # pytest, 400+ tests, no external services
+└── .github/workflows/ci.yml          # pytest matrix 3.9→3.13 + pnpm build + scripts smoke
 ```
-
-## Optional modules
-
-Each feature is opt-in — `install.sh` only proposes what your env supports.
-
-| Module | Requirement | What it adds |
-|---|---|---|
-| **power_limit** | sudoers wrapper installed | UI slider 100-350W (or per-card max), live perf-% estimate |
-| **clock_offsets** | Coolbits ≥ 8 in xorg.conf | Sliders for GPU/mem clock offsets with risk zones |
-| **telegram_alerts** | bot token + chat ID | Push notifications on events |
-| **oculink_watchdog** *(v0.2)* | eGPU detected (PCIe x4 link) | Tracks link uptime, alerts on drops |
-| **fan_curve** *(v0.2)* | Headless Xorg :0 on NVIDIA | Custom fan curve replacing the stock NVIDIA one |
 
 ## Contributing
 
