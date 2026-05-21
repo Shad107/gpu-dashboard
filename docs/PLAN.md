@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:14 (cycle 106 done — Grafana template)
-**Latest commit** : `f6ff929` — Grafana yearly dashboard JSON
+**Last updated** : 2026-05-22 02:18 (cycle 107 done — alert footer)
+**Latest commit** : `6a709c7` — latest-alert footer
 **Tests** : 525 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -59,6 +59,14 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 107 — Latest-alert footer on dashboard (1 commit)
+- `6a709c7` New LatestAlertFooter.svelte below Power chart
+  - Polls /api/health every 60s (reuses Uptime Kuma endpoint)
+  - Two states : "🚨 Last alert : 23m ago — kind" (amber)
+                  "✓ No alerts in the last 7 days" (green)
+  - Only shows on dashboard view (not History/Stats)
+  - 3 new i18n keys × 2 langs
 
 ### Cycle 106 — Grafana yearly dashboard template (1 commit)
 - `f6ff929` docs/grafana/yearly_dashboard.json — turnkey import
@@ -482,7 +490,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~115 |
+| Commits since v0.1.0 | ~116 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
