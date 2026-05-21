@@ -3,9 +3,9 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:06 (cycle 104 done — yearly UI in About)
-**Latest commit** : `539231d` — yearly stats UI in About
-**Tests** : 520 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 02:10 (cycle 105 done — Prometheus yearly gauges)
+**Latest commit** : `16c7d52` — Prom yearly + alert-age
+**Tests** : 525 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
@@ -59,6 +59,14 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 105 — Prometheus yearly + alert-age gauges (1 commit)
+- `16c7d52` 6 new gauges in /api/prom :
+  - kwh_year, cost_year, kwh_today
+  - tokens_year_total, tokens_lifetime_total (counters)
+  - latest_alert_age_seconds (when alerts exist)
+  - 5 new TDD tests · 520 → 525 tests
+  - Grafana yearly-budget dashboards now plot-able
 
 ### Cycle 104 — Yearly aggregates UI in About tab (1 commit)
 - `539231d` New '📊 Year-to-date totals' section in About tab
@@ -462,11 +470,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 520 passing on Py 3.9-3.13 |
+| Tests | 525 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~113 |
+| Commits since v0.1.0 | ~114 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
