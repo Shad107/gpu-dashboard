@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:29 (cycle 82 done — VAPID backend)
-**Latest commit** : `c57e1a8` — VAPID keypair + /api/push/vapid
-**Tests** : 463 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 00:35 (cycle 83 done — push subscription + SW)
+**Latest commit** : `10bccba` — push subscription + service worker
+**Tests** : 469 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 83 : Subscription endpoint + service worker (slice 2/3)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 84 : Web Push protocol — actually fire pushes (slice 3/3)**.
 
 ---
 
@@ -19,17 +19,14 @@ Nothing — between cycles. Wakeup soon will start **Cycle 83 : Subscription end
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 83 (next) — Browser push slice 2/3 — subscription handling
-- POST /api/push/subscribe : stores subscription in DB (new push_subscriptions table)
-- POST /api/push/unsubscribe
-- Frontend : service worker registration + Notification permission flow
-- Toggle in Alerts tab
+### Cycle 84 (next) — Browser push slice 3/3 — actual delivery
+- Web Push protocol (RFC 8030 + RFC 8291 encryption)
+- ECDH-ES P-256 + HKDF-SHA256 + AES-128-GCM
+- VAPID JWT auth header
+- Wire into alert_monitor to send a push on each alert
+- This is the heaviest slice — might span cycles 84-85
 
-### Cycle 84 — Browser push slice 3/3 — alert_monitor wires push delivery
-- Web Push protocol (ECDH-ES + AES128GCM encryption per RFC 8291)
-- This is the hardest slice : encryption + push service POST
-
-### Cycle 85+ — Multi-GPU full picker UI · Drag-and-drop fan curve editor SVG
+### Cycle 86+ — Multi-GPU full picker UI · Drag-and-drop fan curve editor SVG
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
 
 ### Cycle 70+ — Original feature backlog continues
@@ -52,6 +49,17 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 83 — Push subscription endpoint + service worker (1 commit)
+- `10bccba` Schema v3 (push_subscriptions table) + API + sw.js + push.svelte.ts
+  - storage : add/list/remove_push_subscription methods
+  - api : /api/push/subscribe + /unsubscribe + /status
+  - frontend/public/sw.js handles push + notificationclick events
+  - lib/push.svelte.ts wraps Notification + PushManager + state machine
+  - Alerts tab gains 🔔 Browser push section
+  - 8 new i18n keys × 2 langs
+  - 6 new TDD tests (storage push)
+  - Tests : 463 → 469
 
 ### Cycle 82 — Web Push VAPID foundation (1 commit)
 - `c57e1a8` web_push.py + /api/push/vapid + 8 TDD tests
@@ -285,11 +293,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 463 passing on Py 3.9-3.13 |
+| Tests | 469 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~90 |
+| Commits since v0.1.0 | ~91 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
