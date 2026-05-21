@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:17 (cycle 79 done — light theme + toggle)
-**Latest commit** : `8910d31` — light theme + toggle + URL param
-**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.13 KB
+**Last updated** : 2026-05-22 00:21 (cycle 80 done — color polish)
+**Latest commit** : `9ef54cb` — expanded theme variable coverage
+**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 80 : polish remaining hard-coded colors**.
+Nothing — between cycles. Wakeup soon will start **Cycle 81 : README update with theme screenshots**.
 
 ---
 
@@ -19,13 +19,10 @@ Nothing — between cycles. Wakeup soon will start **Cycle 80 : polish remaining
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 80 (next) — Polish remaining hard-coded colors (slice 3/4)
-- Component-specific colors (badges, charts, sparklines, mode-tiles) that don't
-  yet use the CSS variables — convert with proper theme awareness
-- Verify modal backdrop, OcuLink card color states, fan colors transition cleanly
-
-### Cycle 81 — Side-by-side README screenshot (slice 4/4)
-Document the theme toggle in README with dark vs light screenshots.
+### Cycle 81 (next) — README update + theme screenshots (slice 4/4)
+- Add "Theme" section to README with dark + light screenshots
+- Document the URL ?theme= override + the in-UI toggle
+- Final commit closes the 4-cycle theme work
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
 
 ### Cycle 70+ — Original feature backlog continues
@@ -48,6 +45,13 @@ Document the theme toggle in README with dark vs light screenshots.
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 80 — Theme variable coverage polish (1 commit)
+- `9ef54cb` Added 11 more CSS variables (btn states, accent-cost, text shades)
+  - Buttons now theme cleanly (light btn-bg #e5e7eb vs dark #22262e)
+  - Danger button inverts properly (light: red bg + dark fg)
+  - ~20 more hard-coded refs converted via sed
+  - Bundle CSS 22.20 → 23.10 KB raw
 
 ### Cycle 79 — Light theme + toggle (2 commits)
 - `4b91e9c` html.theme-light overrides + theme.svelte.ts store + toggle in Layout tab
@@ -262,8 +266,8 @@ Rules :
 | Tests | 455 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
-| Bundle CSS | 22.20 KB raw / 5.13 KB gzip |
-| Commits since v0.1.0 | ~87 |
+| Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
+| Commits since v0.1.0 | ~88 |
 | API endpoints | 35+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
