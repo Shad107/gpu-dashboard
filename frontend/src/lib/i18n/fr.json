@@ -127,6 +127,7 @@
   "diagnostics.no_log": "Pas de source de log disponible",
   "diagnostics.source_file": "Fichier",
   "diagnostics.source_journalctl": "journalctl",
+  "multigpu.detected": "{n} GPU détectés — monitoring de l'index {idx}. Pour switcher, mets GPU_INDEX dans config.env.",
   "power.section_title": "Power Limit",
   "power.description": "Plafond de consommation (nvidia-smi -pl). Persistant au reboot via le wrapper sudoers.",
   "power.limit_label": "Limite",

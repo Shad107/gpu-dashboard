@@ -41,8 +41,17 @@ export type Watchdog =
   | { available: false }
   | { available: true; drops: number; last_uptime: string };
 
+export type GpuInfo = {
+  index: number;
+  name: string;
+  bus_id: string;
+  vram_mib: number | null;
+};
+
 export type State = {
   gpu: Gpu;
+  gpus_available?: GpuInfo[];
+  selected_gpu_index?: number;
   metrics: Sample[];
   profile: { model: string } | null;
   fans: Fan[];

@@ -27,28 +27,30 @@ Response = Tuple[int, dict]
 # ─────────────────────────────── helpers ───────────────────────────────────
 
 
-def _gpu_card_snapshot() -> dict:
-    """Fast nvidia-smi snapshot of the GPU card for the live tiles."""
+def _gpu_card_snapshot(gpu_index: int = 0) -> dict:
+    """Fast nvidia-smi snapshot for ONE GPU (default: index 0)."""
     try:
         r = subprocess.run(
             ["nvidia-smi",
+             "-i", str(int(gpu_index)),
              "--query-gpu=name,temperature.gpu,fan.speed,power.draw,power.limit,"
              "utilization.gpu,memory.used,memory.total",
              "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=3,
         )
     except (FileNotFoundError, subprocess.SubprocessError, OSError):
-        return {"alive": False, "name": "?"}
+        return {"alive": False, "name": "?", "index": gpu_index}
 
     if r.returncode != 0 or not r.stdout.strip():
-        return {"alive": False, "name": "?"}
+        return {"alive": False, "name": "?", "index": gpu_index}
 
     parts = [p.strip() for p in r.stdout.strip().split(",")]
     if len(parts) < 8 or not parts[1].isdigit():
-        return {"alive": False, "name": parts[0] if parts else "?"}
+        return {"alive": False, "name": parts[0] if parts else "?", "index": gpu_index}
 
     return {
         "alive": True,
+        "index": gpu_index,
         "name": parts[0],
         "temp": int(parts[1]),
         "fan_pct": int(parts[2]),
@@ -58,6 +60,37 @@ def _gpu_card_snapshot() -> dict:
         "mem_used_mib": int(parts[6]),
         "mem_total_mib": int(parts[7]),
     }
+
+
+def _gpus_available() -> list:
+    """Quick list of all GPUs detected on this host (name + bus_id + index).
+
+    Returns [] if nvidia-smi is unavailable or no GPU.
+    """
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index,name,pci.bus_id,memory.total",
+             "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=3,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return []
+    if r.returncode != 0 or not r.stdout.strip():
+        return []
+    gpus = []
+    for line in r.stdout.strip().splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 4 or not parts[0].isdigit():
+            continue
+        # memory.total is "24576 MiB" — extract the int
+        vram_str = parts[3].split()[0] if parts[3] else "0"
+        gpus.append({
+            "index": int(parts[0]),
+            "name": parts[1],
+            "bus_id": parts[2],
+            "vram_mib": int(vram_str) if vram_str.isdigit() else None,
+        })
+    return gpus
 
 
 # ─────────────────────────── GET /api/state ────────────────────────────────
@@ -70,8 +103,11 @@ def handle_state(ctx: dict) -> Response:
     when a module is disabled.
     """
     cfg = ctx["config"]
+    gpu_index = cfg.get_int("GPU_INDEX", default=0)
     body = {
-        "gpu": _gpu_card_snapshot(),
+        "gpu": _gpu_card_snapshot(gpu_index=gpu_index),
+        "gpus_available": _gpus_available(),
+        "selected_gpu_index": gpu_index,
         "metrics": ctx["sampler"].snapshot() if ctx.get("sampler") else [],
         "profile": ctx.get("profile"),
         "fans": _per_fan_state(cfg),
