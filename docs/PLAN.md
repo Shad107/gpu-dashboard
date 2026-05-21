@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:22 (cycle 69 done — top-nav scaffold)
-**Latest commit** : `f51709c` — Top-nav scaffold + CSS
-**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 68.46 KB gzip
+**Last updated** : 2026-05-21 23:27 (cycle 70 done — HistoryView extracted)
+**Latest commit** : `04ab73d` — HistoryView top-level + About stays in Settings
+**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 71.35 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 70 : Extract HistoryView from modal**.
+Nothing — between cycles. Wakeup soon will start **Cycle 71 : Extract StatsView**.
 
 ---
 
@@ -19,14 +19,9 @@ Nothing — between cycles. Wakeup soon will start **Cycle 70 : Extract HistoryV
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 70 (next) — Extract HistoryView.svelte from SettingsModal
-The chart + Export CSV + Compare-to + Heatmap as a standalone top-level view.
-Removes the History section from the modal, wires the view dispatch in App.svelte.
-
-### Cycle 71 — Extract StatsView.svelte (fan distribution)
-### Cycle 72 — Extract AboutView.svelte (version, vBIOS, profile time)
-### Cycle 73 — Clean modal sidebar (back to 7 tabs)
-### Cycle 74 — Theme toggle light/dark (~2h, deferred until restructure done)
+### Cycle 71 (next) — Extract StatsView.svelte (fan distribution)
+### Cycle 72 — Clean modal sidebar : remove History + Stats sections, keep About (per user 23:25)
+### Cycle 73 — Theme toggle light/dark (~2h, deferred until restructure done)
 
 ### Cycle 70+ — Original feature backlog continues
 1. Browser push notifs via Web Push + VAPID (~1.5h)
@@ -48,6 +43,14 @@ Removes the History section from the modal, wires the view dispatch in App.svelt
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 70 — Extract HistoryView + About stays in Settings (1 commit)
+- `04ab73d` Extract HistoryView as top-level page; About kept in Settings
+  - User feedback 23:25: 'Remet le à-propos dans le paramétrage a la fin'
+  - 3 top-level views now : Dashboard / History / Stats (Stats still placeholder)
+  - HistoryView.svelte = self-contained, all state lifted from modal
+  - Modal still has the same History section for now — will be removed cycle 72
+  - Keyboard 'a' opens modal at About (was switching top-nav)
 
 ### Cycle 69 — Top-nav scaffold (2 commits)
 - `47dd0ce` view store + TopNav.svelte + App.svelte wiring + i18n
@@ -197,13 +200,13 @@ Rules :
 |---|---|
 | Tests | 442 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 199.61 KB raw / 68.46 KB gzip |
-| Bundle CSS | 17.15 KB raw / 4.16 KB gzip |
-| Commits since v0.1.0 | ~75 |
+| Bundle JS | 206.96 KB raw / 71.35 KB gzip |
+| Bundle CSS | 17.40 KB raw / 4.21 KB gzip |
+| Commits since v0.1.0 | ~76 |
 | API endpoints | 32+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
-| Modal tabs | 11 (grouped in 6 sections) |
+| Modal tabs | 11 currently (10 after cycle 72: History removed)
 | Languages | EN + FR (full coverage) |
 | GPU profiles bundled | 5 (3090, 3090 Ti, 4090, 5090, _generic) |
 
