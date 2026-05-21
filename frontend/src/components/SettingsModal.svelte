@@ -467,10 +467,7 @@
       icon: "M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z" },
     { id: "clocks", group: "tuning", labelKey: "modal.clocks" as const,
       icon: "M3 17v2h6v-2H3M3 5v2h10V5H3m10 16v-2h8v-2h-8v-2h-2v6h2M7 9v2H3v2h4v2h2V9H7m14 4v-2H11v2h10m-6-4h2V7h4V5h-4V3h-2v6z" },
-    { id: "history", group: "review", labelKey: "modal.history" as const,
-      icon: "M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 7 7c-2.94 0-5.49-1.81-6.56-4.4l-1.89.61C5.84 18.45 9.16 21 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z" },
-    { id: "stats", group: "review", labelKey: "modal.stats" as const,
-      icon: "M22 21H2V3h2v16h2v-9h4v9h2V6h4v13h2v-7h4v9z" },
+    // History + Stats removed in cycle 75 — they live as top-level views now.
     { id: "alerts", group: "notify", labelKey: "modal.alerts" as const,
       icon: "M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22m6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" },
     { id: "services", group: "ops", labelKey: "modal.services" as const,
@@ -486,6 +483,12 @@
     { id: "about", group: "meta", labelKey: "modal.about" as const,
       icon: "M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z" },
   ];
+
+  /** Look up an icon by section id — safer than `sections[N]` (which breaks
+   * whenever the array changes). */
+  function iconOf(id: string): string {
+    return sections.find(s => s.id === id)?.icon ?? "";
+  }
 
   // Group headers (only shown on desktop sidebar)
   const GROUP_LABELS: Record<string, string> = {
@@ -611,7 +614,7 @@
       <!-- Power Limit -->
       <div class="modal-section" class:active={modal.section === "power"}>
         <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[0].icon} /></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("power")} /></svg>
           <span>{i18n.t("power.section_title")}</span>
         </h3>
         <p class="sub" style="margin:0 0 1em">{i18n.t("power.description")}</p>
@@ -650,7 +653,7 @@
       <!-- Clocks -->
       <div class="modal-section" class:active={modal.section === "clocks"}>
         <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[1].icon} /></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("clocks")} /></svg>
           <span>{i18n.t("clocks.section_title")}</span>
         </h3>
         <div class="controls" style="background:transparent;border:none;padding:0">
@@ -711,31 +714,12 @@
         </div>
       </div>
 
-      <!-- Stats -->
-      <div class="modal-section" class:active={modal.section === "stats"}>
-        <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[2].icon} /></svg>
-          <span>{i18n.t("stats.title")}</span>
-        </h3>
-        <table><tbody>
-          {#each distEntries as r}
-            <tr>
-              <td>{r.k}%</td>
-              <td>
-                {r.n} <span class="sub">({r.pct.toFixed(1)}%)</span><br />
-                <span class="bar" style:width="{r.pct.toFixed(1)}%">
-                  <div style="width:100%;background:{colorFan(+r.k)}"></div>
-                </span>
-              </td>
-            </tr>
-          {/each}
-        </tbody></table>
-      </div>
+      <!-- Stats section removed in cycle 75 — now lives as top-level view (StatsView.svelte) -->
 
       <!-- Services -->
       <div class="modal-section" class:active={modal.section === "services"}>
         <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[3].icon} /></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("services")} /></svg>
           <span>{i18n.t("services.title")}</span>
         </h3>
         <table><tbody>
@@ -812,7 +796,7 @@
       <!-- Alerts -->
       <div class="modal-section" class:active={modal.section === "alerts"}>
         <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[4].icon} /></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("alerts")} /></svg>
           <span>{i18n.t("alerts.title")}</span>
         </h3>
         <p class="sub" style="margin:0 0 1em">{i18n.t("alerts.description")}</p>
@@ -853,117 +837,12 @@
         </div>
       </div>
 
-      <!-- History -->
-      <div class="modal-section" class:active={modal.section === "history"}>
-        <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[6].icon} /></svg>
-          <span>{i18n.t("history.title")}</span>
-        </h3>
-        <p class="sub" style="margin:0 0 1em">{i18n.t("history.description")}</p>
-
-        <div class="controls" style="background:transparent;border:none;padding:0">
-          <div class="btn-row" style="margin-bottom:.8em">
-            {#each ["1h", "6h", "24h", "7d", "30d"] as r}
-              <button
-                class="btn"
-                class:btn-primary={historyRange === r}
-                onclick={() => (historyRange = r as HistoryRange)}
-              >{i18n.t(`history.range_${r}` as any)}</button>
-            {/each}
-          </div>
-
-          <div class="form-row">
-            <span class="form-lbl">{i18n.t("history.metric")}</span>
-            <span class="form-val">
-              <select bind:value={historyMetric} class="al-input" style="max-width:240px">
-                <option value="power">{i18n.t("history.metric_power")}</option>
-                <option value="temp">{i18n.t("history.metric_temp")}</option>
-                <option value="fan_pct">{i18n.t("history.metric_fan")}</option>
-                <option value="util_gpu">{i18n.t("history.metric_util")}</option>
-                <option value="tokens_per_sec">{i18n.t("history.metric_tps")}</option>
-                <option value="tokens_per_watt">{i18n.t("history.metric_tpw")}</option>
-              </select>
-            </span>
-          </div>
-
-          <div style="height:340px;background:#0e1014;border-radius:8px;padding:6px;margin-top:.8em">
-            {#if historyLoading}
-              <div style="color:#7c8aa3;padding:2em;text-align:center">{i18n.t("history.loading")}</div>
-            {:else}
-              <HistoryChart
-                samples={derivedSamples}
-                events={historyEvents}
-                metric={historyMetric}
-                color={METRIC_INFO[historyMetric].color}
-                unit={METRIC_INFO[historyMetric].unit}
-                compareSamples={historyCompareMode ? historyCompare : []}
-                compareLabel={compareLabelFor(historyCompareOffset)}
-              >
-                <span slot="empty">{i18n.t("history.no_data")}</span>
-              </HistoryChart>
-            {/if}
-          </div>
-
-          <div class="btn-row" style="margin-top:.8em">
-            <button class="btn btn-primary" onclick={loadHistory}>{i18n.t("history.refresh")}</button>
-            <button class="btn" onclick={exportCsv}>📥 {i18n.t("history.export_csv")}</button>
-            <label style="display:flex;align-items:center;gap:.4em;cursor:pointer;font-size:.85em">
-              <input type="checkbox" bind:checked={historyAutoRefresh} />
-              ⏱️ {i18n.t("history.auto_refresh")}
-            </label>
-            <label style="display:flex;align-items:center;gap:.4em;font-size:.85em">
-              📊 {i18n.t("history.compare_to")}
-              <select bind:value={historyCompareOffset} class="al-input" style="max-width:160px;font-size:.95em">
-                <option value={0}>{i18n.t("history.compare_off")}</option>
-                <option value={86400}>{i18n.t("history.compare_label_24h")}</option>
-                <option value={604800}>{i18n.t("history.compare_label_7d")}</option>
-                <option value={2592000}>{i18n.t("history.compare_label_30d")}</option>
-              </select>
-            </label>
-            <span class="warn-text">{i18n.t("history.samples_count", { n: historySamples.length })}</span>
-          </div>
-
-          {#if heatmapData}
-            {@const sym = heatmapData.currency === "EUR" ? "€" : heatmapData.currency === "USD" ? "$" : heatmapData.currency}
-            <h3 style="margin-top:1.6em;color:#cdd2da;font-size:.95em;font-weight:600">
-              ⏰ {i18n.t("heatmap.title")}
-            </h3>
-            <p class="sub" style="margin:0 0 .6em;font-size:.82em">
-              {i18n.t("heatmap.description", { days: heatmapData.days })}
-            </p>
-            <div class="form-row" style="margin-bottom:.6em">
-              <span class="form-lbl">{i18n.t("heatmap.days_label")}</span>
-              <span class="form-val">
-                <select bind:value={heatmapDays} class="al-input" style="max-width:120px">
-                  <option value={1}>1 day</option>
-                  <option value={7}>7 days</option>
-                  <option value={14}>14 days</option>
-                  <option value={30}>30 days</option>
-                </select>
-              </span>
-            </div>
-            {#if heatmapData.hours.every(h => h.sample_count === 0)}
-              <p class="sub">{i18n.t("heatmap.no_data")}</p>
-            {:else}
-              <div class="heatmap-grid">
-                {#each heatmapData.hours as cell}
-                  <div class="heatmap-cell" style:background={heatmapBg(cell.cost_per_hour)}
-                       title="{cell.hour}:00 — {cell.avg_watts}W · {cell.cost_per_hour.toFixed(3)}{sym}/h · {cell.sample_count} samples">
-                    <div class="heatmap-hour">{cell.hour}h</div>
-                    <div class="heatmap-watts">{cell.avg_watts.toFixed(0)}W</div>
-                    <div class="heatmap-cost">{cell.cost_per_hour.toFixed(2)}{sym}</div>
-                  </div>
-                {/each}
-              </div>
-            {/if}
-          {/if}
-        </div>
-      </div>
+      <!-- History section removed in cycle 75 — now lives as top-level view (HistoryView.svelte) -->
 
       <!-- About -->
       <div class="modal-section" class:active={modal.section === "about"}>
         <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[7].icon} /></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("about")} /></svg>
           <span>{i18n.t("about.title")}</span>
         </h3>
         <p class="sub" style="margin:0 0 1em">{i18n.t("about.tagline")}</p>
@@ -1025,7 +904,7 @@
       <!-- Profile editor -->
       <div class="modal-section" class:active={modal.section === "profile"}>
         <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[9].icon} /></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("profile")} /></svg>
           <span>{i18n.t("profile.title")}</span>
         </h3>
         <p class="sub" style="margin:0 0 .8em">{i18n.t("profile.description")}</p>
@@ -1048,7 +927,7 @@
       <!-- Diagnostics / logs -->
       <div class="modal-section" class:active={modal.section === "diagnostics"}>
         <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[8].icon} /></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("diagnostics")} /></svg>
           <span>{i18n.t("diagnostics.title")}</span>
         </h3>
         <p class="sub" style="margin:0 0 .8em">{i18n.t("diagnostics.description")}</p>
@@ -1149,7 +1028,7 @@
       <!-- Language -->
       <div class="modal-section" class:active={modal.section === "language"}>
         <h3 class="title">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[5].icon} /></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("language")} /></svg>
           <span>{i18n.t("lang.title")}</span>
         </h3>
         <p class="sub" style="margin:0 0 1em">{i18n.t("lang.description")}</p>
