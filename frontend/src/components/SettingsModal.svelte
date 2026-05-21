@@ -5,6 +5,25 @@
   import { api, type HistorySample, type StoredEvent } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
   import HistoryChart from "./HistoryChart.svelte";
+  import { dndzone } from "svelte-dnd-action";
+
+  // Layout drag-and-drop items — re-derived from layout.order whenever it changes
+  type LayoutItem = { id: string };
+  let layoutItems = $state<LayoutItem[]>(layout.order.map(n => ({ id: n })));
+  // Keep local mirror in sync if external changes happen (eg. reset)
+  $effect(() => {
+    const order = layout.order;
+    if (order.join(",") !== layoutItems.map(i => i.id).join(",")) {
+      layoutItems = order.map(n => ({ id: n }));
+    }
+  });
+  function handleDndConsider(e: CustomEvent<{ items: LayoutItem[] }>) {
+    layoutItems = e.detail.items;
+  }
+  function handleDndFinalize(e: CustomEvent<{ items: LayoutItem[] }>) {
+    layoutItems = e.detail.items;
+    layout.setOrder(layoutItems.map(i => i.id));
+  }
 
   // ── Power profile presets state ───────────────────────────────────────────
   let powerProfiles = $state<{ name: "silent"|"sweet"|"boost"; watts: number; gpu_offset: number; mem_offset: number }[]>([]);
@@ -968,29 +987,36 @@
         {/if}
       </div>
 
-      <!-- Layout : card hide/show -->
+      <!-- Layout : card hide/show + drag-and-drop reorder -->
       <div class="modal-section" class:active={modal.section === "layout"}>
         <h3 class="title">
           <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2zm16 0v3H5V5zm-7 5v9H5v-9zm2 0h5v9h-5z"/></svg>
           <span>{i18n.t("layout.title")}</span>
         </h3>
         <p class="sub" style="margin:0 0 1em">{i18n.t("layout.description")}</p>
-        <div class="layout-grid">
-          {#each CARD_NAMES as cardName}
-            <label class="layout-row">
+        <div
+          class="layout-dnd"
+          use:dndzone={{ items: layoutItems, flipDurationMs: 200, type: "layout-cards", dragDisabled: false }}
+          onconsider={handleDndConsider}
+          onfinalize={handleDndFinalize}
+        >
+          {#each layoutItems as item (item.id)}
+            <div class="layout-row">
+              <span class="layout-handle" title={i18n.t("layout.drag_hint")}>⋮⋮</span>
               <input
                 type="checkbox"
-                checked={layout.visible(cardName)}
-                onchange={() => layout.toggle(cardName)}
+                checked={layout.visible(item.id)}
+                onchange={() => layout.toggle(item.id)}
               />
-              <span class="layout-name">{i18n.t(("card." + cardName) as any)}</span>
-              <span class="layout-status" class:on={layout.visible(cardName)}>
-                {layout.visible(cardName) ? i18n.t("layout.shown") : i18n.t("layout.hidden")}
+              <span class="layout-name">{i18n.t(("card." + item.id) as any)}</span>
+              <span class="layout-status" class:on={layout.visible(item.id)}>
+                {layout.visible(item.id) ? i18n.t("layout.shown") : i18n.t("layout.hidden")}
               </span>
-            </label>
+            </div>
           {/each}
         </div>
-        <div class="btn-row" style="margin-top:1em">
+        <p class="sub" style="font-size:.78em;margin-top:.8em">{i18n.t("layout.drag_hint")}</p>
+        <div class="btn-row" style="margin-top:.4em">
           <button class="btn" onclick={() => {
             if (confirm(i18n.t("layout.reset_confirm"))) layout.reset();
           }}>↺ {i18n.t("layout.reset_btn")}</button>

@@ -58,9 +58,10 @@
   const sign = (v: number) => (v >= 0 ? "+" : "") + v;
 </script>
 
-<div class="row">
+<div class="row" style="display:flex;flex-wrap:wrap">
   {#if alive && g && g.alive}
-    <div class="card">
+    {#if layout.visible("gpu")}
+    <div class="card" style:order={layout.indexOf("gpu")}>
       <h2>{i18n.t("card.gpu")}</h2>
       <div class="big" style:color={tempColor(g.temp)}>{g.temp}°C</div>
       <div class="sub">{i18n.t("gpu.util")} {g.util_gpu}% · {i18n.t("gpu.draw")} {g.power.toFixed(0)} W</div>
@@ -70,8 +71,10 @@
         </div>
       {/if}
     </div>
+    {/if}
 
-    <div class="card">
+    {#if layout.visible("power_limit")}
+    <div class="card" style:order={layout.indexOf("power_limit")}>
       <h2>{i18n.t("card.power_limit")}</h2>
       <div class="big">
         {g.power_limit.toFixed(0)} <span class="sub" style="font-size:.55em">/ 350 W</span>
@@ -81,8 +84,10 @@
         {i18n.t("perf.perf_short")} · {i18n.t("perf.stock_pl")}
       </div>
     </div>
+    {/if}
 
-    <div class="card">
+    {#if layout.visible("fans")}
+    <div class="card" style:order={layout.indexOf("fans")}>
       <h2>{i18n.t("card.fans")}</h2>
       <div class="fan-visual">
         {#each fans as f}
@@ -104,16 +109,19 @@
         {/each}
       </div>
     </div>
+    {/if}
 
-    <div class="card">
+    {#if layout.visible("vram")}
+    <div class="card" style:order={layout.indexOf("vram")}>
       <h2>{i18n.t("card.vram")}</h2>
       <div class="big">
         {(g.mem_used_mib / 1024).toFixed(1)}
         <span class="sub" style="font-size:.55em">/ {(g.mem_total_mib / 1024).toFixed(1)} GiB</span>
       </div>
     </div>
+    {/if}
   {:else}
-    <div class="card">
+    <div class="card" style:order={layout.indexOf("gpu")}>
       <h2>{i18n.t("card.gpu")}</h2>
       <div class="big bad">{i18n.t("gpu.off_bus")}</div>
       <div class="sub">{i18n.t("gpu.no_response")}</div>
@@ -121,7 +129,7 @@
   {/if}
 
   {#if d?.watchdog?.available && layout.visible("oculink")}
-    <div class="card">
+    <div class="card" style:order={layout.indexOf("oculink")}>
       <h2>{i18n.t("card.oculink")}</h2>
       <div class="big" class:warn={d.watchdog.drops > 0} class:ok={d.watchdog.drops === 0}>
         {d.watchdog.last_uptime}
@@ -131,14 +139,14 @@
   {/if}
 
   {#if d?.llm_model && layout.visible("llm_model")}
-    <div class="card">
+    <div class="card" style:order={layout.indexOf("llm_model")}>
       <h2>{i18n.t("card.llm_model")}</h2>
       <div class="big" style="font-size:1em;word-break:break-all">{d.llm_model}</div>
     </div>
   {/if}
 
   {#if layout.visible("llm_throughput") && llm?.available && (llm.tokens_generated_total ?? 0) > 0}
-    <div class="card">
+    <div class="card" style:order={layout.indexOf("llm_throughput")}>
       <h2>🪙 {i18n.t("card.llm_throughput")}</h2>
       <div class="big">
         {(llm.tokens_generated_total ?? 0).toLocaleString()}
@@ -154,7 +162,7 @@
 
   {#if elec && layout.visible("electricity")}
     {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
-    <div class="card">
+    <div class="card" style:order={layout.indexOf("electricity")}>
       <h2>⚡ {i18n.t("card.electricity")}</h2>
       <div class="big">
         {elec.avg_power_watts.toFixed(0)} W
@@ -171,7 +179,7 @@
   {/if}
 
   {#if layout.visible("processes") && (d?.processes?.length ?? 0) > 0}
-    <div class="card">
+    <div class="card" style:order={layout.indexOf("processes")}>
       <h2>{i18n.t("card.processes")}</h2>
       <table style="font-size:.78em;width:100%">
         <tbody>
@@ -188,7 +196,7 @@
   {/if}
 
   {#if showTuning && layout.visible("tuning")}
-    <div class="card">
+    <div class="card" style:order={layout.indexOf("tuning")}>
       <h2>{i18n.t("card.tuning")}</h2>
       <div class="tuning-row">
         <div class="tuning-lbl">{i18n.t("card.gpu")}</div>

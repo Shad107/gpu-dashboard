@@ -241,7 +241,8 @@
   "layout.shown": "shown",
   "layout.hidden": "hidden",
   "layout.reset_btn": "Reset to default",
-  "layout.reset_confirm": "Restore all cards to visible?",
+  "layout.reset_confirm": "Restore all cards to visible and reset order?",
+  "layout.drag_hint": "Drag rows to reorder cards on the dashboard.",
   "toast.error": "Error",
   "toast.unknown": "unknown",
   "toast.power_applied": "Power limit → {watts} W (~{perf}% perf)"
