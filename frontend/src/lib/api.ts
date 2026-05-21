@@ -189,6 +189,11 @@ export const api = {
       jsonOf<{ ok: boolean; message?: string }>
     ),
 
+  stop: () =>
+    fetch("/api/stop", { method: "POST" }).then(
+      jsonOf<{ ok: boolean; message?: string }>
+    ),
+
   about: () =>
     fetch("/api/about").then(jsonOf<{
       version: string;

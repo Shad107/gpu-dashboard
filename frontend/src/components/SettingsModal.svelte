@@ -217,6 +217,17 @@
     setTimeout(tryReconnect, 1500);
   }
 
+  async function stopServer() {
+    if (!confirm(i18n.t("services.stop_confirm"))) return;
+    try {
+      await api.stop();
+      toast.emit("🛑 " + i18n.t("services.stopped"), "ok");
+    } catch {
+      // Connection drops as the server exits — that's expected
+      toast.emit("🛑 " + i18n.t("services.stopped"), "ok");
+    }
+  }
+
   // ── Language selection ────────────────────────────────────────────────────
   function selectLang(l: Lang) { i18n.setLang(l); }
 
@@ -420,6 +431,9 @@
         <div class="btn-row" style="margin-top:.8em">
           <button class="btn btn-danger" disabled={restarting} onclick={restartServer}>
             {restarting ? i18n.t("services.restarting") : "🔄 " + i18n.t("services.restart_btn")}
+          </button>
+          <button class="btn btn-danger" onclick={stopServer}>
+            🛑 {i18n.t("services.stop_btn")}
           </button>
         </div>
 

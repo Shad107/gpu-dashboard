@@ -449,6 +449,34 @@ def handle_about(ctx: dict) -> Response:
     }
 
 
+# ────────────────────────── POST /api/stop ────────────────────────────────
+
+
+def handle_stop(ctx: dict) -> Response:
+    """Stop the server gracefully via sys.exit(0).
+
+    Response is flushed BEFORE the exit, so the frontend gets confirmation
+    before connection drops. Unlike /api/restart, this does NOT re-launch
+    — the user (or systemd) decides what to do after.
+    """
+    import sys
+    import threading
+    import time as _t
+
+    def _stop():
+        _t.sleep(0.5)
+        try:
+            if ctx.get("sampler"): ctx["sampler"].stop()
+            if ctx.get("retention"): ctx["retention"].stop()
+            if ctx.get("storage"): ctx["storage"].close()
+        except Exception:
+            pass
+        sys.exit(0)
+
+    threading.Thread(target=_stop, daemon=False).start()
+    return 200, {"ok": True, "message": "stopping"}
+
+
 # ────────────────────────── POST /api/restart ─────────────────────────────
 
 
