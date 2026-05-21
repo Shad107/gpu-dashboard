@@ -144,18 +144,22 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     alert_monitor_daemon = None
     tg_enabled = cfg.get_bool("TG_ENABLED")
     webhook_enabled = cfg.get_bool("WEBHOOK_ENABLED")
+    # Web Push is auto-active whenever there's at least one subscription
+    # (and alert_monitor module is enabled — the gate stays the same).
     if cfg.get_bool("MODULE_ALERT_MONITOR") and (tg_enabled or webhook_enabled):
         try:
             from .modules.alert_monitor import AlertMonitorDaemon
             from .modules.telegram_alerts import send_message as _tg_send
             from .modules.webhook import send as _wh_send
+            from .modules import web_push as _wp
 
             tg_token = cfg.get("TG_TOKEN", "")
             tg_chat = cfg.get("TG_CHAT", "")
             webhook_url = cfg.get("WEBHOOK_URL", "")
+            vapid_cfg_dir = os.path.expanduser("~/.config/gpu-dashboard")
 
             def _send_alert(text):
-                """Multi-channel dispatch — Telegram + webhook in parallel."""
+                """Multi-channel dispatch — Telegram + webhook + browser push."""
                 results = []
                 if tg_enabled and tg_token and tg_chat:
                     try:
@@ -169,6 +173,20 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
                         results.append(("webhook", ok, msg))
                     except Exception as e:
                         results.append(("webhook", False, str(e)))
+                # Browser push : send to ALL stored subscriptions
+                if storage is not None:
+                    try:
+                        subs = storage.list_push_subscriptions()
+                        if subs:
+                            vapid = _wp.ensure_vapid_keys(vapid_cfg_dir)
+                            for sub in subs:
+                                ok, msg = _wp.send_push(sub, vapid)
+                                results.append((f"push:{sub['endpoint'][:30]}...", ok, msg))
+                                # Drop expired subscriptions (404 / 410)
+                                if not ok and ("404" in msg or "410" in msg):
+                                    storage.remove_push_subscription(sub["endpoint"])
+                    except Exception as e:
+                        results.append(("push", False, str(e)))
                 return results
 
             # Best-effort: probe nvidia-smi once to learn VRAM capacity
