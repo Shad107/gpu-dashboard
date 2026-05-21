@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:27 (cycle 70 done — HistoryView extracted)
-**Latest commit** : `04ab73d` — HistoryView top-level + About stays in Settings
-**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 71.35 KB gzip
+**Last updated** : 2026-05-21 23:34 (cycle 71 done — StatsView extracted)
+**Latest commit** : `d83a4b9` — StatsView top-level page
+**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 71.75 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 71 : Extract StatsView**.
+Nothing — between cycles. Wakeup soon will start **Cycle 72 : Modal cleanup (remove History+Stats from modal)**.
 
 ---
 
@@ -19,9 +19,15 @@ Nothing — between cycles. Wakeup soon will start **Cycle 71 : Extract StatsVie
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 71 (next) — Extract StatsView.svelte (fan distribution)
-### Cycle 72 — Clean modal sidebar : remove History + Stats sections, keep About (per user 23:25)
-### Cycle 73 — Theme toggle light/dark (~2h, deferred until restructure done)
+### Cycle 72 (next) — Modal cleanup
+Remove History + Stats sections from SettingsModal.svelte. Remove the 2 sidebar entries.
+Sidebar drops from 11 → 9 tabs. Keep About at the end of Préférences.
+
+### Cycle 73 — Simple mode (no LLM detected) — user feedback 23:32
+Filter Tokens/s + Tokens/W from History metric dropdown if LLM_SERVER_URL not configured.
+Add "Setup mode" choice in wizard : Standard / LLM rig.
+
+### Cycle 74 — Theme toggle light/dark (~2h, deferred)
 
 ### Cycle 70+ — Original feature backlog continues
 1. Browser push notifs via Web Push + VAPID (~1.5h)
@@ -43,6 +49,11 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 71 — Extract StatsView (1 commit)
+- `d83a4b9` StatsView.svelte top-level page
+  - Fan distribution table moved out of modal
+  - 2 new i18n keys (description, no_data) × 2 langs
 
 ### Cycle 70 — Extract HistoryView + About stays in Settings (1 commit)
 - `04ab73d` Extract HistoryView as top-level page; About kept in Settings
@@ -200,9 +211,9 @@ Rules :
 |---|---|
 | Tests | 442 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 206.96 KB raw / 71.35 KB gzip |
-| Bundle CSS | 17.40 KB raw / 4.21 KB gzip |
-| Commits since v0.1.0 | ~76 |
+| Bundle JS | 208.13 KB raw / 71.75 KB gzip |
+| Bundle CSS | 18.12 KB raw / 4.32 KB gzip |
+| Commits since v0.1.0 | ~77 |
 | API endpoints | 32+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
