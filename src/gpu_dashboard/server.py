@@ -51,6 +51,8 @@ DEFAULTS = {
     "AUTO_PROFILE_MIN_STABLE": "90",
     "AUTO_PROFILE_IDLE_THRESHOLD": "5",
     "AUTO_PROFILE_BOOST_THRESHOLD": "80",
+    "ELECTRICITY_PRICE_EUR_PER_KWH": "0.25",
+    "ELECTRICITY_CURRENCY": "EUR",
     "STORAGE_DB_PATH": "~/.local/share/gpu-dashboard/metrics.db",
     "STORAGE_RETENTION_DAYS": "30",
     "POWER_LIMIT_DEFAULT": "250",
@@ -324,6 +326,10 @@ def make_handler(ctx: dict):
                 return
             if path == "/api/auto-profile":
                 code, body = api.handle_auto_profile_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/electricity":
+                code, body = api.handle_electricity(ctx, params)
                 self._send_json(code, body)
                 return
             if path == "/api/prom":

@@ -468,6 +468,65 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── GET /api/electricity ──────────────────────────
+
+
+def handle_electricity(ctx: dict, params: dict) -> Response:
+    """Compute energy consumed + cost over a window from stored samples.
+
+    Default window is the last 1 hour. Returns avg power, kWh consumed,
+    cost in the configured currency, plus 24h + 30d extrapolations.
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    cfg = ctx.get("config")
+    try:
+        window = int(params.get("since", 3600))
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "since must be integer (seconds)"}
+
+    import time as _time
+    now = int(_time.time())
+    from_ts = now - window
+    samples = storage.get_samples(from_ts=from_ts, to_ts=now)
+
+    powers = [s.get("power") for s in samples if s.get("power") is not None]
+    avg_w = (sum(powers) / len(powers)) if powers else 0.0
+    # Energy = avg_W × duration_h
+    kwh = (avg_w * window / 3600.0) / 1000.0  # kWh
+    price = 0.25
+    currency = "EUR"
+    if cfg is not None:
+        try:
+            price = float(cfg.get("ELECTRICITY_PRICE_EUR_PER_KWH", default="0.25"))
+        except (ValueError, TypeError):
+            price = 0.25
+        currency = cfg.get("ELECTRICITY_CURRENCY", default="EUR") or "EUR"
+    cost = kwh * price
+
+    # Extrapolations (assume avg power continues)
+    daily_kwh = avg_w * 24 / 1000.0
+    daily_cost = daily_kwh * price
+    monthly_kwh = daily_kwh * 30
+    monthly_cost = daily_cost * 30
+
+    return 200, {
+        "ok": True,
+        "window_seconds": window,
+        "samples": len(samples),
+        "avg_power_watts": round(avg_w, 2),
+        "kwh": round(kwh, 4),
+        "cost": round(cost, 4),
+        "currency": currency,
+        "price_per_kwh": price,
+        "daily_kwh": round(daily_kwh, 3),
+        "daily_cost": round(daily_cost, 3),
+        "monthly_kwh": round(monthly_kwh, 2),
+        "monthly_cost": round(monthly_cost, 2),
+    }
+
+
 # ────────────────────────── GET /api/auto-profile ─────────────────────────
 
 

@@ -281,4 +281,20 @@ export const api = {
       mem_offset?: number;
       error?: string;
     }>),
+
+  electricity: (since = 3600) =>
+    fetch(`/api/electricity?since=${since}`).then(jsonOf<{
+      ok: boolean;
+      window_seconds: number;
+      samples: number;
+      avg_power_watts: number;
+      kwh: number;
+      cost: number;
+      currency: string;
+      price_per_kwh: number;
+      daily_kwh: number;
+      daily_cost: number;
+      monthly_kwh: number;
+      monthly_cost: number;
+    }>),
 };
