@@ -2,6 +2,33 @@
 
 All notable changes to gpu-dashboard. Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased / 0.3.0-dev]
+
+### Added — Competitive parity (after reviewing GWE, nvtop, gpustat, MSI Afterburner, HWiNFO)
+- **`GET /api/prom`** — Prometheus 0.0.4 text-format exporter (gauges + counter). Plug directly into Grafana / VictoriaMetrics / Uptime Kuma. Labels include `{gpu="N",name="..."}`.
+- **`GET /api/processes`** — per-process GPU VRAM via `nvidia-smi --query-compute-apps`. Returns `[{pid, name, vram_mib}]` sorted by VRAM desc. A new "Compute processes" card appears in the dashboard when ≥1 process is using the GPU.
+- **Memory junction temperature** (`temperature.memory`) + **vBIOS version** (`vbios_version`) now part of `_gpu_card_snapshot`. GDDR junction temp shown as a sub-line on the GPU card (the actual undervolt limiter on RTX 3080/3090/4090). vBIOS surfaced in the About section.
+- **`docs/COMPETITORS.md`** — 170-line side-by-side feature comparison with 11 Linux + Windows tools, ranked v0.3+ roadmap.
+
+### Settings polish (Phase 2 finishing touches)
+- **Restart server** button + `POST /api/restart` with `os.execv` in-place restart; frontend auto-reloads on reconnect.
+- **Stop server** button + `POST /api/stop` for graceful sys.exit.
+- **Redo Setup Wizard** button — replays the 5-step wizard on demand (dismissable mode).
+- **Backup snapshot** button + `GET /api/snapshot` returning a tar.gz of config.env + secrets.env + metrics.db.
+- **Update check** — `GET /api/update/check` runs `git fetch` + behind count; **Pull + Restart** button chains `git pull --ff-only` → `os.execv` (refuses on dirty tree).
+- **Diagnostics tab** + `GET /api/logs?tail=N` with two backends (LOG_FILE or JOURNALCTL_UNIT) — copy/paste-able tail viewer for support.
+- **About section** — version, uptime, Python, platform, paths, license, vBIOS, repo link.
+- **`GET /api/health`** — JSON status for external monitoring (gpu_alive, sampler_running, storage_connected). Returns 503 + degraded if anything fails.
+- **Multi-GPU detection** — `gpus_available[]` + `selected_gpu_index` in `/api/state`. Header shows badge "N GPUs detected" with tooltip on how to switch via `GPU_INDEX`.
+
+### Settings — UX enhancements
+- **Auto-refresh toggle** in History tab (30s).
+- **Events overlay** on History chart — drops/recoveries/pl_change/offset_change/alert_sent as colored vertical markers with hover tooltips.
+- **Profile override editor** + `POST /api/profile/save` — textarea-based JSON editor with schema validation; writes to `~/.config/gpu-dashboard/profile-overrides/<safe-model>.json`.
+
+### Added — fan_curve module (Phase 2 closing)
+- **`src/gpu_dashboard/modules/fan_curve.py`** — pure-function interpolate + validate + apply (via nvidia-settings) + FanCurveDaemon thread. Reuses the sampler's buffer to avoid extra nvidia-smi calls. Opt-in via `MODULE_FAN_CURVE=1`. Default curve: `[[30,0],[50,30],[65,50],[75,70],[85,100]]`. `GET /api/fan-curve` exposes the current curve + target % for the UI.
+
 ## [Unreleased / 0.2.0-dev]
 
 ### Added — Settings polish

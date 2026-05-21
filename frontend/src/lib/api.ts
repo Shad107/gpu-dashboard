@@ -264,4 +264,21 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(profile),
     }).then(jsonOf<{ ok: boolean; path?: string; model?: string; error?: string }>),
+
+  powerProfilesList: () =>
+    fetch("/api/power-profiles").then(jsonOf<{
+      profiles: { name: "silent" | "sweet" | "boost"; watts: number; gpu_offset: number; mem_offset: number }[];
+    }>),
+
+  powerProfileApply: (name: string) =>
+    fetch(`/api/power-profiles/apply/${encodeURIComponent(name)}`, {
+      method: "POST",
+    }).then(jsonOf<{
+      ok: boolean;
+      applied_profile?: string;
+      watts?: number;
+      gpu_offset?: number;
+      mem_offset?: number;
+      error?: string;
+    }>),
 };

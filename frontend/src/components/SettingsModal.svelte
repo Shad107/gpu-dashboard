@@ -5,6 +5,32 @@
   import { perfEstimate, colorFan } from "../lib/charts";
   import HistoryChart from "./HistoryChart.svelte";
 
+  // ── Power profile presets state ───────────────────────────────────────────
+  let powerProfiles = $state<{ name: "silent"|"sweet"|"boost"; watts: number; gpu_offset: number; mem_offset: number }[]>([]);
+  let applyingProfile = $state(false);
+  $effect(() => {
+    if (modal.open && modal.section === "power" && powerProfiles.length === 0) {
+      api.powerProfilesList().then(r => { powerProfiles = r.profiles; }).catch(() => {});
+    }
+  });
+  async function applyPowerProfile(name: string) {
+    applyingProfile = true;
+    try {
+      const r = await api.powerProfileApply(name);
+      if (r.ok) {
+        toast.emit("✓ " + i18n.t("power.profile_applied", {
+          name, w: r.watts ?? "?", g: r.gpu_offset ?? 0, m: r.mem_offset ?? 0,
+        }), "ok");
+      } else {
+        toast.emit("✗ " + (r.error || "apply failed"), "err");
+      }
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally {
+      applyingProfile = false;
+    }
+  }
+
   // ── Power Limit state ────────────────────────────────────────────────────
   let plWatts = $state(250);
   $effect(() => {
@@ -417,6 +443,20 @@
           <span>{i18n.t("power.section_title")}</span>
         </h3>
         <p class="sub" style="margin:0 0 1em">{i18n.t("power.description")}</p>
+
+        <!-- One-click profiles -->
+        <h3 style="margin:0 0 .4em;color:#cdd2da;font-size:.92em;font-weight:600">
+          {i18n.t("power.profiles_title")}
+        </h3>
+        <p class="sub" style="margin:0 0 .6em;font-size:.8em">{i18n.t("power.profiles_description")}</p>
+        <div class="btn-row" style="margin-bottom:1.2em">
+          {#each powerProfiles as p}
+            <button class="btn" onclick={() => applyPowerProfile(p.name)} disabled={applyingProfile}>
+              {i18n.t(("power.profile_" + p.name) as any)}
+              <span class="sub" style="font-size:.78em;margin-left:.4em">{p.watts}W · +{p.gpu_offset}/+{p.mem_offset}</span>
+            </button>
+          {/each}
+        </div>
         <div class="controls" style="background:transparent;border:none;padding:0">
           <div class="slider-row">
             <label for="pl-slider">{i18n.t("power.limit_label")}</label>

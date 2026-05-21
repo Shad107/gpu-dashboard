@@ -48,6 +48,15 @@ DEFAULTS = {
     "STORAGE_DB_PATH": "~/.local/share/gpu-dashboard/metrics.db",
     "STORAGE_RETENTION_DAYS": "30",
     "POWER_LIMIT_DEFAULT": "250",
+    "POWER_PROFILE_SILENT_W": "180",
+    "POWER_PROFILE_SILENT_GPU_OFFSET": "0",
+    "POWER_PROFILE_SILENT_MEM_OFFSET": "0",
+    "POWER_PROFILE_SWEET_W": "250",
+    "POWER_PROFILE_SWEET_GPU_OFFSET": "75",
+    "POWER_PROFILE_SWEET_MEM_OFFSET": "500",
+    "POWER_PROFILE_BOOST_W": "350",
+    "POWER_PROFILE_BOOST_GPU_OFFSET": "100",
+    "POWER_PROFILE_BOOST_MEM_OFFSET": "750",
     "POWER_LIMIT_WRAPPER": "/usr/local/bin/set-power-limit",
     "CLOCK_OFFSETS_DISPLAY": ":0",
     "TG_ENABLED": "0",
@@ -278,6 +287,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_processes(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/power-profiles":
+                code, body = api.handle_power_profiles_list(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/prom":
                 code, body = api.handle_prom(ctx)
                 data = body.encode("utf-8")
@@ -342,6 +355,11 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/profile/save":
                 code, body = api.handle_profile_save(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path.startswith("/api/power-profiles/apply/"):
+                name = self.path[len("/api/power-profiles/apply/"):]
+                code, body = api.handle_power_profile_apply(ctx, name)
                 self._send_json(code, body)
                 return
 

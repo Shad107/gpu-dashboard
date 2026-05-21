@@ -468,6 +468,89 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── /api/power-profiles ───────────────────────────
+
+
+# Each profile bundles power-limit + GPU offset + memory offset.
+_POWER_PROFILES = ("silent", "sweet", "boost")
+
+
+def _read_power_profile(cfg, name: str) -> Optional[dict]:
+    """Read one of the SILENT / SWEET / BOOST profiles from config."""
+    key = name.upper()
+    try:
+        watts = cfg.get_int(f"POWER_PROFILE_{key}_W", default=0)
+    except Exception:
+        return None
+    if watts <= 0:
+        return None
+    return {
+        "name": name,
+        "watts": watts,
+        "gpu_offset": cfg.get_int(f"POWER_PROFILE_{key}_GPU_OFFSET", default=0),
+        "mem_offset": cfg.get_int(f"POWER_PROFILE_{key}_MEM_OFFSET", default=0),
+    }
+
+
+def handle_power_profiles_list(ctx: dict) -> Response:
+    """List the 3 configurable power profiles : silent / sweet / boost.
+
+    Returns {profiles: [{name, watts, gpu_offset, mem_offset}, ...]}.
+    A profile is omitted if its <NAME>_W is not configured (0 or missing).
+    """
+    cfg = ctx["config"]
+    profiles = []
+    for name in _POWER_PROFILES:
+        p = _read_power_profile(cfg, name)
+        if p:
+            profiles.append(p)
+    return 200, {"profiles": profiles}
+
+
+def handle_power_profile_apply(ctx: dict, name: str) -> Response:
+    """Apply one of the named profiles : power-limit + offsets in a single call."""
+    name = (name or "").lower()
+    if name not in _POWER_PROFILES:
+        return 400, {"ok": False, "error": f"unknown profile: {name!r}. Use one of: {_POWER_PROFILES}"}
+
+    cfg = ctx["config"]
+    prof = _read_power_profile(cfg, name)
+    if prof is None:
+        return 400, {"ok": False, "error": f"profile {name!r} is not configured (POWER_PROFILE_{name.upper()}_W)"}
+
+    gpu_profile = ctx.get("profile") or {}
+    from .modules import power_limit as _pl
+    from .modules import clock_offsets as _co
+
+    wrapper = cfg.get("POWER_LIMIT_WRAPPER", "/usr/local/bin/set-power-limit")
+    display = cfg.get("CLOCK_OFFSETS_DISPLAY", ":0")
+    xauth = cfg.get("CLOCK_OFFSETS_XAUTHORITY") or None
+
+    # 1) power-limit
+    try:
+        pl_result = _pl.apply_power_limit(gpu_profile, prof["watts"], wrapper_path=wrapper)
+    except ValueError as e:
+        return 400, {"ok": False, "error": f"power-limit: {e}"}
+
+    # 2) offsets (only if changed from current ; we always apply for simplicity)
+    co_result = _co.apply_offsets(
+        gpu_profile,
+        gpu=prof["gpu_offset"], mem=prof["mem_offset"],
+        display=display, xauthority=xauth,
+    ) if (prof["gpu_offset"] != 0 or prof["mem_offset"] != 0) else {"ok": True, "skipped": True}
+
+    ok = pl_result.get("ok", False) and co_result.get("ok", True)
+    return (200 if ok else 500), {
+        "ok": ok,
+        "applied_profile": name,
+        "watts": prof["watts"],
+        "gpu_offset": prof["gpu_offset"],
+        "mem_offset": prof["mem_offset"],
+        "power_limit_result": pl_result,
+        "offsets_result": co_result,
+    }
+
+
 # ────────────────────────── GET /api/processes ────────────────────────────
 
 
