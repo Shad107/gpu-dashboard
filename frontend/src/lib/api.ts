@@ -282,6 +282,15 @@ export const api = {
       error?: string;
     }>),
 
+  llmStats: () =>
+    fetch("/api/llm/stats").then(jsonOf<{
+      available: boolean;
+      tokens_generated_total?: number;
+      prompt_tokens_total?: number;
+      tokens_per_watt?: number | null;
+      reason?: string;
+    }>),
+
   electricity: (since = 3600) =>
     fetch(`/api/electricity?since=${since}`).then(jsonOf<{
       ok: boolean;

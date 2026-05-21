@@ -468,6 +468,95 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── GET /api/llm/stats ────────────────────────────
+
+
+def _parse_llamacpp_metrics(text: str) -> dict:
+    """Parse a Prometheus-format text dump from llama-server's /metrics.
+
+    Returns a dict of {metric_name_without_namespace: value} for the
+    counters and gauges we care about. Ignores HELP/TYPE/comment lines.
+    """
+    result = {}
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Lines look like : "llamacpp:tokens_predicted_total 67890"
+        # Or with labels  : 'foo{bar="baz"} 1.0'
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        name = parts[0]
+        try:
+            val = float(parts[-1])
+        except (ValueError, TypeError):
+            continue
+        # Strip namespace prefix (llamacpp:)
+        if ":" in name:
+            name = name.split(":", 1)[1]
+        # Strip label suffix {foo="bar"}
+        if "{" in name:
+            name = name.split("{", 1)[0]
+        # Integer if it looks like one
+        result[name] = int(val) if val == int(val) else val
+    return result
+
+
+def _tokens_per_watt(tokens: float, avg_watts: float):
+    """Compute tokens/W. Returns None if avg_watts == 0."""
+    if avg_watts <= 0:
+        return None
+    return tokens / avg_watts
+
+
+def handle_llm_stats(ctx: dict) -> Response:
+    """Fetch llama-server /metrics if LLM_SERVER_URL is configured.
+
+    Returns: {available, model, tokens_generated_total, prompt_tokens_total,
+             tokens_per_watt_avg (if storage available)}
+    """
+    cfg = ctx.get("config")
+    url = (cfg.get("LLM_SERVER_URL", "") if cfg else "").strip().rstrip("/")
+    if not url:
+        return 200, {"available": False, "reason": "LLM_SERVER_URL not configured"}
+
+    import urllib.request
+    import urllib.error
+    try:
+        with urllib.request.urlopen(f"{url}/metrics", timeout=2) as r:
+            text = r.read().decode("utf-8", errors="replace")
+    except Exception as e:
+        return 200, {"available": False, "reason": f"unreachable: {e}"}
+
+    parsed = _parse_llamacpp_metrics(text)
+    if not parsed:
+        return 200, {"available": False, "reason": "no recognized metrics"}
+
+    tokens_gen = parsed.get("tokens_predicted_total", 0)
+    tokens_prompt = parsed.get("prompt_tokens_total", 0)
+
+    # tokens/W (efficiency) using last-hour avg power if storage is available
+    tokens_per_watt = None
+    storage = ctx.get("storage")
+    if storage is not None and tokens_gen > 0:
+        import time as _t
+        now = int(_t.time())
+        recent = storage.get_samples(from_ts=now - 3600, to_ts=now)
+        powers = [s.get("power") for s in recent if s.get("power")]
+        if powers:
+            avg_w = sum(powers) / len(powers)
+            tokens_per_watt = _tokens_per_watt(tokens_gen, avg_w)
+
+    return 200, {
+        "available": True,
+        "tokens_generated_total": tokens_gen,
+        "prompt_tokens_total": tokens_prompt,
+        "tokens_per_watt": round(tokens_per_watt, 2) if tokens_per_watt else None,
+        "raw_metrics_count": len(parsed),
+    }
+
+
 # ────────────────────────── GET /api/electricity ──────────────────────────
 
 

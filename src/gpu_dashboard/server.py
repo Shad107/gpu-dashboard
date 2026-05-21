@@ -332,6 +332,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_electricity(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/llm/stats":
+                code, body = api.handle_llm_stats(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/prom":
                 code, body = api.handle_prom(ctx)
                 data = body.encode("utf-8")
