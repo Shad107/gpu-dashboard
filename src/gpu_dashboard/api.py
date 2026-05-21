@@ -1323,6 +1323,47 @@ def handle_prom(ctx: dict) -> Response:
         metric("gpu_oculink_drops_total", "OcuLink drop count since boot",
                "counter", ctx["watchdog_drops"])
 
+    # Year-to-date energy + LLM tokens — for Grafana yearly-budget panels
+    storage = ctx.get("storage")
+    if storage is not None:
+        try:
+            _, ps = handle_power_stats(ctx)
+            if ps.get("ok"):
+                metric("gpu_dashboard_kwh_year",
+                       "Cumulative energy since Jan 1 (kWh)", "gauge",
+                       ps.get("kwh_year", 0))
+                metric("gpu_dashboard_cost_year",
+                       f"Cumulative cost since Jan 1 ({ps.get('currency','EUR')})",
+                       "gauge", ps.get("cost_year", 0))
+                metric("gpu_dashboard_kwh_today",
+                       "Energy consumed today (kWh)", "gauge",
+                       ps.get("kwh_today", 0))
+            _, ll = handle_llm_lifetime(ctx)
+            if ll.get("available"):
+                metric("gpu_dashboard_tokens_year_total",
+                       "LLM tokens generated since Jan 1", "counter",
+                       ll.get("total_tokens_this_year", 0))
+                metric("gpu_dashboard_tokens_lifetime_total",
+                       "Cumulative LLM tokens since install", "counter",
+                       ll.get("total_tokens_generated", 0))
+        except Exception:
+            pass  # never let metric collection break the endpoint
+
+    # Latest alert age (seconds since most recent alert event), or -1 if none
+    if storage is not None:
+        try:
+            import time as _t3
+            alerts = storage.get_events(
+                from_ts=int(_t3.time()) - 7 * 86400, kind="alert"
+            )
+            if alerts:
+                age = int(_t3.time()) - max(a["ts"] for a in alerts)
+                metric("gpu_dashboard_latest_alert_age_seconds",
+                       "Seconds since the most recent alert (within last 7d)",
+                       "gauge", age)
+        except Exception:
+            pass
+
     return 200, "\n".join(lines) + "\n"
 
 
