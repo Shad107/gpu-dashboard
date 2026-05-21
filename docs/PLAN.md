@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:02 (cycle 66 done)
-**Latest commit** : `aaf15d2` — Lifetime LLM stats
-**Tests** : 435 passing · **CI** : ✅ green · **Bundle** : 66.11 KB gzip
+**Last updated** : 2026-05-21 23:11 (cycle 67 done)
+**Latest commit** : `053ae0c` — Power cost heatmap
+**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 67.28 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Power cost heatmap** or Theme toggle.
+Nothing — between cycles. Wakeup soon will start **Compare-to-7d/30d** or Theme toggle.
 
 ---
 
@@ -19,13 +19,11 @@ Nothing — between cycles. Wakeup soon will start **Power cost heatmap** or The
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 67 (next) — Power cost heatmap by hour-of-day (~1h)
-24-cell heatmap (1 cell per hour) showing avg €/h at each time-of-day. Reveals
-patterns like "5am batch eats €0.50 every night".
+### Cycle 68 (next) — Compare-to-7d/30d toggle in History (~30 min)
+Extend the existing compare-to-yesterday to support 7d/30d offsets.
 
-### Cycle 68+ — Original feature backlog continues
-1. Compare-to-7d / 30d toggle in History (~30 min)
-2. Theme toggle light/dark (~2h)
+### Cycle 69+ — Original feature backlog continues
+1. Theme toggle light/dark (~2h)
 5. Browser push notifs via Web Push + VAPID (~1.5h)
 6. Multi-GPU full picker UI (~3h, several cycles)
 7. Drag-and-drop fan curve editor SVG (~4h, several cycles)
@@ -44,6 +42,13 @@ patterns like "5am batch eats €0.50 every night".
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 67 — Power cost heatmap (2 commits)
+- `c404870` Heatmap backend (/api/power-heatmap) + state + CSS
+- `053ae0c` Fix: wire the missing render block (Svelte template)
+- 24-cell grid in History tab, color intensity = €/h
+- Window selector 1d/7d/14d/30d
+- 7 TDD tests
 
 ### Cycle 66 — Lifetime LLM stats (1 commit)
 - `aaf15d2` Lifetime LLM stats card + /api/llm/lifetime
@@ -168,12 +173,12 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 435 passing on Py 3.9-3.13 |
+| Tests | 442 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 192.59 KB raw / 66.11 KB gzip |
-| Bundle CSS | 15.78 KB raw / 3.86 KB gzip |
-| Commits since v0.1.0 | ~69 |
-| API endpoints | 31+ |
+| Bundle JS | 195.64 KB raw / 67.28 KB gzip |
+| Bundle CSS | 16.37 KB raw / 3.99 KB gzip |
+| Commits since v0.1.0 | ~71 |
+| API endpoints | 32+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
 | Modal tabs | 11 (grouped in 6 sections) |
