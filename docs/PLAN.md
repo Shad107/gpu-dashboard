@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:35 (cycle 83 done — push subscription + SW)
-**Latest commit** : `10bccba` — push subscription + service worker
-**Tests** : 469 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 00:40 (cycle 84a done — push delivery wired)
+**Latest commit** : `eee80d5` — VAPID JWT + send_push + alert_monitor
+**Tests** : 475 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 84 : Web Push protocol — actually fire pushes (slice 3/3)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 85 : encrypted payload (RFC 8291) so notification shows alert text**.
 
 ---
 
@@ -19,12 +19,14 @@ Nothing — between cycles. Wakeup soon will start **Cycle 84 : Web Push protoco
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 84 (next) — Browser push slice 3/3 — actual delivery
-- Web Push protocol (RFC 8030 + RFC 8291 encryption)
-- ECDH-ES P-256 + HKDF-SHA256 + AES-128-GCM
-- VAPID JWT auth header
-- Wire into alert_monitor to send a push on each alert
-- This is the heaviest slice — might span cycles 84-85
+### Cycle 85 (next) — Web Push encrypted payload (RFC 8291)
+- ECDH-ES P-256 key agreement between server ephemeral key + receiver pub
+- HKDF-SHA256 derives content-encryption-key + nonce
+- AES-128-GCM encrypts the JSON {title, body, ...}
+- aes128gcm Content-Encoding (RFC 8188)
+- Update send_push() : if message provided, encrypt + attach body
+- Without this, notifications show generic "New notification" — with
+  it, they show "🔥 GPU temp 92°C" etc.
 
 ### Cycle 86+ — Multi-GPU full picker UI · Drag-and-drop fan curve editor SVG
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
@@ -49,6 +51,16 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 84a — Web Push delivery (1 commit)
+- `eee80d5` VAPID JWT signing + send_push() + alert_monitor wiring
+  - vapid_priv.pem persisted alongside vapid.json for openssl signing
+  - _der_to_jose() converts ASN.1 DER ECDSA → 64-byte JOSE raw
+  - _vapid_jwt() builds signed ES256 JWT (aud, exp, sub)
+  - send_push() POSTs to endpoint with VAPID Authorization, empty body (tickle)
+  - Expired subscriptions (404/410) auto-pruned
+  - 6 new TDD tests (14 web_push tests total)
+  - Tests : 469 → 475
 
 ### Cycle 83 — Push subscription endpoint + service worker (1 commit)
 - `10bccba` Schema v3 (push_subscriptions table) + API + sw.js + push.svelte.ts
@@ -293,11 +305,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 469 passing on Py 3.9-3.13 |
+| Tests | 475 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~91 |
+| Commits since v0.1.0 | ~92 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
