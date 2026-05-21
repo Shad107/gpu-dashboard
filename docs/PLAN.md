@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:44 (cycle 72 done — perf endpoints)
-**Latest commit** : `7e3ae14` — 3 new perf endpoints
-**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 71.84 KB gzip
+**Last updated** : 2026-05-21 23:50 (cycle 73 done — live tok/s + sparkline)
+**Latest commit** : `2ce85a6` — Live tok/s + sparkline on LLM card
+**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 72.79 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 73 : Sparkline component + live tok/s on LLM card**.
+Nothing — between cycles. Wakeup soon will start **Cycle 74 : Rewrite StatsView with sparklines**.
 
 ---
 
@@ -19,14 +19,9 @@ Nothing — between cycles. Wakeup soon will start **Cycle 73 : Sparkline compon
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 73 (next) — Sparkline + live tok/s on LLM card (~5 min)
-- New components/Sparkline.svelte (compact SVG mini-chart)
-- Cards.svelte LLM tile : top line = live tok/s + 1h sparkline
-- Polls /api/llm/perf every 30s
-
-### Cycle 74 — Rewrite StatsView with sparklines (~5 min)
+### Cycle 74 (next) — Rewrite StatsView with sparklines (the BIG cycle, may span)
 - Sections : Performance LLM / Power & cost / Thermal / Profiles / Fan dist / Heatmap
-- Each section : key numbers + Sparkline
+- Each section : key numbers + Sparkline (reuse existing component)
 
 ### Cycle 75 — Modal cleanup (remove History + Stats from modal)
 ### Cycle 76 — Simple mode (filter LLM UI if not configured)
@@ -52,6 +47,12 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 73 — Sparkline + live tok/s on LLM card (2 commits)
+- `4d832fc` Sparkline.svelte + api.ts typed wrappers
+- `2ce85a6` Wire Sparkline + llmPerf state on LLM card (file-read fix)
+- Card now shows big pink tok/s + 1h sparkline + 5m/1h aggregates
+- Falls back to legacy display if /api/llm/perf data not ready
 
 ### Cycle 72 — 3 perf endpoints (1 commit)
 - `7e3ae14` /api/llm/perf + /api/thermal-stats + /api/power-stats
@@ -220,9 +221,9 @@ Rules :
 |---|---|
 | Tests | 455 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 208.47 KB raw / 71.84 KB gzip |
-| Bundle CSS | 18.12 KB raw / 4.32 KB gzip |
-| Commits since v0.1.0 | ~78 |
+| Bundle JS | 211.34 KB raw / 72.79 KB gzip |
+| Bundle CSS | 18.25 KB raw / 4.35 KB gzip |
+| Commits since v0.1.0 | ~80 |
 | API endpoints | 35+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
