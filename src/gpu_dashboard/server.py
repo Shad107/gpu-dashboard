@@ -446,19 +446,19 @@ def make_handler(ctx: dict):
                 self._send_json(code, body)
                 return
             if path == "/api/llm/lifetime":
-                code, body = api.handle_llm_lifetime(ctx)
+                code, body = api.handle_llm_lifetime(ctx, params)
                 self._send_json(code, body)
                 return
             if path == "/api/llm/perf":
-                code, body = api.handle_llm_perf(ctx)
+                code, body = api.handle_llm_perf(ctx, params)
                 self._send_json(code, body)
                 return
             if path == "/api/thermal-stats":
-                code, body = api.handle_thermal_stats(ctx)
+                code, body = api.handle_thermal_stats(ctx, params)
                 self._send_json(code, body)
                 return
             if path == "/api/power-stats":
-                code, body = api.handle_power_stats(ctx)
+                code, body = api.handle_power_stats(ctx, params)
                 self._send_json(code, body)
                 return
             if path == "/api/prom":

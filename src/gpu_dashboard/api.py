@@ -405,10 +405,19 @@ def handle_alerts_config_post(ctx: dict, payload: dict) -> Response:
 # ───────────────────────── GET /api/history ───────────────────────────────
 
 
+def _parse_gpu_index(params: dict) -> int:
+    """Parse ?gpu_index= from query params, default 0 (back-compat)."""
+    try:
+        return int(params.get("gpu_index", 0))
+    except (ValueError, TypeError):
+        return 0
+
+
 def handle_history(ctx: dict, params: dict) -> Response:
     """Renvoie les samples historiques depuis SQLite.
 
-    Query params : from (epoch, default 0), to (epoch, default now), step (seconds, optional)
+    Query params : from (epoch, default 0), to (epoch, default now),
+                   step (seconds, optional), gpu_index (default 0)
     """
     storage = ctx.get("storage")
     if storage is None:
@@ -419,8 +428,9 @@ def handle_history(ctx: dict, params: dict) -> Response:
         step = int(params["step"]) if params.get("step") else None
     except (ValueError, TypeError):
         return 400, {"ok": False, "error": "from/to/step must be integers"}
-    samples = storage.get_samples(from_ts=from_ts, to_ts=to_ts, step=step)
-    return 200, {"ok": True, "samples": samples}
+    gpu = _parse_gpu_index(params)
+    samples = storage.get_samples(from_ts=from_ts, to_ts=to_ts, step=step, gpu_index=gpu)
+    return 200, {"ok": True, "samples": samples, "gpu_index": gpu}
 
 
 # ───────────────────────── GET /api/events ────────────────────────────────
@@ -471,7 +481,7 @@ def handle_export(ctx: dict, params: dict):
 # ────────────────────────── GET /api/llm/lifetime ─────────────────────────
 
 
-def handle_llm_lifetime(ctx: dict) -> Response:
+def handle_llm_lifetime(ctx: dict, params: Optional[dict] = None) -> Response:
     """Cumulative LLM stats since the first sample with a tokens count.
 
     Walks the samples table, sums positive deltas of tokens_total_snapshot
@@ -492,7 +502,8 @@ def handle_llm_lifetime(ctx: dict) -> Response:
     if storage is None:
         return 503, {"ok": False, "error": "storage not available"}
 
-    samples = storage.get_samples(from_ts=0)
+    gpu = _parse_gpu_index(params or {})
+    samples = storage.get_samples(from_ts=0, gpu_index=gpu)
     total = 0
     restarts = 0
     prev = None
@@ -542,7 +553,7 @@ def handle_llm_lifetime(ctx: dict) -> Response:
 # ────────────────────────── GET /api/llm/perf ─────────────────────────────
 
 
-def handle_llm_perf(ctx: dict) -> Response:
+def handle_llm_perf(ctx: dict, params: Optional[dict] = None) -> Response:
     """Live + recent tokens-per-second across multiple rolling windows.
 
     Used by the Stats page sparklines + the LLM card live indicator.
@@ -554,7 +565,8 @@ def handle_llm_perf(ctx: dict) -> Response:
     import time as _time
     now = int(_time.time())
 
-    samples = storage.get_samples(from_ts=now - 86400, to_ts=now)
+    gpu = _parse_gpu_index(params or {})
+    samples = storage.get_samples(from_ts=now - 86400, to_ts=now, gpu_index=gpu)
     token_samples = [s for s in samples if s.get("tokens_total_snapshot") is not None]
     if len(token_samples) < 2:
         return 200, {"ok": True, "available": False}
@@ -612,7 +624,7 @@ def handle_llm_perf(ctx: dict) -> Response:
 # ────────────────────────── GET /api/thermal-stats ─────────────────────────
 
 
-def handle_thermal_stats(ctx: dict) -> Response:
+def handle_thermal_stats(ctx: dict, params: Optional[dict] = None) -> Response:
     """Temperature aggregates over 24h + 24-point downsampled series."""
     storage = ctx.get("storage")
     if storage is None:
@@ -620,13 +632,14 @@ def handle_thermal_stats(ctx: dict) -> Response:
 
     import time as _time
     now = int(_time.time())
+    gpu = _parse_gpu_index(params or {})
 
-    samples_24h = storage.get_samples(from_ts=now - 86400, to_ts=now)
+    samples_24h = storage.get_samples(from_ts=now - 86400, to_ts=now, gpu_index=gpu)
     temps = [s["temp"] for s in samples_24h if s.get("temp") is not None]
     avg_temp = sum(temps) / len(temps) if temps else 0
     peak_temp = max(temps) if temps else 0
 
-    samples_7d = storage.get_samples(from_ts=now - 7 * 86400, to_ts=now)
+    samples_7d = storage.get_samples(from_ts=now - 7 * 86400, to_ts=now, gpu_index=gpu)
     above_80 = 0
     prev = None
     for s in samples_7d:
@@ -660,7 +673,7 @@ def handle_thermal_stats(ctx: dict) -> Response:
 # ────────────────────────── GET /api/power-stats ───────────────────────────
 
 
-def handle_power_stats(ctx: dict) -> Response:
+def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
     """Power aggregates over 24h + 24-point downsampled series + cost today."""
     storage = ctx.get("storage")
     if storage is None:
@@ -670,11 +683,12 @@ def handle_power_stats(ctx: dict) -> Response:
     import time as _time
     import datetime as _dt
     now = int(_time.time())
+    gpu = _parse_gpu_index(params or {})
 
     today_start = int(_dt.datetime.fromtimestamp(now).replace(
         hour=0, minute=0, second=0, microsecond=0).timestamp())
 
-    samples_24h = storage.get_samples(from_ts=now - 86400, to_ts=now)
+    samples_24h = storage.get_samples(from_ts=now - 86400, to_ts=now, gpu_index=gpu)
     powers = [s["power"] for s in samples_24h if s.get("power") is not None]
     avg_w = sum(powers) / len(powers) if powers else 0
     peak_w = max(powers) if powers else 0
@@ -849,7 +863,8 @@ def handle_power_heatmap(ctx: dict, params: dict) -> Response:
     from_ts = now - days * 86400
 
     # Use storage to query all samples in window (no resampling)
-    samples = storage.get_samples(from_ts=from_ts, to_ts=now)
+    gpu = _parse_gpu_index(params)
+    samples = storage.get_samples(from_ts=from_ts, to_ts=now, gpu_index=gpu)
 
     # Bucket by hour-of-day using local time
     import datetime as _dt
@@ -968,7 +983,8 @@ def handle_electricity(ctx: dict, params: dict) -> Response:
     import time as _time
     now = int(_time.time())
     from_ts = now - window
-    samples = storage.get_samples(from_ts=from_ts, to_ts=now)
+    gpu = _parse_gpu_index(params)
+    samples = storage.get_samples(from_ts=from_ts, to_ts=now, gpu_index=gpu)
 
     powers = [s.get("power") for s in samples if s.get("power") is not None]
     avg_w = (sum(powers) / len(powers)) if powers else 0.0
