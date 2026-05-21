@@ -31,13 +31,24 @@ function defaultOrder(): string[] {
   return [...CARD_NAMES];
 }
 
+export type CustomCard = {
+  id: string;     // unique, e.g. "custom-<random>"
+  name: string;   // user-given label shown as card header
+  url: string;   // http/https URL embedded in a sandboxed iframe
+};
+
 type StoredLayout = {
   cards: Record<string, boolean>;
   order: string[];
+  customCards: CustomCard[];
 };
 
 function loadFromStorage(): StoredLayout {
-  const fallback: StoredLayout = { cards: defaultVisible(), order: defaultOrder() };
+  const fallback: StoredLayout = {
+    cards: defaultVisible(),
+    order: defaultOrder(),
+    customCards: [],
+  };
   if (typeof localStorage === "undefined") return fallback;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -45,15 +56,39 @@ function loadFromStorage(): StoredLayout {
     const parsed = JSON.parse(raw);
     // Merge defaults with stored to gracefully handle new cards
     const cards = { ...defaultVisible(), ...(parsed?.cards ?? {}) };
-    // Stored order, augmented with any cards added in newer versions
+    // Stored custom cards (validate shape)
+    const customCards: CustomCard[] = Array.isArray(parsed?.customCards)
+      ? parsed.customCards.filter(
+          (c: any) => c && typeof c.id === "string" && typeof c.name === "string" && isValidUrl(c.url)
+        )
+      : [];
+    // Custom card IDs are also valid order keys
+    const validKeys = new Set([...CARD_NAMES, ...customCards.map(c => c.id)]);
     const storedOrder: string[] = Array.isArray(parsed?.order) ? parsed.order : [];
-    const known = new Set(CARD_NAMES);
-    const filtered = storedOrder.filter(n => known.has(n as any));
-    const missing = CARD_NAMES.filter(n => !filtered.includes(n));
-    return { cards, order: [...filtered, ...missing] };
+    const filtered = storedOrder.filter(n => validKeys.has(n));
+    const missing = [
+      ...CARD_NAMES.filter(n => !filtered.includes(n)),
+      ...customCards.filter(c => !filtered.includes(c.id)).map(c => c.id),
+    ];
+    return { cards, order: [...filtered, ...missing], customCards };
   } catch {
     return fallback;
   }
+}
+
+export function isValidUrl(url: any): boolean {
+  if (typeof url !== "string") return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function makeCustomId(): string {
+  // Short readable ID; collision risk negligible at <100 cards
+  return "custom-" + Math.random().toString(36).slice(2, 9);
 }
 
 class LayoutStore {
@@ -61,6 +96,7 @@ class LayoutStore {
 
   get cards(): Record<string, boolean> { return this._state.cards; }
   get order(): string[] { return this._state.order; }
+  get customCards(): CustomCard[] { return this._state.customCards; }
 
   visible(name: string): boolean {
     // Treat 'undefined' as visible — new cards added in future versions
@@ -71,7 +107,7 @@ class LayoutStore {
   /** Index of `name` in the user's order. Used as CSS `order: N` on cards. */
   indexOf(name: string): number {
     const i = this._state.order.indexOf(name);
-    return i >= 0 ? i : CARD_NAMES.length;  // unknown → at the end
+    return i >= 0 ? i : this._state.order.length;  // unknown → at the end
   }
 
   toggle(name: string): void {
@@ -85,16 +121,39 @@ class LayoutStore {
   }
 
   setOrder(newOrder: string[]): void {
-    // Filter to known cards + append any missing
-    const known = new Set(CARD_NAMES);
-    const filtered = newOrder.filter(n => known.has(n as any));
-    const missing = CARD_NAMES.filter(n => !filtered.includes(n));
+    // Filter to known keys (built-in + custom) + append any missing
+    const validKeys = new Set([...CARD_NAMES, ...this._state.customCards.map(c => c.id)]);
+    const filtered = newOrder.filter(n => validKeys.has(n));
+    const missing = [
+      ...CARD_NAMES.filter(n => !filtered.includes(n)),
+      ...this._state.customCards.filter(c => !filtered.includes(c.id)).map(c => c.id),
+    ];
     this._state.order = [...filtered, ...missing];
     this.persist();
   }
 
+  /** Add a custom iframe card. Returns the new card's id, or null if URL invalid. */
+  addCustom(name: string, url: string): string | null {
+    if (!isValidUrl(url)) return null;
+    const id = makeCustomId();
+    const card: CustomCard = { id, name: name.trim() || url, url };
+    this._state.customCards = [...this._state.customCards, card];
+    this._state.cards[id] = true;
+    this._state.order = [...this._state.order, id];
+    this.persist();
+    return id;
+  }
+
+  /** Remove a custom card by id. Also strips it from cards + order. */
+  removeCustom(id: string): void {
+    this._state.customCards = this._state.customCards.filter(c => c.id !== id);
+    delete this._state.cards[id];
+    this._state.order = this._state.order.filter(n => n !== id);
+    this.persist();
+  }
+
   reset(): void {
-    this._state = { cards: defaultVisible(), order: defaultOrder() };
+    this._state = { cards: defaultVisible(), order: defaultOrder(), customCards: [] };
     this.persist();
   }
 

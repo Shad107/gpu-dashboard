@@ -453,7 +453,7 @@ td:nth-child(2) { text-align: right; color: #cdd2da; }
 }
 .layout-row {
   display: grid;
-  grid-template-columns: 24px 22px 1fr 80px;
+  grid-template-columns: 24px 22px 1fr 80px 30px;
   align-items: center;
   gap: 0.6em;
   padding: 0.55em 0.65em;
@@ -463,6 +463,24 @@ td:nth-child(2) { text-align: right; color: #cdd2da; }
   cursor: grab;
   font-size: 0.9em;
   transition: background 0.15s, transform 0.15s;
+}
+.layout-row.custom { border-color: #4ade80; background: #0e1414; }
+.layout-delete {
+  background: none;
+  border: none;
+  color: #7c8aa3;
+  cursor: pointer;
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  font-size: 1em;
+}
+.layout-delete:hover { background: #2a2e38; color: #f87171; }
+.custom-card iframe {
+  width: 100%;
+  height: 200px;
+  border: 1px solid #2a2e38;
+  border-radius: 6px;
+  background: #0e1014;
 }
 .layout-row:hover { background: #14171f; }
 .layout-row:active { cursor: grabbing; }

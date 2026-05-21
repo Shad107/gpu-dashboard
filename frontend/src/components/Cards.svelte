@@ -195,6 +195,21 @@
     </div>
   {/if}
 
+  {#each layout.customCards as cc (cc.id)}
+    {#if layout.visible(cc.id)}
+      <div class="card custom-card" style:order={layout.indexOf(cc.id)}>
+        <h2>🧩 {cc.name}</h2>
+        <iframe
+          src={cc.url}
+          title={cc.name}
+          sandbox="allow-scripts allow-same-origin"
+          referrerpolicy="no-referrer"
+          loading="lazy"
+        ></iframe>
+      </div>
+    {/if}
+  {/each}
+
   {#if showTuning && layout.visible("tuning")}
     <div class="card" style:order={layout.indexOf("tuning")}>
       <h2>{i18n.t("card.tuning")}</h2>

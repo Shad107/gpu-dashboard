@@ -1,6 +1,6 @@
 <script lang="ts">
   import { modal, live, toast, wizard } from "../lib/stores.svelte";
-  import { layout, CARD_NAMES } from "../lib/layout.svelte";
+  import { layout, CARD_NAMES, isValidUrl } from "../lib/layout.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
   import { api, type HistorySample, type StoredEvent } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
@@ -10,6 +10,30 @@
   // Layout drag-and-drop items — re-derived from layout.order whenever it changes
   type LayoutItem = { id: string };
   let layoutItems = $state<LayoutItem[]>(layout.order.map(n => ({ id: n })));
+
+  // Custom URL card form
+  let newCustomName = $state("");
+  let newCustomUrl = $state("");
+  function isCustomId(id: string): boolean { return id.startsWith("custom-"); }
+  function cardLabel(id: string): string {
+    if (isCustomId(id)) {
+      return layout.customCards.find(c => c.id === id)?.name ?? id;
+    }
+    return i18n.t(("card." + id) as any);
+  }
+  function addCustomCard() {
+    const url = newCustomUrl.trim();
+    if (!isValidUrl(url)) {
+      toast.emit("✗ " + i18n.t("layout.invalid_url"), "err");
+      return;
+    }
+    const id = layout.addCustom(newCustomName.trim() || new URL(url).hostname, url);
+    if (id) {
+      toast.emit("✓ " + i18n.t("layout.custom_added", { name: newCustomName.trim() || url }), "ok");
+      newCustomName = "";
+      newCustomUrl = "";
+    }
+  }
   // Keep local mirror in sync if external changes happen (eg. reset)
   $effect(() => {
     const order = layout.order;
@@ -1001,22 +1025,48 @@
           onfinalize={handleDndFinalize}
         >
           {#each layoutItems as item (item.id)}
-            <div class="layout-row">
+            <div class="layout-row" class:custom={isCustomId(item.id)}>
               <span class="layout-handle" title={i18n.t("layout.drag_hint")}>⋮⋮</span>
               <input
                 type="checkbox"
                 checked={layout.visible(item.id)}
                 onchange={() => layout.toggle(item.id)}
               />
-              <span class="layout-name">{i18n.t(("card." + item.id) as any)}</span>
+              <span class="layout-name">
+                {#if isCustomId(item.id)}🧩 {/if}{cardLabel(item.id)}
+              </span>
               <span class="layout-status" class:on={layout.visible(item.id)}>
                 {layout.visible(item.id) ? i18n.t("layout.shown") : i18n.t("layout.hidden")}
               </span>
+              {#if isCustomId(item.id)}
+                <button class="layout-delete" onclick={() => layout.removeCustom(item.id)}
+                  title={i18n.t("layout.remove_custom")}>🗑️</button>
+              {:else}
+                <span></span>
+              {/if}
             </div>
           {/each}
         </div>
         <p class="sub" style="font-size:.78em;margin-top:.8em">{i18n.t("layout.drag_hint")}</p>
+
+        <h3 style="margin-top:1.6em;color:#cdd2da;font-size:.92em;font-weight:600">
+          ➕ {i18n.t("layout.add_custom_title")}
+        </h3>
+        <p class="sub" style="margin:0 0 .6em;font-size:.82em">{i18n.t("layout.add_custom_description")}</p>
+        <div class="form-row">
+          <span class="form-lbl">{i18n.t("layout.custom_name")}</span>
+          <input class="al-input" type="text" bind:value={newCustomName}
+            placeholder={i18n.t("layout.custom_name_placeholder")} />
+        </div>
+        <div class="form-row">
+          <span class="form-lbl">{i18n.t("layout.custom_url")}</span>
+          <input class="al-input" type="url" bind:value={newCustomUrl}
+            placeholder="https://grafana.local/d-solo/..." />
+        </div>
         <div class="btn-row" style="margin-top:.4em">
+          <button class="btn btn-primary" onclick={addCustomCard}>
+            ➕ {i18n.t("layout.add_btn")}
+          </button>
           <button class="btn" onclick={() => {
             if (confirm(i18n.t("layout.reset_confirm"))) layout.reset();
           }}>↺ {i18n.t("layout.reset_btn")}</button>
