@@ -4,6 +4,12 @@ All notable changes to gpu-dashboard. Format inspired by [Keep a Changelog](http
 
 ## [Unreleased / 0.3.0-dev]
 
+### Added — LLM-specific killer features (v0.3 originals)
+- **🪙 LLM throughput card** (`GET /api/llm/stats`) — fetches llama-server `/metrics` and computes **tokens/Watt** efficiency using the avg power from the last hour. *No other GPU monitoring tool on either platform surfaces this metric.* Positions gpu-dashboard as the LLM-focused dashboard.
+- **⚡ Electricity cost widget** (`GET /api/electricity`) — computes kWh + €/month from stored samples × configured `ELECTRICITY_PRICE_EUR_PER_KWH`. Dashboard card shows daily kWh + monthly cost extrapolation.
+- **Auto profile-switch daemon** (`modules/auto_profile.py`) — classifies load (silent/sweet/boost) from sampler buffer; switches profile after `MIN_STABLE` seconds of sustained classification. Opt-in via `MODULE_AUTO_PROFILE=1`.
+- **3 power profile presets** (`/api/power-profiles/apply/<name>`) — Silent/Sweet/Boost bundles of power-limit + GPU offset + memory offset. One-click switching from the Power tab. MSI Afterburner-inspired but Linux-native.
+
 ### Added — Competitive parity (after reviewing GWE, nvtop, gpustat, MSI Afterburner, HWiNFO)
 - **`GET /api/prom`** — Prometheus 0.0.4 text-format exporter (gauges + counter). Plug directly into Grafana / VictoriaMetrics / Uptime Kuma. Labels include `{gpu="N",name="..."}`.
 - **`GET /api/processes`** — per-process GPU VRAM via `nvidia-smi --query-compute-apps`. Returns `[{pid, name, vram_mib}]` sorted by VRAM desc. A new "Compute processes" card appears in the dashboard when ≥1 process is using the GPU.
