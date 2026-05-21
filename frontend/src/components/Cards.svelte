@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { live } from "../lib/stores.svelte";
+  import { layout } from "../lib/layout.svelte";
   import { i18n } from "../lib/i18n/index.svelte";
   import { tempColor, perfEstimate } from "../lib/charts";
   import { api } from "../lib/api";
@@ -119,7 +120,7 @@
     </div>
   {/if}
 
-  {#if d?.watchdog?.available}
+  {#if d?.watchdog?.available && layout.visible("oculink")}
     <div class="card">
       <h2>{i18n.t("card.oculink")}</h2>
       <div class="big" class:warn={d.watchdog.drops > 0} class:ok={d.watchdog.drops === 0}>
@@ -129,14 +130,14 @@
     </div>
   {/if}
 
-  {#if d?.llm_model}
+  {#if d?.llm_model && layout.visible("llm_model")}
     <div class="card">
       <h2>{i18n.t("card.llm_model")}</h2>
       <div class="big" style="font-size:1em;word-break:break-all">{d.llm_model}</div>
     </div>
   {/if}
 
-  {#if llm?.available && (llm.tokens_generated_total ?? 0) > 0}
+  {#if layout.visible("llm_throughput") && llm?.available && (llm.tokens_generated_total ?? 0) > 0}
     <div class="card">
       <h2>🪙 {i18n.t("card.llm_throughput")}</h2>
       <div class="big">
@@ -151,7 +152,7 @@
     </div>
   {/if}
 
-  {#if elec}
+  {#if elec && layout.visible("electricity")}
     {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
     <div class="card">
       <h2>⚡ {i18n.t("card.electricity")}</h2>
@@ -169,7 +170,7 @@
     </div>
   {/if}
 
-  {#if (d?.processes?.length ?? 0) > 0}
+  {#if layout.visible("processes") && (d?.processes?.length ?? 0) > 0}
     <div class="card">
       <h2>{i18n.t("card.processes")}</h2>
       <table style="font-size:.78em;width:100%">
@@ -186,7 +187,7 @@
     </div>
   {/if}
 
-  {#if showTuning}
+  {#if showTuning && layout.visible("tuning")}
     <div class="card">
       <h2>{i18n.t("card.tuning")}</h2>
       <div class="tuning-row">

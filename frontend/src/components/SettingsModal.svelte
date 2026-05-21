@@ -1,5 +1,6 @@
 <script lang="ts">
   import { modal, live, toast, wizard } from "../lib/stores.svelte";
+  import { layout, CARD_NAMES } from "../lib/layout.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
   import { api, type HistorySample, type StoredEvent } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
@@ -402,6 +403,8 @@
       icon: "M14.6 16.6L19.2 12L14.6 7.4L16 6l6 6-6 6-1.4-1.4M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4z" },
     { id: "profile", group: "advanced", labelKey: "modal.profile" as const,
       icon: "M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
+    { id: "layout", group: "meta", labelKey: "modal.layout" as const,
+      icon: "M3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2zm16 0v3H5V5zm-7 5v9H5v-9zm2 0h5v9h-5z" },
     { id: "language", group: "meta", labelKey: "modal.language" as const,
       icon: "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" },
     { id: "about", group: "meta", labelKey: "modal.about" as const,
@@ -963,6 +966,35 @@
         {:else}
           <pre class="logs-pre">{(logsData.lines || []).join("")}</pre>
         {/if}
+      </div>
+
+      <!-- Layout : card hide/show -->
+      <div class="modal-section" class:active={modal.section === "layout"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2zm16 0v3H5V5zm-7 5v9H5v-9zm2 0h5v9h-5z"/></svg>
+          <span>{i18n.t("layout.title")}</span>
+        </h3>
+        <p class="sub" style="margin:0 0 1em">{i18n.t("layout.description")}</p>
+        <div class="layout-grid">
+          {#each CARD_NAMES as cardName}
+            <label class="layout-row">
+              <input
+                type="checkbox"
+                checked={layout.visible(cardName)}
+                onchange={() => layout.toggle(cardName)}
+              />
+              <span class="layout-name">{i18n.t(("card." + cardName) as any)}</span>
+              <span class="layout-status" class:on={layout.visible(cardName)}>
+                {layout.visible(cardName) ? i18n.t("layout.shown") : i18n.t("layout.hidden")}
+              </span>
+            </label>
+          {/each}
+        </div>
+        <div class="btn-row" style="margin-top:1em">
+          <button class="btn" onclick={() => {
+            if (confirm(i18n.t("layout.reset_confirm"))) layout.reset();
+          }}>↺ {i18n.t("layout.reset_btn")}</button>
+        </div>
       </div>
 
       <!-- Language -->
