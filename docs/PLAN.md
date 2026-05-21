@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:30 (cycle 95 done — fan curve persist 4/8)
-**Latest commit** : `1557911` — fan curve persistence
+**Last updated** : 2026-05-22 01:33 (cycle 96 done — fan curve presets 5/8)
+**Latest commit** : `ef4240c` — fan curve presets
 **Tests** : 510 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 96 : fan curve slice 5/8 — presets (silent/balanced/aggressive)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 97 : fan curve slice 6/8 — keyboard shortcuts (arrow keys)**.
 
 ---
 
@@ -19,16 +19,14 @@ Nothing — between cycles. Wakeup soon will start **Cycle 96 : fan curve slice 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 96 (next) — Fan curve slice 5/8 — presets
-- 3 preset buttons : 🤫 Silent · ⚖️ Balanced · 🔥 Aggressive
-- Click → loads the preset into editedCurve (still requires Save to persist)
-- Presets defined in lib :
-  silent     = [[30,0],[55,20],[70,40],[80,60],[90,80]]
-  balanced   = [[30,0],[50,30],[65,50],[75,70],[85,100]]  (current default)
-  aggressive = [[30,20],[45,40],[60,70],[70,90],[80,100]]
+### Cycle 97 (next) — Fan curve slice 6/8 — keyboard fine-tuning
+- Click a control point to select (without dragging)
+- Arrow keys nudge the selected point : ←→ = ±1°C, ↑↓ = ±1%
+- Shift+arrow = ±5
+- Delete key removes selected point (with same min-2 enforcement)
+- Tab cycles to next point
 
-### Cycle 97 — Slice 6/8 : per-fan curves (fan 0 / fan 1 if available)
-### Cycle 98 — Slice 7/8 : keyboard shortcuts in editor (arrow keys for fine tuning)
+### Cycle 98 — Slice 7/8 : enriched validation + UX polish
 ### Cycle 99 — Slice 8/8 : README + final screenshot showing the editor
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
@@ -54,6 +52,12 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 96 — Fan curve presets (1 commit)
+- `ef4240c` 3 preset buttons : 🤫 Silent / ⚖️ Balanced / 🔥 Aggressive
+  - Active preset highlighted btn-primary when curve matches exactly
+  - Tooltip on each button describes the trade-off
+  - 7 new i18n keys × 2 langs
 
 ### Cycle 95 — Fan curve persistence (2 commits)
 - `c6602ad` POST /api/fan-curve + validate_user_curve + Save button
@@ -400,7 +404,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~104 |
+| Commits since v0.1.0 | ~105 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
