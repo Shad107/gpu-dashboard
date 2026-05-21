@@ -107,6 +107,37 @@
     if (draggingIdx !== null) draggingIdx = null;
   }
 
+  /** Double-click on empty SVG area → insert new point at that temp/fan,
+   * sorted by temp. Ignored if it would create a duplicate temp. */
+  function onSvgDoubleClick(e: MouseEvent) {
+    // Ignore if user double-clicked an existing point (let circle handler win)
+    if ((e.target as Element)?.tagName === "circle") return;
+    if (!svgEl) return;
+    const rect = svgEl.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) / rect.width * W;
+    const sy = (e.clientY - rect.top) / rect.height * H;
+    let temp = Math.round(((sx - PAD_L) / innerW) * 100);
+    let fan = Math.round((1 - (sy - PAD_T) / innerH) * 100);
+    if (temp < 0 || temp > 100 || fan < 0 || fan > 100) return;
+    // Find sorted insertion index
+    let idx = editedCurve.findIndex(p => p[0] >= temp);
+    if (idx < 0) idx = editedCurve.length;
+    // Refuse if exact temp already exists
+    if (editedCurve.some(p => p[0] === temp)) return;
+    editedCurve = [...editedCurve.slice(0, idx), [temp, fan], ...editedCurve.slice(idx)];
+  }
+
+  /** Right-click on a point → confirm + remove. Min 2 points enforced. */
+  function onPointContextMenu(idx: number, e: MouseEvent) {
+    e.preventDefault();
+    if (editedCurve.length <= 2) {
+      alert(i18n.t("fancurve.min_points_warning"));
+      return;
+    }
+    if (!confirm(i18n.t("fancurve.remove_point_confirm"))) return;
+    editedCurve = editedCurve.filter((_, i) => i !== idx);
+  }
+
   const path = $derived(
     editedCurve.length >= 2
       ? editedCurve.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(p[0])},${yOf(p[1])}`).join(" ")
@@ -144,7 +175,8 @@
     </div>
 
     <svg viewBox="0 0 {W} {H}" class="curve-svg" preserveAspectRatio="xMidYMid meet"
-         bind:this={svgEl} class:dragging={draggingIdx !== null}>
+         bind:this={svgEl} class:dragging={draggingIdx !== null}
+         ondblclick={onSvgDoubleClick}>
       {#each [0,20,40,60,80,100] as t}
         <line x1={xOf(t)} x2={xOf(t)} y1={PAD_T} y2={PAD_T + innerH}
           stroke="var(--border-subtle)" stroke-width="0.5" />
@@ -179,8 +211,9 @@
           class="point"
           class:dragging={draggingIdx === i}
           onpointerdown={(e) => onPointerDown(i, e)}
+          oncontextmenu={(e) => onPointContextMenu(i, e)}
         >
-          <title>{p[0]}°C → {p[1]}%</title>
+          <title>{p[0]}°C → {p[1]}% · {i18n.t("fancurve.right_click_to_delete")}</title>
         </circle>
       {/each}
     </svg>
@@ -190,7 +223,7 @@
         ↺ {i18n.t("fancurve.reset")}
       </button>
       <span class="sub" style="font-size:.78em">
-        {i18n.t("fancurve.save_hint")}
+        {i18n.t("fancurve.edit_hint")}
       </span>
     </div>
   {/if}
@@ -218,6 +251,7 @@
     padding: 4px;
     touch-action: none;  /* prevent scroll on touch drag */
   }
+  .curve-svg { cursor: copy; }  /* dbl-click empty area = add point */
   .curve-svg.dragging { cursor: grabbing; }
   circle.point { cursor: grab; transition: r 0.1s; }
   circle.point:hover { r: 7; }
