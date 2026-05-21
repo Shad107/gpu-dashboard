@@ -354,7 +354,7 @@ def make_handler(ctx: dict):
                 self._send_static(path[len("/static/"):])
                 return
             if path == "/api/state":
-                code, body = api.handle_state(ctx)
+                code, body = api.handle_state(ctx, params)
                 self._send_json(code, body)
                 return
             if path == "/api/alerts-config":

@@ -4,6 +4,7 @@
   // not inside the Settings modal.
   import { onDestroy } from "svelte";
   import { view } from "../lib/view.svelte";
+  import { gpu } from "../lib/gpu.svelte";
   import { toast } from "../lib/stores.svelte";
   import { i18n } from "../lib/i18n/index.svelte";
   import { api, type HistorySample, type StoredEvent } from "../lib/api";
@@ -87,12 +88,12 @@
       const step = RANGE_STEP[historyRange] || undefined;
       const offset = historyCompareOffset;
       const promises: Promise<any>[] = [
-        api.history(from, now, step),
+        api.history(from, now, step, gpu.selected),
         api.events(from).catch(() => ({ ok: false, events: [] })),
       ];
       if (offset > 0) {
         promises.push(
-          api.history(from - offset, now - offset, step).catch(() => ({ ok: false, samples: [] })),
+          api.history(from - offset, now - offset, step, gpu.selected).catch(() => ({ ok: false, samples: [] })),
         );
       }
       const results = await Promise.all(promises);

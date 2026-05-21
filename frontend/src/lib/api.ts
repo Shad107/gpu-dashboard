@@ -136,7 +136,7 @@ async function jsonOf<T>(r: Response): Promise<T> {
 }
 
 export const api = {
-  state: () => fetch("/api/state", { cache: "no-store" }).then(jsonOf<State>),
+  state: (gpu = 0) => fetch("/api/state" + (gpu ? `?gpu_index=${gpu}` : ""), { cache: "no-store" }).then(jsonOf<State>),
 
   setPowerLimit: (watts: number) =>
     fetch("/api/set-power-limit", {
@@ -166,10 +166,11 @@ export const api = {
       jsonOf<{ ok: boolean; msg?: string; error?: string }>
     ),
 
-  history: (from: number, to?: number, step?: number) => {
+  history: (from: number, to?: number, step?: number, gpu = 0) => {
     const q = new URLSearchParams({ from: String(from) });
     if (to !== undefined) q.set("to", String(to));
     if (step !== undefined) q.set("step", String(step));
+    if (gpu) q.set("gpu_index", String(gpu));
     return fetch(`/api/history?${q.toString()}`).then(
       jsonOf<{ ok: boolean; samples: HistorySample[] }>
     );
@@ -305,8 +306,11 @@ export const api = {
       error?: string;
     }>),
 
-  llmStats: () =>
-    fetch("/api/llm/stats").then(jsonOf<{
+  // Helper : append &gpu_index=N to a URL if N > 0 (default 0 = back-compat, no query)
+  // Multi-GPU query helpers — all data endpoints accept ?gpu_index=N
+
+  llmStats: (gpu = 0) =>
+    fetch("/api/llm/stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       available: boolean;
       tokens_generated_total?: number;
       prompt_tokens_total?: number;
@@ -338,8 +342,8 @@ export const api = {
       body: JSON.stringify({ endpoint }),
     }).then(jsonOf<{ ok: boolean; removed?: number }>),
 
-  llmPerf: () =>
-    fetch("/api/llm/perf").then(jsonOf<{
+  llmPerf: (gpu = 0) =>
+    fetch("/api/llm/perf" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       available: boolean;
       now?: number;
@@ -352,8 +356,8 @@ export const api = {
       series_1h?: number[];
     }>),
 
-  thermalStats: () =>
-    fetch("/api/thermal-stats").then(jsonOf<{
+  thermalStats: (gpu = 0) =>
+    fetch("/api/thermal-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       avg_temp_24h: number;
       peak_temp_24h: number;
@@ -362,8 +366,8 @@ export const api = {
       samples_count: number;
     }>),
 
-  powerStats: () =>
-    fetch("/api/power-stats").then(jsonOf<{
+  powerStats: (gpu = 0) =>
+    fetch("/api/power-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       avg_watts_24h: number;
       peak_watts_24h: number;
@@ -376,8 +380,8 @@ export const api = {
       samples_count: number;
     }>),
 
-  llmLifetime: () =>
-    fetch("/api/llm/lifetime").then(jsonOf<{
+  llmLifetime: (gpu = 0) =>
+    fetch("/api/llm/lifetime" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       available: boolean;
       since_ts: number | null;
@@ -388,8 +392,8 @@ export const api = {
       avg_tokens_per_watt: number | null;
     }>),
 
-  powerHeatmap: (days = 7) =>
-    fetch(`/api/power-heatmap?days=${days}`).then(jsonOf<{
+  powerHeatmap: (days = 7, gpu = 0) =>
+    fetch(`/api/power-heatmap?days=${days}` + (gpu ? `&gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       days: number;
       currency: string;
@@ -403,8 +407,8 @@ export const api = {
       }[];
     }>),
 
-  electricity: (since = 3600) =>
-    fetch(`/api/electricity?since=${since}`).then(jsonOf<{
+  electricity: (since = 3600, gpu = 0) =>
+    fetch(`/api/electricity?since=${since}` + (gpu ? `&gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       window_seconds: number;
       samples: number;

@@ -1,6 +1,7 @@
 // Svelte 5 runes-based stores. Reactivity is implicit via $state.
 
 import { api, type State } from "./api";
+import { gpu } from "./gpu.svelte";
 
 // Live data store — null until first poll completes.
 class LiveStore {
@@ -10,7 +11,7 @@ class LiveStore {
 
   async tick() {
     try {
-      this.data = await api.state();
+      this.data = await api.state(gpu.selected);
       this.error = null;
     } catch (e) {
       this.error = (e as Error).message;

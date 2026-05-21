@@ -109,14 +109,24 @@ def _gpus_available() -> list:
 # ─────────────────────────── GET /api/state ────────────────────────────────
 
 
-def handle_state(ctx: dict) -> Response:
+def handle_state(ctx: dict, params: Optional[dict] = None) -> Response:
     """Aggregates everything the frontend needs in a single payload.
 
     All optional fields default to None/empty so the UI can render gracefully
     when a module is disabled.
+
+    Query params : gpu_index (default = config GPU_INDEX, then 0) selects which
+    GPU's live snapshot to return (multi-GPU rigs).
     """
     cfg = ctx["config"]
-    gpu_index = cfg.get_int("GPU_INDEX", default=0)
+    # Picker preference (URL param) wins over config default
+    if params and "gpu_index" in params:
+        try:
+            gpu_index = int(params["gpu_index"])
+        except (ValueError, TypeError):
+            gpu_index = cfg.get_int("GPU_INDEX", default=0)
+    else:
+        gpu_index = cfg.get_int("GPU_INDEX", default=0)
     _, procs = handle_processes(ctx)
     body = {
         "gpu": _gpu_card_snapshot(gpu_index=gpu_index),

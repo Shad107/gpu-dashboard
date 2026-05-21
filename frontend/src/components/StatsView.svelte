@@ -3,6 +3,7 @@
   // User feedback 23:35-23:37 : real perf metrics + curves, not static tiles.
   import { onDestroy } from "svelte";
   import { view } from "../lib/view.svelte";
+  import { gpu } from "../lib/gpu.svelte";
   import { live } from "../lib/stores.svelte";
   import { i18n } from "../lib/i18n/index.svelte";
   import { colorFan } from "../lib/charts";
@@ -18,17 +19,17 @@
   let timer: ReturnType<typeof setInterval> | null = null;
 
   async function loadAll() {
-    try { llmPerf      = await api.llmPerf();              } catch {}
-    try { thermalStats = await api.thermalStats();         } catch {}
-    try { powerStats   = await api.powerStats();           } catch {}
-    try { profileTime  = await api.profileStats(86400);    } catch {}
-    try { heatmapData  = await api.powerHeatmap(heatmapDays); } catch {}
+    try { llmPerf      = await api.llmPerf(gpu.selected);              } catch {}
+    try { thermalStats = await api.thermalStats(gpu.selected);         } catch {}
+    try { powerStats   = await api.powerStats(gpu.selected);           } catch {}
+    try { profileTime  = await api.profileStats(86400);                } catch {}  // profile-stats is global
+    try { heatmapData  = await api.powerHeatmap(heatmapDays, gpu.selected); } catch {}
   }
   // Re-fetch heatmap when window changes
   $effect(() => {
     heatmapDays;
     if (view.current === "stats" && heatmapData) {
-      api.powerHeatmap(heatmapDays).then(d => heatmapData = d).catch(() => {});
+      api.powerHeatmap(heatmapDays, gpu.selected).then(d => heatmapData = d).catch(() => {});
     }
   });
 
@@ -52,6 +53,11 @@
       timer = setInterval(loadAll, 30_000);
     }
     return () => { if (timer) clearInterval(timer); };
+  });
+  // Re-fetch when GPU picker changes
+  $effect(() => {
+    gpu.selected;
+    if (isActive) loadAll();
   });
   onDestroy(() => { if (timer) clearInterval(timer); });
 

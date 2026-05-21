@@ -5,6 +5,7 @@
   import { i18n } from "../lib/i18n/index.svelte";
   import { tempColor, perfEstimate } from "../lib/charts";
   import { api } from "../lib/api";
+  import { gpu } from "../lib/gpu.svelte";
   import Sparkline from "./Sparkline.svelte";
 
   // Electricity widget — polled every minute (independent from live data)
@@ -13,17 +14,23 @@
   let llmLifetime = $state<Awaited<ReturnType<typeof api.llmLifetime>> | null>(null);
   let llmPerf = $state<Awaited<ReturnType<typeof api.llmPerf>> | null>(null);
   async function loadElec() {
-    try { elec = await api.electricity(3600); } catch { /* keep last */ }
+    try { elec = await api.electricity(3600, gpu.selected); } catch { /* keep last */ }
   }
   async function loadLlm() {
-    try { llm = await api.llmStats(); } catch { /* keep last */ }
+    try { llm = await api.llmStats(gpu.selected); } catch { /* keep last */ }
   }
   async function loadLlmLifetime() {
-    try { llmLifetime = await api.llmLifetime(); } catch { /* keep last */ }
+    try { llmLifetime = await api.llmLifetime(gpu.selected); } catch { /* keep last */ }
   }
   async function loadLlmPerf() {
-    try { llmPerf = await api.llmPerf(); } catch { /* keep last */ }
+    try { llmPerf = await api.llmPerf(gpu.selected); } catch { /* keep last */ }
   }
+
+  // Re-fetch immediately when the user picks a different GPU
+  $effect(() => {
+    gpu.selected;  // dependency
+    loadElec(); loadLlm(); loadLlmLifetime(); loadLlmPerf();
+  });
   let elecTimer: ReturnType<typeof setInterval> | null = null;
   let llmTimer: ReturnType<typeof setInterval> | null = null;
   let llmLifeTimer: ReturnType<typeof setInterval> | null = null;
