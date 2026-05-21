@@ -62,3 +62,6 @@ frontend/npm-debug.log*
 *.bak
 *.orig
 .merge_file_*
+
+# Local planning docs (not for public repo)
+docs/CLOUD_TELEMETRY_PLAN.md
