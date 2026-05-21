@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:58 (cycle 102 done — /api/health recent_alerts)
-**Latest commit** : `4354962` — /api/health recent_alerts
-**Tests** : 515 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 02:02 (cycle 103 done — yearly aggregates)
+**Latest commit** : `413f6f4` — yearly stats backend
+**Tests** : 520 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup will pick next small follow-up (lifetime yearly / coolbits / ?).
+Nothing — between cycles. Wakeup 104 = wire yearly stats into About tab UI + screenshot.
 
 ---
 
@@ -59,6 +59,15 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 103 — Yearly aggregates backend (1 commit)
+- `413f6f4` /api/power-stats : kwh_year, cost_year, year_start_ts
+  /api/llm/lifetime : total_tokens_this_year, year_start_ts
+  - Single year-to-date query in power_stats
+  - LLM lifetime walks deltas filtering by ts >= year_start_ts
+  - 5 new TDD tests
+  - Tests : 515 → 520
+  - Frontend types updated ; UI rendering in cycle 104
 
 ### Cycle 102 — /api/health recent_alerts (1 commit)
 - `4354962` /api/health returns recent_alerts (last 5, 7-day window)
@@ -446,11 +455,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 515 passing on Py 3.9-3.13 |
+| Tests | 520 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~111 |
+| Commits since v0.1.0 | ~112 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
