@@ -4,6 +4,16 @@ All notable changes to gpu-dashboard. Format inspired by [Keep a Changelog](http
 
 ## [Unreleased / 0.3.0-dev]
 
+### Added — Fan curve editor with drag-and-drop (cycles 92-99)
+- **Visual SVG editor** of the daemon's fan curve in Settings → Tuning → Courbe ventilo.
+- **Drag points** with the mouse (slice 2) ; double-click empty area to **add** a point (slice 3) ; right-click to **remove** with min-2 enforcement.
+- **Keyboard fine-tuning** (slice 6) : click to select, arrow keys nudge ±1 (Shift ±5), Tab cycles, Delete removes, ESC deselects.
+- **3 one-click presets** (slice 5) : 🤫 Silent · ⚖️ Balanced · 🔥 Aggressive — active preset highlighted btn-primary when curve matches exactly.
+- **POST `/api/fan-curve`** persists to `~/.config/gpu-dashboard/fan_curve.json` (slice 4). `pick_curve()` priority : explicit arg > override file > profile.fans.default_curve > built-in. Daemon picks up changes on next poll, no restart needed.
+- **`validate_user_curve()`** : list of `[int,int]`, ≥2 points, all in `[0,100]`, strictly ascending by temp.
+- **UX polish** (slice 7) : Catmull-Rom smooth interpolation, coordinate label on selected point, live GPU temp vertical line, hysteresis hint.
+- 13 new TDD tests (validation + POST + override file). Tests : 497 → 510. 9-cycle slice = 8 feature cycles + 1 fix.
+
 ### Added — Multi-GPU full pipeline (cycles 86-91)
 - **Per-GPU sampling** — sampler now polls ALL detected NVIDIA GPUs each tick; each sample is persisted with a `gpu_index` field (DB schema v4, composite PK on `(ts, gpu_index)`).
 - **Per-GPU API** — every data endpoint (`/api/state`, `/api/history`, `/api/llm/perf`, `/api/llm/lifetime`, `/api/thermal-stats`, `/api/power-stats`, `/api/power-heatmap`, `/api/electricity`) accepts `?gpu_index=N`. Default 0 = back-compat.

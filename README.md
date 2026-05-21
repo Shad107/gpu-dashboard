@@ -48,7 +48,26 @@ saved in localStorage.
 </tr>
 </table>
 
-### Settings — 9 tabs, all 1 click away
+### 🌀 Fan curve editor
+
+Visual editor for the fan curve daemon — drag, click, keyboard. Lives in
+**Settings → Tuning → Courbe ventilo** (modal tab, 10 tabs total).
+
+- **Drag** any control point to reshape (temp stays clamped between neighbors)
+- **Double-click** an empty area of the SVG to insert a new control point
+- **Right-click** a point to remove (min 2 points enforced)
+- **Click + arrow keys** for fine-tuning : ±1°C / ±1% per arrow, Shift = ±5
+- **Tab** cycles through points · **Delete** removes the selected one · **ESC** deselects
+- **3 one-click presets** : 🤫 Silent · ⚖️ Balanced · 🔥 Aggressive
+- **💾 Save** persists to `~/.config/gpu-dashboard/fan_curve.json` (overrides profile)
+- **Daemon picks up the new curve on next poll** — no restart needed
+- **±2°C hysteresis** built-in to prevent fan oscillation near a control point
+
+Visual cues : live GPU temp shown as vertical cyan line on the curve, current
+fan target shown as horizontal dashed line, selected point shows coordinate
+label (e.g. "78°C · 65%") in amber.
+
+### Settings — 10 tabs, all 1 click away
 
 Bookmarkable via `?modal=<tab>` (e.g. `http://localhost:9999/?modal=history`).
 

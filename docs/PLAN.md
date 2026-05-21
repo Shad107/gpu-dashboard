@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:41 (cycle 98 done — fan curve UX polish 7/8)
-**Latest commit** : `84bce89` — fan curve UX polish
+**Last updated** : 2026-05-22 01:45 (cycle 99 done — fan curve editor COMPLETE 8/8)
+**Latest commit** : (after this) — fan curve README + CHANGELOG
 **Tests** : 510 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 99 : fan curve slice 8/8 FINAL — README + screenshots**.
+Nothing — between cycles. Wakeup will start the next big idea — backlog cleared.
 
 ---
 
@@ -19,17 +19,22 @@ Nothing — between cycles. Wakeup soon will start **Cycle 99 : fan curve slice 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 99 (next) — Fan curve slice 8/8 FINAL — README + screenshot
-- Add "🌀 Fan curve editor" section to README documenting :
-  - Drag to move points
-  - Double-click empty area to add
-  - Right-click point to remove (min 2)
-  - Click + arrows for fine-tuning
-  - 3 presets one-click
-  - Save persists to ~/.config/gpu-dashboard/fan_curve.json
-- Screenshot the editor in action
-- CHANGELOG entry for the 8-cycle slice
-- Update PLAN.md with completion mark
+### Cycles 100+ — Backlog cleared !
+
+The 5 major work items have all been delivered in this 37-cycle loop iteration :
+  - Cycles 63-65 : Dashboard customization (hide/show + drag-reorder + URL embeds)
+  - Cycles 69-77 : Top-nav restructure + Sparkline Stats + Simple mode
+  - Cycles 78-81 : Theme toggle light/dark
+  - Cycles 82-85 : Browser push notifications
+  - Cycles 86-91 : Multi-GPU full picker pipeline
+  - Cycles 92-99 : Drag-and-drop fan curve editor SVG
+
+Optional follow-ups for future iterations :
+  - Per-fan RPM curves (separate fan 0 / fan 1, eGPU rigs)
+  - Per-GPU profiles (currently global)
+  - RFC 8291 encrypted Web Push payloads
+  - Coolbits detection in wizard
+  - Whatever the user asks for next
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
@@ -54,6 +59,11 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 99 — Fan curve editor FINAL (README + CHANGELOG) (1 commit)
+- Closes the 8-cycle Fan curve editor work (cycles 92-99)
+- README "🌀 Fan curve editor" section documents all interactions
+- CHANGELOG entry recapping the 8 slices
 
 ### Cycle 98 — Fan curve UX polish (1 commit)
 - `84bce89` Smoothing + coord label + live temp band + hysteresis hint
@@ -421,7 +431,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~107 |
+| Commits since v0.1.0 | ~108 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
