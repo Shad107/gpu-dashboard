@@ -130,6 +130,8 @@
   let historyMetric = $state<HistoryMetric>("power");
   let historySamples = $state<HistorySample[]>([]);
   let historyLoading = $state(false);
+  let historyAutoRefresh = $state(false);
+  let historyTimer: ReturnType<typeof setInterval> | null = null;
 
   const RANGE_SECONDS: Record<HistoryRange, number> = {
     "1h": 3600, "6h": 21600, "24h": 86400, "7d": 7 * 86400, "30d": 30 * 86400,
@@ -180,6 +182,14 @@
     if (modal.open && modal.section === "history") {
       loadHistory();
     }
+  });
+  // Auto-refresh timer
+  $effect(() => {
+    if (historyTimer) { clearInterval(historyTimer); historyTimer = null; }
+    if (historyAutoRefresh && modal.open && modal.section === "history") {
+      historyTimer = setInterval(() => loadHistory(), 30_000);
+    }
+    return () => { if (historyTimer) clearInterval(historyTimer); };
   });
 
   // ── Restart action ────────────────────────────────────────────────────────
@@ -532,6 +542,10 @@
           <div class="btn-row" style="margin-top:.8em">
             <button class="btn btn-primary" onclick={loadHistory}>{i18n.t("history.refresh")}</button>
             <button class="btn" onclick={exportCsv}>📥 {i18n.t("history.export_csv")}</button>
+            <label style="display:flex;align-items:center;gap:.4em;cursor:pointer;font-size:.85em">
+              <input type="checkbox" bind:checked={historyAutoRefresh} />
+              ⏱️ {i18n.t("history.auto_refresh")}
+            </label>
             <span class="warn-text">{i18n.t("history.samples_count", { n: historySamples.length })}</span>
           </div>
         </div>

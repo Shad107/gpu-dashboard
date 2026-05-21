@@ -56,6 +56,7 @@
   "history.no_data": "Aucune donnée pour cette plage. Le buffer se remplit à mesure que les samples sont collectés (un toutes les 5s).",
   "history.loading": "Chargement…",
   "history.samples_count": "{n} échantillons",
+  "history.auto_refresh": "Auto-actualiser (30s)",
   "setup.welcome_title": "Bienvenue dans gpu-dashboard",
   "setup.welcome_intro": "Ce wizard configure le dashboard pour ta machine. Il n'écrit que dans ton home — les commandes sudo éventuelles sont affichées explicitement, jamais exécutées en silence.",
   "setup.step_label": "Étape {n} sur {total}",
