@@ -386,6 +386,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_auto_profile_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/profile-stats":
+                code, body = api.handle_profile_stats(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/electricity":
                 code, body = api.handle_electricity(ctx, params)
                 self._send_json(code, body)

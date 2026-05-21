@@ -668,6 +668,58 @@ def handle_electricity(ctx: dict, params: dict) -> Response:
     }
 
 
+# ────────────────────────── GET /api/profile-stats ────────────────────────
+
+
+def handle_profile_stats(ctx: dict, params: dict) -> Response:
+    """Total time spent in each power profile since `since` seconds ago.
+
+    Walks the `profile_switch` events from storage and computes durations:
+      - For each consecutive pair (e1, e2), the interval [e1.ts, e2.ts]
+        is attributed to e1.payload.to
+      - The tail [last_switch.ts, now] is attributed to last_switch.payload.to
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+
+    import time as _time
+    try:
+        since = int(params.get("since", 0))
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "since must be integer"}
+
+    now = int(_time.time())
+    from_ts = max(0, now - since) if since > 0 else 0
+    events = storage.get_events(from_ts=from_ts, kind="profile_switch")
+    # Sort defensively (storage already orders by id, but be paranoid)
+    events.sort(key=lambda e: e["ts"])
+
+    # If since > 0, we cap the first event's start at from_ts (so durations
+    # are measured WITHIN the window, not before it).
+    totals: dict = {}
+    for i, ev in enumerate(events):
+        payload = ev.get("payload") or {}
+        to = payload.get("to")
+        if not to:
+            continue
+        start = max(ev["ts"], from_ts) if since > 0 else ev["ts"]
+        if i + 1 < len(events):
+            end = events[i + 1]["ts"]
+        else:
+            end = now
+        dur = max(0, end - start)
+        totals[to] = totals.get(to, 0) + dur
+
+    return 200, {
+        "ok": True,
+        "totals": totals,
+        "now": now,
+        "since_seconds": since,
+        "events_count": len(events),
+    }
+
+
 # ────────────────────────── GET /api/auto-profile ─────────────────────────
 
 
@@ -726,7 +778,10 @@ def handle_power_profiles_list(ctx: dict) -> Response:
 
 
 def handle_power_profile_apply(ctx: dict, name: str) -> Response:
-    """Apply one of the named profiles : power-limit + offsets in a single call."""
+    """Apply one of the named profiles : power-limit + offsets in a single call.
+
+    Also logs a 'profile_switch' event to storage for the time-tracker.
+    """
     name = (name or "").lower()
     if name not in _POWER_PROFILES:
         return 400, {"ok": False, "error": f"unknown profile: {name!r}. Use one of: {_POWER_PROFILES}"}
@@ -758,6 +813,15 @@ def handle_power_profile_apply(ctx: dict, name: str) -> Response:
     ) if (prof["gpu_offset"] != 0 or prof["mem_offset"] != 0) else {"ok": True, "skipped": True}
 
     ok = pl_result.get("ok", False) and co_result.get("ok", True)
+
+    # Log the switch for the time tracker (storage may be None if not started)
+    storage = ctx.get("storage")
+    if storage is not None and ok:
+        try:
+            storage.record_event("profile_switch", {"to": name, "watts": prof["watts"]})
+        except Exception:
+            pass
+
     return (200 if ok else 500), {
         "ok": ok,
         "applied_profile": name,
