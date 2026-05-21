@@ -1,9 +1,15 @@
 <script lang="ts">
   import { live } from "../lib/stores.svelte";
   import { modal } from "../lib/stores.svelte";
+  import { gpu } from "../lib/gpu.svelte";
   import { i18n } from "../lib/i18n/index.svelte";
 
-  const gpuName = $derived(live.data?.gpu?.name ?? "…");
+  const gpus = $derived(live.data?.gpus_available ?? []);
+  const hasMultipleGpus = $derived(gpus.length > 1);
+  const selectedGpuName = $derived(
+    gpus.find(g => g.index === gpu.selected)?.name ?? live.data?.gpu?.name ?? "…"
+  );
+  const singleGpuName = $derived(live.data?.gpu?.name ?? "…");
   const tsText = $derived(
     live.error
       ? `${i18n.t("ts.network_error")}: ${live.error}`
@@ -16,7 +22,19 @@
 <div class="header">
   <div>
     <h1>🎛️ {i18n.t("app.title")}</h1>
-    <div class="ts">{gpuName} · {tsText}</div>
+    {#if hasMultipleGpus}
+      <div class="ts" style="display:flex;align-items:center;gap:.6em;flex-wrap:wrap">
+        <span>{i18n.t("header.gpu_picker_label")}</span>
+        <select class="gpu-picker" value={gpu.selected} onchange={(e) => gpu.set(parseInt((e.target as HTMLSelectElement).value, 10))}>
+          {#each gpus as g}
+            <option value={g.index}>GPU {g.index} — {g.name}</option>
+          {/each}
+        </select>
+        <span style="color:var(--text-faint)">· {tsText}</span>
+      </div>
+    {:else}
+      <div class="ts">{singleGpuName} · {tsText}</div>
+    {/if}
   </div>
   <button
     class="gear-btn"

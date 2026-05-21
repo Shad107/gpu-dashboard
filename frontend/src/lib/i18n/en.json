@@ -268,6 +268,7 @@
   "push.active": "Active on this browser",
   "push.unsupported": "Your browser doesn't support Web Push.",
   "push.denied": "Permission denied. Re-enable in browser settings if you want.",
+  "header.gpu_picker_label": "GPU:",
   "alerts.config_saved": "Config saved — applied at next watchdog tick (< 60s)",
   "alerts.message_sent": "Message sent — check your phone",
   "alerts.telegram_error": "Telegram error",
