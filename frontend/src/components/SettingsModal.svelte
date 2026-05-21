@@ -444,12 +444,26 @@
 
   // ── About state ───────────────────────────────────────────────────────────
   let aboutData = $state<Awaited<ReturnType<typeof api.about>> | null>(null);
+  let profileTime = $state<Awaited<ReturnType<typeof api.profileStats>> | null>(null);
   async function loadAbout() {
     try { aboutData = await api.about(); } catch { aboutData = null; }
+    try { profileTime = await api.profileStats(86400); } catch { profileTime = null; }
   }
   $effect(() => {
     if (modal.open && modal.section === "about" && !aboutData) loadAbout();
   });
+
+  function fmtDuration(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+    return `${m}m`;
+  }
+  const PROFILE_EMOJI: Record<string, string> = {
+    silent: "🤫",
+    sweet: "⭐",
+    boost: "🚀",
+  };
   function fmtUptime(s: number): string {
     const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
     const m = Math.floor((s % 3600) / 60), sec = s % 60;
@@ -809,6 +823,37 @@
               </tr>
             </tbody>
           </table>
+
+          {#if profileTime}
+            {@const totals = profileTime.totals}
+            {@const sum = Object.values(totals).reduce((a, b) => a + b, 0)}
+            <h3 style="margin-top:1.6em;color:#cdd2da;font-size:.95em;font-weight:600">
+              {i18n.t("about.profile_time_24h")}
+            </h3>
+            {#if sum > 0}
+              <table class="about-table" style="margin-top:.4em">
+                <tbody>
+                  {#each ["boost", "sweet", "silent"] as p}
+                    {#if totals[p]}
+                      {@const pct = ((totals[p] / sum) * 100).toFixed(1)}
+                      <tr>
+                        <td>{PROFILE_EMOJI[p] || ""} {p}</td>
+                        <td>
+                          <b>{fmtDuration(totals[p])}</b>
+                          <span class="sub" style="margin-left:.6em">({pct}%)</span>
+                          <div style="height:3px;background:#22262e;border-radius:2px;margin-top:.25em;width:240px">
+                            <div style="height:100%;background:#4ade80;width:{pct}%;border-radius:2px"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    {/if}
+                  {/each}
+                </tbody>
+              </table>
+            {:else}
+              <p class="sub">{i18n.t("about.profile_time_none")}</p>
+            {/if}
+          {/if}
         {:else}
           <p class="sub">{i18n.t("history.loading")}</p>
         {/if}

@@ -216,6 +216,15 @@ export const api = {
       jsonOf<{ ok: boolean; message?: string }>
     ),
 
+  profileStats: (sinceSeconds = 86400) =>
+    fetch(`/api/profile-stats?since=${sinceSeconds}`).then(jsonOf<{
+      ok: boolean;
+      totals: Record<string, number>;
+      now: number;
+      since_seconds: number;
+      events_count: number;
+    }>),
+
   about: () =>
     fetch("/api/about").then(jsonOf<{
       version: string;

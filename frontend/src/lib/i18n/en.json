@@ -178,6 +178,8 @@
   "idle.suggest_stop": "Nothing running on the GPU — you could stop the dashboard server to save electricity.",
   "idle.save_hint": "~{eur} €/month at current rate if you stop the server now.",
   "about.vbios": "vBIOS",
+  "about.profile_time_24h": "Profile time (last 24h)",
+  "about.profile_time_none": "No profile switches recorded yet.",
   "power.section_title": "Power Limit",
   "power.description": "Power consumption cap (nvidia-smi -pl). Persistent across reboot via the sudoers wrapper.",
   "power.limit_label": "Limit",

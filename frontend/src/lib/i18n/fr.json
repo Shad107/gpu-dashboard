@@ -178,6 +178,8 @@
   "idle.suggest_stop": "Rien ne tourne sur le GPU — tu peux stop le dashboard pour économiser l'électricité.",
   "idle.save_hint": "~{eur} €/mois économisés au tarif actuel si tu stop maintenant.",
   "about.vbios": "vBIOS",
+  "about.profile_time_24h": "Temps par profil (24 dernières heures)",
+  "about.profile_time_none": "Aucun changement de profil enregistré.",
   "power.section_title": "Power Limit",
   "power.description": "Plafond de consommation (nvidia-smi -pl). Persistant au reboot via le wrapper sudoers.",
   "power.limit_label": "Limite",
