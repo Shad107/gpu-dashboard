@@ -67,6 +67,16 @@ class ModalStore {
 
 export const modal = new ModalStore();
 
+// Initialize from URL ?modal=<section> at boot — useful for screenshot
+// tooling and bookmarkable links into a specific tab.
+if (typeof location !== "undefined") {
+  const m = location.search.match(/[?&]modal=([a-z]+)/i);
+  if (m) {
+    modal.section = m[1].toLowerCase();
+    modal.open = true;
+  }
+}
+
 // Wizard store — separate from setup_required (first-run) so the user can
 // re-open it on demand from the Services tab.
 class WizardStore {
