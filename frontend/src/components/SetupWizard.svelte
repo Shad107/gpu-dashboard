@@ -1,8 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { i18n } from "../lib/i18n/index.svelte";
-  import { toast } from "../lib/stores.svelte";
+  import { toast, wizard } from "../lib/stores.svelte";
   import { api, type SetupDetect, type ModuleRec } from "../lib/api";
+
+  type Props = { dismissable?: boolean };
+  const { dismissable = false }: Props = $props();
 
   const TOTAL_STEPS = 5;
   // Support ?step=N in the URL for screenshot tooling + bookmarking.
@@ -125,6 +128,9 @@
   <div class="setup-container">
     <div class="setup-header">
       <h1>🎛️ gpu-dashboard</h1>
+      {#if dismissable}
+        <button class="setup-close" aria-label="Close" onclick={() => wizard.dismiss()}>×</button>
+      {/if}
       <div class="setup-step">{i18n.t("setup.step_label", { n: step, total: TOTAL_STEPS })}</div>
       <div class="setup-progress">
         {#each Array(TOTAL_STEPS) as _, i}
@@ -263,6 +269,15 @@
           <code style="display:block;margin-top:.8em;padding:.8em;background:#0e1014;border-radius:6px">
             {i18n.t("setup.done_restart_hint")}
           </code>
+          {#if dismissable}
+            <div class="btn-row" style="margin-top:1.2em">
+              <button class="btn btn-primary" onclick={async () => {
+                try { await api.restart(); } catch {}
+                setTimeout(() => location.reload(), 2500);
+              }}>🔄 {i18n.t("services.restart_btn")}</button>
+              <button class="btn" onclick={() => wizard.dismiss()}>{i18n.t("modal.close")}</button>
+            </div>
+          {/if}
         {/if}
       {/if}
     </div>
@@ -310,10 +325,26 @@
     padding: 1.4em 2em 0.8em;
     border-bottom: 1px solid #2a2e38;
   }
+  .setup-header { position: relative; }
   .setup-header h1 {
     margin: 0 0 0.3em;
     font-size: 1.4em;
   }
+  .setup-close {
+    position: absolute;
+    top: 1.4em;
+    right: 1.6em;
+    background: none;
+    border: none;
+    color: #7c8aa3;
+    cursor: pointer;
+    font-size: 1.6em;
+    line-height: 1;
+    padding: 0.1em 0.45em;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+  .setup-close:hover { background: #22262e; color: #e6e6ee; }
   .setup-step {
     color: #7c8aa3;
     font-size: 0.8em;

@@ -7,7 +7,7 @@
   import SettingsModal from "./components/SettingsModal.svelte";
   import SetupWizard from "./components/SetupWizard.svelte";
   import Toast from "./components/Toast.svelte";
-  import { live } from "./lib/stores.svelte";
+  import { live, wizard } from "./lib/stores.svelte";
   import { i18n } from "./lib/i18n/index.svelte";
 
   onMount(() => {
@@ -17,13 +17,15 @@
   });
   onDestroy(() => live.stop());
 
-  // First-run detection : if the backend has no config, show the wizard
-  // instead of the (empty/broken) dashboard.
+  // Show the wizard when either:
+  //  - backend reports no config exists (first run), OR
+  //  - user explicitly asked to re-run it from Services tab.
   const setupRequired = $derived(live.data?.setup_required === true);
+  const showWizard = $derived(setupRequired || wizard.userRequested);
 </script>
 
-{#if setupRequired}
-  <SetupWizard />
+{#if showWizard}
+  <SetupWizard dismissable={!setupRequired} />
   <Toast />
 {:else}
   <Header />

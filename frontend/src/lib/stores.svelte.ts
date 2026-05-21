@@ -66,3 +66,14 @@ class ModalStore {
 }
 
 export const modal = new ModalStore();
+
+// Wizard store — separate from setup_required (first-run) so the user can
+// re-open it on demand from the Services tab.
+class WizardStore {
+  userRequested = $state<boolean>(false);
+
+  request() { this.userRequested = true; modal.close(); }
+  dismiss() { this.userRequested = false; }
+}
+
+export const wizard = new WizardStore();

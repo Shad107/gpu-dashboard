@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { modal, live, toast } from "../lib/stores.svelte";
+  import { modal, live, toast, wizard } from "../lib/stores.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
   import { api, type HistorySample } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
@@ -420,6 +420,16 @@
         <div class="btn-row" style="margin-top:.8em">
           <button class="btn btn-danger" disabled={restarting} onclick={restartServer}>
             {restarting ? i18n.t("services.restarting") : "🔄 " + i18n.t("services.restart_btn")}
+          </button>
+        </div>
+
+        <h3 style="margin-top:1.8em;color:#cdd2da;font-size:.95em;font-weight:600">
+          {i18n.t("services.redo_wizard_label")}
+        </h3>
+        <p class="sub">{i18n.t("services.redo_wizard_description")}</p>
+        <div class="btn-row" style="margin-top:.8em">
+          <button class="btn" onclick={() => wizard.request()}>
+            🧙 {i18n.t("services.redo_wizard_btn")}
           </button>
         </div>
       </div>
