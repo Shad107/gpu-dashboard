@@ -5,11 +5,13 @@
   import { i18n } from "../lib/i18n/index.svelte";
   import { tempColor, perfEstimate } from "../lib/charts";
   import { api } from "../lib/api";
+  import Sparkline from "./Sparkline.svelte";
 
   // Electricity widget — polled every minute (independent from live data)
   let elec = $state<Awaited<ReturnType<typeof api.electricity>> | null>(null);
   let llm = $state<Awaited<ReturnType<typeof api.llmStats>> | null>(null);
   let llmLifetime = $state<Awaited<ReturnType<typeof api.llmLifetime>> | null>(null);
+  let llmPerf = $state<Awaited<ReturnType<typeof api.llmPerf>> | null>(null);
   async function loadElec() {
     try { elec = await api.electricity(3600); } catch { /* keep last */ }
   }
@@ -19,20 +21,27 @@
   async function loadLlmLifetime() {
     try { llmLifetime = await api.llmLifetime(); } catch { /* keep last */ }
   }
+  async function loadLlmPerf() {
+    try { llmPerf = await api.llmPerf(); } catch { /* keep last */ }
+  }
   let elecTimer: ReturnType<typeof setInterval> | null = null;
   let llmTimer: ReturnType<typeof setInterval> | null = null;
   let llmLifeTimer: ReturnType<typeof setInterval> | null = null;
+  let llmPerfTimer: ReturnType<typeof setInterval> | null = null;
   onMount(() => {
     loadElec();
     loadLlm();
     loadLlmLifetime();
+    loadLlmPerf();
     elecTimer = setInterval(loadElec, 60_000);
     llmTimer = setInterval(loadLlm, 30_000);
-    llmLifeTimer = setInterval(loadLlmLifetime, 120_000);   // 2 min — slower-changing aggregate
+    llmLifeTimer = setInterval(loadLlmLifetime, 120_000);
+    llmPerfTimer = setInterval(loadLlmPerf, 30_000);
     return () => {
       if (elecTimer) clearInterval(elecTimer);
       if (llmTimer) clearInterval(llmTimer);
       if (llmLifeTimer) clearInterval(llmLifeTimer);
+      if (llmPerfTimer) clearInterval(llmPerfTimer);
     };
   });
 
@@ -162,14 +171,33 @@
   {#if layout.visible("llm_throughput") && llm?.available && (llm.tokens_generated_total ?? 0) > 0}
     <div class="card" style:order={layout.indexOf("llm_throughput")}>
       <h2>🪙 {i18n.t("card.llm_throughput")}</h2>
-      <div class="big">
-        {(llm.tokens_generated_total ?? 0).toLocaleString()}
-        <span class="sub" style="font-size:.45em">{i18n.t("llm.tokens_generated")}</span>
-      </div>
-      {#if llm.tokens_per_watt}
-        <div class="sub" style="margin-top:.2em;color:#a3e635">
-          <b>{llm.tokens_per_watt.toFixed(2)}</b> {i18n.t("llm.tok_per_watt")}
+      {#if llmPerf?.available && (llmPerf.avg_tps_1m ?? 0) > 0}
+        <div class="big" style="color:#f472b6">
+          {(llmPerf.avg_tps_1m ?? 0).toFixed(1)}
+          <span class="sub" style="font-size:.45em">tok/s</span>
         </div>
+        {#if llmPerf.series_1h && llmPerf.series_1h.length > 0}
+          <div style="margin-top:-.2em;margin-bottom:.3em">
+            <Sparkline values={llmPerf.series_1h} color="#f472b6" width={180} height={26} />
+          </div>
+        {/if}
+        <div class="sub" style="font-size:.75em">
+          5m <b>{(llmPerf.avg_tps_5m ?? 0).toFixed(1)}</b> ·
+          1h <b>{(llmPerf.avg_tps_1h ?? 0).toFixed(1)}</b>
+          {#if llm.tokens_per_watt}
+            · <b style="color:#a3e635">{llm.tokens_per_watt.toFixed(2)}</b> tok/W
+          {/if}
+        </div>
+      {:else}
+        <div class="big">
+          {(llm.tokens_generated_total ?? 0).toLocaleString()}
+          <span class="sub" style="font-size:.45em">{i18n.t("llm.tokens_generated")}</span>
+        </div>
+        {#if llm.tokens_per_watt}
+          <div class="sub" style="margin-top:.2em;color:#a3e635">
+            <b>{llm.tokens_per_watt.toFixed(2)}</b> {i18n.t("llm.tok_per_watt")}
+          </div>
+        {/if}
       {/if}
       {#if llmLifetime?.available && llmLifetime.total_tokens_generated > 0}
         <div class="sub" style="margin-top:.35em;padding-top:.3em;border-top:1px solid #22262e;font-size:.78em">
