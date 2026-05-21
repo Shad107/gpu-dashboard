@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:45 (cycle 99 done — fan curve editor COMPLETE 8/8)
-**Latest commit** : (after this) — fan curve README + CHANGELOG
+**Last updated** : 2026-05-22 01:50 (cycle 100 done — screenshots refresh)
+**Latest commit** : `1174de2` — fresh README screenshots
 **Tests** : 510 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup will start the next big idea — backlog cleared.
+Nothing — between cycles. Wakeup will start an optional follow-up (per-fan curves / coolbits / profile activity log).
 
 ---
 
@@ -59,6 +59,12 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 100 — Screenshots housekeeping (1 commit)
+- `1174de2` Refreshed all docs/modal/*.png + docs/screenshot.png + theme captures
+  - Old history.png + stats.png removed (no longer modal tabs)
+  - New fancurve.png + layout.png + language.png added to gallery
+  - README gallery reorganized to 10-tab layout
 
 ### Cycle 99 — Fan curve editor FINAL (README + CHANGELOG) (1 commit)
 - Closes the 8-cycle Fan curve editor work (cycles 92-99)
@@ -431,7 +437,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~108 |
+| Commits since v0.1.0 | ~109 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
