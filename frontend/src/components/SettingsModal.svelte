@@ -3,6 +3,7 @@
   import { layout, CARD_NAMES, isValidUrl } from "../lib/layout.svelte";
   import { theme } from "../lib/theme.svelte";
   import { push } from "../lib/push.svelte";
+  import FanCurveEditor from "./FanCurveEditor.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
   import { api, type HistorySample, type StoredEvent } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
@@ -469,6 +470,8 @@
       icon: "M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z" },
     { id: "clocks", group: "tuning", labelKey: "modal.clocks" as const,
       icon: "M3 17v2h6v-2H3M3 5v2h10V5H3m10 16v-2h8v-2h-8v-2h-2v6h2M7 9v2H3v2h4v2h2V9H7m14 4v-2H11v2h10m-6-4h2V7h4V5h-4V3h-2v6z" },
+    { id: "fancurve", group: "tuning", labelKey: "modal.fancurve" as const,
+      icon: "M12,11A1,1 0 0,0 11,12A1,1 0 0,0 12,13A1,1 0 0,0 13,12A1,1 0 0,0 12,11M12.5,2C17,2 17.11,5.57 14.75,6.75C13.76,7.24 13.32,8.29 13.13,9.22C13.61,9.42 14.03,9.73 14.35,10.13C18.05,8.13 22.03,8.92 22.03,12.5C22.03,17 18.46,17.1 17.28,14.73C16.78,13.74 15.72,13.3 14.79,13.11C14.59,13.59 14.28,14 13.87,14.34C15.87,18.04 15.08,22 11.5,22C7,22 6.91,18.42 9.27,17.24C10.25,16.75 10.69,15.71 10.89,14.79C10.4,14.59 9.97,14.27 9.65,13.87C5.95,15.87 2,15.08 2,11.5C2,7 5.56,6.91 6.74,9.27C7.24,10.25 8.29,10.69 9.22,10.88C9.41,10.4 9.73,9.97 10.14,9.65C8.14,5.96 8.91,2 12.5,2Z" },
     // History + Stats removed in cycle 75 — they live as top-level views now.
     { id: "alerts", group: "notify", labelKey: "modal.alerts" as const,
       icon: "M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22m6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" },
@@ -717,6 +720,15 @@
       </div>
 
       <!-- Stats section removed in cycle 75 — now lives as top-level view (StatsView.svelte) -->
+
+      <!-- Fan curve (slice 1/8 : visualization only) -->
+      <div class="modal-section" class:active={modal.section === "fancurve"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("fancurve")} /></svg>
+          <span>{i18n.t("modal.fancurve")}</span>
+        </h3>
+        <FanCurveEditor />
+      </div>
 
       <!-- Services -->
       <div class="modal-section" class:active={modal.section === "services"}>
