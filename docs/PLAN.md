@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:10 (cycle 105 done — Prometheus yearly gauges)
-**Latest commit** : `16c7d52` — Prom yearly + alert-age
+**Last updated** : 2026-05-22 02:14 (cycle 106 done — Grafana template)
+**Latest commit** : `f6ff929` — Grafana yearly dashboard JSON
 **Tests** : 525 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -59,6 +59,14 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 106 — Grafana yearly dashboard template (1 commit)
+- `f6ff929` docs/grafana/yearly_dashboard.json — turnkey import
+  - 9 panels : kWh/cost/tokens YTD · alert age · live power/temp/fan
+  - Threshold-colored alert age (red/orange/green by age)
+  - GPU alive UP/DOWN value mapping
+  - Grafana schemaVersion 38 (compat 10+)
+  - README integrations section gets import paragraph
 
 ### Cycle 105 — Prometheus yearly + alert-age gauges (1 commit)
 - `16c7d52` 6 new gauges in /api/prom :
@@ -474,7 +482,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~114 |
+| Commits since v0.1.0 | ~115 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
