@@ -283,6 +283,7 @@
   "stats.section_thermal": "Thermique",
   "stats.section_profiles": "Temps par profil (24h)",
   "stats.section_fans": "Distribution paliers ventilo",
+  "stats.section_alerts": "Alertes récentes (7 jours)",
   "services.title": "Services système",
   "alerts.title": "Alertes Telegram",
   "alerts.description": "Notifications push sur ton téléphone (décrochage/reprise OcuLink). Le watchdog recharge la conf à chaque tick (~60s) — pas de restart nécessaire.",

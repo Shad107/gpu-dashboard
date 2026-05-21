@@ -16,6 +16,7 @@
   let profileTime  = $state<Awaited<ReturnType<typeof api.profileStats>> | null>(null);
   let heatmapData  = $state<Awaited<ReturnType<typeof api.powerHeatmap>> | null>(null);
   let heatmapDays  = $state(7);
+  let alerts = $state<Array<{ ts: number; payload: any }>>([]);
   let timer: ReturnType<typeof setInterval> | null = null;
 
   async function loadAll() {
@@ -24,6 +25,27 @@
     try { powerStats   = await api.powerStats(gpu.selected);           } catch {}
     try { profileTime  = await api.profileStats(86400);                } catch {}  // profile-stats is global
     try { heatmapData  = await api.powerHeatmap(heatmapDays, gpu.selected); } catch {}
+    // /api/health.recent_alerts (last 5, 7-day window)
+    try {
+      const r = await fetch("/api/health", { cache: "no-store" });
+      const j = await r.json();
+      alerts = (j.recent_alerts ?? []) as Array<{ ts: number; payload: any }>;
+    } catch {}
+  }
+
+  function fmtAlertAgo(ts: number): string {
+    const dt = Math.floor(Date.now() / 1000) - ts;
+    if (dt < 60) return `${dt}s ago`;
+    if (dt < 3600) return `${Math.floor(dt / 60)}m ago`;
+    if (dt < 86400) return `${Math.floor(dt / 3600)}h ago`;
+    return `${Math.floor(dt / 86400)}d ago`;
+  }
+  function fmtAlertDetail(payload: any): string {
+    if (!payload) return "";
+    const parts: string[] = [];
+    if (payload.value != null) parts.push(`value ${payload.value}`);
+    if (payload.threshold != null) parts.push(`threshold ${payload.threshold}`);
+    return parts.join(" · ");
   }
   // Re-fetch heatmap when window changes
   $effect(() => {
@@ -254,6 +276,30 @@
       {/if}
     </div>
   {/if}
+
+  <!-- 🚨 Recent alerts (7-day window via /api/health.recent_alerts) -->
+  <div class="stats-card">
+    <div class="stats-card-head">
+      <h3>🚨 {i18n.t("stats.section_alerts") ?? "Recent alerts"}</h3>
+    </div>
+    {#if alerts.length === 0}
+      <p class="sub" style="color:var(--accent)">
+        ✓ {i18n.t("alertfooter.no_alerts_7d")}
+      </p>
+    {:else}
+      <table class="alerts-table">
+        <tbody>
+          {#each alerts as a}
+            <tr>
+              <td class="alert-ago">{fmtAlertAgo(a.ts)}</td>
+              <td class="alert-kind">{a.payload?.kind || "alert"}</td>
+              <td class="alert-detail">{fmtAlertDetail(a.payload)}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -335,6 +381,13 @@
   .fan-dist-table td:first-child { color: #7c8aa3; width: 60px; text-align: right; font-variant-numeric: tabular-nums; }
   .fan-bar { height: 5px; background: #14171f; border-radius: 3px; margin-top: 0.25em; overflow: hidden; }
   .fan-bar > div { height: 100%; border-radius: 3px; }
+
+  .alerts-table { width: 100%; max-width: 560px; font-size: 0.86em; }
+  .alerts-table td { padding: 0.35em 0.5em; vertical-align: middle; border-bottom: 1px solid var(--border-subtle); }
+  .alerts-table tr:last-child td { border-bottom: none; }
+  .alert-ago { color: var(--accent-warn); font-weight: 500; width: 90px; }
+  .alert-kind { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: 0.9em; }
+  .alert-detail { color: var(--text-dim); font-size: 0.85em; }
 
   @media (max-width: 600px) {
     .stats-row { gap: 0.8em; }

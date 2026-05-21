@@ -283,6 +283,7 @@
   "stats.section_thermal": "Thermal",
   "stats.section_profiles": "Profile time (last 24h)",
   "stats.section_fans": "Fan target distribution",
+  "stats.section_alerts": "Recent alerts (7 days)",
   "services.title": "System services",
   "alerts.title": "Telegram alerts",
   "alerts.description": "Push notifications to your phone (OcuLink drop/recovery). The watchdog reloads the config at each tick (~60s) — no restart needed.",
