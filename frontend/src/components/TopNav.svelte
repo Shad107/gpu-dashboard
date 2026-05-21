@@ -6,10 +6,12 @@
   // 'About' stays in the Settings modal (per user feedback 2026-05-21 23:25 :
   // 'Remet le à-propos dans le paramétrage a la fin'). Top-level keeps only
   // recurring views.
+  // Order : Dashboard (live) → Stats (perf overview) → History (deep dive)
+  // Stats is more "at-a-glance" than History → goes second per user 23:39.
   const tabs: NavTab[] = [
     { id: "dashboard", labelKey: "nav.dashboard", emoji: "🏠" },
-    { id: "history",   labelKey: "nav.history",   emoji: "📊" },
     { id: "stats",     labelKey: "nav.stats",     emoji: "📈" },
+    { id: "history",   labelKey: "nav.history",   emoji: "📊" },
   ];
 </script>
 
