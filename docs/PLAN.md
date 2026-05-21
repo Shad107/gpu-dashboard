@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:13 (cycle 91 done — multi-GPU COMPLETE)
-**Latest commit** : `1841253` — README + CHANGELOG multi-GPU recap
+**Last updated** : 2026-05-22 01:18 (cycle 92 done — fan curve viz 1/8)
+**Latest commit** : `064c59c` — fan curve SVG visualization
 **Tests** : 497 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 92 : Drag-and-drop fan curve editor SVG (slice 1 of ~8)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 93 : fan curve editor slice 2/8 — drag handling**.
 
 ---
 
@@ -19,13 +19,16 @@ Nothing — between cycles. Wakeup soon will start **Cycle 92 : Drag-and-drop fa
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 92 (next) — Drag-and-drop fan curve editor SVG (slice 1 of ~8)
-The last remaining big-effort feature from the original backlog.
+### Cycle 93 (next) — Fan curve slice 2/8 — drag handling
+- pointerdown on a circle → start drag
+- pointermove updates the local curve array (constrained to [0,100] × [0,100])
+- pointerup → finalize (still no persist yet — slice 4)
+- Snap to integer grid (1°C and 1% steps)
+- Visual feedback : circle radius +1 on hover, +2 on grab
 
-Slice 1 : new component `FanCurveEditor.svelte` rendering the current
-curve as draggable points on SVG. Read-only initially — just visualization
-of the saved curve config. Slices 2-3 add drag handling. Slice 4 persists
-changes. Slices 5-8 polish + per-fan curves + presets.
+### Cycle 94 — Slice 3/8 : add/remove control points
+### Cycle 95 — Slice 4/8 : POST /api/fan-curve to persist edits
+### Cycles 96-99 : per-fan curves, presets, tests, polish
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
@@ -50,6 +53,15 @@ changes. Slices 5-8 polish + per-fan curves + presets.
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 92 — Fan curve SVG visualization (1 commit)
+- `064c59c` New FanCurveEditor.svelte component
+  - 460×240 SVG with grid + axis labels
+  - Curve from /api/fan-curve drawn as smooth path
+  - Live current_target_pct dashed line
+  - Module + daemon status badges
+  - 9 new i18n keys × 2 langs
+  - New tab in TUNING group (10 modal tabs total)
 
 ### Cycle 91 — Multi-GPU final + README (1 commit)
 - `1841253` README "🖥️🖥️ Multi-GPU support" section
@@ -365,7 +377,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~99 |
+| Commits since v0.1.0 | ~100 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
