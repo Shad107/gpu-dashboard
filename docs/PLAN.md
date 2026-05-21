@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:54 (cycle 74 done — Stats multi-section)
-**Latest commit** : `ced093d` — Stats multi-section sparklines
-**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 74.25 KB gzip
+**Last updated** : 2026-05-22 00:02 (cycle 75 done — modal cleanup)
+**Latest commit** : `12f30c5` — modal cleanup (History+Stats removed)
+**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 71.30 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 75 : Modal cleanup + heatmap migration**.
+Nothing — between cycles. Wakeup soon will start **Cycle 76 : migrate heatmap to Stats + Simple mode (no LLM)**.
 
 ---
 
@@ -19,12 +19,11 @@ Nothing — between cycles. Wakeup soon will start **Cycle 75 : Modal cleanup + 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 75 (next) — Modal cleanup + heatmap migration
-- Remove History + Stats sections from SettingsModal.svelte
+### Cycle 76 (next) — Migrate heatmap to Stats + Simple mode
 - Move power-cost heatmap from HistoryView to StatsView (more thematic fit)
-- Sidebar drops to 9 tabs (Tuning · Alerts · Operations · Advanced · Préférences)
+- Filter Tokens/s + Tokens/W from History metric dropdown if no LLM_SERVER_URL
+- Add a 'Simple mode' detection : when no LLM detected, hide LLM-specific UI
 
-### Cycle 76 — Simple mode (filter LLM UI if not configured)
 ### Cycle 77+ — Theme toggle, Browser push, Multi-GPU, Fan curve editor
 
 ### Cycle 70+ — Original feature backlog continues
@@ -47,6 +46,12 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 75 — Modal cleanup (1 commit)
+- `12f30c5` Removed History + Stats sections from SettingsModal
+  - 11 → 9 modal tabs
+  - Refactored `sections[N].icon` to `iconOf(id)` helper (more robust)
+  - Bundle 74.25 → 71.30 KB gzip (-3 KB)
 
 ### Cycle 74 — Rewrite StatsView with multi-section sparklines (1 commit)
 - `ced093d` 5 stats-card sections : LLM perf · Power · Thermal · Profiles · Fan dist
@@ -228,13 +233,13 @@ Rules :
 |---|---|
 | Tests | 455 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 218.41 KB raw / 74.25 KB gzip |
+| Bundle JS | 209.97 KB raw / 71.30 KB gzip |
 | Bundle CSS | 20.03 KB raw / 4.62 KB gzip |
-| Commits since v0.1.0 | ~81 |
+| Commits since v0.1.0 | ~82 |
 | API endpoints | 35+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
-| Modal tabs | 11 currently (10 after cycle 72: History removed)
+| Modal tabs | 9 (was 11 — History + Stats moved to top-level)
 | Languages | EN + FR (full coverage) |
 | GPU profiles bundled | 5 (3090, 3090 Ti, 4090, 5090, _generic) |
 
