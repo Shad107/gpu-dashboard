@@ -2,6 +2,7 @@
   import { modal, live, toast, wizard } from "../lib/stores.svelte";
   import { layout, CARD_NAMES, isValidUrl } from "../lib/layout.svelte";
   import { theme } from "../lib/theme.svelte";
+  import { push } from "../lib/push.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
   import { api, type HistorySample, type StoredEvent } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
@@ -835,6 +836,29 @@
             </span>
           </label>
           <p class="sub" style="margin:.2em 0 0 110px;font-size:.78em">{i18n.t("alerts.sound_hint")}</p>
+
+          <h3 style="margin-top:1.8em;color:var(--text-muted);font-size:.92em;font-weight:600">
+            🔔 {i18n.t("push.title")}
+          </h3>
+          <p class="sub" style="margin:0 0 .6em;font-size:.82em">{i18n.t("push.description")}</p>
+          {#if push.state === "unsupported"}
+            <p class="sub" style="color:var(--accent-warn)">{i18n.t("push.unsupported")}</p>
+          {:else if push.state === "denied"}
+            <p class="sub" style="color:var(--accent-bad)">{i18n.t("push.denied")}</p>
+          {:else if push.state === "granted-subbed"}
+            <div class="btn-row">
+              <span style="color:var(--accent)">✓ {i18n.t("push.active")}</span>
+              <button class="btn" onclick={() => push.unsubscribe()}>{i18n.t("push.disable")}</button>
+            </div>
+          {:else}
+            <div class="btn-row">
+              <button class="btn btn-primary" onclick={() => push.subscribe()}>{i18n.t("push.enable")}</button>
+              <span class="sub" style="font-size:.78em">{i18n.t("push.enable_hint")}</span>
+            </div>
+          {/if}
+          {#if push.error}
+            <p class="sub" style="color:var(--accent-bad);font-size:.78em">{push.error}</p>
+          {/if}
         </div>
       </div>
 

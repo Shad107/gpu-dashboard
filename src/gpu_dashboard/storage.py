@@ -21,7 +21,7 @@ import time
 from typing import Optional
 
 
-CURRENT_SCHEMA_VERSION = 2  # bumped from 1: added tokens_total_snapshot column
+CURRENT_SCHEMA_VERSION = 3  # bumped from 2: added push_subscriptions table
 
 # Colonnes du sample, dans l'ordre. Sert pour insert + export CSV.
 SAMPLE_COLUMNS = (
@@ -61,6 +61,14 @@ CREATE TABLE IF NOT EXISTS events (
 
 CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_ts INTEGER NOT NULL
+);
 """
 
 
@@ -69,6 +77,12 @@ def _migrate_v1_to_v2(conn) -> None:
     cols = [row[1] for row in conn.execute("PRAGMA table_info(samples)").fetchall()]
     if "tokens_total_snapshot" not in cols:
         conn.execute("ALTER TABLE samples ADD COLUMN tokens_total_snapshot INTEGER")
+
+
+def _migrate_v2_to_v3(conn) -> None:
+    """Idempotent: push_subscriptions table is created by _SCHEMA_SQL via
+    CREATE TABLE IF NOT EXISTS, so this is a no-op. Kept for documentation."""
+    pass
 
 
 class Storage:
@@ -93,10 +107,35 @@ class Storage:
         # Schéma + migrations idempotentes
         self._conn.executescript(_SCHEMA_SQL)
         _migrate_v1_to_v2(self._conn)
+        _migrate_v2_to_v3(self._conn)
         self._conn.execute(
             "INSERT OR IGNORE INTO schema_version (version) VALUES (?)",
             (CURRENT_SCHEMA_VERSION,),
         )
+
+    # ── push subscriptions ──────────────────────────────────────────────────
+
+    def add_push_subscription(self, endpoint: str, p256dh: str, auth: str) -> None:
+        """Idempotent : UPSERT by endpoint."""
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO push_subscriptions "
+                "(endpoint, p256dh, auth, created_ts) VALUES (?, ?, ?, ?)",
+                (endpoint, p256dh, auth, int(time.time())),
+            )
+
+    def list_push_subscriptions(self) -> list:
+        cur = self._conn.execute(
+            "SELECT endpoint, p256dh, auth, created_ts FROM push_subscriptions ORDER BY id"
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+    def remove_push_subscription(self, endpoint: str) -> int:
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM push_subscriptions WHERE endpoint = ?", (endpoint,)
+            )
+            return cur.rowcount
 
     # ── introspection ───────────────────────────────────────────────────────
 

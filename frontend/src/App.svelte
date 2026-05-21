@@ -14,6 +14,7 @@
   import { live, wizard, modal, toast } from "./lib/stores.svelte";
   import { view } from "./lib/view.svelte";
   import { theme } from "./lib/theme.svelte";  // applies theme class on boot
+  import { push } from "./lib/push.svelte";
   import { i18n } from "./lib/i18n/index.svelte";
 
   // Reference theme so Svelte doesn't tree-shake the side-effect import
@@ -66,6 +67,8 @@
     document.title = i18n.t("app.title");
     document.documentElement.lang = i18n.lang;
     window.addEventListener("keydown", onKey);
+    // Wire push notifications (no-op if browser unsupported)
+    push.init();
   });
   onDestroy(() => {
     live.stop();

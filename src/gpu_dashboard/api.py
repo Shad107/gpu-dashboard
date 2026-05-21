@@ -1388,6 +1388,58 @@ def handle_push_vapid(ctx: dict) -> Response:
     return 200, {"ok": True, "public_key": data["public_key"]}
 
 
+def handle_push_subscribe(ctx: dict, payload: dict) -> Response:
+    """Save a browser's push subscription to the DB.
+
+    Payload shape (from PushSubscription.toJSON()) :
+      {endpoint: "...", keys: {p256dh: "...", auth: "..."}}
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+
+    endpoint = payload.get("endpoint")
+    keys = payload.get("keys") or {}
+    p256dh = keys.get("p256dh")
+    auth = keys.get("auth")
+    if not endpoint or not p256dh or not auth:
+        return 400, {"ok": False, "error": "endpoint + keys.p256dh + keys.auth required"}
+
+    storage.add_push_subscription(endpoint, p256dh, auth)
+    return 200, {"ok": True}
+
+
+def handle_push_unsubscribe(ctx: dict, payload: dict) -> Response:
+    """Remove a subscription by endpoint."""
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    endpoint = payload.get("endpoint")
+    if not endpoint:
+        return 400, {"ok": False, "error": "endpoint required"}
+    n = storage.remove_push_subscription(endpoint)
+    return 200, {"ok": True, "removed": n}
+
+
+def handle_push_status(ctx: dict) -> Response:
+    """Return the count of active push subscriptions + the VAPID public key."""
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    from .modules import web_push
+    cfg_dir = os.path.expanduser("~/.config/gpu-dashboard")
+    try:
+        data = web_push.ensure_vapid_keys(cfg_dir)
+        public_key = data["public_key"]
+    except Exception:
+        public_key = None
+    return 200, {
+        "ok": True,
+        "count": len(storage.list_push_subscriptions()),
+        "vapid_public_key": public_key,
+    }
+
+
 def handle_about(ctx: dict) -> Response:
     """Static info about the running server : version, paths, uptime, vBIOS."""
     import platform

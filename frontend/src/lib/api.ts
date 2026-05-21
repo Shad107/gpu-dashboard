@@ -314,6 +314,30 @@ export const api = {
       reason?: string;
     }>),
 
+  pushVapid: () =>
+    fetch("/api/push/vapid").then(jsonOf<{ ok: boolean; public_key: string }>),
+
+  pushStatus: () =>
+    fetch("/api/push/status").then(jsonOf<{
+      ok: boolean;
+      count: number;
+      vapid_public_key: string | null;
+    }>),
+
+  pushSubscribe: (sub: any) =>
+    fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub),
+    }).then(jsonOf<{ ok: boolean; error?: string }>),
+
+  pushUnsubscribe: (endpoint: string) =>
+    fetch("/api/push/unsubscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint }),
+    }).then(jsonOf<{ ok: boolean; removed?: number }>),
+
   llmPerf: () =>
     fetch("/api/llm/perf").then(jsonOf<{
       ok: boolean;
