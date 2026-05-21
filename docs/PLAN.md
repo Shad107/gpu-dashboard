@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:11 (cycle 67 done)
-**Latest commit** : `053ae0c` — Power cost heatmap
-**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 67.28 KB gzip
+**Last updated** : 2026-05-21 23:18 (cycle 68 done)
+**Latest commit** : `a6f7500` — Compare-to 24h/7d/30d dropdown
+**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 67.55 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Compare-to-7d/30d** or Theme toggle.
+Nothing — between cycles. Wakeup soon will start **Theme toggle light/dark**.
 
 ---
 
@@ -19,11 +19,11 @@ Nothing — between cycles. Wakeup soon will start **Compare-to-7d/30d** or Them
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 68 (next) — Compare-to-7d/30d toggle in History (~30 min)
-Extend the existing compare-to-yesterday to support 7d/30d offsets.
+### Cycle 69 (next) — Theme toggle light/dark (~2h)
+CSS variables refactor. Toggle in Layout tab. Persist in localStorage.
 
-### Cycle 69+ — Original feature backlog continues
-1. Theme toggle light/dark (~2h)
+### Cycle 70+ — Original feature backlog continues
+1. Browser push notifs via Web Push + VAPID (~1.5h)
 5. Browser push notifs via Web Push + VAPID (~1.5h)
 6. Multi-GPU full picker UI (~3h, several cycles)
 7. Drag-and-drop fan curve editor SVG (~4h, several cycles)
@@ -42,6 +42,14 @@ Extend the existing compare-to-yesterday to support 7d/30d offsets.
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 68 — Compare-to dropdown 24h/7d/30d (2 commits)
+- `a63f7de` Compare-to dropdown replaces compare-to-yesterday checkbox
+- `a6f7500` Fix : i18n keys that didn't land in the previous commit
+- Options: off / 24h ago / 7 days ago / 30 days ago
+- Chart legend updates dynamically per offset
+- Useful for spotting long-term trends + week-over-week patterns
+- 5 new i18n keys × 2 langs
 
 ### Cycle 67 — Power cost heatmap (2 commits)
 - `c404870` Heatmap backend (/api/power-heatmap) + state + CSS
@@ -175,9 +183,9 @@ Rules :
 |---|---|
 | Tests | 442 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 195.64 KB raw / 67.28 KB gzip |
+| Bundle JS | 196.48 KB raw / 67.55 KB gzip |
 | Bundle CSS | 16.37 KB raw / 3.99 KB gzip |
-| Commits since v0.1.0 | ~71 |
+| Commits since v0.1.0 | ~73 |
 | API endpoints | 32+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
