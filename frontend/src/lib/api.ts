@@ -375,6 +375,9 @@ export const api = {
       peak_ts: number;
       kwh_today: number;
       cost_today: number;
+      kwh_year: number;
+      cost_year: number;
+      year_start_ts: number;
       currency: string;
       price_per_kwh: number;
       series_24h: number[];
@@ -388,6 +391,8 @@ export const api = {
       since_ts: number | null;
       latest_snapshot: number;
       total_tokens_generated: number;
+      total_tokens_this_year: number;
+      year_start_ts: number;
       restart_count: number;
       avg_power_watts: number;
       avg_tokens_per_watt: number | null;

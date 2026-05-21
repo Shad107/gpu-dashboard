@@ -514,7 +514,12 @@ def handle_llm_lifetime(ctx: dict, params: Optional[dict] = None) -> Response:
 
     gpu = _parse_gpu_index(params or {})
     samples = storage.get_samples(from_ts=0, gpu_index=gpu)
+    import datetime as _dt2
+    import time as _t2
+    year_start_ts = int(_dt2.datetime.fromtimestamp(_t2.time()).replace(
+        month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
     total = 0
+    total_this_year = 0
     restarts = 0
     prev = None
     first_ts = None
@@ -531,6 +536,8 @@ def handle_llm_lifetime(ctx: dict, params: Optional[dict] = None) -> Response:
             delta = tok - prev
             if delta > 0:
                 total += delta
+                if s["ts"] >= year_start_ts:
+                    total_this_year += delta
             elif delta < 0:
                 restarts += 1
         prev = tok
@@ -554,6 +561,8 @@ def handle_llm_lifetime(ctx: dict, params: Optional[dict] = None) -> Response:
         "since_ts": first_ts,
         "latest_snapshot": latest or 0,
         "total_tokens_generated": total,
+        "total_tokens_this_year": total_this_year,
+        "year_start_ts": year_start_ts,
         "restart_count": restarts,
         "avg_power_watts": round(avg_power, 2),
         "avg_tokens_per_watt": round(avg_tpw, 4) if avg_tpw else None,
@@ -697,6 +706,8 @@ def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
 
     today_start = int(_dt.datetime.fromtimestamp(now).replace(
         hour=0, minute=0, second=0, microsecond=0).timestamp())
+    year_start = int(_dt.datetime.fromtimestamp(now).replace(
+        month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
 
     samples_24h = storage.get_samples(from_ts=now - 86400, to_ts=now, gpu_index=gpu)
     powers = [s["power"] for s in samples_24h if s.get("power") is not None]
@@ -729,6 +740,20 @@ def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
 
     cost_today = round(kwh_today * price, 4)
 
+    # Yearly kWh — integrate over all year-to-date samples (single query)
+    year_samples = storage.get_samples(from_ts=year_start, to_ts=now, gpu_index=gpu)
+    year_wh = 0.0
+    for i in range(1, len(year_samples)):
+        prev_s = year_samples[i - 1]
+        cur = year_samples[i]
+        if prev_s.get("power") is None or cur.get("power") is None:
+            continue
+        dt = min(cur["ts"] - prev_s["ts"], 300)
+        avg = (prev_s["power"] + cur["power"]) / 2
+        year_wh += avg * dt / 3600
+    kwh_year = year_wh / 1000
+    cost_year = round(kwh_year * price, 2)
+
     series = []
     for h in range(24):
         bucket_start = now - (24 - h) * 3600
@@ -744,6 +769,9 @@ def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
         "peak_ts": peak_ts,
         "kwh_today": round(kwh_today, 4),
         "cost_today": cost_today,
+        "kwh_year": round(kwh_year, 2),
+        "cost_year": cost_year,
+        "year_start_ts": year_start,
         "currency": currency,
         "price_per_kwh": price,
         "series_24h": series,
