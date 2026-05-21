@@ -1412,6 +1412,20 @@ def handle_health(ctx: dict) -> Response:
         except Exception:
             components["storage"] = False
 
+    # Recent alerts — last 5 from the events table (gives Uptime Kuma + Grafana
+    # operational context without a second API call).
+    recent_alerts = []
+    if storage is not None:
+        try:
+            from_ts = max(0, int(_time.time()) - 7 * 86400)  # last 7 days max
+            events = storage.get_events(from_ts=from_ts, kind="alert")
+            recent_alerts = [
+                {"ts": ev["ts"], "payload": ev.get("payload")}
+                for ev in events[-5:][::-1]  # last 5, most recent first
+            ]
+        except Exception:
+            recent_alerts = []
+
     all_ok = all(components.values())
     code = 200 if all_ok else 503
     return code, {
@@ -1419,6 +1433,7 @@ def handle_health(ctx: dict) -> Response:
         "components": components,
         "uptime_seconds": max(0, int(_time.time() - (ctx.get("started_at") or _time.time()))),
         "version": _ver,
+        "recent_alerts": recent_alerts,
     }
 
 
