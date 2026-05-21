@@ -6,6 +6,7 @@
   import CoolingChart from "./components/CoolingChart.svelte";
   import PowerChart from "./components/PowerChart.svelte";
   import HistoryView from "./components/HistoryView.svelte";
+  import StatsView from "./components/StatsView.svelte";
   import SettingsModal from "./components/SettingsModal.svelte";
   import SetupWizard from "./components/SetupWizard.svelte";
   import IdleBanner from "./components/IdleBanner.svelte";
@@ -108,11 +109,7 @@
   {:else if view.current === "history"}
     <HistoryView />
   {:else if view.current === "stats"}
-    <div class="view-placeholder">
-      <h2>📈 {i18n.t("nav.stats")}</h2>
-      <p class="sub">{i18n.t("view.coming_soon")}</p>
-      <p class="sub"><button class="btn" onclick={() => modal.show("stats")}>open the legacy Stats tab</button></p>
-    </div>
+    <StatsView />
   {/if}
   <SettingsModal />
   <Toast />
