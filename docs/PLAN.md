@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:13 (cycle 78 done — CSS variables foundation)
-**Latest commit** : `c77ad21` — CSS variables refactor
-**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 71.98 KB gzip · CSS 4.97 KB
+**Last updated** : 2026-05-22 00:17 (cycle 79 done — light theme + toggle)
+**Latest commit** : `8910d31` — light theme + toggle + URL param
+**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.13 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 79 : Light theme overrides + toggle in Layout tab**.
+Nothing — between cycles. Wakeup soon will start **Cycle 80 : polish remaining hard-coded colors**.
 
 ---
 
@@ -19,14 +19,13 @@ Nothing — between cycles. Wakeup soon will start **Cycle 79 : Light theme over
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 79 (next) — Light theme + toggle (slice 2/4)
-- Define html.theme-light variable overrides (white bg, dark text)
-- Add toggle in Layout tab (radio or 2-tile picker)
-- Persist in localStorage 'gpu-dashboard-theme'
-- Apply on root <html> at boot
+### Cycle 80 (next) — Polish remaining hard-coded colors (slice 3/4)
+- Component-specific colors (badges, charts, sparklines, mode-tiles) that don't
+  yet use the CSS variables — convert with proper theme awareness
+- Verify modal backdrop, OcuLink card color states, fan colors transition cleanly
 
-### Cycle 80 — Polish remaining hard-coded colors (slice 3/4)
-### Cycle 81 — Screenshot dark + light side by side (slice 4/4)
+### Cycle 81 — Side-by-side README screenshot (slice 4/4)
+Document the theme toggle in README with dark vs light screenshots.
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
 
 ### Cycle 70+ — Original feature backlog continues
@@ -49,6 +48,11 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 79 — Light theme + toggle (2 commits)
+- `4b91e9c` html.theme-light overrides + theme.svelte.ts store + toggle in Layout tab
+- `8910d31` ?theme=light|dark URL param (for screenshot tooling + bookmarks)
+- 6 new i18n keys × 2 langs
 
 ### Cycle 78 — CSS variables foundation for theme toggle (1 commit)
 - `c77ad21` :root variables defined (--bg-*, --border-*, --text-*, --accent-*)
@@ -257,9 +261,9 @@ Rules :
 |---|---|
 | Tests | 455 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 212.96 KB raw / 71.98 KB gzip |
-| Bundle CSS | 21.71 KB raw / 4.97 KB gzip |
-| Commits since v0.1.0 | ~85 |
+| Bundle JS | 215.31 KB raw / 72.74 KB gzip |
+| Bundle CSS | 22.20 KB raw / 5.13 KB gzip |
+| Commits since v0.1.0 | ~87 |
 | API endpoints | 35+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
