@@ -1,0 +1,44 @@
+{
+  "model": "RTX 4090",
+  "architecture": "Ada Lovelace (AD102)",
+  "release_year": 2022,
+  "match": ["RTX 4090"],
+  "vram_gib": 24,
+  "tdp_w": 450,
+
+  "power": {
+    "min": 100,
+    "max": 600,
+    "stock": 450,
+    "sweet_spot": 320,
+    "perf_curve": [
+      [100, 22], [150, 38], [200, 52], [250, 65], [300, 78],
+      [325, 84], [350, 88], [375, 92], [400, 96], [430, 99], [450, 100],
+      [500, 101], [550, 102], [600, 103]
+    ]
+  },
+
+  "clocks": {
+    "gpu_offset_max": 250,
+    "mem_offset_max": 2000,
+    "gpu_zones": {
+      "safe": 100, "moderate": 175, "aggressive": 225, "danger": 250
+    },
+    "mem_zones": {
+      "safe": 500, "moderate": 1200, "aggressive": 1700, "danger": 2000
+    },
+    "sweet_spot": { "gpu": 150, "mem": 1000 }
+  },
+
+  "fans": {
+    "controllers_expected": 2,
+    "physical_count": 3,
+    "rpm_max": 3000,
+    "zero_rpm_cutoff_c": 55,
+    "default_curve": [
+      [40, 30], [50, 40], [60, 55], [70, 70], [80, 85], [90, 100]
+    ]
+  },
+
+  "notes": "Ada Lovelace AD102. Excellente perf/W — courbe très plate au-dessus de 350W. Sweet-spot ~320W (~84%). Au-delà de 450W les gains sont marginaux (et certains AIB acceptent jusqu'à 600W). VRAM tolère +1000 MHz d'offset facile."
+}

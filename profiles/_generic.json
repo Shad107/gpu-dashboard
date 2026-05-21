@@ -1,0 +1,45 @@
+{
+  "model": "Generic NVIDIA GPU",
+  "architecture": "unknown",
+  "release_year": null,
+  "match": [],
+  "_fallback": true,
+  "vram_gib": null,
+  "tdp_w": null,
+
+  "_doc": "Profil fallback chargé si aucun profil spécifique ne matche. Valeurs prudentes. Si tu vois ce profil chargé, ta carte n'est pas connue — pense à contribuer un profile/ JSON via PR (voir SCHEMA.md).",
+
+  "power": {
+    "min": 100,
+    "max": 350,
+    "stock": 350,
+    "sweet_spot": 250,
+    "perf_curve": [
+      [100, 30], [150, 50], [200, 70], [250, 85], [300, 95], [350, 100]
+    ]
+  },
+
+  "clocks": {
+    "gpu_offset_max": 100,
+    "mem_offset_max": 500,
+    "gpu_zones": {
+      "safe": 25, "moderate": 50, "aggressive": 75, "danger": 100
+    },
+    "mem_zones": {
+      "safe": 150, "moderate": 300, "aggressive": 400, "danger": 500
+    },
+    "sweet_spot": { "gpu": 0, "mem": 0 }
+  },
+
+  "fans": {
+    "controllers_expected": 1,
+    "physical_count": 1,
+    "rpm_max": 3000,
+    "zero_rpm_cutoff_c": 50,
+    "default_curve": [
+      [40, 30], [50, 40], [60, 55], [70, 70], [80, 85], [90, 100]
+    ]
+  },
+
+  "notes": "Fallback prudent — limites OC réduites pour éviter d'endommager une carte inconnue."
+}

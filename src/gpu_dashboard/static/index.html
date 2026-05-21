@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>GPU Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1 data-i18n="app.title">GPU Dashboard</h1>
+    <div class="ts"><span id="gpu-name">…</span> · <span id="ts" data-i18n="ts.loading">loading…</span></div>
+  </div>
+  <button class="gear-btn" id="gear-btn" data-i18n-title="header.gear_title" data-i18n-aria="modal.settings">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/></svg>
+  </button>
+</div>
+<div class="row" id="cards"></div>
+<div class="chart-row chart-cool">
+  <div class="card">
+    <h2 data-i18n="chart.cooling">Cooling — fans (RPM) + temperature</h2>
+    <div class="hist" id="hist"></div>
+    <div class="sub" id="hist-info"></div>
+  </div>
+</div>
+<div class="chart-row chart-pow">
+  <div class="card">
+    <h2 data-i18n="chart.power">Power — live draw + power-limit cap</h2>
+    <div class="hist-power" id="hist-power"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-sidebar">
+      <h3 data-i18n="modal.settings">Settings</h3>
+      <button class="sidebar-item active" data-section="power">
+        <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z"/></svg>
+        <span data-i18n="modal.power">Power Limit</span>
+      </button>
+      <button class="sidebar-item" data-section="clocks">
+        <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3M3 5v2h10V5H3m10 16v-2h8v-2h-8v-2h-2v6h2M7 9v2H3v2h4v2h2V9H7m14 4v-2H11v2h10m-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+        <span data-i18n="modal.clocks">Clocks</span>
+      </button>
+      <button class="sidebar-item" data-section="stats">
+        <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M22 21H2V3h2v16h2v-9h4v9h2V6h4v13h2v-7h4v9z"/></svg>
+        <span data-i18n="modal.stats">Statistics</span>
+      </button>
+      <button class="sidebar-item" data-section="services">
+        <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14.06 9L15 9.94 5.92 19H5v-.92L14.06 9m3.6-6c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83a.996.996 0 0 0 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/></svg>
+        <span data-i18n="modal.services">Services</span>
+      </button>
+      <button class="sidebar-item" data-section="alerts">
+        <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22m6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+        <span data-i18n="modal.alerts">Alerts</span>
+      </button>
+      <button class="sidebar-item" data-section="language">
+        <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+        <span data-i18n="modal.language">Language</span>
+      </button>
+    </div>
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close" data-i18n-aria="modal.close">×</button>
+
+      <div class="modal-section active" id="section-power">
+        <h3 class="title"><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z"/></svg><span data-i18n="power.section_title">Power Limit</span></h3>
+        <p class="sub" style="margin:0 0 1em" data-i18n="power.description">Power consumption cap (nvidia-smi -pl). Persistent across reboot via the sudoers wrapper.</p>
+        <div class="controls" style="background:transparent;border:none;padding:0">
+          <div class="slider-row">
+            <label data-i18n="power.limit_label">Limit</label>
+            <input type="range" id="pl-slider" min="100" max="350" step="10" value="250">
+            <div class="val"><span id="pl-val">250</span> W <span class="sub" id="pl-perf" style="font-size:.78em">(~93%)</span></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-pl-apply" data-i18n="power.apply">Apply</button>
+            <button class="btn" id="btn-pl-250" data-i18n="power.preset_250">→ 250 W</button>
+            <button class="btn" id="btn-pl-350" data-i18n="power.preset_350">→ 350 W (stock)</button>
+            <span class="warn-text" data-i18n="power.stock_note">Stock 350 W · sweet-spot ~250 W</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section" id="section-clocks">
+        <h3 class="title"><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3M3 5v2h10V5H3m10 16v-2h8v-2h-8v-2h-2v6h2M7 9v2H3v2h4v2h2V9H7m14 4v-2H11v2h10m-6-4h2V7h4V5h-4V3h-2v6z"/></svg><span data-i18n="clocks.section_title">Clock control (Coolbits 12 · no sudo)</span></h3>
+        <div class="controls" style="background:transparent;border:none;padding:0">
+          <div class="ref-text">
+            <b data-i18n="clocks.reference_title">RTX 3090 reference:</b> <span data-i18n="clocks.reference_text">typical stable sweet-spot =</span> <code>GPU +75–100</code> / <code>mem +500</code>. <span data-i18n="clocks.reference_warning">Beyond: crash risk, visual artifacts, memory corruption. Reset at any sign of instability.</span><br>
+            <span style="color:#7c8aa3"><span data-i18n="clocks.zones_label">Zones:</span> <span class="zone safe" data-i18n="zone.safe">safe</span> <span data-i18n="clocks.zone_safe_help">risk-free</span> · <span class="zone mod" data-i18n="zone.moderate">moderate</span> <span data-i18n="clocks.zone_mod_help">typical</span> · <span class="zone agg" data-i18n="zone.aggressive">aggressive</span> <span data-i18n="clocks.zone_agg_help">stability test required</span> · <span class="zone danger" data-i18n="zone.danger">danger</span> <span data-i18n="clocks.zone_danger_help">may freeze the GPU</span></span>
+          </div>
+          <div class="slider-row">
+            <label data-i18n="clocks.gpu_offset">GPU offset</label>
+            <input type="range" id="gpu-offset" min="0" max="100" step="25" value="0">
+            <div class="val">
+              <span id="gpu-offset-val">+0</span> MHz
+              <span class="zone safe" id="gpu-zone">safe</span>
+            </div>
+          </div>
+          <div class="slider-row">
+            <label data-i18n="clocks.mem_offset">Mem offset</label>
+            <input type="range" id="mem-offset" min="0" max="500" step="50" value="0">
+            <div class="val">
+              <span id="mem-offset-val">+0</span> MHz
+              <span class="zone safe" id="mem-zone">safe</span>
+            </div>
+          </div>
+          <label class="advanced-row" for="advanced-mode">
+            <input type="checkbox" id="advanced-mode">
+            <span data-i18n="clocks.advanced_mode">⚠️ Advanced mode — unlock GPU up to +200 / mem +1500 MHz</span><span class="locked-mark" data-i18n="clocks.locked">(currently locked to safe/moderate)</span>
+          </label>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-apply" data-i18n="clocks.apply">Apply</button>
+            <button class="btn btn-danger" id="btn-reset" data-i18n="clocks.reset">Reset (0 / 0)</button>
+            <span class="warn-text" data-i18n="clocks.test_warning">⚠️ Test after each increase</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section" id="section-stats">
+        <h3 class="title"><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M22 21H2V3h2v16h2v-9h4v9h2V6h4v13h2v-7h4v9z"/></svg><span data-i18n="stats.title">Fan target distribution (since startup)</span></h3>
+        <table id="dist"></table>
+      </div>
+
+      <div class="modal-section" id="section-services">
+        <h3 class="title"><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14.06 9L15 9.94 5.92 19H5v-.92L14.06 9m3.6-6c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83a.996.996 0 0 0 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/></svg><span data-i18n="services.title">System services</span></h3>
+        <table id="svc"></table>
+      </div>
+
+      <div class="modal-section" id="section-alerts">
+        <h3 class="title"><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22m6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span data-i18n="alerts.title">Telegram alerts</span></h3>
+        <p class="sub" style="margin:0 0 1em" data-i18n="alerts.description">Push notifications to your phone (OcuLink drop/recovery). The watchdog reloads the config at each tick (~60s) — no restart needed.</p>
+        <div class="controls" style="background:transparent;border:none;padding:0">
+          <label class="form-row">
+            <span class="form-lbl" data-i18n="alerts.enable_label">Enable</span>
+            <span class="form-val"><input type="checkbox" id="al-enabled"> <span data-i18n="alerts.enable_help">send Telegram notifications</span></span>
+          </label>
+          <label class="form-row">
+            <span class="form-lbl" data-i18n="alerts.bot_token">Bot token</span>
+            <input type="text" id="al-token" class="al-input" placeholder="123456789:ABC..." autocomplete="off" spellcheck="false">
+          </label>
+          <label class="form-row">
+            <span class="form-lbl" data-i18n="alerts.chat_id">Chat ID</span>
+            <input type="text" id="al-chat" class="al-input" placeholder="123456789" autocomplete="off" spellcheck="false">
+          </label>
+          <div class="form-row">
+            <span class="form-lbl" data-i18n="alerts.events">Events</span>
+            <span class="form-val">
+              <label style="cursor:pointer;margin-right:1.2em"><input type="checkbox" id="al-on-drop"> <span data-i18n="alerts.drop">🔴 Drop</span></label>
+              <label style="cursor:pointer"><input type="checkbox" id="al-on-recover"> <span data-i18n="alerts.recovery">🟢 Recovery</span></label>
+            </span>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-al-save" data-i18n="alerts.save">Save</button>
+            <button class="btn" id="btn-al-test" data-i18n="alerts.test_btn">📤 Send a test</button>
+            <span class="warn-text" data-i18n="alerts.token_note">Configure your Telegram bot token in secrets.env</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section" id="section-language">
+        <h3 class="title"><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg><span data-i18n="lang.title">Language</span></h3>
+        <p class="sub" style="margin:0 0 1em" data-i18n="lang.description">Choose the language for the dashboard UI. Stored locally in your browser.</p>
+        <div class="controls" style="background:transparent;border:none;padding:0">
+          <label class="form-row" style="cursor:pointer">
+            <span class="form-lbl"><input type="radio" name="lang" value="en" id="lang-en"></span>
+            <span class="form-val" data-i18n="lang.en">🇬🇧 English</span>
+          </label>
+          <label class="form-row" style="cursor:pointer">
+            <span class="form-lbl"><input type="radio" name="lang" value="fr" id="lang-fr"></span>
+            <span class="form-val" data-i18n="lang.fr">🇫🇷 Français</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="footer"><span data-i18n="footer.refresh">refresh 5s</span> · <a href="https://github.com/Shad107/gpu-dashboard">github</a></div>
+<script src="/static/i18n.js"></script>
+<script src="/static/app.js"></script>
+</body></html>

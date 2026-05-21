@@ -1,0 +1,43 @@
+{
+  "model": "RTX 5090",
+  "architecture": "Blackwell (GB202)",
+  "release_year": 2025,
+  "match": ["RTX 5090"],
+  "vram_gib": 32,
+  "tdp_w": 575,
+
+  "power": {
+    "min": 125,
+    "max": 600,
+    "stock": 575,
+    "sweet_spot": 425,
+    "perf_curve": [
+      [125, 22], [200, 38], [275, 52], [350, 68], [400, 78],
+      [450, 87], [500, 93], [535, 97], [575, 100], [600, 101]
+    ]
+  },
+
+  "clocks": {
+    "gpu_offset_max": 300,
+    "mem_offset_max": 2500,
+    "gpu_zones": {
+      "safe": 100, "moderate": 200, "aggressive": 275, "danger": 300
+    },
+    "mem_zones": {
+      "safe": 600, "moderate": 1500, "aggressive": 2200, "danger": 2500
+    },
+    "sweet_spot": { "gpu": 150, "mem": 1500 }
+  },
+
+  "fans": {
+    "controllers_expected": 2,
+    "physical_count": 3,
+    "rpm_max": 3500,
+    "zero_rpm_cutoff_c": 55,
+    "default_curve": [
+      [40, 30], [50, 40], [60, 55], [70, 70], [80, 85], [90, 100]
+    ]
+  },
+
+  "notes": "Blackwell GB202 — 32 GB GDDR7. TDP très élevé (575W) — sweet-spot ~425W (~87%). GDDR7 a une marge OC importante (+1500 MHz tient bien). Profil basé sur les premières mesures publiées — perf_curve à affiner via PR communautaire."
+}

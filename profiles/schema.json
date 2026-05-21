@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Shad107/gpu-dashboard/profiles/schema.json",
+  "title": "GPU Profile",
+  "description": "Profil pour un modèle de carte NVIDIA — plage de power-limit, courbe perf, zones d'offset clocks, ventilos.",
+  "type": "object",
+  "required": ["model", "match", "power"],
+
+  "properties": {
+    "model":         { "type": "string", "minLength": 1 },
+    "architecture":  { "type": "string" },
+    "release_year":  { "type": ["integer", "null"], "minimum": 2000, "maximum": 2100 },
+
+    "match": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Patterns matchés (case-insensitive substring) contre `nvidia-smi --query-gpu=name`. Liste vide = profil _generic fallback."
+    },
+
+    "_fallback": { "type": "boolean" },
+    "_doc":      { "type": "string" },
+
+    "vram_gib": { "type": ["integer", "null"], "minimum": 1, "maximum": 256 },
+    "tdp_w":    { "type": ["integer", "null"], "minimum": 30, "maximum": 1000 },
+
+    "power": {
+      "type": "object",
+      "required": ["min", "max", "stock", "perf_curve"],
+      "properties": {
+        "min":        { "type": "integer", "minimum": 30,  "maximum": 1000 },
+        "max":        { "type": "integer", "minimum": 30,  "maximum": 1500 },
+        "stock":      { "type": "integer", "minimum": 30,  "maximum": 1500 },
+        "sweet_spot": { "type": "integer", "minimum": 30,  "maximum": 1500 },
+        "perf_curve": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "integer", "minimum": 30, "maximum": 1500 },
+              { "type": "number",  "minimum": 0,  "maximum": 120  }
+            ],
+            "minItems": 2,
+            "maxItems": 2,
+            "items": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "clocks": {
+      "type": "object",
+      "properties": {
+        "gpu_offset_max": { "type": "integer", "minimum": 0, "maximum": 500 },
+        "mem_offset_max": { "type": "integer", "minimum": 0, "maximum": 5000 },
+        "gpu_zones":      { "$ref": "#/$defs/zones" },
+        "mem_zones":      { "$ref": "#/$defs/zones" },
+        "sweet_spot": {
+          "type": "object",
+          "properties": {
+            "gpu": { "type": "integer", "minimum": -200, "maximum": 500  },
+            "mem": { "type": "integer", "minimum": -500, "maximum": 5000 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "fans": {
+      "type": "object",
+      "properties": {
+        "controllers_expected": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "physical_count":       { "type": "integer", "minimum": 0, "maximum": 8 },
+        "rpm_max":              { "type": "integer", "minimum": 100, "maximum": 10000 },
+        "zero_rpm_cutoff_c":    { "type": "integer", "minimum": 0, "maximum": 100 },
+        "default_curve": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "integer", "minimum": 0, "maximum": 110 },
+              { "type": "integer", "minimum": 0, "maximum": 100 }
+            ],
+            "minItems": 2,
+            "maxItems": 2,
+            "items": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "notes": { "type": "string" }
+  },
+
+  "additionalProperties": false,
+
+  "$defs": {
+    "zones": {
+      "type": "object",
+      "required": ["safe", "moderate", "aggressive", "danger"],
+      "properties": {
+        "safe":       { "type": "integer", "minimum": 0 },
+        "moderate":   { "type": "integer", "minimum": 0 },
+        "aggressive": { "type": "integer", "minimum": 0 },
+        "danger":     { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

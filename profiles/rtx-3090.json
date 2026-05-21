@@ -1,0 +1,43 @@
+{
+  "model": "RTX 3090",
+  "architecture": "Ampere (GA102)",
+  "release_year": 2020,
+  "match": ["RTX 3090"],
+  "vram_gib": 24,
+  "tdp_w": 350,
+
+  "power": {
+    "min": 100,
+    "max": 350,
+    "stock": 350,
+    "sweet_spot": 250,
+    "perf_curve": [
+      [100, 31], [150, 56], [200, 76], [220, 83], [250, 89],
+      [280, 92], [300, 95], [340, 100], [350, 100]
+    ]
+  },
+
+  "clocks": {
+    "gpu_offset_max": 200,
+    "mem_offset_max": 1500,
+    "gpu_zones": {
+      "safe": 50, "moderate": 100, "aggressive": 150, "danger": 200
+    },
+    "mem_zones": {
+      "safe": 300, "moderate": 700, "aggressive": 1200, "danger": 1500
+    },
+    "sweet_spot": { "gpu": 100, "mem": 500 }
+  },
+
+  "fans": {
+    "controllers_expected": 2,
+    "physical_count": 3,
+    "rpm_max": 3000,
+    "zero_rpm_cutoff_c": 50,
+    "default_curve": [
+      [40, 30], [50, 40], [60, 55], [70, 70], [80, 85], [90, 100]
+    ]
+  },
+
+  "notes": "Ampere GA102, pure attention pour inférence LLM. Prefix-cache OK sur llama.cpp. Sweet-spot 250W = ~93% perf, gain énergétique fort vs stock 350W."
+}

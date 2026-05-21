@@ -1,0 +1,43 @@
+{
+  "model": "RTX 3090 Ti",
+  "architecture": "Ampere (GA102 full)",
+  "release_year": 2022,
+  "match": ["RTX 3090 Ti"],
+  "vram_gib": 24,
+  "tdp_w": 450,
+
+  "power": {
+    "min": 125,
+    "max": 450,
+    "stock": 450,
+    "sweet_spot": 320,
+    "perf_curve": [
+      [125, 30], [200, 55], [275, 75], [325, 85], [375, 92],
+      [400, 95], [430, 98], [450, 100]
+    ]
+  },
+
+  "clocks": {
+    "gpu_offset_max": 200,
+    "mem_offset_max": 1500,
+    "gpu_zones": {
+      "safe": 50, "moderate": 100, "aggressive": 150, "danger": 200
+    },
+    "mem_zones": {
+      "safe": 400, "moderate": 800, "aggressive": 1200, "danger": 1500
+    },
+    "sweet_spot": { "gpu": 100, "mem": 600 }
+  },
+
+  "fans": {
+    "controllers_expected": 2,
+    "physical_count": 3,
+    "rpm_max": 3200,
+    "zero_rpm_cutoff_c": 50,
+    "default_curve": [
+      [40, 30], [50, 40], [60, 55], [70, 70], [80, 85], [90, 100]
+    ]
+  },
+
+  "notes": "Ampere GA102 full activation (10752 CUDA cores). VRAM 21 Gbps. Plus chaude que la 3090 — sweet-spot ~320W. perf_curve estimée — calibrations bienvenues via PR."
+}
