@@ -376,6 +376,13 @@ def make_handler(ctx: dict):
                 else:
                     self._send_json(code, body)
                 return
+            if path == "/api/export/year":
+                code, body = api.handle_export_year(ctx, params)
+                if isinstance(body, str):
+                    self._send_csv(code, body)
+                else:
+                    self._send_json(code, body)
+                return
             if path == "/api/setup/detect":
                 code, body = api.handle_setup_detect(ctx)
                 self._send_json(code, body)

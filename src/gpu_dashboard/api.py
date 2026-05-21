@@ -488,6 +488,22 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+def handle_export_year(ctx: dict, params: dict):
+    """One-click year-to-date CSV export. Equivalent to
+    /api/export?since=<Jan-1-of-current-year>.
+
+    Convenient for January reports / spreadsheets.
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    import time as _time
+    import datetime as _dt
+    year_start = int(_dt.datetime.fromtimestamp(_time.time()).replace(
+        month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
+    return 200, storage.export_csv(from_ts=year_start)
+
+
 # ────────────────────────── GET /api/llm/lifetime ─────────────────────────
 
 
