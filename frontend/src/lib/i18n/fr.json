@@ -145,6 +145,7 @@
   "fancurve.preset_aggressive": "Agressif",
   "fancurve.preset_aggressive_desc": "Ventilos qui se déclenchent plus tôt et plus fort — GPU froid, bruyant",
   "fancurve.keyboard_hint": "Point sélectionné — Flèches ±1 (Shift ±5) · Tab = suivant · Suppr = retirer · ÉCHAP = désélectionner",
+  "fancurve.hysteresis_hint": "Le daemon ajoute ±2°C d'hystérésis entre les évaluations pour éviter l'oscillation des ventilos près d'une température de control point.",
   "modal.group_tuning": "Tuning",
   "modal.group_review": "Historique",
   "modal.group_notify": "Alertes",

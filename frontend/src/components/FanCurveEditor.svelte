@@ -5,7 +5,8 @@
   // Slice 3-4 (next) : add/remove points + persist via POST.
   import { onMount, onDestroy } from "svelte";
   import { i18n } from "../lib/i18n/index.svelte";
-  import { toast } from "../lib/stores.svelte";
+  import { toast, live } from "../lib/stores.svelte";
+  import { smoothPath } from "../lib/charts";
 
   type CurvePoint = [number, number]; // [temp_°C, fan_%]
   type FanCurveData = {
@@ -230,14 +231,20 @@
     editedCurve = editedCurve.filter((_, i) => i !== idx);
   }
 
+  // Smooth Catmull-Rom curve through the control points (reuses HistoryChart's helper)
   const path = $derived(
     editedCurve.length >= 2
-      ? editedCurve.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(p[0])},${yOf(p[1])}`).join(" ")
+      ? smoothPath(editedCurve.map(p => ({ x: xOf(p[0]), y: yOf(p[1]) })))
       : ""
   );
   const targetY = $derived(
     data?.current_target_pct != null ? yOf(data.current_target_pct) : null
   );
+  // Live GPU temp band — subtle vertical highlight at the current temp
+  const liveTempX = $derived.by(() => {
+    const t = live.data?.gpu?.alive ? live.data.gpu.temp : null;
+    return t != null ? xOf(t) : null;
+  });
 </script>
 
 <div class="fancurve">
@@ -302,6 +309,16 @@
           stroke="var(--accent-cool)" stroke-width="1" stroke-dasharray="4 3" opacity="0.5" />
       {/if}
 
+      <!-- Live GPU temp band — subtle vertical line + label -->
+      {#if liveTempX != null}
+        <line x1={liveTempX} x2={liveTempX} y1={PAD_T} y2={PAD_T + innerH}
+          stroke="var(--accent-cool)" stroke-width="1.5" opacity="0.4" />
+        <text x={liveTempX} y={PAD_T + 12} text-anchor="middle"
+          fill="var(--accent-cool)" font-size="10" opacity="0.7">
+          {live.data?.gpu?.alive ? live.data.gpu.temp : 0}°C
+        </text>
+      {/if}
+
       {#if path}
         <path d={path} fill="none" stroke="var(--accent)" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round" />
@@ -323,6 +340,12 @@
         >
           <title>{p[0]}°C → {p[1]}% · {i18n.t("fancurve.right_click_to_delete")}</title>
         </circle>
+        {#if selectedIdx === i}
+          <text x={xOf(p[0]) + 10} y={yOf(p[1]) - 8}
+            fill="var(--accent-warn)" font-size="11" font-weight="600">
+            {p[0]}°C · {p[1]}%
+          </text>
+        {/if}
       {/each}
     </svg>
 
@@ -342,6 +365,9 @@
         ⌨️ {i18n.t("fancurve.keyboard_hint")}
       </p>
     {/if}
+    <p class="sub" style="font-size:.74em;margin-top:.6em;color:var(--text-dim)">
+      💡 {i18n.t("fancurve.hysteresis_hint")}
+    </p>
   {/if}
 </div>
 
