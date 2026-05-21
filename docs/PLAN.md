@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:37 (cycle 97 done — fan curve keyboard 6/8)
-**Latest commit** : `07cfa31` — fan curve keyboard nudge
+**Last updated** : 2026-05-22 01:41 (cycle 98 done — fan curve UX polish 7/8)
+**Latest commit** : `84bce89` — fan curve UX polish
 **Tests** : 510 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 98 : fan curve slice 7/8 — UX polish + tooltips**.
+Nothing — between cycles. Wakeup soon will start **Cycle 99 : fan curve slice 8/8 FINAL — README + screenshots**.
 
 ---
 
@@ -19,14 +19,17 @@ Nothing — between cycles. Wakeup soon will start **Cycle 98 : fan curve slice 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 98 (next) — Fan curve slice 7/8 — UX polish
-- Live preview : highlight the SVG region for the temp range above the current GPU temp
-- Show current point coords as text label next to selected circle
-- Smooth Catmull-Rom curve interpolation between control points (currently
-  straight lines — apply same smoothing as HistoryChart)
-- Hysteresis hint (small text mentioning the daemon adds ±2°C buffer)
-
-### Cycle 99 — Slice 8/8 : README + final screenshot showing the editor
+### Cycle 99 (next) — Fan curve slice 8/8 FINAL — README + screenshot
+- Add "🌀 Fan curve editor" section to README documenting :
+  - Drag to move points
+  - Double-click empty area to add
+  - Right-click point to remove (min 2)
+  - Click + arrows for fine-tuning
+  - 3 presets one-click
+  - Save persists to ~/.config/gpu-dashboard/fan_curve.json
+- Screenshot the editor in action
+- CHANGELOG entry for the 8-cycle slice
+- Update PLAN.md with completion mark
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
@@ -51,6 +54,14 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 98 — Fan curve UX polish (1 commit)
+- `84bce89` Smoothing + coord label + live temp band + hysteresis hint
+  - smoothPath() helper from lib/charts reused for Catmull-Rom curve
+  - Selected point gets amber coordinate label '78°C · 65%'
+  - Vertical cyan line at the live GPU temp + small label
+  - Small footer hint explains the daemon's ±2°C hysteresis buffer
+  - 2 new i18n keys × 2 langs
 
 ### Cycle 97 — Fan curve keyboard fine-tuning (1 commit)
 - `07cfa31` selectedIdx + arrow-key nudge
@@ -410,7 +421,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~106 |
+| Commits since v0.1.0 | ~107 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
