@@ -246,4 +246,11 @@ export const api = {
       reason?: string;
       total?: number;
     }>),
+
+  profileSave: (profile: object) =>
+    fetch("/api/profile/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(profile),
+    }).then(jsonOf<{ ok: boolean; path?: string; model?: string; error?: string }>),
 };

@@ -453,6 +453,50 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── /api/profile/save ─────────────────────────────
+
+
+def handle_profile_save(ctx: dict, payload: dict) -> Response:
+    """Save a user override for a GPU profile.
+
+    Validates the payload against profiles/schema.json then writes it to
+    `<overrides_dir>/<safe_model_name>.json`. The next reload picks it up
+    automatically (via `profile.get_profile_for_gpu`'s override-dir param).
+    """
+    import re as _re
+    from .profile import load_schema, validate_profile
+
+    if not isinstance(payload, dict):
+        return 400, {"ok": False, "error": "payload must be an object"}
+
+    profiles_dir = ctx.get("profiles_dir") or "profiles"
+    schema = load_schema(profiles_dir)
+    if schema is None:
+        return 500, {"ok": False, "error": "schema not found"}
+    try:
+        validate_profile(payload, schema)
+    except ValueError as e:
+        return 400, {"ok": False, "error": str(e)}
+
+    overrides_dir = ctx.get("overrides_dir") or os.path.expanduser(
+        "~/.config/gpu-dashboard/profile-overrides"
+    )
+    os.makedirs(overrides_dir, exist_ok=True)
+
+    # Safe filename : keep only letters/digits/dash/underscore, lowercase
+    model = str(payload.get("model", "override"))
+    safe = _re.sub(r"[^A-Za-z0-9_-]+", "-", model).strip("-").lower() or "override"
+    path = os.path.join(overrides_dir, f"{safe}.json")
+    try:
+        import json as _json
+        with open(path, "w", encoding="utf-8") as f:
+            _json.dump(payload, f, indent=2)
+    except OSError as e:
+        return 500, {"ok": False, "error": f"write failed: {e}"}
+
+    return 200, {"ok": True, "path": path, "model": model}
+
+
 # ────────────────────────── /api/fan-curve ────────────────────────────────
 
 

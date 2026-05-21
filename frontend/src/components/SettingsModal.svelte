@@ -312,7 +312,49 @@
       icon: "M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z" },
     { id: "diagnostics", labelKey: "modal.diagnostics" as const,
       icon: "M14.6 16.6L19.2 12L14.6 7.4L16 6l6 6-6 6-1.4-1.4M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4z" },
+    { id: "profile", labelKey: "modal.profile" as const,
+      icon: "M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
   ];
+
+  // ── Profile editor state ──────────────────────────────────────────────────
+  let profileText = $state("");
+  let profileSaving = $state(false);
+  $effect(() => {
+    if (modal.open && modal.section === "profile" && !profileText) {
+      profileText = JSON.stringify(live.data?.profile ?? {}, null, 2);
+    }
+  });
+  function formatProfileJson() {
+    try {
+      profileText = JSON.stringify(JSON.parse(profileText), null, 2);
+    } catch (e) {
+      toast.emit("✗ " + i18n.t("profile.invalid_json") + ": " + (e as Error).message, "err");
+    }
+  }
+  function resetProfile() {
+    profileText = JSON.stringify(live.data?.profile ?? {}, null, 2);
+  }
+  async function saveProfile() {
+    let parsed: object;
+    try { parsed = JSON.parse(profileText); }
+    catch (e) {
+      toast.emit("✗ " + i18n.t("profile.invalid_json") + ": " + (e as Error).message, "err");
+      return;
+    }
+    profileSaving = true;
+    try {
+      const r = await api.profileSave(parsed);
+      if (r.ok) {
+        toast.emit("✓ " + i18n.t("profile.saved", { path: r.path || "?" }), "ok");
+      } else {
+        toast.emit("✗ " + i18n.t("profile.schema_violation") + ": " + (r.error || "?"), "err");
+      }
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally {
+      profileSaving = false;
+    }
+  }
 
   // ── Diagnostics / logs state ──────────────────────────────────────────────
   let logTail = $state(100);
@@ -675,6 +717,29 @@
         {:else}
           <p class="sub">{i18n.t("history.loading")}</p>
         {/if}
+      </div>
+
+      <!-- Profile editor -->
+      <div class="modal-section" class:active={modal.section === "profile"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[9].icon} /></svg>
+          <span>{i18n.t("profile.title")}</span>
+        </h3>
+        <p class="sub" style="margin:0 0 .8em">{i18n.t("profile.description")}</p>
+        <p class="sub" style="margin:.4em 0">
+          <strong>{i18n.t("profile.current")}:</strong> {live.data?.profile?.model ?? "_generic"}
+        </p>
+
+        <label class="sub" style="display:block;margin:.6em 0 .3em">{i18n.t("profile.editor_label")}</label>
+        <textarea class="profile-editor" bind:value={profileText} spellcheck="false"></textarea>
+
+        <div class="btn-row" style="margin-top:.6em">
+          <button class="btn btn-primary" disabled={profileSaving} onclick={saveProfile}>
+            💾 {profileSaving ? "…" : i18n.t("profile.save_btn")}
+          </button>
+          <button class="btn" onclick={formatProfileJson}>📝 {i18n.t("profile.format_btn")}</button>
+          <button class="btn" onclick={resetProfile}>↩️ {i18n.t("profile.reset_btn")}</button>
+        </div>
       </div>
 
       <!-- Diagnostics / logs -->

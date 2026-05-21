@@ -148,6 +148,7 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
         "fan_curve_daemon": fan_curve_daemon,
         "setup_required": setup_required,
         "profiles_dir": profiles_dir,
+        "overrides_dir": os.path.join(home, ".config/gpu-dashboard/profile-overrides"),
         "started_at": _t.time(),
         "config_path": (config_files[0] if config_files else os.path.join(home, ".config/gpu-dashboard/config.env")),
         "secrets_path": os.path.join(home, ".config/gpu-dashboard/secrets.env"),
@@ -324,6 +325,10 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/update/pull":
                 code, body = api.handle_update_pull(ctx)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/profile/save":
+                code, body = api.handle_profile_save(ctx, payload)
                 self._send_json(code, body)
                 return
 

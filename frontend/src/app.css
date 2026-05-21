@@ -362,6 +362,23 @@ td:nth-child(2) { text-align: right; color: #cdd2da; }
 .about-table td:first-child { color: #7c8aa3; width: 130px; }
 .about-table code { background: #0e1014; padding: 0.15em 0.45em; border-radius: 3px; color: #a3e635; font-size: 0.85em; word-break: break-all; }
 
+/* Profile editor */
+.profile-editor {
+  width: 100%;
+  min-height: 360px;
+  padding: 0.6em 0.8em;
+  background: #0e1014;
+  border: 1px solid #2a2e38;
+  border-radius: 6px;
+  color: #a3e635;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.82em;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+.profile-editor:focus { border-color: #4ade80; }
+
 /* Logs viewer */
 .logs-pre {
   background: #0e1014;
