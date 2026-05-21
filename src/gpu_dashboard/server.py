@@ -65,6 +65,13 @@ DEFAULTS = {
     "POWER_PROFILE_BOOST_W": "350",
     "POWER_PROFILE_BOOST_GPU_OFFSET": "100",
     "POWER_PROFILE_BOOST_MEM_OFFSET": "750",
+    "MODULE_ALERT_MONITOR": "0",
+    "ALERT_GPU_TEMP_THRESHOLD": "85",
+    "ALERT_MEM_TEMP_THRESHOLD": "95",
+    "ALERT_FAN_PCT_THRESHOLD": "95",
+    "ALERT_MIN_CONSECUTIVE": "3",
+    "ALERT_COOLDOWN_SECONDS": "300",
+    "ALERT_MONITOR_INTERVAL": "30",
     "POWER_LIMIT_WRAPPER": "/usr/local/bin/set-power-limit",
     "CLOCK_OFFSETS_DISPLAY": ":0",
     "TG_ENABLED": "0",
@@ -129,6 +136,33 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     )
     retention.start()
 
+    # alert_monitor daemon (optional) — fires Telegram alerts on thresholds
+    alert_monitor_daemon = None
+    if cfg.get_bool("MODULE_ALERT_MONITOR") and cfg.get_bool("TG_ENABLED"):
+        try:
+            from .modules.alert_monitor import AlertMonitorDaemon
+            from .modules.telegram_alerts import send_message as _tg_send
+            tg_token = cfg.get("TG_TOKEN", "")
+            tg_chat = cfg.get("TG_CHAT", "")
+            if tg_token and tg_chat:
+                def _send_telegram(text):
+                    return _tg_send(token=tg_token, chat_id=tg_chat, text=text)
+                alert_monitor_daemon = AlertMonitorDaemon(
+                    sampler=sampler,
+                    telegram_send_fn=_send_telegram,
+                    thresholds={
+                        "gpu_temp": cfg.get_int("ALERT_GPU_TEMP_THRESHOLD", default=85),
+                        "mem_temp": cfg.get_int("ALERT_MEM_TEMP_THRESHOLD", default=95),
+                        "fan_pct":  cfg.get_int("ALERT_FAN_PCT_THRESHOLD", default=95),
+                        "min_consecutive": cfg.get_int("ALERT_MIN_CONSECUTIVE", default=3),
+                        "cooldown_seconds": cfg.get_int("ALERT_COOLDOWN_SECONDS", default=300),
+                    },
+                    interval=float(cfg.get_int("ALERT_MONITOR_INTERVAL", default=30)),
+                )
+                alert_monitor_daemon.start()
+        except Exception as e:
+            print(f"warning: alert_monitor daemon failed: {e}", file=sys.stderr)
+
     # auto_profile daemon (optional) — must come after sampler is started
     auto_profile_daemon = None
     if cfg.get_bool("MODULE_AUTO_PROFILE"):
@@ -188,6 +222,7 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
         "sampler": sampler, "storage": storage, "retention": retention,
         "fan_curve_daemon": fan_curve_daemon,
         "auto_profile_daemon": auto_profile_daemon,
+        "alert_monitor_daemon": alert_monitor_daemon,
         "setup_required": setup_required,
         "profiles_dir": profiles_dir,
         "overrides_dir": os.path.join(home, ".config/gpu-dashboard/profile-overrides"),
@@ -446,6 +481,8 @@ def main(argv: Optional[list] = None) -> int:
                 ctx["fan_curve_daemon"].stop()
             if ctx.get("auto_profile_daemon"):
                 ctx["auto_profile_daemon"].stop()
+            if ctx.get("alert_monitor_daemon"):
+                ctx["alert_monitor_daemon"].stop()
             if "storage" in ctx:
                 ctx["storage"].close()
     return 0
