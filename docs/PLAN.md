@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:25 (cycle 81 done — theme work complete)
-**Latest commit** : `92503da` — README theme section
-**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 00:29 (cycle 82 done — VAPID backend)
+**Latest commit** : `c57e1a8` — VAPID keypair + /api/push/vapid
+**Tests** : 463 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 82 : Browser push notifs (~1.5h ≈ 3 cycles, slice 1/3)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 83 : Subscription endpoint + service worker (slice 2/3)**.
 
 ---
 
@@ -19,18 +19,16 @@ Nothing — between cycles. Wakeup soon will start **Cycle 82 : Browser push not
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 82 (next) — Browser push notifs slice 1/3 — backend VAPID setup
-- Generate or load VAPID keys at startup (saved to ~/.config/gpu-dashboard/vapid.json)
-- New /api/push/vapid GET returns the public key
-- 4+ TDD tests
-- No frontend yet — just backend foundation
-
-### Cycle 83 — Browser push slice 2/3 — subscription handling
-- POST /api/push/subscribe : stores subscription in DB
+### Cycle 83 (next) — Browser push slice 2/3 — subscription handling
+- POST /api/push/subscribe : stores subscription in DB (new push_subscriptions table)
 - POST /api/push/unsubscribe
-- Service worker registration + Notification permission flow
+- Frontend : service worker registration + Notification permission flow
+- Toggle in Alerts tab
 
-### Cycle 84 — Browser push slice 3/3 — wire alert_monitor to push
+### Cycle 84 — Browser push slice 3/3 — alert_monitor wires push delivery
+- Web Push protocol (ECDH-ES + AES128GCM encryption per RFC 8291)
+- This is the hardest slice : encryption + push service POST
+
 ### Cycle 85+ — Multi-GPU full picker UI · Drag-and-drop fan curve editor SVG
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
 
@@ -54,6 +52,14 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 82 — Web Push VAPID foundation (1 commit)
+- `c57e1a8` web_push.py + /api/push/vapid + 8 TDD tests
+  - ECDSA P-256 keypair via openssl subprocess (no new Python dep)
+  - Persisted ~/.config/gpu-dashboard/vapid.json mode 0600
+  - base64url no-padding format (what browsers expect)
+  - Robust : recovers from corrupted file
+  - Tests : 455 → 463
 
 ### Cycle 81 — README + theme docs (1 commit)
 - `92503da` docs(readme) section "🎨 Themes" with dark + light side-by-side
@@ -279,13 +285,13 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 455 passing on Py 3.9-3.13 |
+| Tests | 463 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~89 |
+| Commits since v0.1.0 | ~90 |
 | API endpoints | 35+ |
-| Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
+| Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
 | Modal tabs | 9 (was 11 — History + Stats moved to top-level)
 | Languages | EN + FR (full coverage) |
