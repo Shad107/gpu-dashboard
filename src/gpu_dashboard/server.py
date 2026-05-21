@@ -113,13 +113,16 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     retention.start()
 
     import time as _t
+    home = os.path.expanduser("~")
     return {
         "config": cfg, "profile": profile,
         "sampler": sampler, "storage": storage, "retention": retention,
         "setup_required": setup_required,
         "profiles_dir": profiles_dir,
         "started_at": _t.time(),
-        "config_path": (config_files[0] if config_files else None),
+        "config_path": (config_files[0] if config_files else os.path.join(home, ".config/gpu-dashboard/config.env")),
+        "secrets_path": os.path.join(home, ".config/gpu-dashboard/secrets.env"),
+        "storage_path": db_path,
     }
 
 
@@ -168,6 +171,14 @@ def make_handler(ctx: dict):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+
+        def _send_binary(self, code: int, body: bytes, content_type: str, filename: str) -> None:
+            self.send_response(code)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
         def do_GET(self):
             parsed = urlparse(self.path)
@@ -219,6 +230,15 @@ def make_handler(ctx: dict):
             if path == "/api/health":
                 code, body = api.handle_health(ctx)
                 self._send_json(code, body)
+                return
+            if path == "/api/snapshot":
+                code, body = api.handle_snapshot(ctx)
+                if isinstance(body, bytes):
+                    import datetime as _dt
+                    fn = f"gpu-dashboard-snapshot-{_dt.datetime.now().strftime('%Y%m%d-%H%M%S')}.tar.gz"
+                    self._send_binary(code, body, "application/gzip", fn)
+                else:
+                    self._send_json(code, body)
                 return
             self.send_response(404)
             self.end_headers()

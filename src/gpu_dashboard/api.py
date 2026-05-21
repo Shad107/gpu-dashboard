@@ -522,6 +522,48 @@ def handle_stop(ctx: dict) -> Response:
     return 200, {"ok": True, "message": "stopping"}
 
 
+# ────────────────────────── GET /api/snapshot ─────────────────────────────
+
+
+def handle_snapshot(ctx: dict):
+    """Bundle config.env + secrets.env + metrics.db into a tar.gz for download.
+
+    Returns (code, bytes). Server wraps with Content-Type application/gzip +
+    Content-Disposition attachment. Missing files are skipped silently — the
+    snapshot tries to include everything it can find.
+    """
+    import io
+    import tarfile
+    import time as _time
+
+    # Determine paths from ctx
+    cfg = ctx.get("config")
+    config_path = ctx.get("config_path") or (
+        cfg.get("_CONFIG_PATH") if cfg else None
+    ) or os.path.expanduser("~/.config/gpu-dashboard/config.env")
+    secrets_path = ctx.get("secrets_path") or (
+        cfg.get("_SECRETS_PATH") if cfg else None
+    ) or os.path.expanduser("~/.config/gpu-dashboard/secrets.env")
+    storage_path = ctx.get("storage_path") or (
+        cfg.get("STORAGE_DB_PATH") if cfg else None
+    ) or os.path.expanduser("~/.local/share/gpu-dashboard/metrics.db")
+    storage_path = os.path.expanduser(storage_path)
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        for src, arc in [
+            (config_path,  "gpu-dashboard-snapshot/config.env"),
+            (secrets_path, "gpu-dashboard-snapshot/secrets.env"),
+            (storage_path, "gpu-dashboard-snapshot/metrics.db"),
+        ]:
+            if os.path.isfile(src):
+                try:
+                    tar.add(src, arcname=arc)
+                except (OSError, tarfile.TarError):
+                    pass
+    return 200, buf.getvalue()
+
+
 # ────────────────────────── POST /api/restart ─────────────────────────────
 
 

@@ -165,6 +165,8 @@ export const api = {
 
   exportCsvUrl: (since: number) => `/api/export?since=${since}`,
 
+  snapshotUrl: () => "/api/snapshot",
+
   setupDetect: () => fetch("/api/setup/detect").then(jsonOf<SetupDetect>),
 
   setupRecheck: (module: string) =>

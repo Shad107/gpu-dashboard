@@ -463,6 +463,16 @@
             🧙 {i18n.t("services.redo_wizard_btn")}
           </button>
         </div>
+
+        <h3 style="margin-top:1.8em;color:#cdd2da;font-size:.95em;font-weight:600">
+          {i18n.t("services.snapshot_label")}
+        </h3>
+        <p class="sub">{i18n.t("services.snapshot_description")}</p>
+        <div class="btn-row" style="margin-top:.8em">
+          <button class="btn" onclick={() => window.location.href = api.snapshotUrl()}>
+            📦 {i18n.t("services.snapshot_btn")}
+          </button>
+        </div>
       </div>
 
       <!-- Alerts -->
