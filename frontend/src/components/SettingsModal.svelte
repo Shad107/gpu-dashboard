@@ -1,7 +1,7 @@
 <script lang="ts">
   import { modal, live, toast, wizard } from "../lib/stores.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
-  import { api, type HistorySample } from "../lib/api";
+  import { api, type HistorySample, type StoredEvent } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
   import HistoryChart from "./HistoryChart.svelte";
 
@@ -129,6 +129,7 @@
   let historyRange = $state<HistoryRange>("24h");
   let historyMetric = $state<HistoryMetric>("power");
   let historySamples = $state<HistorySample[]>([]);
+  let historyEvents = $state<StoredEvent[]>([]);
   let historyLoading = $state(false);
   let historyAutoRefresh = $state(false);
   let historyTimer: ReturnType<typeof setInterval> | null = null;
@@ -154,11 +155,17 @@
       const now = Math.floor(Date.now() / 1000);
       const from = now - RANGE_SECONDS[historyRange];
       const step = RANGE_STEP[historyRange] || undefined;
-      const r = await api.history(from, now, step);
-      historySamples = r.samples ?? [];
+      // Parallel fetch: samples + events overlay
+      const [hist, evs] = await Promise.all([
+        api.history(from, now, step),
+        api.events(from).catch(() => ({ ok: false, events: [] })),
+      ]);
+      historySamples = hist.samples ?? [];
+      historyEvents = evs.events ?? [];
     } catch (e) {
       toast.emit("✗ " + i18n.t("ts.network_error") + ": " + (e as Error).message, "err");
       historySamples = [];
+      historyEvents = [];
     } finally {
       historyLoading = false;
     }
@@ -530,6 +537,7 @@
             {:else}
               <HistoryChart
                 samples={historySamples}
+                events={historyEvents}
                 metric={historyMetric}
                 color={METRIC_INFO[historyMetric].color}
                 unit={METRIC_INFO[historyMetric].unit}

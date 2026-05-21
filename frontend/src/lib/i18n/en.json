@@ -57,6 +57,7 @@
   "history.loading": "Loading…",
   "history.samples_count": "{n} samples",
   "history.auto_refresh": "Auto-refresh (30s)",
+  "history.events_legend": "Events: 🔴 drop · 🟢 recover · 🔵 power-limit · 🟣 offsets · 🟡 alert",
   "setup.welcome_title": "Welcome to gpu-dashboard",
   "setup.welcome_intro": "This setup wizard configures the dashboard for your machine. It only writes to your home folder — sudo commands you may need to run are shown explicitly, never executed silently.",
   "setup.step_label": "Step {n} of {total}",

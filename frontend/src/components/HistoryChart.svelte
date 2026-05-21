@@ -1,14 +1,27 @@
 <script lang="ts">
   import { smoothPath } from "../lib/charts";
-  import type { HistorySample } from "../lib/api";
+  import type { HistorySample, StoredEvent } from "../lib/api";
 
   type Props = {
     samples: HistorySample[];
     metric: "power" | "temp" | "fan_pct" | "util_gpu";
     color: string;
     unit: string;
+    events?: StoredEvent[];
   };
-  const { samples, metric, color, unit }: Props = $props();
+  const { samples, metric, color, unit, events = [] }: Props = $props();
+
+  // Marker color per event kind
+  const EVENT_COLORS: Record<string, string> = {
+    drop: "#f87171",          // red — OcuLink drop
+    recover: "#4ade80",       // green — link recovered
+    pl_change: "#22d3ee",     // cyan — power-limit changed
+    offset_change: "#a855f7", // purple — clock offset changed
+    alert_sent: "#fbbf24",    // amber — telegram alert
+  };
+  function eventColor(kind: string): string {
+    return EVENT_COLORS[kind] ?? "#fbbf24";
+  }
 
   const W = 1200, H = 320, PAD_L = 56, PAD_R = 24, PAD_T = 20, PAD_B = 36;
   const innerW = W - PAD_L - PAD_R;
@@ -58,6 +71,25 @@
       return { x: x(idx), label: useDate ? fmtDate(samples[idx].ts) : fmtTime(samples[idx].ts) };
     });
   });
+
+  // Event markers: map each event to an x position based on its ts within
+  // the visible window [samples[0].ts, samples[last].ts]. Out-of-range events
+  // are clipped.
+  const eventMarkers = $derived.by(() => {
+    if (samples.length < 2) return [];
+    const tStart = samples[0].ts;
+    const tEnd = samples[samples.length - 1].ts;
+    const span = Math.max(1, tEnd - tStart);
+    return events
+      .filter(e => e.ts >= tStart && e.ts <= tEnd)
+      .map(e => ({
+        x: PAD_L + ((e.ts - tStart) / span) * innerW,
+        color: eventColor(e.kind),
+        kind: e.kind,
+        ts: e.ts,
+        label: `${e.kind} @ ${fmtTime(e.ts)}`,
+      }));
+  });
 </script>
 
 {#if samples.length === 0}
@@ -77,5 +109,16 @@
       <text x={t.x} y={PAD_T + innerH + 18} fill="#7c8aa3" font-size="10" text-anchor="middle">{t.label}</text>
     {/each}
     <path d={path} fill="none" stroke={color} stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+
+    <!-- Event markers (vertical lines + small circle on top axis) -->
+    {#each eventMarkers as m}
+      <line x1={m.x} x2={m.x} y1={PAD_T} y2={PAD_T + innerH}
+            stroke={m.color} stroke-width="1.2" stroke-dasharray="3 2" opacity="0.55">
+        <title>{m.label}</title>
+      </line>
+      <circle cx={m.x} cy={PAD_T} r="4" fill={m.color} stroke="#0e1014" stroke-width="1">
+        <title>{m.label}</title>
+      </circle>
+    {/each}
   </svg>
 {/if}
