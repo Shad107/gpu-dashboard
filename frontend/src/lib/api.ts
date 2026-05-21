@@ -119,6 +119,7 @@ export type HistorySample = {
   power_limit: number | null;
   util_gpu: number | null;
   mem_used_mib: number | null;
+  tokens_total_snapshot?: number | null;
 };
 
 export type StoredEvent = {

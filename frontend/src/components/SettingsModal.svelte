@@ -151,7 +151,7 @@
 
   // ── History state ─────────────────────────────────────────────────────────
   type HistoryRange = "1h" | "6h" | "24h" | "7d" | "30d";
-  type HistoryMetric = "power" | "temp" | "fan_pct" | "util_gpu";
+  type HistoryMetric = "power" | "temp" | "fan_pct" | "util_gpu" | "tokens_per_sec" | "tokens_per_watt";
   let historyRange = $state<HistoryRange>("24h");
   let historyMetric = $state<HistoryMetric>("power");
   let historySamples = $state<HistorySample[]>([]);
@@ -169,11 +169,40 @@
   };
 
   const METRIC_INFO: Record<HistoryMetric, { color: string; unit: string }> = {
-    "power":    { color: "#22d3ee", unit: "W" },
-    "temp":     { color: "#fbbf24", unit: "°C" },
-    "fan_pct":  { color: "#4ade80", unit: "%" },
-    "util_gpu": { color: "#a855f7", unit: "%" },
+    "power":           { color: "#22d3ee", unit: "W" },
+    "temp":            { color: "#fbbf24", unit: "°C" },
+    "fan_pct":         { color: "#4ade80", unit: "%" },
+    "util_gpu":        { color: "#a855f7", unit: "%" },
+    "tokens_per_sec":  { color: "#f472b6", unit: "/s" },
+    "tokens_per_watt": { color: "#f59e0b", unit: "/W" },
   };
+
+  /** Compute derived metric series from raw samples.
+   * Tokens/s = delta(tokens_total_snapshot) / delta(ts) between consecutive samples.
+   * Tokens/W = (tokens delta / time delta) / avg power over that interval.
+   * Both prepend a 0 for the first sample (no delta yet). */
+  function computeDerivedSamples(raw: HistorySample[], metric: HistoryMetric): HistorySample[] {
+    if (metric !== "tokens_per_sec" && metric !== "tokens_per_watt") return raw;
+    if (raw.length < 2) return [];
+    const out: HistorySample[] = [];
+    for (let i = 1; i < raw.length; i++) {
+      const prev = raw[i - 1];
+      const cur = raw[i];
+      const dt = cur.ts - prev.ts;
+      const t0 = prev.tokens_total_snapshot;
+      const t1 = cur.tokens_total_snapshot;
+      let value: number | null = null;
+      if (dt > 0 && t0 != null && t1 != null && t1 >= t0) {
+        const tps = (t1 - t0) / dt;
+        if (metric === "tokens_per_sec") value = tps;
+        else if (cur.power && cur.power > 0) value = tps / cur.power;  // tokens/W = tok/s ÷ W
+      }
+      // Stamp the value into the metric slot the chart already reads from.
+      out.push({ ...cur, [metric]: value } as HistorySample);
+    }
+    return out;
+  }
+  const derivedSamples = $derived(computeDerivedSamples(historySamples, historyMetric));
 
   async function loadHistory() {
     historyLoading = true;
@@ -699,6 +728,8 @@
                 <option value="temp">{i18n.t("history.metric_temp")}</option>
                 <option value="fan_pct">{i18n.t("history.metric_fan")}</option>
                 <option value="util_gpu">{i18n.t("history.metric_util")}</option>
+                <option value="tokens_per_sec">{i18n.t("history.metric_tps")}</option>
+                <option value="tokens_per_watt">{i18n.t("history.metric_tpw")}</option>
               </select>
             </span>
           </div>
@@ -708,7 +739,7 @@
               <div style="color:#7c8aa3;padding:2em;text-align:center">{i18n.t("history.loading")}</div>
             {:else}
               <HistoryChart
-                samples={historySamples}
+                samples={derivedSamples}
                 events={historyEvents}
                 metric={historyMetric}
                 color={METRIC_INFO[historyMetric].color}

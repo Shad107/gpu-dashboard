@@ -2,9 +2,10 @@
   import { smoothPath } from "../lib/charts";
   import type { HistorySample, StoredEvent } from "../lib/api";
 
+  type Metric = "power" | "temp" | "fan_pct" | "util_gpu" | "tokens_per_sec" | "tokens_per_watt";
   type Props = {
     samples: HistorySample[];
-    metric: "power" | "temp" | "fan_pct" | "util_gpu";
+    metric: Metric;
     color: string;
     unit: string;
     events?: StoredEvent[];

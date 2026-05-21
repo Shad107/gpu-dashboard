@@ -51,6 +51,8 @@
   "history.metric_temp": "Temperature (°C)",
   "history.metric_fan": "Fan (%)",
   "history.metric_util": "GPU util (%)",
+  "history.metric_tps": "Tokens / sec",
+  "history.metric_tpw": "Tokens / Watt",
   "history.refresh": "Refresh",
   "history.export_csv": "Export CSV",
   "history.no_data": "No data for this range. Buffer fills as samples are collected (one every 5s).",
