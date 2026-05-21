@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:18 (cycle 92 done — fan curve viz 1/8)
-**Latest commit** : `064c59c` — fan curve SVG visualization
+**Last updated** : 2026-05-22 01:22 (cycle 93 done — fan curve drag 2/8)
+**Latest commit** : `728c07d` — fan curve drag handling
 **Tests** : 497 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 93 : fan curve editor slice 2/8 — drag handling**.
+Nothing — between cycles. Wakeup soon will start **Cycle 94 : fan curve slice 3/8 — add/remove points**.
 
 ---
 
@@ -19,15 +19,13 @@ Nothing — between cycles. Wakeup soon will start **Cycle 93 : fan curve editor
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 93 (next) — Fan curve slice 2/8 — drag handling
-- pointerdown on a circle → start drag
-- pointermove updates the local curve array (constrained to [0,100] × [0,100])
-- pointerup → finalize (still no persist yet — slice 4)
-- Snap to integer grid (1°C and 1% steps)
-- Visual feedback : circle radius +1 on hover, +2 on grab
+### Cycle 94 (next) — Fan curve slice 3/8 — add/remove control points
+- Right-click on a point → confirm + delete from curve
+- Double-click empty SVG area → insert new point at that temp/fan
+- Min 2 points enforced (can't remove the last 2)
+- Visual cue : "+" cursor when hovering empty area
 
-### Cycle 94 — Slice 3/8 : add/remove control points
-### Cycle 95 — Slice 4/8 : POST /api/fan-curve to persist edits
+### Cycle 95 — Slice 4/8 : POST /api/fan-curve to persist
 ### Cycles 96-99 : per-fan curves, presets, tests, polish
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
@@ -53,6 +51,14 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 93 — Fan curve drag handling (1 commit)
+- `728c07d` Pointer drag of control points
+  - editedCurve = local mirror, syncs from server only when not dirty/dragging
+  - eventToCurve() = inverse map of client coords to curve domain
+  - Temp-axis constraint : clamped between neighbors (curve stays sorted)
+  - isDirty derived + "Reset" button + "● Unsaved" indicator
+  - 5 new i18n keys × 2 langs
 
 ### Cycle 92 — Fan curve SVG visualization (1 commit)
 - `064c59c` New FanCurveEditor.svelte component
@@ -377,7 +383,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~100 |
+| Commits since v0.1.0 | ~101 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
