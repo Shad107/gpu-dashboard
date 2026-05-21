@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:02 (cycle 75 done — modal cleanup)
-**Latest commit** : `12f30c5` — modal cleanup (History+Stats removed)
-**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 71.30 KB gzip
+**Last updated** : 2026-05-22 00:05 (cycle 76 done — heatmap migration + simple mode)
+**Latest commit** : `1f7cf46` — heatmap → Stats + simple mode
+**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 71.21 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 76 : migrate heatmap to Stats + Simple mode (no LLM)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 77 : Simple mode in wizard + final polish**.
 
 ---
 
@@ -19,12 +19,12 @@ Nothing — between cycles. Wakeup soon will start **Cycle 76 : migrate heatmap 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 76 (next) — Migrate heatmap to Stats + Simple mode
-- Move power-cost heatmap from HistoryView to StatsView (more thematic fit)
-- Filter Tokens/s + Tokens/W from History metric dropdown if no LLM_SERVER_URL
-- Add a 'Simple mode' detection : when no LLM detected, hide LLM-specific UI
+### Cycle 77 (next) — Simple mode in wizard + final polish
+- Wizard step for LLM_SERVER_URL : add explicit "Standard / LLM rig" choice
+- Default to "Standard" — skips LLM URL config, hides LLM cards
+- Cleanup any remaining LLM-specific i18n leakage when no LLM
 
-### Cycle 77+ — Theme toggle, Browser push, Multi-GPU, Fan curve editor
+### Cycle 78+ — Theme toggle, Browser push, Multi-GPU, Fan curve editor
 
 ### Cycle 70+ — Original feature backlog continues
 1. Browser push notifs via Web Push + VAPID (~1.5h)
@@ -46,6 +46,13 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 76 — Heatmap migration + simple mode dropdown (1 commit)
+- `1f7cf46` Heatmap moved from HistoryView to StatsView
+  - StatsView gains 6th section : 🗺️ Power cost heatmap
+  - HistoryView focused on pure time-series scrubbing
+  - Simple mode : Tokens/s + Tokens/W hidden in History dropdown if no LLM
+  - llmAvailable detected via /api/llm/stats on mount
 
 ### Cycle 75 — Modal cleanup (1 commit)
 - `12f30c5` Removed History + Stats sections from SettingsModal
@@ -233,9 +240,9 @@ Rules :
 |---|---|
 | Tests | 455 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 209.97 KB raw / 71.30 KB gzip |
+| Bundle JS | 210.19 KB raw / 71.21 KB gzip |
 | Bundle CSS | 20.03 KB raw / 4.62 KB gzip |
-| Commits since v0.1.0 | ~82 |
+| Commits since v0.1.0 | ~83 |
 | API endpoints | 35+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
