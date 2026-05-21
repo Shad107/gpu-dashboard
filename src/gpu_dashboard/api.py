@@ -1359,7 +1359,7 @@ def handle_fan_curve_post(ctx: dict, payload: dict) -> Response:
     """
     from .modules import fan_curve as _fc
     curve = payload.get("curve") if isinstance(payload, dict) else None
-    ok, err = _fc.validate_curve(curve)
+    ok, err = _fc.validate_user_curve(curve)
     if not ok:
         return 400, {"ok": False, "error": err}
     path = os.path.expanduser("~/.config/gpu-dashboard/fan_curve.json")

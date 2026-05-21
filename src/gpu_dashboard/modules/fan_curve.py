@@ -111,14 +111,11 @@ def pick_curve(profile: Optional[dict] = None, override: Optional[list] = None) 
     return list(_DEFAULT_CURVE)
 
 
-def validate_curve(curve) -> tuple:
+def validate_user_curve(curve) -> tuple:
     """Validate a user-supplied curve. Returns (ok, error_msg).
 
-    Rules :
-      - List of [int, int] pairs
-      - At least 2 points
-      - All temps and fans in [0, 100]
-      - Sorted strictly ascending by temp (no duplicates)
+    User-facing variant of validate_curve() — returns a tuple for
+    HTTP error response instead of raising ValueError. Same rules.
     """
     if not isinstance(curve, list):
         return False, "curve must be a list"

@@ -24,47 +24,47 @@ class MockConfig:
 # ─── validate_curve ─────────────────────────────────────────────────────
 
 def test_validate_accepts_valid_curve():
-    ok, err = fan_curve.validate_curve([[30, 0], [50, 30], [70, 70], [90, 100]])
+    ok, err = fan_curve.validate_user_curve([[30, 0], [50, 30], [70, 70], [90, 100]])
     assert ok
     assert err == ""
 
 
 def test_validate_rejects_empty():
-    ok, err = fan_curve.validate_curve([])
+    ok, err = fan_curve.validate_user_curve([])
     assert not ok
     assert "at least 2" in err
 
 
 def test_validate_rejects_single_point():
-    ok, err = fan_curve.validate_curve([[50, 50]])
+    ok, err = fan_curve.validate_user_curve([[50, 50]])
     assert not ok
 
 
 def test_validate_rejects_out_of_range_temp():
-    ok, err = fan_curve.validate_curve([[30, 50], [150, 100]])
+    ok, err = fan_curve.validate_user_curve([[30, 50], [150, 100]])
     assert not ok
     assert "temp" in err.lower()
 
 
 def test_validate_rejects_out_of_range_fan():
-    ok, err = fan_curve.validate_curve([[30, 50], [70, 110]])
+    ok, err = fan_curve.validate_user_curve([[30, 50], [70, 110]])
     assert not ok
     assert "fan" in err.lower()
 
 
 def test_validate_rejects_unsorted():
-    ok, err = fan_curve.validate_curve([[50, 30], [30, 0], [70, 70]])
+    ok, err = fan_curve.validate_user_curve([[50, 30], [30, 0], [70, 70]])
     assert not ok
     assert "sorted" in err.lower()
 
 
 def test_validate_rejects_duplicate_temps():
-    ok, err = fan_curve.validate_curve([[50, 30], [50, 50]])
+    ok, err = fan_curve.validate_user_curve([[50, 30], [50, 50]])
     assert not ok
 
 
 def test_validate_rejects_non_int():
-    ok, err = fan_curve.validate_curve([[30, 0], [50.5, 30]])
+    ok, err = fan_curve.validate_user_curve([[30, 0], [50.5, 30]])
     assert not ok
 
 
