@@ -57,6 +57,26 @@
     window.removeEventListener("keydown", onKey);
   });
 
+  // Live tab title : useful when the dashboard tab is hidden in a tab group
+  // — a glance at the tab strip shows the GPU's current temp + power.
+  // Format : "44°C · 250W · GPU Dashboard"
+  $effect(() => {
+    if (showWizard) {
+      document.title = "🧙 " + i18n.t("app.title");
+      return;
+    }
+    const g = live.data?.gpu;
+    if (g?.alive) {
+      const t = g.temp.toFixed(0);
+      const p = g.power.toFixed(0);
+      document.title = `${t}°C · ${p}W · ${i18n.t("app.title")}`;
+    } else if (live.data && g && !g.alive) {
+      document.title = "⚠️ " + i18n.t("app.title");
+    } else {
+      document.title = i18n.t("app.title");
+    }
+  });
+
   // Show the wizard when either:
   //  - backend reports no config exists (first run), OR
   //  - user explicitly asked to re-run it from Services tab.
