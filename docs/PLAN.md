@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:59 (cycle 88 done — API per-GPU)
-**Latest commit** : `664b4e8` — gpu_index API param
+**Last updated** : 2026-05-22 01:03 (cycle 89 done — header picker)
+**Latest commit** : `c00b8fc` — Header GPU picker
 **Tests** : 497 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 89 : Header picker dropdown UI (slice 4/6)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 90 : Wire gpu.selected into Cards + Views (slice 5/6)**.
 
 ---
 
@@ -19,12 +19,11 @@ Nothing — between cycles. Wakeup soon will start **Cycle 89 : Header picker dr
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 89 (next) — Header picker dropdown UI (slice 4/6)
-- Header.svelte shows live picker when /api/state.gpus_available has > 1 entry
-- Selected gpu_index lives in a new lib/gpu.svelte.ts store
-- Store value propagates as ?gpu_index= on all data fetches (Cards, History, Stats)
+### Cycle 90 (next) — Wire gpu.selected through views (slice 5/6)
+- Cards.svelte : polls /api/state?gpu_index= and /api/electricity?gpu_index=
+- HistoryView, StatsView : pass gpu.selected on each fetch + re-fetch when changed
+- Make sure live.data still works for single-GPU users (gpu.selected=0 default)
 
-### Cycle 90 — Slice 5 : wire gpu store through Cards + Stats + History
 ### Cycle 91 — Slice 6 : polish + screenshots + README
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
@@ -50,6 +49,13 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 89 — Header picker dropdown (1 commit)
+- `c00b8fc` GpuStore + Header.svelte dropdown
+  - lib/gpu.svelte.ts : selected $state, localStorage, ?gpu= URL override
+  - Header shows picker when gpus_available > 1 ; otherwise unchanged
+  - i18n : header.gpu_picker_label (EN + FR)
+  - .gpu-picker CSS hovers to accent color
 
 ### Cycle 88 — API gpu_index query param (1 commit)
 - `664b4e8` `?gpu_index=` propagated through all data endpoints
@@ -345,7 +351,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~96 |
+| Commits since v0.1.0 | ~97 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
