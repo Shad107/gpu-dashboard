@@ -9,6 +9,8 @@
 ![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![Status](https://img.shields.io/badge/status-alpha-orange.svg)
 
+![Dashboard](docs/screenshot.png)
+
 ## What it does
 
 A small HTTP dashboard you point your browser at (`http://localhost:9999`) that shows:
