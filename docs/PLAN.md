@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:21 (cycle 80 done — color polish)
-**Latest commit** : `9ef54cb` — expanded theme variable coverage
+**Last updated** : 2026-05-22 00:25 (cycle 81 done — theme work complete)
+**Latest commit** : `92503da` — README theme section
 **Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 81 : README update with theme screenshots**.
+Nothing — between cycles. Wakeup soon will start **Cycle 82 : Browser push notifs (~1.5h ≈ 3 cycles, slice 1/3)**.
 
 ---
 
@@ -19,10 +19,19 @@ Nothing — between cycles. Wakeup soon will start **Cycle 81 : README update wi
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 81 (next) — README update + theme screenshots (slice 4/4)
-- Add "Theme" section to README with dark + light screenshots
-- Document the URL ?theme= override + the in-UI toggle
-- Final commit closes the 4-cycle theme work
+### Cycle 82 (next) — Browser push notifs slice 1/3 — backend VAPID setup
+- Generate or load VAPID keys at startup (saved to ~/.config/gpu-dashboard/vapid.json)
+- New /api/push/vapid GET returns the public key
+- 4+ TDD tests
+- No frontend yet — just backend foundation
+
+### Cycle 83 — Browser push slice 2/3 — subscription handling
+- POST /api/push/subscribe : stores subscription in DB
+- POST /api/push/unsubscribe
+- Service worker registration + Notification permission flow
+
+### Cycle 84 — Browser push slice 3/3 — wire alert_monitor to push
+### Cycle 85+ — Multi-GPU full picker UI · Drag-and-drop fan curve editor SVG
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
 
 ### Cycle 70+ — Original feature backlog continues
@@ -45,6 +54,13 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 81 — README + theme docs (1 commit)
+- `92503da` docs(readme) section "🎨 Themes" with dark + light side-by-side
+  - docs/theme-dark.png + docs/theme-light.png saved
+  - URL ?theme=light|dark documented
+  - docs/screenshot.png refreshed
+  - Closes the 4-cycle theme work (78 → 81)
 
 ### Cycle 80 — Theme variable coverage polish (1 commit)
 - `9ef54cb` Added 11 more CSS variables (btn states, accent-cost, text shades)
@@ -267,7 +283,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~88 |
+| Commits since v0.1.0 | ~89 |
 | API endpoints | 35+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
