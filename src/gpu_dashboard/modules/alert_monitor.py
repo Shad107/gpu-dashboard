@@ -19,9 +19,10 @@ NAME = "alert_monitor"
 
 # Alert kinds + which field of a sample they inspect + comparison.
 _THRESHOLD_RULES = [
-    ("gpu_temp_high",  "temp",       "above"),
-    ("mem_temp_high",  "mem_temp",   "above"),
-    ("fan_pct_high",   "fan_pct",    "above"),
+    ("gpu_temp_high",  "temp",         "above"),
+    ("mem_temp_high",  "mem_temp",     "above"),
+    ("fan_pct_high",   "fan_pct",      "above"),
+    ("vram_pct_high",  "_vram_pct",    "above"),  # computed below from mem_used/total
 ]
 
 
@@ -46,16 +47,25 @@ def check_thresholds(samples, thresholds: dict, state: AlertState) -> list:
     if len(samples) < min_n:
         return []
 
+    # Annotate each sample with a derived _vram_pct = mem_used/mem_total*100
+    mem_total = thresholds.get("mem_total_mib")  # optional, needed for VRAM alerts
     tail = samples[-min_n:]
+    if mem_total and mem_total > 0:
+        tail = [
+            {**s, "_vram_pct": (s.get("mem_used_mib") or 0) / mem_total * 100}
+            for s in tail
+        ]
+
     now = _time.time()
     alerts = []
 
     for kind, field, _ in _THRESHOLD_RULES:
         # Map kind → threshold key
         thresh_key = {
-            "gpu_temp_high": "gpu_temp",
-            "mem_temp_high": "mem_temp",
-            "fan_pct_high":  "fan_pct",
+            "gpu_temp_high":  "gpu_temp",
+            "mem_temp_high":  "mem_temp",
+            "fan_pct_high":   "fan_pct",
+            "vram_pct_high":  "vram_pct",
         }[kind]
         threshold = thresholds.get(thresh_key)
         if threshold is None:
@@ -93,12 +103,18 @@ def check_thresholds(samples, thresholds: dict, state: AlertState) -> list:
 
 def _format_alert(kind: str, value, threshold) -> str:
     pretty = {
-        "gpu_temp_high": ("🔥 GPU temp high", "°C"),
-        "mem_temp_high": ("🔥 VRAM junction high", "°C"),
-        "fan_pct_high":  ("🌀 Fan ramped up",     "%"),
+        "gpu_temp_high":  ("🔥 GPU temp high",      "°C"),
+        "mem_temp_high":  ("🔥 VRAM junction high", "°C"),
+        "fan_pct_high":   ("🌀 Fan ramped up",      "%"),
+        "vram_pct_high":  ("💾 VRAM almost full",   "%"),
     }
     label, unit = pretty.get(kind, (kind, ""))
-    return f"{label} : {value}{unit} (threshold {threshold}{unit})"
+    # Round numeric values for readability (VRAM% can be a float)
+    try:
+        v = f"{float(value):.0f}"
+    except (ValueError, TypeError):
+        v = str(value)
+    return f"{label} : {v}{unit} (threshold {threshold}{unit})"
 
 
 class AlertMonitorDaemon:

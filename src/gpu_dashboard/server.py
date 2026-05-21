@@ -69,6 +69,7 @@ DEFAULTS = {
     "ALERT_GPU_TEMP_THRESHOLD": "85",
     "ALERT_MEM_TEMP_THRESHOLD": "95",
     "ALERT_FAN_PCT_THRESHOLD": "95",
+    "ALERT_VRAM_PCT_THRESHOLD": "90",
     "ALERT_MIN_CONSECUTIVE": "3",
     "ALERT_COOLDOWN_SECONDS": "300",
     "ALERT_MONITOR_INTERVAL": "30",
@@ -170,6 +171,16 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
                         results.append(("webhook", False, str(e)))
                 return results
 
+            # Best-effort: probe nvidia-smi once to learn VRAM capacity
+            mem_total_mib = None
+            try:
+                from . import api as _api
+                snap = _api._gpu_card_snapshot(gpu_index=cfg.get_int("GPU_INDEX", default=0))
+                if snap.get("alive"):
+                    mem_total_mib = snap.get("mem_total_mib")
+            except Exception:
+                pass
+
             alert_monitor_daemon = AlertMonitorDaemon(
                 sampler=sampler,
                 telegram_send_fn=_send_alert,
@@ -177,6 +188,8 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
                     "gpu_temp": cfg.get_int("ALERT_GPU_TEMP_THRESHOLD", default=85),
                     "mem_temp": cfg.get_int("ALERT_MEM_TEMP_THRESHOLD", default=95),
                     "fan_pct":  cfg.get_int("ALERT_FAN_PCT_THRESHOLD", default=95),
+                    "vram_pct": cfg.get_int("ALERT_VRAM_PCT_THRESHOLD", default=90),
+                    "mem_total_mib": mem_total_mib,
                     "min_consecutive": cfg.get_int("ALERT_MIN_CONSECUTIVE", default=3),
                     "cooldown_seconds": cfg.get_int("ALERT_COOLDOWN_SECONDS", default=300),
                 },

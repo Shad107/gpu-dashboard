@@ -92,3 +92,32 @@ class TestCheckThresholds:
         thresholds = {"gpu_temp": 85, "mem_temp": 95, "fan_pct": 95, "min_consecutive": 3}
         state = AlertState()
         assert check_thresholds([], thresholds, state) == []
+
+
+class TestVramAlert:
+    def test_vram_pct_high_fires(self):
+        thresholds = {
+            "vram_pct": 90, "min_consecutive": 3,
+            "mem_total_mib": 24576,  # RTX 3090
+        }
+        state = AlertState()
+        # 95%+ used = 23347+ MiB
+        samples = [_sample(temp=50, mem_used_mib=23500) for _ in range(3)]
+        alerts = check_thresholds(samples, thresholds, state)
+        assert len(alerts) == 1
+        assert alerts[0]["kind"] == "vram_pct_high"
+
+    def test_vram_below_threshold_does_not_fire(self):
+        thresholds = {"vram_pct": 90, "min_consecutive": 3, "mem_total_mib": 24576}
+        state = AlertState()
+        samples = [_sample(mem_used_mib=10000) for _ in range(3)]  # ~40%
+        assert check_thresholds(samples, thresholds, state) == []
+
+    def test_vram_requires_mem_total(self):
+        """Without mem_total_mib in thresholds, VRAM alert cannot be computed."""
+        thresholds = {"vram_pct": 90, "min_consecutive": 3}  # no mem_total_mib
+        state = AlertState()
+        samples = [_sample(mem_used_mib=23500) for _ in range(3)]
+        alerts = check_thresholds(samples, thresholds, state)
+        # No alert because we can't compute % without total
+        assert all(a["kind"] != "vram_pct_high" for a in alerts)
