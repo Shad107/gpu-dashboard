@@ -42,8 +42,9 @@ class TestElectricityConfigSave:
     def test_updates_in_memory_config(self, ctx):
         api.handle_electricity_config(ctx, {"price_per_kwh": 0.30, "currency": "EUR"})
         # Subsequent /api/electricity should use the new price (the Config is
-        # updated in-place via .set so no restart needed)
-        assert ctx["config"].get("ELECTRICITY_PRICE_EUR_PER_KWH") == "0.30"
+        # updated in-place via .set so no restart needed).
+        # Compare as float to avoid Python's trailing-zero strip ("0.30" → "0.3")
+        assert float(ctx["config"].get("ELECTRICITY_PRICE_EUR_PER_KWH")) == 0.30
 
     def test_invalid_price_returns_400(self, ctx):
         code, body = api.handle_electricity_config(ctx,
