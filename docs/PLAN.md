@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 22:48 (cycle 64 done)
-**Latest commit** : `d89b9db` — Phase B drag-and-drop reorder
-**Tests** : 428 passing · **CI** : ✅ green · **Bundle** : 64.11 KB gzip
+**Last updated** : 2026-05-21 22:55 (cycle 65 done)
+**Latest commit** : `56b2ef1` — Phase C custom URL iframe cards
+**Tests** : 428 passing · **CI** : ✅ green · **Bundle** : 65.69 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Phase C : Custom URL iframe card**.
+Nothing — between cycles. Wakeup soon will start the original backlog. Phase A/B/C all done.
 
 ---
 
@@ -19,15 +19,11 @@ Nothing — between cycles. Wakeup soon will start **Phase C : Custom URL iframe
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 65 (next) — Phase C : Custom URL card (iframe embed) (~2-3h)
-- Allow user to add an arbitrary URL card (Grafana panel, Home Assistant card, an image, etc.)
-- Sandboxed iframe (sandbox="allow-scripts" — no parent navigation)
-- Multiple custom cards possible
-- Add/remove from Layout tab
-- Tests : URL validation (must be http/https), iframe attrs correct
-- Screenshot
+### Cycle 66 (next) — Lifetime LLM stats (~1h)
+Total tokens generated since install. Card in dashboard + counter in About.
+Uses cumulative tokens_total_snapshot from sampler / DB.
 
-### Cycle 66+ — Original feature backlog continues
+### Cycle 67+ — Original feature backlog continues
 1. Lifetime LLM stats (total tokens since install, ~1h)
 2. Power cost heatmap by hour-of-day (~1h)
 3. Compare-to-7d / 30d toggle in History (~30 min)
@@ -50,6 +46,14 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 65 — Dashboard customization Phase C (1 commit)
+- `56b2ef1` Phase C : custom URL iframe cards
+  - layout.svelte.ts : customCards: CustomCard[] + addCustom/removeCustom + isValidUrl
+  - Cards.svelte : iframe with sandbox="allow-scripts allow-same-origin"
+  - SettingsModal Layout tab : 🧩 emoji + 🗑️ delete + add-form
+  - Default name = URL hostname if name empty
+  - URL validation : http/https only
 
 ### Cycle 64 — Dashboard customization Phase B (1 commit)
 - `d89b9db` Phase B : drag-and-drop card reorder via svelte-dnd-action
@@ -160,9 +164,9 @@ Rules :
 |---|---|
 | Tests | 428 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 186 KB raw / 64.11 KB gzip |
-| Bundle CSS | 15.43 KB raw / 3.80 KB gzip |
-| Commits since v0.1.0 | ~67 |
+| Bundle JS | 191 KB raw / 65.69 KB gzip |
+| Bundle CSS | 15.78 KB raw / 3.86 KB gzip |
+| Commits since v0.1.0 | ~68 |
 | API endpoints | 30+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
