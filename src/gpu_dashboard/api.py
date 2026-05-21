@@ -468,6 +468,24 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── GET /api/auto-profile ─────────────────────────
+
+
+def handle_auto_profile_status(ctx: dict) -> Response:
+    """Status of the auto-profile-switch daemon (current classification, etc.)."""
+    daemon = ctx.get("auto_profile_daemon")
+    enabled = ctx["config"].get_bool("MODULE_AUTO_PROFILE")
+    if daemon is None:
+        return 200, {"enabled": enabled, "running": False}
+    status = daemon.status()
+    status["enabled"] = enabled
+    status["thresholds"] = {
+        "idle": ctx["config"].get_int("AUTO_PROFILE_IDLE_THRESHOLD", default=5),
+        "boost": ctx["config"].get_int("AUTO_PROFILE_BOOST_THRESHOLD", default=80),
+    }
+    return 200, status
+
+
 # ────────────────────────── /api/power-profiles ───────────────────────────
 
 

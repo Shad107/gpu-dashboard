@@ -45,6 +45,12 @@ DEFAULTS = {
     "MODULE_TELEGRAM_ALERTS": "0",
     "MODULE_OCULINK_WATCHDOG": "0",
     "MODULE_FAN_CURVE": "0",
+    "MODULE_AUTO_PROFILE": "0",
+    "AUTO_PROFILE_INTERVAL": "30",
+    "AUTO_PROFILE_WINDOW": "60",
+    "AUTO_PROFILE_MIN_STABLE": "90",
+    "AUTO_PROFILE_IDLE_THRESHOLD": "5",
+    "AUTO_PROFILE_BOOST_THRESHOLD": "80",
     "STORAGE_DB_PATH": "~/.local/share/gpu-dashboard/metrics.db",
     "STORAGE_RETENTION_DAYS": "30",
     "POWER_LIMIT_DEFAULT": "250",
@@ -121,6 +127,30 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     )
     retention.start()
 
+    # auto_profile daemon (optional) — must come after sampler is started
+    auto_profile_daemon = None
+    if cfg.get_bool("MODULE_AUTO_PROFILE"):
+        try:
+            from .modules.auto_profile import AutoProfileDaemon
+            def _apply_named(name: str):
+                # Lazy import to avoid circular reference
+                from . import api as _api
+                # Construct a minimal ctx for the apply handler
+                ctx_local = {"config": cfg, "profile": profile}
+                _api.handle_power_profile_apply(ctx_local, name)
+            auto_profile_daemon = AutoProfileDaemon(
+                sampler=sampler,
+                api_apply_callback=_apply_named,
+                interval=float(cfg.get_int("AUTO_PROFILE_INTERVAL", default=30)),
+                window_seconds=cfg.get_int("AUTO_PROFILE_WINDOW", default=60),
+                min_stable_seconds=cfg.get_int("AUTO_PROFILE_MIN_STABLE", default=90),
+                idle_threshold=cfg.get_int("AUTO_PROFILE_IDLE_THRESHOLD", default=5),
+                boost_threshold=cfg.get_int("AUTO_PROFILE_BOOST_THRESHOLD", default=80),
+            )
+            auto_profile_daemon.start()
+        except Exception as e:
+            print(f"warning: auto_profile daemon failed: {e}", file=sys.stderr)
+
     # fan_curve daemon (optional)
     fan_curve_daemon = None
     if cfg.get_bool("MODULE_FAN_CURVE"):
@@ -155,6 +185,7 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
         "config": cfg, "profile": profile,
         "sampler": sampler, "storage": storage, "retention": retention,
         "fan_curve_daemon": fan_curve_daemon,
+        "auto_profile_daemon": auto_profile_daemon,
         "setup_required": setup_required,
         "profiles_dir": profiles_dir,
         "overrides_dir": os.path.join(home, ".config/gpu-dashboard/profile-overrides"),
@@ -291,6 +322,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_power_profiles_list(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/auto-profile":
+                code, body = api.handle_auto_profile_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/prom":
                 code, body = api.handle_prom(ctx)
                 data = body.encode("utf-8")
@@ -395,6 +430,8 @@ def main(argv: Optional[list] = None) -> int:
                 ctx["retention"].stop()
             if ctx.get("fan_curve_daemon"):
                 ctx["fan_curve_daemon"].stop()
+            if ctx.get("auto_profile_daemon"):
+                ctx["auto_profile_daemon"].stop()
             if "storage" in ctx:
                 ctx["storage"].close()
     return 0
