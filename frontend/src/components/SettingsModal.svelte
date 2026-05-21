@@ -156,6 +156,8 @@
   let historyMetric = $state<HistoryMetric>("power");
   let historySamples = $state<HistorySample[]>([]);
   let historyEvents = $state<StoredEvent[]>([]);
+  let historyCompare = $state<HistorySample[]>([]);
+  let historyCompareMode = $state(false);
   let historyLoading = $state(false);
   let historyAutoRefresh = $state(false);
   let historyTimer: ReturnType<typeof setInterval> | null = null;
@@ -210,21 +212,36 @@
       const now = Math.floor(Date.now() / 1000);
       const from = now - RANGE_SECONDS[historyRange];
       const step = RANGE_STEP[historyRange] || undefined;
-      // Parallel fetch: samples + events overlay
-      const [hist, evs] = await Promise.all([
+      const ONE_DAY = 86400;
+
+      // Parallel fetch: samples + events overlay + optional yesterday-overlay
+      const promises: Promise<any>[] = [
         api.history(from, now, step),
         api.events(from).catch(() => ({ ok: false, events: [] })),
-      ]);
-      historySamples = hist.samples ?? [];
-      historyEvents = evs.events ?? [];
+      ];
+      if (historyCompareMode) {
+        promises.push(
+          api.history(from - ONE_DAY, now - ONE_DAY, step).catch(() => ({ ok: false, samples: [] })),
+        );
+      }
+      const results = await Promise.all(promises);
+      historySamples = results[0].samples ?? [];
+      historyEvents = results[1].events ?? [];
+      historyCompare = historyCompareMode ? (results[2].samples ?? []) : [];
     } catch (e) {
       toast.emit("✗ " + i18n.t("ts.network_error") + ": " + (e as Error).message, "err");
-      historySamples = [];
-      historyEvents = [];
+      historySamples = []; historyEvents = []; historyCompare = [];
     } finally {
       historyLoading = false;
     }
   }
+  // Reload when compare toggle flips
+  $effect(() => {
+    historyCompareMode;  // dependency
+    if (modal.open && modal.section === "history" && historySamples.length > 0) {
+      loadHistory();
+    }
+  });
 
   function exportCsv() {
     const now = Math.floor(Date.now() / 1000);
@@ -779,6 +796,8 @@
                 metric={historyMetric}
                 color={METRIC_INFO[historyMetric].color}
                 unit={METRIC_INFO[historyMetric].unit}
+                compareSamples={historyCompareMode ? historyCompare : []}
+                compareLabel={historyCompareMode ? i18n.t("history.compare_label") : ""}
               >
                 <span slot="empty">{i18n.t("history.no_data")}</span>
               </HistoryChart>
@@ -791,6 +810,10 @@
             <label style="display:flex;align-items:center;gap:.4em;cursor:pointer;font-size:.85em">
               <input type="checkbox" bind:checked={historyAutoRefresh} />
               ⏱️ {i18n.t("history.auto_refresh")}
+            </label>
+            <label style="display:flex;align-items:center;gap:.4em;cursor:pointer;font-size:.85em">
+              <input type="checkbox" bind:checked={historyCompareMode} />
+              📊 {i18n.t("history.compare_yesterday")}
             </label>
             <span class="warn-text">{i18n.t("history.samples_count", { n: historySamples.length })}</span>
           </div>

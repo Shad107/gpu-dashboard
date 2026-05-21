@@ -9,8 +9,11 @@
     color: string;
     unit: string;
     events?: StoredEvent[];
+    /** Optional comparison series (rendered as dimmer overlay) — typically same range −24h */
+    compareSamples?: HistorySample[];
+    compareLabel?: string;
   };
-  const { samples, metric, color, unit, events = [] }: Props = $props();
+  const { samples, metric, color, unit, events = [], compareSamples = [], compareLabel }: Props = $props();
 
   // Marker color per event kind
   const EVENT_COLORS: Record<string, string> = {
@@ -28,17 +31,24 @@
   const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
 
-  const values = $derived(samples.map(s => (s[metric] as number) ?? 0));
-  const minV = $derived(values.length ? Math.min(...values) : 0);
-  const maxV = $derived(values.length ? Math.max(...values) : 1);
+  // Y-axis spans BOTH series so the overlay isn't squashed
+  const allValues = $derived([
+    ...samples.map(s => (s[metric] as number) ?? 0),
+    ...compareSamples.map(s => (s[metric] as number) ?? 0),
+  ]);
+  const minV = $derived(allValues.length ? Math.min(...allValues) : 0);
+  const maxV = $derived(allValues.length ? Math.max(...allValues) : 1);
   const span = $derived(Math.max(1, maxV - minV));
 
-  const path = $derived.by(() => {
-    if (samples.length < 2) return "";
-    const x = (i: number) => PAD_L + (i / (samples.length - 1)) * innerW;
+  function buildPath(arr: HistorySample[]): string {
+    if (arr.length < 2) return "";
+    const x = (i: number) => PAD_L + (i / (arr.length - 1)) * innerW;
     const y = (v: number) => PAD_T + (1 - (v - minV) / span) * innerH;
-    return smoothPath(samples.map((s, i) => ({ x: x(i), y: y((s[metric] as number) ?? 0) })));
-  });
+    return smoothPath(arr.map((s, i) => ({ x: x(i), y: y((s[metric] as number) ?? 0) })));
+  }
+
+  const path = $derived(buildPath(samples));
+  const comparePath = $derived(compareSamples.length >= 2 ? buildPath(compareSamples) : "");
 
   const gridY = $derived.by(() => {
     const steps = 5;
@@ -109,7 +119,21 @@
       <line x1={t.x} x2={t.x} y1={PAD_T + innerH} y2={PAD_T + innerH + 4} stroke="#3a3f4d" stroke-width="0.7" />
       <text x={t.x} y={PAD_T + innerH + 18} fill="#7c8aa3" font-size="10" text-anchor="middle">{t.label}</text>
     {/each}
+    <!-- Comparison series (dimmer, dashed) — rendered BEFORE the main path so the latter sits on top -->
+    {#if comparePath}
+      <path d={comparePath} fill="none" stroke="#7c8aa3" stroke-width="1.4" stroke-dasharray="6 3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="0.7">
+        <title>{compareLabel || "compare"}</title>
+      </path>
+    {/if}
+
     <path d={path} fill="none" stroke={color} stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+
+    {#if comparePath && compareLabel}
+      <g font-size="11">
+        <line x1={PAD_L + 6} x2={PAD_L + 20} y1={PAD_T - 4} y2={PAD_T - 4} stroke="#7c8aa3" stroke-width="1.4" stroke-dasharray="6 3" opacity="0.7"/>
+        <text x={PAD_L + 24} y={PAD_T - 1} fill="#7c8aa3">{compareLabel}</text>
+      </g>
+    {/if}
 
     <!-- Event markers (vertical lines + small circle on top axis) -->
     {#each eventMarkers as m}
