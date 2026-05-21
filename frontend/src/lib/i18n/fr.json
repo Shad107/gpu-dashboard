@@ -283,6 +283,12 @@
   "layout.invalid_url": "URL doit commencer par http:// ou https://",
   "layout.custom_added": "Card custom ajoutée : {name}",
   "layout.remove_custom": "Supprimer cette card custom",
+  "theme.title": "Thème",
+  "theme.description": "Palette de couleurs du dashboard. Sauvegardé dans ton browser.",
+  "theme.dark": "Sombre",
+  "theme.dark_desc": "Le défaut. Reposant pour les sessions tard le soir.",
+  "theme.light": "Clair",
+  "theme.light_desc": "Fond clair pour usage en journée.",
   "toast.error": "Erreur",
   "toast.unknown": "inconnue",
   "toast.power_applied": "Power limit → {watts} W (~{perf}% perf)"

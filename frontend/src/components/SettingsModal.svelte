@@ -1,6 +1,7 @@
 <script lang="ts">
   import { modal, live, toast, wizard } from "../lib/stores.svelte";
   import { layout, CARD_NAMES, isValidUrl } from "../lib/layout.svelte";
+  import { theme } from "../lib/theme.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
   import { api, type HistorySample, type StoredEvent } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
@@ -1022,6 +1023,31 @@
           <button class="btn" onclick={() => {
             if (confirm(i18n.t("layout.reset_confirm"))) layout.reset();
           }}>↺ {i18n.t("layout.reset_btn")}</button>
+        </div>
+
+        <h3 style="margin-top:1.8em;color:var(--text-muted);font-size:.92em;font-weight:600">
+          🎨 {i18n.t("theme.title")}
+        </h3>
+        <p class="sub" style="margin:0 0 .6em;font-size:.82em">{i18n.t("theme.description")}</p>
+        <div class="mode-tiles">
+          <button
+            class="mode-tile"
+            class:active={theme.current === "dark"}
+            onclick={() => theme.set("dark")}
+          >
+            <div class="mode-tile-emoji">🌙</div>
+            <div class="mode-tile-name">{i18n.t("theme.dark")}</div>
+            <div class="mode-tile-desc">{i18n.t("theme.dark_desc")}</div>
+          </button>
+          <button
+            class="mode-tile"
+            class:active={theme.current === "light"}
+            onclick={() => theme.set("light")}
+          >
+            <div class="mode-tile-emoji">☀️</div>
+            <div class="mode-tile-name">{i18n.t("theme.light")}</div>
+            <div class="mode-tile-desc">{i18n.t("theme.light_desc")}</div>
+          </button>
         </div>
       </div>
 

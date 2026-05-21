@@ -283,6 +283,12 @@
   "layout.invalid_url": "URL must start with http:// or https://",
   "layout.custom_added": "Custom card added: {name}",
   "layout.remove_custom": "Delete this custom card",
+  "theme.title": "Theme",
+  "theme.description": "Color scheme for the dashboard. Saved in your browser.",
+  "theme.dark": "Dark",
+  "theme.dark_desc": "The default. Easy on the eyes for late-night sessions.",
+  "theme.light": "Light",
+  "theme.light_desc": "Bright background for daytime use.",
   "toast.error": "Error",
   "toast.unknown": "unknown",
   "toast.power_applied": "Power limit → {watts} W (~{perf}% perf)"
