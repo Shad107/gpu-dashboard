@@ -4,9 +4,9 @@
 // *settings*. They should be top-level navigation tabs on the dashboard, not
 // hidden behind the gear icon.
 
-export type View = "dashboard" | "history" | "stats" | "about";
+export type View = "dashboard" | "history" | "stats";
 
-const ALL_VIEWS: View[] = ["dashboard", "history", "stats", "about"];
+const ALL_VIEWS: View[] = ["dashboard", "history", "stats"];
 
 function parseHash(): View {
   if (typeof location === "undefined") return "dashboard";

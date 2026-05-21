@@ -5,6 +5,7 @@
   import Cards from "./components/Cards.svelte";
   import CoolingChart from "./components/CoolingChart.svelte";
   import PowerChart from "./components/PowerChart.svelte";
+  import HistoryView from "./components/HistoryView.svelte";
   import SettingsModal from "./components/SettingsModal.svelte";
   import SetupWizard from "./components/SetupWizard.svelte";
   import IdleBanner from "./components/IdleBanner.svelte";
@@ -36,7 +37,8 @@
       view.set("history"); e.preventDefault(); return;
     }
     if (e.key === "a" || e.key === "A") {
-      view.set("about"); e.preventDefault(); return;
+      // About stays in the Settings modal per user feedback 23:25
+      modal.show("about"); e.preventDefault(); return;
     }
     if (e.key === "d" || e.key === "D") {
       view.set("dashboard"); e.preventDefault(); return;
@@ -104,22 +106,12 @@
     <CoolingChart />
     <PowerChart />
   {:else if view.current === "history"}
-    <div class="view-placeholder">
-      <h2>📊 {i18n.t("nav.history")}</h2>
-      <p class="sub">{i18n.t("view.coming_soon")}</p>
-      <p class="sub">In the meantime : <button class="btn" onclick={() => modal.show("history")}>open the legacy History tab</button></p>
-    </div>
+    <HistoryView />
   {:else if view.current === "stats"}
     <div class="view-placeholder">
       <h2>📈 {i18n.t("nav.stats")}</h2>
       <p class="sub">{i18n.t("view.coming_soon")}</p>
       <p class="sub"><button class="btn" onclick={() => modal.show("stats")}>open the legacy Stats tab</button></p>
-    </div>
-  {:else if view.current === "about"}
-    <div class="view-placeholder">
-      <h2>ℹ️ {i18n.t("nav.about")}</h2>
-      <p class="sub">{i18n.t("view.coming_soon")}</p>
-      <p class="sub"><button class="btn" onclick={() => modal.show("about")}>open the legacy About tab</button></p>
     </div>
   {/if}
   <SettingsModal />

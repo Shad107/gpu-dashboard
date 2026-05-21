@@ -3,11 +3,13 @@
   import { i18n } from "../lib/i18n/index.svelte";
 
   type NavTab = { id: View; labelKey: string; emoji: string };
+  // 'About' stays in the Settings modal (per user feedback 2026-05-21 23:25 :
+  // 'Remet le à-propos dans le paramétrage a la fin'). Top-level keeps only
+  // recurring views.
   const tabs: NavTab[] = [
     { id: "dashboard", labelKey: "nav.dashboard", emoji: "🏠" },
     { id: "history",   labelKey: "nav.history",   emoji: "📊" },
     { id: "stats",     labelKey: "nav.stats",     emoji: "📈" },
-    { id: "about",     labelKey: "nav.about",     emoji: "ℹ️" },
   ];
 </script>
 
