@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:55 (cycle 87 done — sampler polls all GPUs)
-**Latest commit** : `e626c2e` — sampler multi-GPU
-**Tests** : 491 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 00:59 (cycle 88 done — API per-GPU)
+**Latest commit** : `664b4e8` — gpu_index API param
+**Tests** : 497 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 88 : /api/state ?gpu_index= + history per-GPU (slice 3/6)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 89 : Header picker dropdown UI (slice 4/6)**.
 
 ---
 
@@ -19,14 +19,12 @@ Nothing — between cycles. Wakeup soon will start **Cycle 88 : /api/state ?gpu_
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 88 (next) — Multi-GPU slice 3/6 — API per-GPU
-- /api/state accepts ?gpu_index= (default 0)
-- /api/history accepts ?gpu_index= (default 0)
-- /api/llm/perf, /api/thermal-stats, /api/power-stats also accept gpu_index
-- Tests for the new query param plumbing
+### Cycle 89 (next) — Header picker dropdown UI (slice 4/6)
+- Header.svelte shows live picker when /api/state.gpus_available has > 1 entry
+- Selected gpu_index lives in a new lib/gpu.svelte.ts store
+- Store value propagates as ?gpu_index= on all data fetches (Cards, History, Stats)
 
-### Cycle 89 — Slice 4 : Header picker dropdown UI
-### Cycle 90 — Slice 5 : HistoryView + StatsView pass gpu_index
+### Cycle 90 — Slice 5 : wire gpu store through Cards + Stats + History
 ### Cycle 91 — Slice 6 : polish + screenshots + README
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
@@ -52,6 +50,15 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 88 — API gpu_index query param (1 commit)
+- `664b4e8` `?gpu_index=` propagated through all data endpoints
+  - history, llm/lifetime, llm/perf, thermal-stats, power-stats,
+    electricity, power-heatmap all accept the param
+  - `_parse_gpu_index(params)` helper (default 0, robust to garbage)
+  - Default behavior unchanged
+  - 6 new TDD tests
+  - Tests : 491 → 497
 
 ### Cycle 87 — Multi-GPU sampler refactor (1 commit)
 - `e626c2e` Sampler polls all GPUs, persists with gpu_index
@@ -334,11 +341,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 491 passing on Py 3.9-3.13 |
+| Tests | 497 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~95 |
+| Commits since v0.1.0 | ~96 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
