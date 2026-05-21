@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 00:40 (cycle 84a done — push delivery wired)
-**Latest commit** : `eee80d5` — VAPID JWT + send_push + alert_monitor
-**Tests** : 475 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 00:46 (cycle 85 done — push pivot via /api/alerts/latest)
+**Latest commit** : `90a2ceb` — SW fetches alert details on push
+**Tests** : 479 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 85 : encrypted payload (RFC 8291) so notification shows alert text**.
+Nothing — between cycles. Wakeup soon will start **Cycle 86 : Multi-GPU full picker UI (slice 1 of ~6)**.
 
 ---
 
@@ -19,16 +19,19 @@ Nothing — between cycles. Wakeup soon will start **Cycle 85 : encrypted payloa
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 85 (next) — Web Push encrypted payload (RFC 8291)
-- ECDH-ES P-256 key agreement between server ephemeral key + receiver pub
-- HKDF-SHA256 derives content-encryption-key + nonce
-- AES-128-GCM encrypts the JSON {title, body, ...}
-- aes128gcm Content-Encoding (RFC 8188)
-- Update send_push() : if message provided, encrypt + attach body
-- Without this, notifications show generic "New notification" — with
-  it, they show "🔥 GPU temp 92°C" etc.
+### Cycle 86 (next) — Multi-GPU full picker UI slice 1/6
+- Today : header shows a multi-GPU badge but only the selected one is monitored
+- Goal : per-GPU sampler buffers, picker dropdown in Header, /api/state?gpu_index=N
+- Slice 1 (this cycle) : backend per-GPU sampler refactor — keep sampling all
+  GPUs in parallel, store samples with gpu_index column. No frontend yet.
 
-### Cycle 86+ — Multi-GPU full picker UI · Drag-and-drop fan curve editor SVG
+### Cycle 87 — Slice 2 : /api/state accepts gpu_index param
+### Cycle 88 — Slice 3 : Header picker dropdown UI
+### Cycle 89 — Slice 4 : History view per-GPU
+### Cycle 90 — Slice 5 : Stats view per-GPU
+### Cycle 91 — Slice 6 : polish + docs + screenshots
+
+### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
 
 ### Cycle 70+ — Original feature backlog continues
@@ -51,6 +54,16 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 85 — Push pivot : SW fetches /api/alerts/latest (1 commit)
+- `90a2ceb` Pragmatic alternative to RFC 8291 encryption
+  - Push is just a wake-up signal ; SW fetches alert details
+  - New /api/alerts/latest endpoint returns most recent alert event
+  - sw.js : on push, try inline data → fallback to backend fetch
+  - 4 new TDD tests
+  - Tests : 475 → 479
+  - RFC 8291 encrypted payload deferred indefinitely (low ROI for
+    custom self-hosted deployment)
 
 ### Cycle 84a — Web Push delivery (1 commit)
 - `eee80d5` VAPID JWT signing + send_push() + alert_monitor wiring
@@ -305,11 +318,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 475 passing on Py 3.9-3.13 |
+| Tests | 479 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~92 |
+| Commits since v0.1.0 | ~93 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
