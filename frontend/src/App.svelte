@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import Header from "./components/Header.svelte";
+  import TopNav from "./components/TopNav.svelte";
   import Cards from "./components/Cards.svelte";
   import CoolingChart from "./components/CoolingChart.svelte";
   import PowerChart from "./components/PowerChart.svelte";
@@ -9,6 +10,7 @@
   import IdleBanner from "./components/IdleBanner.svelte";
   import Toast from "./components/Toast.svelte";
   import { live, wizard, modal, toast } from "./lib/stores.svelte";
+  import { view } from "./lib/view.svelte";
   import { i18n } from "./lib/i18n/index.svelte";
 
   // Global keyboard shortcuts.
@@ -31,10 +33,16 @@
       e.preventDefault(); return;
     }
     if (e.key === "h" || e.key === "H") {
-      modal.show("history"); e.preventDefault(); return;
+      view.set("history"); e.preventDefault(); return;
     }
     if (e.key === "a" || e.key === "A") {
-      modal.show("about"); e.preventDefault(); return;
+      view.set("about"); e.preventDefault(); return;
+    }
+    if (e.key === "d" || e.key === "D") {
+      view.set("dashboard"); e.preventDefault(); return;
+    }
+    if (e.key === "s" || e.key === "S") {
+      view.set("stats"); e.preventDefault(); return;
     }
     if (e.key === "?") {
       toast.emit("Shortcuts: g=settings · h=history · a=about · ESC=close · r=redo wizard", "ok", 5000);
@@ -89,10 +97,31 @@
   <Toast />
 {:else}
   <Header />
+  <TopNav />
   <IdleBanner />
-  <Cards />
-  <CoolingChart />
-  <PowerChart />
+  {#if view.current === "dashboard"}
+    <Cards />
+    <CoolingChart />
+    <PowerChart />
+  {:else if view.current === "history"}
+    <div class="view-placeholder">
+      <h2>📊 {i18n.t("nav.history")}</h2>
+      <p class="sub">{i18n.t("view.coming_soon")}</p>
+      <p class="sub">In the meantime : <button class="btn" onclick={() => modal.show("history")}>open the legacy History tab</button></p>
+    </div>
+  {:else if view.current === "stats"}
+    <div class="view-placeholder">
+      <h2>📈 {i18n.t("nav.stats")}</h2>
+      <p class="sub">{i18n.t("view.coming_soon")}</p>
+      <p class="sub"><button class="btn" onclick={() => modal.show("stats")}>open the legacy Stats tab</button></p>
+    </div>
+  {:else if view.current === "about"}
+    <div class="view-placeholder">
+      <h2>ℹ️ {i18n.t("nav.about")}</h2>
+      <p class="sub">{i18n.t("view.coming_soon")}</p>
+      <p class="sub"><button class="btn" onclick={() => modal.show("about")}>open the legacy About tab</button></p>
+    </div>
+  {/if}
   <SettingsModal />
   <Toast />
 

@@ -1,5 +1,10 @@
 {
   "app.title": "GPU Dashboard",
+  "nav.dashboard": "Dashboard",
+  "nav.history": "History",
+  "nav.stats": "Stats",
+  "nav.about": "About",
+  "view.coming_soon": "Moving here from Settings next cycle — content unchanged, just relocating.",
   "ts.loading": "loading…",
   "ts.updated": "updated",
   "ts.network_error": "Network error",

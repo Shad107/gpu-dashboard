@@ -1,5 +1,10 @@
 {
   "app.title": "Dashboard GPU",
+  "nav.dashboard": "Dashboard",
+  "nav.history": "Historique",
+  "nav.stats": "Statistiques",
+  "nav.about": "À propos",
+  "view.coming_soon": "Déplacé ici depuis Réglages au prochain cycle — contenu inchangé, on réorganise juste.",
   "ts.loading": "chargement…",
   "ts.updated": "maj",
   "ts.network_error": "Erreur réseau",
