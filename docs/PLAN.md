@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:34 (cycle 71 done — StatsView extracted)
-**Latest commit** : `d83a4b9` — StatsView top-level page
-**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 71.75 KB gzip
+**Last updated** : 2026-05-21 23:44 (cycle 72 done — perf endpoints)
+**Latest commit** : `7e3ae14` — 3 new perf endpoints
+**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 71.84 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 72 : Modal cleanup (remove History+Stats from modal)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 73 : Sparkline component + live tok/s on LLM card**.
 
 ---
 
@@ -19,15 +19,18 @@ Nothing — between cycles. Wakeup soon will start **Cycle 72 : Modal cleanup (r
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 72 (next) — Modal cleanup
-Remove History + Stats sections from SettingsModal.svelte. Remove the 2 sidebar entries.
-Sidebar drops from 11 → 9 tabs. Keep About at the end of Préférences.
+### Cycle 73 (next) — Sparkline + live tok/s on LLM card (~5 min)
+- New components/Sparkline.svelte (compact SVG mini-chart)
+- Cards.svelte LLM tile : top line = live tok/s + 1h sparkline
+- Polls /api/llm/perf every 30s
 
-### Cycle 73 — Simple mode (no LLM detected) — user feedback 23:32
-Filter Tokens/s + Tokens/W from History metric dropdown if LLM_SERVER_URL not configured.
-Add "Setup mode" choice in wizard : Standard / LLM rig.
+### Cycle 74 — Rewrite StatsView with sparklines (~5 min)
+- Sections : Performance LLM / Power & cost / Thermal / Profiles / Fan dist / Heatmap
+- Each section : key numbers + Sparkline
 
-### Cycle 74 — Theme toggle light/dark (~2h, deferred)
+### Cycle 75 — Modal cleanup (remove History + Stats from modal)
+### Cycle 76 — Simple mode (filter LLM UI if not configured)
+### Cycle 77+ — Theme toggle, Browser push, Multi-GPU, Fan curve editor
 
 ### Cycle 70+ — Original feature backlog continues
 1. Browser push notifs via Web Push + VAPID (~1.5h)
@@ -49,6 +52,12 @@ Add "Setup mode" choice in wizard : Standard / LLM rig.
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 72 — 3 perf endpoints (1 commit)
+- `7e3ae14` /api/llm/perf + /api/thermal-stats + /api/power-stats
+  - Each returns aggregates + downsampled sparkline series
+  - 13 TDD tests
+  - 442 → 455 tests total
 
 ### Cycle 71 — Extract StatsView (1 commit)
 - `d83a4b9` StatsView.svelte top-level page
@@ -209,12 +218,12 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 442 passing on Py 3.9-3.13 |
+| Tests | 455 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 208.13 KB raw / 71.75 KB gzip |
+| Bundle JS | 208.47 KB raw / 71.84 KB gzip |
 | Bundle CSS | 18.12 KB raw / 4.32 KB gzip |
-| Commits since v0.1.0 | ~77 |
-| API endpoints | 32+ |
+| Commits since v0.1.0 | ~78 |
+| API endpoints | 35+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
 | Modal tabs | 11 currently (10 after cycle 72: History removed)
