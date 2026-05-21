@@ -78,11 +78,15 @@ class MetricsSampler:
 
     def _loop(self) -> None:
         while not self._stop.is_set():
-            sample = self._poll()
-            if sample is not None:
+            samples = self._poll_all()
+            if samples:
+                # Keep only GPU 0 in the live in-memory buffer (back-compat).
                 with self._lock:
-                    self._buffer.append(sample)
-                self._persist(sample)
+                    for s in samples:
+                        if s.get("gpu_index", 0) == 0:
+                            self._buffer.append(s)
+                for s in samples:
+                    self._persist(s)
             self._stop.wait(self.interval)
 
     def _persist(self, sample: dict) -> None:
@@ -103,6 +107,7 @@ class MetricsSampler:
                 "util_gpu": sample.get("util_gpu"),
                 "mem_used_mib": sample.get("mem_used_mib"),
                 "tokens_total_snapshot": sample.get("tokens_total_snapshot"),
+                "gpu_index": sample.get("gpu_index", 0),
             }
             self._storage.record_sample(db_sample)
         except Exception:
@@ -139,6 +144,20 @@ class MetricsSampler:
         return None
 
     def _poll(self) -> Optional[dict]:
+        """Back-compat single-GPU poll : returns the FIRST GPU's sample only.
+
+        New code (the _loop) uses _poll_all(). This method is kept for direct
+        unit tests of the parsing logic.
+        """
+        samples = self._poll_all()
+        return samples[0] if samples else None
+
+    def _poll_all(self) -> list:
+        """Poll nvidia-smi for ALL GPUs. Returns one sample dict per GPU.
+
+        nvidia-smi --query-gpu without -i returns one CSV row per GPU.
+        Each row's index (0, 1, 2, ...) becomes the gpu_index field.
+        """
         try:
             out = subprocess.run(
                 ["nvidia-smi",
@@ -147,53 +166,50 @@ class MetricsSampler:
                 capture_output=True, text=True, timeout=5,
             )
         except (FileNotFoundError, subprocess.SubprocessError, OSError):
-            return None
+            return []
         if out.returncode != 0:
-            return None
-
-        parts = [p.strip() for p in out.stdout.strip().split(",")] if out.stdout.strip() else []
-        # 8 champs attendus depuis _NVIDIA_SMI_QUERY
-        if len(parts) < 5 or not parts[0].isdigit():
-            return None
+            return []
 
         def _int(s, default=0):
-            try:
-                return int(s)
-            except (ValueError, TypeError):
-                return default
+            try: return int(s)
+            except (ValueError, TypeError): return default
 
         def _float(s, default=0.0):
-            try:
-                return float(s)
-            except (ValueError, TypeError):
-                return default
+            try: return float(s)
+            except (ValueError, TypeError): return default
 
-        sample = {
-            "ts": datetime.datetime.now().strftime("%H:%M:%S"),
-            "temp": _int(parts[0]),
-            "fan": _int(parts[1]),
-            "clk_gpu": _int(parts[2]),
-            "clk_mem": _int(parts[3]),
-            "power": _float(parts[4]),
-        }
-        # Champs étendus (peuvent manquer si vieux driver, on parse défensivement)
-        if len(parts) > 5: sample["power_limit"] = _float(parts[5])
-        if len(parts) > 6: sample["util_gpu"]    = _int(parts[6])
-        if len(parts) > 7: sample["mem_used_mib"] = _int(parts[7])
-
-        # Per-fan RPM via nvidia-settings, if a DISPLAY is configured
-        if self._display:
-            f0, f1 = self._query_per_fan_rpm()
-            sample["fan0_rpm"] = f0
-            sample["fan1_rpm"] = f1
-
-        # LLM tokens (if llama-server URL configured)
-        if self._llm_url:
-            tokens = self._fetch_llm_tokens()
-            if tokens is not None:
-                sample["tokens_total_snapshot"] = tokens
-
-        return sample
+        samples = []
+        # One CSV row per GPU
+        for gpu_index, line in enumerate(out.stdout.strip().splitlines()):
+            parts = [p.strip() for p in line.split(",")]
+            # 8 champs attendus depuis _NVIDIA_SMI_QUERY
+            if len(parts) < 5 or not parts[0].isdigit():
+                continue
+            sample = {
+                "ts": datetime.datetime.now().strftime("%H:%M:%S"),
+                "gpu_index": gpu_index,
+                "temp": _int(parts[0]),
+                "fan": _int(parts[1]),
+                "clk_gpu": _int(parts[2]),
+                "clk_mem": _int(parts[3]),
+                "power": _float(parts[4]),
+            }
+            if len(parts) > 5: sample["power_limit"] = _float(parts[5])
+            if len(parts) > 6: sample["util_gpu"]    = _int(parts[6])
+            if len(parts) > 7: sample["mem_used_mib"] = _int(parts[7])
+            # Per-fan RPM via nvidia-settings (GPU 0 only — multi-GPU per-fan
+            # extraction would need its own loop with /Fan[N] selectors per GPU)
+            if gpu_index == 0 and self._display:
+                f0, f1 = self._query_per_fan_rpm()
+                sample["fan0_rpm"] = f0
+                sample["fan1_rpm"] = f1
+            # LLM tokens — only attach to GPU 0 since llama-server reports per-server
+            if gpu_index == 0 and self._llm_url:
+                tokens = self._fetch_llm_tokens()
+                if tokens is not None:
+                    sample["tokens_total_snapshot"] = tokens
+            samples.append(sample)
+        return samples
 
     def _query_per_fan_rpm(self) -> tuple:
         """Query nvidia-settings for per-fan RPM. Returns (fan0, fan1) ints (0 if unknown)."""
