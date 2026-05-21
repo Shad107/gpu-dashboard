@@ -6,6 +6,7 @@
   import PowerChart from "./components/PowerChart.svelte";
   import SettingsModal from "./components/SettingsModal.svelte";
   import SetupWizard from "./components/SetupWizard.svelte";
+  import IdleBanner from "./components/IdleBanner.svelte";
   import Toast from "./components/Toast.svelte";
   import { live, wizard, modal, toast } from "./lib/stores.svelte";
   import { i18n } from "./lib/i18n/index.svelte";
@@ -68,6 +69,7 @@
   <Toast />
 {:else}
   <Header />
+  <IdleBanner />
   <Cards />
   <CoolingChart />
   <PowerChart />
