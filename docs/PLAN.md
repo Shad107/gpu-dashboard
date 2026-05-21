@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:03 (cycle 89 done — header picker)
-**Latest commit** : `c00b8fc` — Header GPU picker
+**Last updated** : 2026-05-22 01:09 (cycle 90 done — GPU picker fully wired)
+**Latest commit** : `09ce72c` — gpu.selected propagation
 **Tests** : 497 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 90 : Wire gpu.selected into Cards + Views (slice 5/6)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 91 : polish + screenshots + README (slice 6/6)**.
 
 ---
 
@@ -19,12 +19,11 @@ Nothing — between cycles. Wakeup soon will start **Cycle 90 : Wire gpu.selecte
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 90 (next) — Wire gpu.selected through views (slice 5/6)
-- Cards.svelte : polls /api/state?gpu_index= and /api/electricity?gpu_index=
-- HistoryView, StatsView : pass gpu.selected on each fetch + re-fetch when changed
-- Make sure live.data still works for single-GPU users (gpu.selected=0 default)
-
-### Cycle 91 — Slice 6 : polish + screenshots + README
+### Cycle 91 (next) — Multi-GPU slice 6/6 — polish + README
+- Update README with multi-GPU section + picker screenshot
+- Mention the architecture (per-GPU sampling, picker, store)
+- Verify no regression on single-GPU machines
+- Final screenshots
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
@@ -49,6 +48,13 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 90 — gpu.selected propagation through all fetches (1 commit)
+- `09ce72c` All 9 api.ts wrappers accept optional gpu_index
+  - handle_state accepts ?gpu_index= URL param
+  - Cards / HistoryView / StatsView : \$effect re-fetches on gpu change
+  - live store now picks GPU from gpu.selected
+  - Zero-impact on single-GPU rigs
 
 ### Cycle 89 — Header picker dropdown (1 commit)
 - `c00b8fc` GpuStore + Header.svelte dropdown
@@ -351,7 +357,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~97 |
+| Commits since v0.1.0 | ~98 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
