@@ -171,9 +171,12 @@
   {#if layout.visible("llm_throughput") && llm?.available && (llm.tokens_generated_total ?? 0) > 0}
     <div class="card" style:order={layout.indexOf("llm_throughput")}>
       <h2>🪙 {i18n.t("card.llm_throughput")}</h2>
-      {#if llmPerf?.available && (llmPerf.avg_tps_1m ?? 0) > 0}
+      {#if llmPerf?.available && (llmPerf.series_1h?.some(v => v > 0) ?? false)}
+        {@const headline = (llmPerf.avg_tps_1m ?? 0) > 0
+          ? (llmPerf.avg_tps_1m ?? 0)
+          : (llmPerf.avg_tps_5m ?? 0)}
         <div class="big" style="color:#f472b6">
-          {(llmPerf.avg_tps_1m ?? 0).toFixed(1)}
+          {headline.toFixed(1)}
           <span class="sub" style="font-size:.45em">tok/s</span>
         </div>
         {#if llmPerf.series_1h && llmPerf.series_1h.length > 0}
