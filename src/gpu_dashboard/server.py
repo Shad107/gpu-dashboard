@@ -241,6 +241,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_setup_save(ctx, payload)
                 self._send_json(code, body)
                 return
+            if self.path == "/api/restart":
+                code, body = api.handle_restart(ctx)
+                self._send_json(code, body)
+                return
 
             self.send_response(404)
             self.end_headers()

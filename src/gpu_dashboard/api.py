@@ -417,6 +417,34 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── POST /api/restart ─────────────────────────────
+
+
+def handle_restart(ctx: dict) -> Response:
+    """Restart the server in-place via os.execv.
+
+    Returns 200 immediately, then re-execs the Python process after a short
+    delay so the response can be sent. Works for both interactive runs and
+    systemd-managed services.
+    """
+    import sys
+    import threading
+    import time as _t
+
+    def _restart():
+        _t.sleep(0.5)  # let the HTTP response flush
+        try:
+            if ctx.get("sampler"): ctx["sampler"].stop()
+            if ctx.get("retention"): ctx["retention"].stop()
+            if ctx.get("storage"): ctx["storage"].close()
+        except Exception:
+            pass
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    threading.Thread(target=_restart, daemon=False).start()
+    return 200, {"ok": True, "message": "restarting"}
+
+
 # ────────────────────────── /api/setup/* ───────────────────────────────────
 
 

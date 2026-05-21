@@ -182,6 +182,41 @@
     }
   });
 
+  // ── Restart action ────────────────────────────────────────────────────────
+  let restarting = $state(false);
+  async function restartServer() {
+    if (!confirm(i18n.t("services.restart_confirm"))) return;
+    restarting = true;
+    try {
+      await api.restart();
+    } catch {
+      // Connection will drop during restart — that's expected
+    }
+    // Poll /api/state until the server is back up, then reload
+    let attempts = 0;
+    const maxAttempts = 30;  // ~30s max wait
+    const tryReconnect = async () => {
+      attempts++;
+      try {
+        const r = await fetch("/api/state", { cache: "no-store" });
+        if (r.ok) {
+          toast.emit("✓ " + i18n.t("services.reconnected"), "ok");
+          setTimeout(() => location.reload(), 800);
+          return;
+        }
+      } catch {
+        // Server still down, keep trying
+      }
+      if (attempts < maxAttempts) {
+        setTimeout(tryReconnect, 1000);
+      } else {
+        restarting = false;
+        toast.emit("✗ Server didn't come back. Restart it manually.", "err");
+      }
+    };
+    setTimeout(tryReconnect, 1500);
+  }
+
   // ── Language selection ────────────────────────────────────────────────────
   function selectLang(l: Lang) { i18n.setLang(l); }
 
@@ -358,6 +393,16 @@
             </tr>
           {/each}
         </tbody></table>
+
+        <h3 style="margin-top:1.8em;color:#cdd2da;font-size:.95em;font-weight:600">
+          {i18n.t("services.restart_label")}
+        </h3>
+        <p class="sub">{i18n.t("services.restart_description")}</p>
+        <div class="btn-row" style="margin-top:.8em">
+          <button class="btn btn-danger" disabled={restarting} onclick={restartServer}>
+            {restarting ? i18n.t("services.restarting") : "🔄 " + i18n.t("services.restart_btn")}
+          </button>
+        </div>
       </div>
 
       <!-- Alerts -->

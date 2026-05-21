@@ -183,4 +183,9 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).then(jsonOf<{ ok: boolean; path?: string; error?: string }>),
+
+  restart: () =>
+    fetch("/api/restart", { method: "POST" }).then(
+      jsonOf<{ ok: boolean; message?: string }>
+    ),
 };
