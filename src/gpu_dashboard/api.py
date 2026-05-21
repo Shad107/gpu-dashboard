@@ -1421,6 +1421,24 @@ def handle_push_unsubscribe(ctx: dict, payload: dict) -> Response:
     return 200, {"ok": True, "removed": n}
 
 
+def handle_alerts_latest(ctx: dict) -> Response:
+    """Return the most-recent alert event.
+
+    Called by the service worker on push receipt to fetch the alert text
+    (avoids needing RFC 8291 encrypted payloads — push is just a 'wake up
+    and check' signal, SW fetches details here).
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    events = storage.get_events(from_ts=0, kind="alert")
+    if not events:
+        return 200, {"ok": True, "alert": None}
+    # Most recent first
+    latest = max(events, key=lambda e: e["ts"])
+    return 200, {"ok": True, "alert": latest}
+
+
 def handle_push_status(ctx: dict) -> Response:
     """Return the count of active push subscriptions + the VAPID public key."""
     storage = ctx.get("storage")

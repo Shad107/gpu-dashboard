@@ -397,6 +397,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_push_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/alerts/latest":
+                code, body = api.handle_alerts_latest(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/health":
                 code, body = api.handle_health(ctx)
                 self._send_json(code, body)
