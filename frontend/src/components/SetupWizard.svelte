@@ -5,7 +5,14 @@
   import { api, type SetupDetect, type ModuleRec } from "../lib/api";
 
   const TOTAL_STEPS = 5;
-  let step = $state(1);
+  // Support ?step=N in the URL for screenshot tooling + bookmarking.
+  function initialStep(): number {
+    const m = (typeof location !== "undefined" ? location.search : "").match(/[?&]step=(\d+)/);
+    if (!m) return 1;
+    const n = parseInt(m[1], 10);
+    return n >= 1 && n <= TOTAL_STEPS ? n : 1;
+  }
+  let step = $state(initialStep());
   let detect = $state<SetupDetect | null>(null);
   let loading = $state(true);
   let saving = $state(false);

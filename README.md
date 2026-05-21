@@ -11,6 +11,19 @@
 
 ![Dashboard](docs/screenshot.png)
 
+### 5-step web wizard on first launch
+
+<table>
+<tr>
+<td width="50%"><img src="docs/wizard/step1.png" alt="Step 1 — Welcome with live hardware detection" /></td>
+<td width="50%"><img src="docs/wizard/step2.png" alt="Step 2 — Module selection with availability tags" /></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/wizard/step3.png" alt="Step 3 — Copy-paste sudo commands with live recheck" /></td>
+<td width="50%"><img src="docs/wizard/step4.png" alt="Step 4 — Final configuration (port, default power-limit)" /></td>
+</tr>
+</table>
+
 ## What it does
 
 A small HTTP dashboard you point your browser at (`http://localhost:9999`) that shows:
