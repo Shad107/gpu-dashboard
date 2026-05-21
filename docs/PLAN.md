@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:18 (cycle 68 done)
-**Latest commit** : `a6f7500` — Compare-to 24h/7d/30d dropdown
-**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 67.55 KB gzip
+**Last updated** : 2026-05-21 23:22 (cycle 69 done — top-nav scaffold)
+**Latest commit** : `f51709c` — Top-nav scaffold + CSS
+**Tests** : 442 passing · **CI** : ✅ green · **Bundle** : 68.46 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Theme toggle light/dark**.
+Nothing — between cycles. Wakeup soon will start **Cycle 70 : Extract HistoryView from modal**.
 
 ---
 
@@ -19,8 +19,14 @@ Nothing — between cycles. Wakeup soon will start **Theme toggle light/dark**.
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 69 (next) — Theme toggle light/dark (~2h)
-CSS variables refactor. Toggle in Layout tab. Persist in localStorage.
+### Cycle 70 (next) — Extract HistoryView.svelte from SettingsModal
+The chart + Export CSV + Compare-to + Heatmap as a standalone top-level view.
+Removes the History section from the modal, wires the view dispatch in App.svelte.
+
+### Cycle 71 — Extract StatsView.svelte (fan distribution)
+### Cycle 72 — Extract AboutView.svelte (version, vBIOS, profile time)
+### Cycle 73 — Clean modal sidebar (back to 7 tabs)
+### Cycle 74 — Theme toggle light/dark (~2h, deferred until restructure done)
 
 ### Cycle 70+ — Original feature backlog continues
 1. Browser push notifs via Web Push + VAPID (~1.5h)
@@ -42,6 +48,14 @@ CSS variables refactor. Toggle in Layout tab. Persist in localStorage.
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 69 — Top-nav scaffold (2 commits)
+- `47dd0ce` view store + TopNav.svelte + App.svelte wiring + i18n
+- `f51709c` Fix : add CSS that didn't land (Read-state issue)
+- URL hash sync (#history, #stats, #about), browser back/forward works
+- Keyboard shortcuts updated : d=dashboard, h=history, s=stats, a=about
+- Placeholder views with button to open the legacy modal tab
+- This is slice 1 of a 5-cycle restructure per user feedback 23:14
 
 ### Cycle 68 — Compare-to dropdown 24h/7d/30d (2 commits)
 - `a63f7de` Compare-to dropdown replaces compare-to-yesterday checkbox
@@ -183,9 +197,9 @@ Rules :
 |---|---|
 | Tests | 442 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 196.48 KB raw / 67.55 KB gzip |
-| Bundle CSS | 16.37 KB raw / 3.99 KB gzip |
-| Commits since v0.1.0 | ~73 |
+| Bundle JS | 199.61 KB raw / 68.46 KB gzip |
+| Bundle CSS | 17.15 KB raw / 4.16 KB gzip |
+| Commits since v0.1.0 | ~75 |
 | API endpoints | 32+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
