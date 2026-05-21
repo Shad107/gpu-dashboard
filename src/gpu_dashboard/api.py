@@ -1525,6 +1525,45 @@ def handle_health(ctx: dict) -> Response:
 # ────────────────────────── GET /api/about ────────────────────────────────
 
 
+def handle_version(ctx: dict) -> Response:
+    """Tiny endpoint for headless monitoring / CLI scripts.
+
+    Returns {version, schema_version, modules_enabled}. Much smaller payload
+    than /api/about — designed to be polled cheaply from scripts that just
+    need to verify the dashboard is up and at the expected version.
+    """
+    from . import __version__ as _ver
+    cfg = ctx.get("config")
+    schema_version = None
+    storage = ctx.get("storage")
+    if storage is not None:
+        try:
+            schema_version = storage.schema_version()
+        except Exception:
+            pass
+
+    # Build modules_enabled list from config
+    module_keys = [
+        "MODULE_POWER_LIMIT", "MODULE_CLOCK_OFFSETS",
+        "MODULE_TELEGRAM_ALERTS", "MODULE_OCULINK_WATCHDOG",
+        "MODULE_FAN_CURVE", "MODULE_AUTO_PROFILE",
+        "MODULE_ALERT_MONITOR",
+    ]
+    modules_enabled = []
+    if cfg is not None:
+        for k in module_keys:
+            if cfg.get_bool(k):
+                # Strip MODULE_ prefix and lowercase
+                modules_enabled.append(k.replace("MODULE_", "").lower())
+
+    return 200, {
+        "ok": True,
+        "version": _ver,
+        "schema_version": schema_version,
+        "modules_enabled": modules_enabled,
+    }
+
+
 def handle_push_vapid(ctx: dict) -> Response:
     """Return the VAPID public key for browser push subscription.
 
