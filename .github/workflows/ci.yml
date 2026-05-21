@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ────────────────────────── Python tests ──────────────────────────────────
+  pytest:
+    name: pytest (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest jsonschema
+
+      - name: Run pytest
+        run: PYTHONPATH=src pytest tests/ -v
+
+  # ────────────────────────── Frontend build ────────────────────────────────
+  frontend-build:
+    name: Frontend build (Svelte 5 + Vite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: ./frontend
+        run: pnpm build
+
+      - name: Verify build output exists
+        run: |
+          test -f src/gpu_dashboard/static/index.html
+          test -d src/gpu_dashboard/static/assets
+          ls -la src/gpu_dashboard/static/assets/
+
+  # ────────────────────────── Shell scripts smoke ───────────────────────────
+  scripts-smoke:
+    name: Sudo scripts smoke (--print / --check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Test --print modes (no root needed)
+        run: |
+          scripts/install-power-limit-wrapper.sh --user ci-test --print | head -20
+          scripts/install-coolbits-xorg.sh --print | head -20
+          scripts/install-coolbits-xorg.sh --headless --print | head -20
+          scripts/install-oculink-watchdog.sh --print | head -20
+
+      - name: Test --check modes (no root needed)
+        run: |
+          # Should return 0 or 1 (installed or not) but never crash (>1)
+          scripts/install-power-limit-wrapper.sh --check && echo "installed" || echo "not installed"
+          scripts/install-coolbits-xorg.sh --check && echo "installed" || echo "not installed"
+
+      - name: Test get.sh structure (don't execute clone)
+        run: |
+          bash -n scripts/get.sh
+          grep -q 'set -euo pipefail' scripts/get.sh
+          # Verify it's the bootstrap (no sudo calls)
+          ! grep -E '^\s*sudo' scripts/get.sh

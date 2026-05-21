@@ -5,6 +5,7 @@
 
 🇬🇧 English · [🇫🇷 Français](README.fr.md)
 
+[![CI](https://github.com/Shad107/gpu-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/Shad107/gpu-dashboard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![Status](https://img.shields.io/badge/status-alpha-orange.svg)
