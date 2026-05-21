@@ -325,6 +325,21 @@ export const api = {
       avg_tokens_per_watt: number | null;
     }>),
 
+  powerHeatmap: (days = 7) =>
+    fetch(`/api/power-heatmap?days=${days}`).then(jsonOf<{
+      ok: boolean;
+      days: number;
+      currency: string;
+      price_per_kwh: number;
+      hours: {
+        hour: number;
+        avg_watts: number;
+        kwh_per_hour: number;
+        cost_per_hour: number;
+        sample_count: number;
+      }[];
+    }>),
+
   electricity: (since = 3600) =>
     fetch(`/api/electricity?since=${since}`).then(jsonOf<{
       ok: boolean;

@@ -214,6 +214,31 @@
   let historyEvents = $state<StoredEvent[]>([]);
   let historyCompare = $state<HistorySample[]>([]);
   let historyCompareMode = $state(false);
+
+  // Power heatmap (24 hours × N days window)
+  let heatmapData = $state<Awaited<ReturnType<typeof api.powerHeatmap>> | null>(null);
+  let heatmapDays = $state(7);
+  async function loadHeatmap() {
+    try { heatmapData = await api.powerHeatmap(heatmapDays); } catch { heatmapData = null; }
+  }
+  $effect(() => {
+    if (modal.open && modal.section === "history" && !heatmapData) loadHeatmap();
+  });
+  $effect(() => {
+    heatmapDays;  // re-fetch when days changes
+    if (modal.open && modal.section === "history" && heatmapData) loadHeatmap();
+  });
+  const heatmapMaxCost = $derived(
+    heatmapData ? Math.max(0.001, ...heatmapData.hours.map(h => h.cost_per_hour)) : 1
+  );
+  function heatmapBg(cost: number): string {
+    const ratio = cost / heatmapMaxCost;
+    // Color from dark blue (low) → orange (high)
+    if (ratio < 0.05) return "#0e1014";
+    if (ratio < 0.25) return `rgba(96,165,250,${0.15 + ratio * 0.5})`;
+    if (ratio < 0.6)  return `rgba(251,191,36,${0.2 + ratio * 0.5})`;
+    return `rgba(251,146,60,${0.3 + ratio * 0.7})`;
+  }
   let historyLoading = $state(false);
   let historyAutoRefresh = $state(false);
   let historyTimer: ReturnType<typeof setInterval> | null = null;

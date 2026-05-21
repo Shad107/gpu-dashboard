@@ -628,6 +628,85 @@ def handle_llm_stats(ctx: dict) -> Response:
     }
 
 
+# ────────────────────────── GET /api/power-heatmap ────────────────────────
+
+
+def handle_power_heatmap(ctx: dict, params: dict) -> Response:
+    """24-bucket heatmap of avg power + cost by hour-of-day over last N days.
+
+    Useful for spotting patterns like 'training runs every 5am eat €0.50/day'
+    or 'weekday afternoons are when inference is most active'.
+
+    Query params : days (default 7)
+    Returns :
+      days: int
+      currency: str
+      price_per_kwh: float
+      hours: [{hour, avg_watts, kwh_per_hour, cost_per_hour, sample_count}, ...]  (length 24)
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    cfg = ctx.get("config")
+
+    try:
+        days = int(params.get("days", 7))
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "days must be integer"}
+    if days < 1 or days > 365:
+        return 400, {"ok": False, "error": "days out of range [1, 365]"}
+
+    import time as _time
+    now = int(_time.time())
+    from_ts = now - days * 86400
+
+    # Use storage to query all samples in window (no resampling)
+    samples = storage.get_samples(from_ts=from_ts, to_ts=now)
+
+    # Bucket by hour-of-day using local time
+    import datetime as _dt
+    buckets = [{"watts_sum": 0.0, "count": 0} for _ in range(24)]
+    for s in samples:
+        if s.get("power") is None:
+            continue
+        ts = s.get("ts", 0)
+        h = _dt.datetime.fromtimestamp(ts).hour
+        buckets[h]["watts_sum"] += s["power"]
+        buckets[h]["count"] += 1
+
+    # Rate + currency
+    price = 0.25
+    currency = "EUR"
+    if cfg is not None:
+        try:
+            price = float(cfg.get("ELECTRICITY_PRICE_EUR_PER_KWH", default="0.25"))
+        except (ValueError, TypeError):
+            price = 0.25
+        currency = cfg.get("ELECTRICITY_CURRENCY", default="EUR") or "EUR"
+
+    hours_out = []
+    for h in range(24):
+        b = buckets[h]
+        avg_w = (b["watts_sum"] / b["count"]) if b["count"] > 0 else 0.0
+        kwh = avg_w / 1000.0  # kWh consumed during 1 hour at this avg power
+        cost = kwh * price
+        hours_out.append({
+            "hour": h,
+            "avg_watts": round(avg_w, 1),
+            "kwh_per_hour": round(kwh, 4),
+            "cost_per_hour": round(cost, 4),
+            "sample_count": b["count"],
+        })
+
+    return 200, {
+        "ok": True,
+        "days": days,
+        "currency": currency,
+        "price_per_kwh": price,
+        "hours": hours_out,
+    }
+
+
 # ────────────────────────── POST /api/electricity/config ──────────────────
 
 

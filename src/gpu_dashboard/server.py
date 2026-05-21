@@ -407,6 +407,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_electricity(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/power-heatmap":
+                code, body = api.handle_power_heatmap(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/llm/stats":
                 code, body = api.handle_llm_stats(ctx)
                 self._send_json(code, body)
