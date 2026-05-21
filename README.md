@@ -47,21 +47,70 @@ This tries to be the missing middle: **web UI, controllable, scriptable, alertab
 
 > Got a card not in the list? See [`profiles/SCHEMA.md`](profiles/SCHEMA.md) and open a PR.
 
-## Install (alpha, manual)
+## Install — 30 seconds, web wizard
 
 Requires Linux + NVIDIA driver + Python 3.9+.
+Tested on Ubuntu 24.04 / 25.10, Fedora 40, Arch.
+
+### Option A — one-liner bootstrap + web wizard (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Shad107/gpu-dashboard/main/scripts/get.sh | bash
+```
+
+The script does **only** these things (no sudo, no auto-install of system packages):
+
+1. Clones the repo to `~/gpu-dashboard`
+2. `pip install --user jsonschema` (the only Python dep)
+3. Starts the dashboard in the background on port 9999
+4. Prints the URL to open in your browser
+
+Open the URL, a **5-step wizard** walks you through:
+- Detected hardware (GPU, OS, profile match)
+- Which optional modules to enable
+- For each module needing root, the **exact sudo command to copy-paste in a terminal** (the wizard re-checks it after you run it)
+- Final config (port, default power-limit)
+- Done — restart the dashboard to apply
+
+> **Want to audit the script first?** It's 116 lines, viewable at [`scripts/get.sh`](scripts/get.sh).
+> Don't trust `curl | bash`? Use Option B below.
+
+### Option B — manual clone (full audit)
 
 ```bash
 git clone https://github.com/Shad107/gpu-dashboard.git
 cd gpu-dashboard
-./install.sh
+python3 -m pip install --user jsonschema
+PYTHONPATH=src python3 -m gpu_dashboard
 ```
 
-The installer probes your environment (OS, NVIDIA driver, X server, Coolbits, sudoers)
-and only proposes modules that can actually work on your machine. **No silent sudo,
-no auto-install of packages.** It tells you what it would do, you confirm.
+Open `http://localhost:9999` — the same web wizard runs.
 
-Use `./install.sh --detect-only` to just see the report without installing anything.
+### Option C — CLI install (headless / scripted)
+
+For headless servers or automation, the legacy interactive CLI is still available:
+
+```bash
+git clone https://github.com/Shad107/gpu-dashboard.git
+cd gpu-dashboard
+./install.sh --detect-only    # show what would happen (no writes)
+./install.sh                   # interactive prompts
+PYTHONPATH=src python3 -m gpu_dashboard
+```
+
+### Sudo commands the wizard suggests
+
+The wizard never runs sudo silently. For each module needing root, you'll see
+**one** bash command pointing to an audit-friendly script in the repo:
+
+| Module | Command suggested by wizard |
+|---|---|
+| `power_limit` | `sudo bash scripts/install-power-limit-wrapper.sh --user $USER` |
+| `clock_offsets` | `sudo bash scripts/install-coolbits-xorg.sh` (`--headless` for VM/eGPU) |
+| `oculink_watchdog` | `sudo bash scripts/install-oculink-watchdog.sh` |
+
+Each script supports `--check` (verify if already installed) and `--print`
+(show what it would write without writing) so you can audit before running.
 
 ## Architecture
 

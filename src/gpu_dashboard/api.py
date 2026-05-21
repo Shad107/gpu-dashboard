@@ -80,6 +80,7 @@ def handle_state(ctx: dict) -> Response:
         "services": _services_state(cfg),
         "fan_dist": _fan_distribution(cfg),
         "llm_model": _llm_model_served(cfg),
+        "setup_required": bool(ctx.get("setup_required", False)),
     }
     return 200, body
 
@@ -414,6 +415,121 @@ def handle_export(ctx: dict, params: dict):
     except (ValueError, TypeError):
         return 400, {"ok": False, "error": "since must be integer"}
     return 200, storage.export_csv(from_ts=since)
+
+
+# ────────────────────────── /api/setup/* ───────────────────────────────────
+
+
+def handle_setup_detect(ctx: dict) -> Response:
+    """Full environment detection + module recommendations for the wizard.
+
+    Pure GET — never modifies state. The frontend calls this on wizard load
+    and re-calls after the user reports they've executed sudo commands.
+    """
+    from .install import _gather_env, recommend_modules
+    from .profile import get_profile_for_gpu
+
+    try:
+        env = _gather_env()
+    except Exception as e:
+        return 500, {"ok": False, "error": f"detection failed: {e}"}
+
+    recs = recommend_modules(env)
+    profile = None
+    if env.get("nvidia", {}).get("gpus"):
+        try:
+            profile = get_profile_for_gpu(
+                ctx.get("profiles_dir", "profiles"),
+                env["nvidia"]["gpus"][0]["name"],
+            )
+        except Exception:
+            profile = None
+
+    return 200, {
+        "ok": True,
+        "env": env,
+        "modules": recs,
+        "profile": profile,
+        "setup_required": bool(ctx.get("setup_required", False)),
+    }
+
+
+def handle_setup_recheck(ctx: dict, module_name: str) -> Response:
+    """Re-run can_enable() for ONE module after the user reports sudo done.
+
+    Used by the wizard's "I executed the command, recheck now" button.
+    """
+    from .modules import power_limit as _pl, clock_offsets as _co
+    from . import detect as _detect
+
+    if module_name == "power_limit":
+        wrapper = ctx["config"].get("POWER_LIMIT_WRAPPER", "/usr/local/bin/set-power-limit")
+        ok, reason = _pl.can_enable(wrapper_path=wrapper)
+        return 200, {"ok": ok, "reason": reason}
+
+    if module_name == "clock_offsets":
+        coolbits_info = _detect.detect_coolbits()
+        ok, reason = _co.can_enable(coolbits_info)
+        return 200, {"ok": ok, "reason": reason}
+
+    if module_name == "oculink_watchdog":
+        # Heuristic: the systemd service exists & is active
+        try:
+            r = subprocess.run(
+                ["systemctl", "is-active", "gpu-oculink-watchdog"],
+                capture_output=True, text=True, timeout=3,
+            )
+            if r.stdout.strip() == "active":
+                return 200, {"ok": True, "reason": "service active"}
+        except (FileNotFoundError, subprocess.SubprocessError, OSError):
+            pass
+        # Fallback: log file exists at the configured path
+        log = os.path.expanduser(ctx["config"].get("OCULINK_WATCHDOG_LOG", "~/gpu-watchdog.log"))
+        if os.path.isfile(log):
+            return 200, {"ok": True, "reason": f"watchdog log present at {log}"}
+        return 200, {"ok": False, "reason": "service not active and no watchdog log found"}
+
+    if module_name == "telegram_alerts":
+        token = ctx["config"].get("TG_TOKEN", "")
+        chat_id = ctx["config"].get("TG_CHAT", "")
+        if token and chat_id:
+            return 200, {"ok": True, "reason": "token and chat_id present in secrets.env"}
+        return 200, {"ok": False, "reason": "token or chat_id missing — fill via Alerts tab"}
+
+    return 400, {"ok": False, "error": f"unknown module: {module_name}"}
+
+
+def handle_setup_save(ctx: dict, payload: dict) -> Response:
+    """Save the user's wizard choices to ~/.config/gpu-dashboard/config.env.
+
+    Payload schema:
+      {
+        "modules": {"power_limit": bool, "clock_offsets": bool, ...},
+        "port": int (optional, default 9999),
+        "bind": str (optional, default "0.0.0.0"),
+        "power_default": int (optional, default 250),
+      }
+    """
+    from .install import generate_config_env
+
+    choices = payload.get("modules") or {}
+    if not isinstance(choices, dict):
+        return 400, {"ok": False, "error": "modules must be a dict"}
+
+    try:
+        port = int(payload.get("port", 9999))
+        power_default = int(payload.get("power_default", 250))
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "port and power_default must be integers"}
+
+    bind = str(payload.get("bind", "0.0.0.0"))
+
+    config_path = os.path.expanduser("~/.config/gpu-dashboard/config.env")
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    content = generate_config_env(choices, port=port, power_default=power_default, bind=bind)
+    with open(config_path, "w") as f:
+        f.write(content)
+    return 200, {"ok": True, "path": config_path}
 
 
 def handle_alerts_test(ctx: dict) -> Response:

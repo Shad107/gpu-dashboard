@@ -5,6 +5,7 @@
   import CoolingChart from "./components/CoolingChart.svelte";
   import PowerChart from "./components/PowerChart.svelte";
   import SettingsModal from "./components/SettingsModal.svelte";
+  import SetupWizard from "./components/SetupWizard.svelte";
   import Toast from "./components/Toast.svelte";
   import { live } from "./lib/stores.svelte";
   import { i18n } from "./lib/i18n/index.svelte";
@@ -15,15 +16,24 @@
     document.documentElement.lang = i18n.lang;
   });
   onDestroy(() => live.stop());
+
+  // First-run detection : if the backend has no config, show the wizard
+  // instead of the (empty/broken) dashboard.
+  const setupRequired = $derived(live.data?.setup_required === true);
 </script>
 
-<Header />
-<Cards />
-<CoolingChart />
-<PowerChart />
-<SettingsModal />
-<Toast />
+{#if setupRequired}
+  <SetupWizard />
+  <Toast />
+{:else}
+  <Header />
+  <Cards />
+  <CoolingChart />
+  <PowerChart />
+  <SettingsModal />
+  <Toast />
 
-<div class="footer">
-  {i18n.t("footer.refresh")} · <a href="https://github.com/Shad107/gpu-dashboard">github</a>
-</div>
+  <div class="footer">
+    {i18n.t("footer.refresh")} · <a href="https://github.com/Shad107/gpu-dashboard">github</a>
+  </div>
+{/if}

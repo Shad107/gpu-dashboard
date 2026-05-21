@@ -51,6 +51,33 @@ export type State = {
   services: Record<string, string>;
   fan_dist: Record<string, number>;
   llm_model: string;
+  setup_required?: boolean;
+};
+
+export type ModuleRec = {
+  name: string;
+  available: boolean;
+  recommend: boolean;
+  reason: string;
+};
+
+export type SetupDetect = {
+  ok: boolean;
+  env: {
+    os: { id: string | null; pretty_name: string | null; package_manager: string | null };
+    nvidia: {
+      available: boolean;
+      driver_version: string | null;
+      gpus: { name: string; bus_id: string; vram_mib: number; driver_version: string }[];
+    };
+    coolbits: { enabled: boolean; value: number | null; source: string | null };
+    virt: { is_vm: boolean; type: string };
+    external_gpu: { link_width: number | null; link_speed: string | null; likely_external: boolean };
+    power_wrapper_exists: boolean;
+  };
+  modules: ModuleRec[];
+  profile: { model: string } | null;
+  setup_required: boolean;
 };
 
 export type AlertsConfig = {
@@ -137,4 +164,23 @@ export const api = {
   },
 
   exportCsvUrl: (since: number) => `/api/export?since=${since}`,
+
+  setupDetect: () => fetch("/api/setup/detect").then(jsonOf<SetupDetect>),
+
+  setupRecheck: (module: string) =>
+    fetch(`/api/setup/recheck/${encodeURIComponent(module)}`).then(
+      jsonOf<{ ok: boolean; reason: string }>
+    ),
+
+  setupSave: (payload: {
+    modules: Record<string, boolean>;
+    port?: number;
+    bind?: string;
+    power_default?: number;
+  }) =>
+    fetch("/api/setup/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(jsonOf<{ ok: boolean; path?: string; error?: string }>),
 };

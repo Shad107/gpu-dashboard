@@ -58,18 +58,30 @@ DEFAULTS = {
 }
 
 
+def _default_config_path() -> str:
+    return os.path.expanduser("~/.config/gpu-dashboard/config.env")
+
+
 def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profiles") -> dict:
     """Build the context dict passed to api.* handlers."""
     config_files = []
+    # `setup_required` is True iff no config.env was found at the expected path.
+    # Frontend uses this hint to auto-open the setup wizard on first launch.
+    setup_required = False
     if config_path is None:
         # Defaults under ~/.config/gpu-dashboard/
         home = os.path.expanduser("~")
-        for f in ("config.env", "secrets.env"):
-            p = os.path.join(home, ".config/gpu-dashboard", f)
-            if os.path.isfile(p):
-                config_files.append(p)
+        config_env_path = os.path.join(home, ".config/gpu-dashboard", "config.env")
+        secrets_env_path = os.path.join(home, ".config/gpu-dashboard", "secrets.env")
+        if os.path.isfile(config_env_path):
+            config_files.append(config_env_path)
+        else:
+            setup_required = True
+        if os.path.isfile(secrets_env_path):
+            config_files.append(secrets_env_path)
     else:
         config_files.append(config_path)
+        setup_required = not os.path.isfile(config_path)
 
     cfg = Config(defaults=DEFAULTS, files=config_files)
 
@@ -103,6 +115,8 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     return {
         "config": cfg, "profile": profile,
         "sampler": sampler, "storage": storage, "retention": retention,
+        "setup_required": setup_required,
+        "profiles_dir": profiles_dir,
     }
 
 
@@ -186,6 +200,15 @@ def make_handler(ctx: dict):
                 else:
                     self._send_json(code, body)
                 return
+            if path == "/api/setup/detect":
+                code, body = api.handle_setup_detect(ctx)
+                self._send_json(code, body)
+                return
+            if path.startswith("/api/setup/recheck/"):
+                module = path[len("/api/setup/recheck/"):]
+                code, body = api.handle_setup_recheck(ctx, module)
+                self._send_json(code, body)
+                return
             self.send_response(404)
             self.end_headers()
 
@@ -212,6 +235,10 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/alerts-test":
                 code, body = api.handle_alerts_test(ctx)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/setup/save":
+                code, body = api.handle_setup_save(ctx, payload)
                 self._send_json(code, body)
                 return
 
