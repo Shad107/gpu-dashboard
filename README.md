@@ -12,6 +12,15 @@
 
 ![Dashboard](docs/screenshot.png)
 
+> Showing 8 live cards : GPU temp · power-limit + perf% · fan RPM/target · VRAM ·
+> **LLM model** (real-time from llama-server) · **🪙 Tokens generated + tok/W
+> efficiency** (unique to gpu-dashboard) · **⚡ Electricity €/month** · Compute
+> processes. Below : Cooling chart (fan0/fan1 RPM + temp dashed) and Power chart
+> (live draw + power-limit cap).
+
+### Mobile responsive
+<img src="docs/mobile/dashboard-mobile.png" width="280" alt="Single-column mobile layout" />
+
 ### 5-step web wizard on first launch
 
 <table>
