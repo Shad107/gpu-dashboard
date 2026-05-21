@@ -1075,12 +1075,20 @@ def handle_profile_stats(ctx: dict, params: dict) -> Response:
         dur = max(0, end - start)
         totals[to] = totals.get(to, 0) + dur
 
+    # Most-recent-first list of {ts, to} pairs for the About activity log
+    recent_events = [
+        {"ts": ev["ts"], "to": (ev.get("payload") or {}).get("to")}
+        for ev in reversed(events)
+        if (ev.get("payload") or {}).get("to")
+    ][:50]
+
     return 200, {
         "ok": True,
         "totals": totals,
         "now": now,
         "since_seconds": since,
         "events_count": len(events),
+        "recent_events": recent_events,
     }
 
 

@@ -932,6 +932,29 @@
             {:else}
               <p class="sub">{i18n.t("about.profile_time_none")}</p>
             {/if}
+
+            {#if profileTime.recent_events && profileTime.recent_events.length > 0}
+              <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
+                {i18n.t("about.profile_activity")}
+              </h3>
+              <p class="sub" style="margin:0 0 .4em;font-size:.78em">
+                {i18n.t("about.profile_activity_hint", { n: profileTime.events_count })}
+              </p>
+              <div class="profile-log">
+                {#each profileTime.recent_events.slice(0, 10) as ev}
+                  {@const dt = profileTime.now - ev.ts}
+                  {@const relative = dt < 60 ? `${dt}s ago`
+                                   : dt < 3600 ? `${Math.floor(dt/60)}m ago`
+                                   : dt < 86400 ? `${Math.floor(dt/3600)}h ago`
+                                   : `${Math.floor(dt/86400)}d ago`}
+                  <div class="profile-log-row">
+                    <span class="profile-log-emoji">{PROFILE_EMOJI[ev.to] || "·"}</span>
+                    <span class="profile-log-name">{ev.to}</span>
+                    <span class="profile-log-time">{relative}</span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
           {/if}
         {:else}
           <p class="sub">{i18n.t("history.loading")}</p>

@@ -236,6 +236,8 @@
   "about.vbios": "vBIOS",
   "about.profile_time_24h": "Profile time (last 24h)",
   "about.profile_time_none": "No profile switches recorded yet.",
+  "about.profile_activity": "Recent profile switches",
+  "about.profile_activity_hint": "{n} switches in the last 24h — most recent first :",
   "power.section_title": "Power Limit",
   "power.description": "Power consumption cap (nvidia-smi -pl). Persistent across reboot via the sudoers wrapper.",
   "power.limit_label": "Limit",

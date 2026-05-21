@@ -225,6 +225,7 @@ export const api = {
       now: number;
       since_seconds: number;
       events_count: number;
+      recent_events: { ts: number; to: string }[];
     }>),
 
   about: () =>

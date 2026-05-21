@@ -697,6 +697,28 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
   .heatmap-grid { grid-template-columns: repeat(6, 1fr); }
 }
 
+/* Profile activity log (About tab) */
+.profile-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  max-width: 360px;
+}
+.profile-log-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 80px;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.3em 0.6em;
+  background: var(--bg-page);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.profile-log-emoji { font-size: 1em; }
+.profile-log-name { color: var(--text-muted); }
+.profile-log-time { color: var(--text-dim); font-size: 0.82em; text-align: right; }
+
 /* Logs viewer */
 .logs-pre {
   background: var(--bg-page);
