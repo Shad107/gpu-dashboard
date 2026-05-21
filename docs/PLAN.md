@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:09 (cycle 90 done — GPU picker fully wired)
-**Latest commit** : `09ce72c` — gpu.selected propagation
+**Last updated** : 2026-05-22 01:13 (cycle 91 done — multi-GPU COMPLETE)
+**Latest commit** : `1841253` — README + CHANGELOG multi-GPU recap
 **Tests** : 497 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 91 : polish + screenshots + README (slice 6/6)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 92 : Drag-and-drop fan curve editor SVG (slice 1 of ~8)**.
 
 ---
 
@@ -19,11 +19,13 @@ Nothing — between cycles. Wakeup soon will start **Cycle 91 : polish + screens
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 91 (next) — Multi-GPU slice 6/6 — polish + README
-- Update README with multi-GPU section + picker screenshot
-- Mention the architecture (per-GPU sampling, picker, store)
-- Verify no regression on single-GPU machines
-- Final screenshots
+### Cycle 92 (next) — Drag-and-drop fan curve editor SVG (slice 1 of ~8)
+The last remaining big-effort feature from the original backlog.
+
+Slice 1 : new component `FanCurveEditor.svelte` rendering the current
+curve as draggable points on SVG. Read-only initially — just visualization
+of the saved curve config. Slices 2-3 add drag handling. Slice 4 persists
+changes. Slices 5-8 polish + per-fan curves + presets.
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
@@ -48,6 +50,12 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 91 — Multi-GPU final + README (1 commit)
+- `1841253` README "🖥️🖥️ Multi-GPU support" section
+  - Multi-GPU pipeline now COMPLETE (cycles 86-91, 6 slices)
+  - CHANGELOG recap of all major v0.3 work (cycles 63-91)
+  - 5 sections : Multi-GPU, Theme toggle, Browser push, Top-nav, Customization
 
 ### Cycle 90 — gpu.selected propagation through all fetches (1 commit)
 - `09ce72c` All 9 api.ts wrappers accept optional gpu_index
@@ -357,7 +365,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~98 |
+| Commits since v0.1.0 | ~99 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
