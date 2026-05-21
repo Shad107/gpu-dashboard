@@ -107,6 +107,23 @@
     </div>
   {/if}
 
+  {#if (d?.processes?.length ?? 0) > 0}
+    <div class="card">
+      <h2>{i18n.t("card.processes")}</h2>
+      <table style="font-size:.78em;width:100%">
+        <tbody>
+          {#each (d?.processes ?? []).slice(0, 5) as p}
+            <tr>
+              <td style="color:#7c8aa3;width:55px">{p.pid}</td>
+              <td style="overflow:hidden;text-overflow:ellipsis;max-width:120px;white-space:nowrap">{p.name}</td>
+              <td style="text-align:right;color:#a3e635">{(p.vram_mib / 1024).toFixed(1)} GiB</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
+
   {#if showTuning}
     <div class="card">
       <h2>{i18n.t("card.tuning")}</h2>

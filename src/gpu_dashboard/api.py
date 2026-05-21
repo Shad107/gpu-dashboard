@@ -104,6 +104,7 @@ def handle_state(ctx: dict) -> Response:
     """
     cfg = ctx["config"]
     gpu_index = cfg.get_int("GPU_INDEX", default=0)
+    _, procs = handle_processes(ctx)
     body = {
         "gpu": _gpu_card_snapshot(gpu_index=gpu_index),
         "gpus_available": _gpus_available(),
@@ -116,6 +117,7 @@ def handle_state(ctx: dict) -> Response:
         "services": _services_state(cfg),
         "fan_dist": _fan_distribution(cfg),
         "llm_model": _llm_model_served(cfg),
+        "processes": procs.get("processes", []) if procs.get("available") else [],
         "setup_required": bool(ctx.get("setup_required", False)),
     }
     return 200, body
@@ -451,6 +453,48 @@ def handle_export(ctx: dict, params: dict):
     except (ValueError, TypeError):
         return 400, {"ok": False, "error": "since must be integer"}
     return 200, storage.export_csv(from_ts=since)
+
+
+# ────────────────────────── GET /api/processes ────────────────────────────
+
+
+def handle_processes(ctx: dict) -> Response:
+    """Per-process GPU usage via `nvidia-smi --query-compute-apps`.
+
+    Returns {available: bool, processes: [{pid, name, vram_mib}]} sorted by
+    vram desc. Useful to identify which LLM process owns the VRAM.
+    """
+    cfg = ctx["config"]
+    gpu_index = cfg.get_int("GPU_INDEX", default=0)
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "-i", str(int(gpu_index)),
+             "--query-compute-apps=pid,process_name,used_memory",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=3,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return 200, {"available": False, "processes": []}
+
+    if r.returncode != 0:
+        return 200, {"available": True, "processes": []}
+
+    processes = []
+    for line in r.stdout.strip().splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 3 or not parts[0].isdigit():
+            continue
+        try:
+            vram = int(parts[2].split()[0]) if parts[2] else 0
+        except (ValueError, IndexError):
+            vram = 0
+        processes.append({
+            "pid": int(parts[0]),
+            "name": parts[1],
+            "vram_mib": vram,
+        })
+    processes.sort(key=lambda p: p["vram_mib"], reverse=True)
+    return 200, {"available": True, "processes": processes}
 
 
 # ────────────────────────── GET /api/prom ─────────────────────────────────

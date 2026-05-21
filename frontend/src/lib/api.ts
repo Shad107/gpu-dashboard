@@ -48,6 +48,12 @@ export type GpuInfo = {
   vram_mib: number | null;
 };
 
+export type GpuProcess = {
+  pid: number;
+  name: string;
+  vram_mib: number;
+};
+
 export type State = {
   gpu: Gpu;
   gpus_available?: GpuInfo[];
@@ -60,6 +66,7 @@ export type State = {
   services: Record<string, string>;
   fan_dist: Record<string, number>;
   llm_model: string;
+  processes?: GpuProcess[];
   setup_required?: boolean;
 };
 

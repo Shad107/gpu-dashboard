@@ -274,6 +274,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_fan_curve_get(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/processes":
+                code, body = api.handle_processes(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/prom":
                 code, body = api.handle_prom(ctx)
                 data = body.encode("utf-8")
