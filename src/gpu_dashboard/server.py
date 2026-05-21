@@ -128,6 +128,7 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
         nvidia_settings_display=cfg.get("CLOCK_OFFSETS_DISPLAY"),
         nvidia_settings_xauthority=cfg.get("CLOCK_OFFSETS_XAUTHORITY") or None,
         storage=storage,
+        llm_server_url=cfg.get("LLM_SERVER_URL", "") or None,
     )
     sampler.start()
 

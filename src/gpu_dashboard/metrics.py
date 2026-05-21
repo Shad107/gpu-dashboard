@@ -41,6 +41,7 @@ class MetricsSampler:
         nvidia_settings_display: Optional[str] = None,
         nvidia_settings_xauthority: Optional[str] = None,
         storage=None,
+        llm_server_url: Optional[str] = None,
     ):
         self.interval = interval
         self._buffer = collections.deque(maxlen=maxlen)
@@ -50,6 +51,7 @@ class MetricsSampler:
         self._display = nvidia_settings_display
         self._xauth = nvidia_settings_xauthority
         self._storage = storage
+        self._llm_url = (llm_server_url or "").rstrip("/")
 
     def start(self) -> None:
         if self._thread is not None:
@@ -100,10 +102,41 @@ class MetricsSampler:
                 "power_limit": sample.get("power_limit"),
                 "util_gpu": sample.get("util_gpu"),
                 "mem_used_mib": sample.get("mem_used_mib"),
+                "tokens_total_snapshot": sample.get("tokens_total_snapshot"),
             }
             self._storage.record_sample(db_sample)
         except Exception:
             pass  # never let DB write failures break the sampler thread
+
+    def _fetch_llm_tokens(self) -> Optional[int]:
+        """Fetch cumulative tokens_predicted_total from llama-server /metrics.
+
+        Returns None if no URL configured or server unreachable. Failure must
+        never break the sampler thread.
+        """
+        if not self._llm_url:
+            return None
+        try:
+            import urllib.request
+            with urllib.request.urlopen(f"{self._llm_url}/metrics", timeout=2) as r:
+                text = r.read().decode("utf-8", errors="replace")
+        except Exception:
+            return None
+        # Parse the line we care about
+        for line in text.splitlines():
+            line = line.strip()
+            if line.startswith("#") or not line:
+                continue
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            name = parts[0].split("{", 1)[0]
+            if name.endswith(":tokens_predicted_total") or name == "tokens_predicted_total":
+                try:
+                    return int(float(parts[-1]))
+                except (ValueError, TypeError):
+                    return None
+        return None
 
     def _poll(self) -> Optional[dict]:
         try:
@@ -153,6 +186,12 @@ class MetricsSampler:
             f0, f1 = self._query_per_fan_rpm()
             sample["fan0_rpm"] = f0
             sample["fan1_rpm"] = f1
+
+        # LLM tokens (if llama-server URL configured)
+        if self._llm_url:
+            tokens = self._fetch_llm_tokens()
+            if tokens is not None:
+                sample["tokens_total_snapshot"] = tokens
 
         return sample
 

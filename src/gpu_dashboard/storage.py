@@ -21,13 +21,14 @@ import time
 from typing import Optional
 
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2  # bumped from 1: added tokens_total_snapshot column
 
 # Colonnes du sample, dans l'ordre. Sert pour insert + export CSV.
 SAMPLE_COLUMNS = (
     "ts", "temp", "fan_pct", "fan0_rpm", "fan1_rpm",
     "clk_gpu", "clk_mem", "power", "power_limit",
     "util_gpu", "mem_used_mib",
+    "tokens_total_snapshot",  # cumulative LLM tokens at sample time (NULL if no llama-server)
 )
 
 
@@ -47,7 +48,8 @@ CREATE TABLE IF NOT EXISTS samples (
     power REAL,
     power_limit REAL,
     util_gpu INTEGER,
-    mem_used_mib INTEGER
+    mem_used_mib INTEGER,
+    tokens_total_snapshot INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS events (
@@ -60,6 +62,13 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);
 """
+
+
+def _migrate_v1_to_v2(conn) -> None:
+    """Add the tokens_total_snapshot column to an existing v1 samples table."""
+    cols = [row[1] for row in conn.execute("PRAGMA table_info(samples)").fetchall()]
+    if "tokens_total_snapshot" not in cols:
+        conn.execute("ALTER TABLE samples ADD COLUMN tokens_total_snapshot INTEGER")
 
 
 class Storage:
@@ -81,8 +90,9 @@ class Storage:
         self._conn.execute("PRAGMA synchronous=NORMAL")
         self._conn.execute("PRAGMA temp_store=MEMORY")
 
-        # Schéma
+        # Schéma + migrations idempotentes
         self._conn.executescript(_SCHEMA_SQL)
+        _migrate_v1_to_v2(self._conn)
         self._conn.execute(
             "INSERT OR IGNORE INTO schema_version (version) VALUES (?)",
             (CURRENT_SCHEMA_VERSION,),
@@ -146,7 +156,8 @@ class Storage:
                 AVG(power)        AS power,
                 AVG(power_limit)  AS power_limit,
                 AVG(util_gpu)     AS util_gpu,
-                AVG(mem_used_mib) AS mem_used_mib
+                AVG(mem_used_mib) AS mem_used_mib,
+                MAX(tokens_total_snapshot) AS tokens_total_snapshot
             FROM samples
             WHERE ts BETWEEN :from AND :to
             GROUP BY bin_ts
