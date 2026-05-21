@@ -417,6 +417,38 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── GET /api/about ────────────────────────────────
+
+
+def handle_about(ctx: dict) -> Response:
+    """Static info about the running server : version, paths, uptime."""
+    import platform
+    import sys as _sys
+    import time as _time
+    from . import __version__ as _ver
+
+    started = ctx.get("started_at") or _time.time()
+    uptime = max(0, int(_time.time() - started))
+    storage_path = ctx.get("config", None)
+    if storage_path is not None:
+        storage_path = os.path.expanduser(
+            storage_path.get("STORAGE_DB_PATH", "~/.local/share/gpu-dashboard/metrics.db")
+        )
+    else:
+        storage_path = os.path.expanduser("~/.local/share/gpu-dashboard/metrics.db")
+
+    return 200, {
+        "version": _ver,
+        "uptime_seconds": uptime,
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "config_path": ctx.get("config_path") or os.path.expanduser("~/.config/gpu-dashboard/config.env"),
+        "storage_path": storage_path,
+        "license": "MIT",
+        "repo_url": "https://github.com/Shad107/gpu-dashboard",
+    }
+
+
 # ────────────────────────── POST /api/restart ─────────────────────────────
 
 

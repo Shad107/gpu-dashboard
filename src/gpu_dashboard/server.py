@@ -112,11 +112,14 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     )
     retention.start()
 
+    import time as _t
     return {
         "config": cfg, "profile": profile,
         "sampler": sampler, "storage": storage, "retention": retention,
         "setup_required": setup_required,
         "profiles_dir": profiles_dir,
+        "started_at": _t.time(),
+        "config_path": (config_files[0] if config_files else None),
     }
 
 
@@ -207,6 +210,10 @@ def make_handler(ctx: dict):
             if path.startswith("/api/setup/recheck/"):
                 module = path[len("/api/setup/recheck/"):]
                 code, body = api.handle_setup_recheck(ctx, module)
+                self._send_json(code, body)
+                return
+            if path == "/api/about":
+                code, body = api.handle_about(ctx)
                 self._send_json(code, body)
                 return
             self.send_response(404)

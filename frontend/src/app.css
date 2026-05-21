@@ -355,3 +355,9 @@ td:nth-child(2) { text-align: right; color: #cdd2da; }
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* About section */
+.about-table { width: 100%; }
+.about-table td { padding: 0.4em 0.5em; vertical-align: top; }
+.about-table td:first-child { color: #7c8aa3; width: 130px; }
+.about-table code { background: #0e1014; padding: 0.15em 0.45em; border-radius: 3px; color: #a3e635; font-size: 0.85em; word-break: break-all; }

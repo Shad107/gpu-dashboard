@@ -243,7 +243,26 @@
       icon: "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" },
     { id: "history", labelKey: "modal.history" as const,
       icon: "M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 7 7c-2.94 0-5.49-1.81-6.56-4.4l-1.89.61C5.84 18.45 9.16 21 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z" },
+    { id: "about", labelKey: "modal.about" as const,
+      icon: "M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z" },
   ];
+
+  // ── About state ───────────────────────────────────────────────────────────
+  let aboutData = $state<Awaited<ReturnType<typeof api.about>> | null>(null);
+  async function loadAbout() {
+    try { aboutData = await api.about(); } catch { aboutData = null; }
+  }
+  $effect(() => {
+    if (modal.open && modal.section === "about" && !aboutData) loadAbout();
+  });
+  function fmtUptime(s: number): string {
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60), sec = s % 60;
+    if (d > 0) return `${d}d ${h}h${String(m).padStart(2, "0")}m`;
+    if (h > 0) return `${h}h${String(m).padStart(2, "0")}m`;
+    if (m > 0) return `${m}m${String(sec).padStart(2, "0")}s`;
+    return `${sec}s`;
+  }
 </script>
 
 <div
@@ -492,6 +511,34 @@
             <span class="warn-text">{i18n.t("history.samples_count", { n: historySamples.length })}</span>
           </div>
         </div>
+      </div>
+
+      <!-- About -->
+      <div class="modal-section" class:active={modal.section === "about"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[7].icon} /></svg>
+          <span>{i18n.t("about.title")}</span>
+        </h3>
+        <p class="sub" style="margin:0 0 1em">{i18n.t("about.tagline")}</p>
+
+        {#if aboutData}
+          <table class="about-table">
+            <tbody>
+              <tr><td>{i18n.t("about.version")}</td><td><code>{aboutData.version}</code></td></tr>
+              <tr><td>{i18n.t("about.uptime")}</td><td>{fmtUptime(aboutData.uptime_seconds)}</td></tr>
+              <tr><td>{i18n.t("about.python")}</td><td>{aboutData.python_version}</td></tr>
+              <tr><td>{i18n.t("about.platform")}</td><td style="font-size:.82em">{aboutData.platform}</td></tr>
+              <tr><td>{i18n.t("about.config_path")}</td><td><code>{aboutData.config_path}</code></td></tr>
+              <tr><td>{i18n.t("about.storage_path")}</td><td><code>{aboutData.storage_path}</code></td></tr>
+              <tr><td>{i18n.t("about.license")}</td><td>{aboutData.license}</td></tr>
+              <tr><td>{i18n.t("about.repo")}</td>
+                <td><a href={aboutData.repo_url} target="_blank" rel="noopener" style="color:#4ade80">{aboutData.repo_url}</a></td>
+              </tr>
+            </tbody>
+          </table>
+        {:else}
+          <p class="sub">{i18n.t("history.loading")}</p>
+        {/if}
       </div>
 
       <!-- Language -->

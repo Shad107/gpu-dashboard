@@ -188,4 +188,16 @@ export const api = {
     fetch("/api/restart", { method: "POST" }).then(
       jsonOf<{ ok: boolean; message?: string }>
     ),
+
+  about: () =>
+    fetch("/api/about").then(jsonOf<{
+      version: string;
+      uptime_seconds: number;
+      python_version: string;
+      platform: string;
+      config_path: string;
+      storage_path: string;
+      license: string;
+      repo_url: string;
+    }>),
 };
