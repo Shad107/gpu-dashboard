@@ -81,14 +81,64 @@ def validate_curve(curve) -> None:
 
 
 def pick_curve(profile: Optional[dict] = None, override: Optional[list] = None) -> list:
-    """Return the active curve: override > profile.fans.default_curve > built-in default."""
+    """Return the active curve.
+
+    Priority order :
+      1. explicit `override` argument (used by the daemon for live edits)
+      2. user-saved override file ~/.config/gpu-dashboard/fan_curve.json
+      3. profile.fans.default_curve (per-GPU profile JSON)
+      4. built-in safe default
+    """
     if override is not None:
         return override
+    # User override file (saved via POST /api/fan-curve)
+    import json as _json
+    import os as _os
+    override_path = _os.path.expanduser("~/.config/gpu-dashboard/fan_curve.json")
+    if _os.path.exists(override_path):
+        try:
+            with open(override_path) as f:
+                data = _json.load(f)
+            c = data.get("curve") if isinstance(data, dict) else None
+            if c and isinstance(c, list) and len(c) >= 2:
+                return c
+        except (OSError, _json.JSONDecodeError):
+            pass  # corrupted file → fall through to profile/default
     if profile:
         c = (profile.get("fans") or {}).get("default_curve")
         if c:
             return c
     return list(_DEFAULT_CURVE)
+
+
+def validate_curve(curve) -> tuple:
+    """Validate a user-supplied curve. Returns (ok, error_msg).
+
+    Rules :
+      - List of [int, int] pairs
+      - At least 2 points
+      - All temps and fans in [0, 100]
+      - Sorted strictly ascending by temp (no duplicates)
+    """
+    if not isinstance(curve, list):
+        return False, "curve must be a list"
+    if len(curve) < 2:
+        return False, "curve must have at least 2 control points"
+    prev_t = -1
+    for i, p in enumerate(curve):
+        if not (isinstance(p, list) and len(p) == 2):
+            return False, f"point {i}: must be [temp, fan]"
+        t, f = p
+        if not (isinstance(t, int) and isinstance(f, int)):
+            return False, f"point {i}: temp and fan must be integers"
+        if not (0 <= t <= 100):
+            return False, f"point {i}: temp {t} out of range [0,100]"
+        if not (0 <= f <= 100):
+            return False, f"point {i}: fan {f} out of range [0,100]"
+        if t <= prev_t:
+            return False, f"point {i}: curve must be sorted by temp (got {t} after {prev_t})"
+        prev_t = t
+    return True, ""
 
 
 # ──────────────────────────── apply via nvidia-settings ────────────────────

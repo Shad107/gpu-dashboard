@@ -515,6 +515,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_push_unsubscribe(ctx, payload)
                 self._send_json(code, body)
                 return
+            if self.path == "/api/fan-curve":
+                code, body = api.handle_fan_curve_post(ctx, payload)
+                self._send_json(code, body)
+                return
             if self.path == "/api/setup/save":
                 code, body = api.handle_setup_save(ctx, payload)
                 self._send_json(code, body)

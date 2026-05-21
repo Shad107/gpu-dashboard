@@ -1351,6 +1351,24 @@ def handle_fan_curve_get(ctx: dict) -> Response:
     }
 
 
+def handle_fan_curve_post(ctx: dict, payload: dict) -> Response:
+    """Save a user-edited fan curve to ~/.config/gpu-dashboard/fan_curve.json.
+
+    The file overrides the profile-baked curve until deleted manually.
+    The running daemon (if any) picks the new curve on next poll.
+    """
+    from .modules import fan_curve as _fc
+    curve = payload.get("curve") if isinstance(payload, dict) else None
+    ok, err = _fc.validate_curve(curve)
+    if not ok:
+        return 400, {"ok": False, "error": err}
+    path = os.path.expanduser("~/.config/gpu-dashboard/fan_curve.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump({"curve": curve}, f, indent=2)
+    return 200, {"ok": True, "path": path, "curve": curve}
+
+
 # ────────────────────────── GET /api/health ───────────────────────────────
 
 

@@ -5,6 +5,7 @@
   // Slice 3-4 (next) : add/remove points + persist via POST.
   import { onMount, onDestroy } from "svelte";
   import { i18n } from "../lib/i18n/index.svelte";
+  import { toast } from "../lib/stores.svelte";
 
   type CurvePoint = [number, number]; // [temp_°C, fan_%]
   type FanCurveData = {
@@ -39,6 +40,29 @@
 
   function resetEdit() {
     editedCurve = (data?.curve ?? []).map(p => [p[0], p[1]] as CurvePoint);
+  }
+
+  let saving = $state(false);
+  async function save() {
+    saving = true;
+    try {
+      const r = await fetch("/api/fan-curve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ curve: editedCurve }),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        toast.emit("✓ " + i18n.t("fancurve.saved"), "ok");
+        await load();  // refresh from server
+      } else {
+        toast.emit("✗ " + (j.error || i18n.t("fancurve.save_failed")), "err");
+      }
+    } catch (e: any) {
+      toast.emit("✗ " + (e?.message || "save failed"), "err");
+    } finally {
+      saving = false;
+    }
   }
 
   const isDirty = $derived(
@@ -219,7 +243,10 @@
     </svg>
 
     <div class="btn-row" style="margin-top:.6em">
-      <button class="btn" onclick={resetEdit} disabled={!isDirty}>
+      <button class="btn btn-primary" onclick={save} disabled={!isDirty || saving}>
+        💾 {saving ? i18n.t("fancurve.saving") : i18n.t("fancurve.save")}
+      </button>
+      <button class="btn" onclick={resetEdit} disabled={!isDirty || saving}>
         ↺ {i18n.t("fancurve.reset")}
       </button>
       <span class="sub" style="font-size:.78em">
