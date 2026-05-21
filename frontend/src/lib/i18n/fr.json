@@ -144,6 +144,7 @@
   "fancurve.preset_balanced_desc": "Courbe par défaut — bruit modéré + temps modérés",
   "fancurve.preset_aggressive": "Agressif",
   "fancurve.preset_aggressive_desc": "Ventilos qui se déclenchent plus tôt et plus fort — GPU froid, bruyant",
+  "fancurve.keyboard_hint": "Point sélectionné — Flèches ±1 (Shift ±5) · Tab = suivant · Suppr = retirer · ÉCHAP = désélectionner",
   "modal.group_tuning": "Tuning",
   "modal.group_review": "Historique",
   "modal.group_notify": "Alertes",

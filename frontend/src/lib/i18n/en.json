@@ -144,6 +144,7 @@
   "fancurve.preset_balanced_desc": "Default curve — moderate noise + moderate temps",
   "fancurve.preset_aggressive": "Aggressive",
   "fancurve.preset_aggressive_desc": "Spin up earlier and harder — coolest GPU, loudest",
+  "fancurve.keyboard_hint": "Selected point — Arrows nudge ±1 (Shift ±5) · Tab = next · Delete = remove · ESC = deselect",
   "modal.group_tuning": "Tuning",
   "modal.group_review": "Review",
   "modal.group_notify": "Alerts",

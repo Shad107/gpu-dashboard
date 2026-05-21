@@ -20,6 +20,7 @@
   let loading = $state(false);
   let error = $state<string>("");
   let draggingIdx = $state<number | null>(null);
+  let selectedIdx = $state<number | null>(null);  // keyboard-selected point
 
   // ─── Presets (cycle 96) ──────────────────────────────────────────────
   const PRESETS: Record<string, { curve: CurvePoint[]; emoji: string }> = {
@@ -93,11 +94,13 @@
     timer = setInterval(load, 5000);
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("keydown", onKeyDown);
   });
   onDestroy(() => {
     if (timer) clearInterval(timer);
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
+    window.removeEventListener("keydown", onKeyDown);
   });
 
   // SVG geometry
@@ -130,7 +133,54 @@
 
   function onPointerDown(idx: number, e: PointerEvent) {
     draggingIdx = idx;
+    selectedIdx = idx;  // also select for keyboard fine-tuning
     e.preventDefault();
+  }
+
+  /** Click on empty SVG area → deselect (so arrow keys don't nudge anything). */
+  function onSvgClick(e: MouseEvent) {
+    if ((e.target as Element)?.tagName !== "circle") selectedIdx = null;
+  }
+
+  /** Move the selected point by (dt, df) — clamps temp between neighbors. */
+  function nudgePoint(dt: number, df: number) {
+    if (selectedIdx === null) return;
+    const idx = selectedIdx;
+    const cur = editedCurve[idx];
+    const prevT = idx > 0 ? editedCurve[idx - 1][0] : 0;
+    const nextT = idx < editedCurve.length - 1 ? editedCurve[idx + 1][0] : 100;
+    const newT = Math.max(prevT + 1, Math.min(nextT - 1, cur[0] + dt));
+    const newF = Math.max(0, Math.min(100, cur[1] + df));
+    editedCurve = editedCurve.map((p, i) =>
+      i === idx ? [newT, newF] as CurvePoint : p
+    );
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (selectedIdx === null) return;
+    // Ignore when typing in an input/textarea/select elsewhere
+    const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+    const step = e.shiftKey ? 5 : 1;
+    if (e.key === "ArrowLeft")  { nudgePoint(-step, 0); e.preventDefault(); }
+    else if (e.key === "ArrowRight") { nudgePoint(+step, 0); e.preventDefault(); }
+    else if (e.key === "ArrowUp")    { nudgePoint(0, +step); e.preventDefault(); }
+    else if (e.key === "ArrowDown")  { nudgePoint(0, -step); e.preventDefault(); }
+    else if (e.key === "Delete" || e.key === "Backspace") {
+      if (editedCurve.length <= 2) return;
+      editedCurve = editedCurve.filter((_, i) => i !== selectedIdx);
+      selectedIdx = null;
+      e.preventDefault();
+    }
+    else if (e.key === "Tab") {
+      selectedIdx = (selectedIdx + 1) % editedCurve.length;
+      e.preventDefault();
+    }
+    else if (e.key === "Escape") {
+      selectedIdx = null;
+      e.preventDefault();
+    }
   }
   function onPointerMove(e: PointerEvent) {
     if (draggingIdx === null) return;
@@ -232,7 +282,8 @@
 
     <svg viewBox="0 0 {W} {H}" class="curve-svg" preserveAspectRatio="xMidYMid meet"
          bind:this={svgEl} class:dragging={draggingIdx !== null}
-         ondblclick={onSvgDoubleClick}>
+         ondblclick={onSvgDoubleClick}
+         onclick={onSvgClick}>
       {#each [0,20,40,60,80,100] as t}
         <line x1={xOf(t)} x2={xOf(t)} y1={PAD_T} y2={PAD_T + innerH}
           stroke="var(--border-subtle)" stroke-width="0.5" />
@@ -260,12 +311,13 @@
         <circle
           cx={xOf(p[0])}
           cy={yOf(p[1])}
-          r={draggingIdx === i ? 8 : 6}
+          r={draggingIdx === i ? 8 : selectedIdx === i ? 7 : 6}
           fill="var(--accent)"
-          stroke="var(--bg-card)"
-          stroke-width="2"
+          stroke={selectedIdx === i ? "var(--accent-warn)" : "var(--bg-card)"}
+          stroke-width={selectedIdx === i ? 3 : 2}
           class="point"
           class:dragging={draggingIdx === i}
+          class:selected={selectedIdx === i}
           onpointerdown={(e) => onPointerDown(i, e)}
           oncontextmenu={(e) => onPointContextMenu(i, e)}
         >
@@ -285,6 +337,11 @@
         {i18n.t("fancurve.edit_hint")}
       </span>
     </div>
+    {#if selectedIdx !== null}
+      <p class="sub" style="font-size:.78em;margin-top:.4em;color:var(--accent-warn)">
+        ⌨️ {i18n.t("fancurve.keyboard_hint")}
+      </p>
+    {/if}
   {/if}
 </div>
 
