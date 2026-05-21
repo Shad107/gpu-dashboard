@@ -482,7 +482,13 @@ def main(argv: Optional[list] = None) -> int:
                         help="Path to config.env (default: ~/.config/gpu-dashboard/config.env)")
     parser.add_argument("--profiles-dir", default="profiles",
                         help="Directory containing JSON profiles")
+    parser.add_argument("--status", action="store_true",
+                        help="Print a one-shot TTY status summary then exit")
     args = parser.parse_args(argv)
+
+    if args.status:
+        from .cli_status import run_status
+        return run_status(profiles_dir=args.profiles_dir)
 
     ctx = _load_context(config_path=args.config, profiles_dir=args.profiles_dir)
     cfg = ctx["config"]
