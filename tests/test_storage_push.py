@@ -51,5 +51,6 @@ def test_remove_missing(storage):
     assert n == 0
 
 
-def test_schema_version_is_3(storage):
-    assert storage.schema_version() == 3
+def test_schema_version_at_least_3(storage):
+    """push_subscriptions table introduced in v3 ; future migrations preserve it."""
+    assert storage.schema_version() >= 3

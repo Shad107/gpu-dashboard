@@ -21,14 +21,15 @@ import time
 from typing import Optional
 
 
-CURRENT_SCHEMA_VERSION = 3  # bumped from 2: added push_subscriptions table
+CURRENT_SCHEMA_VERSION = 4  # bumped from 3: added gpu_index column to samples
 
 # Colonnes du sample, dans l'ordre. Sert pour insert + export CSV.
 SAMPLE_COLUMNS = (
     "ts", "temp", "fan_pct", "fan0_rpm", "fan1_rpm",
     "clk_gpu", "clk_mem", "power", "power_limit",
     "util_gpu", "mem_used_mib",
-    "tokens_total_snapshot",  # cumulative LLM tokens at sample time (NULL if no llama-server)
+    "tokens_total_snapshot",
+    "gpu_index",  # which GPU this sample is from (default 0 for back-compat)
 )
 
 
@@ -38,7 +39,7 @@ CREATE TABLE IF NOT EXISTS schema_version (
 );
 
 CREATE TABLE IF NOT EXISTS samples (
-    ts INTEGER PRIMARY KEY,
+    ts INTEGER NOT NULL,
     temp REAL,
     fan_pct INTEGER,
     fan0_rpm INTEGER,
@@ -49,8 +50,12 @@ CREATE TABLE IF NOT EXISTS samples (
     power_limit REAL,
     util_gpu INTEGER,
     mem_used_mib INTEGER,
-    tokens_total_snapshot INTEGER
+    tokens_total_snapshot INTEGER,
+    gpu_index INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (ts, gpu_index)
 );
+-- Index on (gpu_index, ts) is created in _migrate_v3_to_v4 (must run after
+-- ALTER TABLE for old DBs that didn't have gpu_index yet).
 
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,6 +90,19 @@ def _migrate_v2_to_v3(conn) -> None:
     pass
 
 
+def _migrate_v3_to_v4(conn) -> None:
+    """Add gpu_index column to existing samples table (if missing).
+
+    Always runs the index creation at the end (idempotent) so brand-new DBs
+    also get the index — _SCHEMA_SQL can't create it because old DBs hit
+    'no such column' before the ALTER runs.
+    """
+    cols = [row[1] for row in conn.execute("PRAGMA table_info(samples)").fetchall()]
+    if "gpu_index" not in cols:
+        conn.execute("ALTER TABLE samples ADD COLUMN gpu_index INTEGER NOT NULL DEFAULT 0")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_samples_gpu_ts ON samples(gpu_index, ts)")
+
+
 class Storage:
     """Wrapper SQLite thread-safe pour les métriques + événements du dashboard."""
 
@@ -108,6 +126,7 @@ class Storage:
         self._conn.executescript(_SCHEMA_SQL)
         _migrate_v1_to_v2(self._conn)
         _migrate_v2_to_v3(self._conn)
+        _migrate_v3_to_v4(self._conn)
         self._conn.execute(
             "INSERT OR IGNORE INTO schema_version (version) VALUES (?)",
             (CURRENT_SCHEMA_VERSION,),
@@ -162,28 +181,30 @@ class Storage:
         from_ts: int = 0,
         to_ts: Optional[int] = None,
         step: Optional[int] = None,
+        gpu_index: int = 0,
     ) -> list:
-        """Renvoie les samples dans la plage [from_ts, to_ts], triés par ts.
+        """Renvoie les samples du GPU `gpu_index` dans la plage [from_ts, to_ts].
 
-        Si `step` est fourni (en secondes), les samples sont resamplés en bins
-        de `step` secondes avec moyennes (utile pour les vues 24h/30j).
+        Default gpu_index=0 preserves single-GPU behaviour.
+        Pass gpu_index=-1 to get samples for ALL GPUs (used by alert_monitor).
         """
         if to_ts is None:
             to_ts = int(time.time()) + 1
 
+        gpu_filter = "" if gpu_index < 0 else " AND gpu_index = :gpu"
+        params: dict = {"from": from_ts, "to": to_ts, "gpu": gpu_index}
+
         if not step or step <= 0:
             cur = self._conn.execute(
                 f"SELECT {','.join(SAMPLE_COLUMNS)} FROM samples "
-                f"WHERE ts BETWEEN ? AND ? ORDER BY ts",
-                (from_ts, to_ts),
+                f"WHERE ts BETWEEN :from AND :to{gpu_filter} ORDER BY ts",
+                params,
             )
             return [dict(row) for row in cur.fetchall()]
 
-        # Resampling : groupe par bin de `step` secondes, moyennes.
-        # NB: on alias le bin en `bin_ts` plutôt que `ts` pour ne pas que SQLite
-        # confonde l'alias avec la colonne originale dans le GROUP BY.
+        params["step"] = step
         cur = self._conn.execute(
-            """
+            f"""
             SELECT
                 (ts / :step) * :step AS bin_ts,
                 AVG(temp)         AS temp,
@@ -196,13 +217,14 @@ class Storage:
                 AVG(power_limit)  AS power_limit,
                 AVG(util_gpu)     AS util_gpu,
                 AVG(mem_used_mib) AS mem_used_mib,
-                MAX(tokens_total_snapshot) AS tokens_total_snapshot
+                MAX(tokens_total_snapshot) AS tokens_total_snapshot,
+                :gpu              AS gpu_index
             FROM samples
-            WHERE ts BETWEEN :from AND :to
+            WHERE ts BETWEEN :from AND :to{gpu_filter}
             GROUP BY bin_ts
             ORDER BY bin_ts
             """,
-            {"step": step, "from": from_ts, "to": to_ts},
+            params,
         )
         result = []
         for row in cur.fetchall():
