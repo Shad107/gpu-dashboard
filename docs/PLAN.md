@@ -3,9 +3,9 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:22 (cycle 108 done — /api/export/year)
-**Latest commit** : `df74dc4` — /api/export/year shortcut
-**Tests** : 529 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 02:26 (cycle 109 done — /api/version)
+**Latest commit** : `8ee8bcf` — /api/version minimal
+**Tests** : 534 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
@@ -59,6 +59,12 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 109 — /api/version minimal endpoint (1 commit)
+- `8ee8bcf` Tiny payload : {version, schema_version, modules_enabled}
+  - For CLI / headless monitoring (cheaper than /api/about)
+  - modules_enabled list built from MODULE_* config keys
+  - 5 new TDD tests · 529 → 534
 
 ### Cycle 108 — /api/export/year CSV shortcut (1 commit)
 - `df74dc4` New endpoint : year-to-date CSV without manual since= calc
@@ -492,11 +498,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 529 passing on Py 3.9-3.13 |
+| Tests | 534 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~117 |
+| Commits since v0.1.0 | ~118 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
