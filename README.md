@@ -21,7 +21,20 @@
 ### Mobile responsive
 <img src="docs/mobile/dashboard-mobile.png" width="280" alt="Single-column mobile layout" />
 
-### Settings — 10 tabs, all 1 click away
+### 🎨 Themes — dark (default) + light
+
+Toggle via **Settings → Préférences → Layout → 🎨 Thème**, or use the
+URL override `?theme=light` / `?theme=dark` (bookmarkable). Choice
+saved in localStorage.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/theme-dark.png" alt="Dark theme — default, easy on the eyes" /><br/><sub><b>🌙 Dark</b> — default, easy on the eyes for late-night sessions</sub></td>
+<td width="50%"><img src="docs/theme-light.png" alt="Light theme — bright for daytime use" /><br/><sub><b>☀️ Light</b> — bright background for daytime use</sub></td>
+</tr>
+</table>
+
+### Settings — 9 tabs, all 1 click away
 
 Bookmarkable via `?modal=<tab>` (e.g. `http://localhost:9999/?modal=history`).
 
@@ -282,7 +295,7 @@ gpu-dashboard/
 │       ├── telegram_alerts.py        # Telegram via urllib (no requests dep)
 │       └── webhook.py                # Generic HTTP POST (Discord/Slack/n8n)
 ├── frontend/                         # Svelte 5 + Vite + TypeScript
-│   └── src/                          # 11-tab settings modal + live cards + History chart
+│   └── src/                          # Top-nav (Dashboard/Stats/History) + 9-tab settings modal + live cards
 ├── profiles/                         # GPU JSON profiles + schema.json (Draft 2020-12)
 ├── scripts/                          # get.sh + 3 sudo install scripts (audit-friendly)
 ├── tests/                            # pytest, 400+ tests, no external services
