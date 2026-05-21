@@ -61,6 +61,26 @@ export type AlertsConfig = {
   on_recover: boolean;
 };
 
+export type HistorySample = {
+  ts: number;
+  temp: number | null;
+  fan_pct: number | null;
+  fan0_rpm: number | null;
+  fan1_rpm: number | null;
+  clk_gpu: number | null;
+  clk_mem: number | null;
+  power: number | null;
+  power_limit: number | null;
+  util_gpu: number | null;
+  mem_used_mib: number | null;
+};
+
+export type StoredEvent = {
+  ts: number;
+  kind: string;
+  payload: any | null;
+};
+
 async function jsonOf<T>(r: Response): Promise<T> {
   if (!r.ok && r.status !== 400 && r.status !== 500) {
     throw new Error(`HTTP ${r.status}`);
@@ -98,4 +118,23 @@ export const api = {
     fetch("/api/alerts-test", { method: "POST" }).then(
       jsonOf<{ ok: boolean; msg?: string; error?: string }>
     ),
+
+  history: (from: number, to?: number, step?: number) => {
+    const q = new URLSearchParams({ from: String(from) });
+    if (to !== undefined) q.set("to", String(to));
+    if (step !== undefined) q.set("step", String(step));
+    return fetch(`/api/history?${q.toString()}`).then(
+      jsonOf<{ ok: boolean; samples: HistorySample[] }>
+    );
+  },
+
+  events: (from: number, kind?: string) => {
+    const q = new URLSearchParams({ from: String(from) });
+    if (kind) q.set("kind", kind);
+    return fetch(`/api/events?${q.toString()}`).then(
+      jsonOf<{ ok: boolean; events: StoredEvent[] }>
+    );
+  },
+
+  exportCsvUrl: (since: number) => `/api/export?since=${since}`,
 };

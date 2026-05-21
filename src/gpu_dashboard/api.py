@@ -350,6 +350,72 @@ def handle_alerts_config_post(ctx: dict, payload: dict) -> Response:
     return 200, {"ok": True}
 
 
+# ───────────────────────── GET /api/history ───────────────────────────────
+
+
+def handle_history(ctx: dict, params: dict) -> Response:
+    """Renvoie les samples historiques depuis SQLite.
+
+    Query params : from (epoch, default 0), to (epoch, default now), step (seconds, optional)
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    try:
+        from_ts = int(params.get("from", 0))
+        to_ts = int(params["to"]) if params.get("to") else None
+        step = int(params["step"]) if params.get("step") else None
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "from/to/step must be integers"}
+    samples = storage.get_samples(from_ts=from_ts, to_ts=to_ts, step=step)
+    return 200, {"ok": True, "samples": samples}
+
+
+# ───────────────────────── GET /api/events ────────────────────────────────
+
+
+def handle_events(ctx: dict, params: dict) -> Response:
+    """Renvoie les événements horodatés.
+
+    Query params : from (epoch, default 0), kind (optional filter)
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    try:
+        from_ts = int(params.get("from", 0))
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "from must be integer"}
+    kind = params.get("kind") or None
+    events = storage.get_events(from_ts=from_ts, kind=kind)
+    return 200, {"ok": True, "events": events}
+
+
+# ───────────────────────── GET /api/export ────────────────────────────────
+
+
+def handle_export(ctx: dict, params: dict):
+    """Exporte les samples au format CSV.
+
+    Query params : format (csv only), since (epoch, default 0)
+    Retourne (code, body) où body est :
+      - dict JSON si erreur
+      - string CSV brut si succès
+    Le wrapper HTTP server.py sait gérer les 2.
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    fmt = (params.get("format") or "csv").lower()
+    if fmt != "csv":
+        return 400, {"ok": False, "error": "only format=csv supported"}
+    try:
+        since = int(params.get("since", 0))
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "since must be integer"}
+    return 200, storage.export_csv(from_ts=since)
+
+
 def handle_alerts_test(ctx: dict) -> Response:
     """Send a test Telegram message using current secrets.env values."""
     cfg = ctx["config"]

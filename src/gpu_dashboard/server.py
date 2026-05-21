@@ -18,11 +18,14 @@ import os
 import socketserver
 import sys
 from typing import Optional
+from urllib.parse import parse_qs, urlparse
 
 from . import api
 from .config import Config
 from .metrics import MetricsSampler
 from .profile import get_profile_for_gpu
+from .retention import RetentionTask
+from .storage import Storage
 
 
 _STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -42,6 +45,8 @@ DEFAULTS = {
     "MODULE_TELEGRAM_ALERTS": "0",
     "MODULE_OCULINK_WATCHDOG": "0",
     "MODULE_FAN_CURVE": "0",
+    "STORAGE_DB_PATH": "~/.local/share/gpu-dashboard/metrics.db",
+    "STORAGE_RETENTION_DAYS": "30",
     "POWER_LIMIT_DEFAULT": "250",
     "POWER_LIMIT_WRAPPER": "/usr/local/bin/set-power-limit",
     "CLOCK_OFFSETS_DISPLAY": ":0",
@@ -74,16 +79,31 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     gpu_name = nv["gpus"][0]["name"] if nv.get("gpus") else ""
     profile = get_profile_for_gpu(profiles_dir, gpu_name) if gpu_name else None
 
-    # Start sampler
+    # SQLite storage (persistence) — expandable path
+    db_path = os.path.expanduser(cfg.get("STORAGE_DB_PATH", "~/.local/share/gpu-dashboard/metrics.db"))
+    storage = Storage(db_path)
+
+    # Start sampler with storage attached
     sampler = MetricsSampler(
         interval=float(cfg.get_int("DASHBOARD_REFRESH_INTERVAL", default=5)),
         maxlen=cfg.get_int("DASHBOARD_SAMPLE_KEEP", default=720),
         nvidia_settings_display=cfg.get("CLOCK_OFFSETS_DISPLAY"),
         nvidia_settings_xauthority=cfg.get("CLOCK_OFFSETS_XAUTHORITY") or None,
+        storage=storage,
     )
     sampler.start()
 
-    return {"config": cfg, "profile": profile, "sampler": sampler}
+    # Retention daemon (purge + vacuum)
+    retention = RetentionTask(
+        storage,
+        retention_days=cfg.get_int("STORAGE_RETENTION_DAYS", default=30),
+    )
+    retention.start()
+
+    return {
+        "config": cfg, "profile": profile,
+        "sampler": sampler, "storage": storage, "retention": retention,
+    }
 
 
 # ─────────────────────────────── handler ──────────────────────────────────
@@ -123,20 +143,48 @@ def make_handler(ctx: dict):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_csv(self, code: int, body: str, filename: str = "gpu-history.csv") -> None:
+            data = body.encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
         def do_GET(self):
-            if self.path in ("/", "/index.html"):
+            parsed = urlparse(self.path)
+            path = parsed.path
+            params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+
+            if path in ("/", "/index.html"):
                 self._send_static("index.html")
                 return
-            if self.path.startswith("/static/"):
-                self._send_static(self.path[len("/static/"):])
+            if path.startswith("/static/"):
+                self._send_static(path[len("/static/"):])
                 return
-            if self.path == "/api/state":
+            if path == "/api/state":
                 code, body = api.handle_state(ctx)
                 self._send_json(code, body)
                 return
-            if self.path == "/api/alerts-config":
+            if path == "/api/alerts-config":
                 code, body = api.handle_alerts_config_get(ctx)
                 self._send_json(code, body)
+                return
+            if path == "/api/history":
+                code, body = api.handle_history(ctx, params)
+                self._send_json(code, body)
+                return
+            if path == "/api/events":
+                code, body = api.handle_events(ctx, params)
+                self._send_json(code, body)
+                return
+            if path == "/api/export":
+                code, body = api.handle_export(ctx, params)
+                if isinstance(body, str):
+                    self._send_csv(code, body)
+                else:
+                    self._send_json(code, body)
                 return
             self.send_response(404)
             self.end_headers()
@@ -195,6 +243,10 @@ def main(argv: Optional[list] = None) -> int:
         except KeyboardInterrupt:
             print("\ngpu-dashboard stopped.")
             ctx["sampler"].stop()
+            if "retention" in ctx:
+                ctx["retention"].stop()
+            if "storage" in ctx:
+                ctx["storage"].close()
     return 0
 
 

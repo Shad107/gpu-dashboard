@@ -1,4 +1,5 @@
-"""Background sampler that polls GPU metrics and stores them in a rolling buffer.
+"""Background sampler that polls GPU metrics, keeps a rolling buffer + optionally
+persists each sample in a Storage (SQLite) instance.
 
 The sampler runs in a daemon thread and is woken up every `interval` seconds.
 Each sample is a dict of stats from `nvidia-smi` + (optionally) `nvidia-settings`
@@ -16,16 +17,18 @@ from typing import List, Optional
 
 
 _NVIDIA_SMI_QUERY = (
-    "temperature.gpu,fan.speed,clocks.current.graphics,"
-    "clocks.current.memory,power.draw"
+    "temperature.gpu,fan.speed,clocks.current.graphics,clocks.current.memory,"
+    "power.draw,power.limit,utilization.gpu,memory.used"
 )
 
 
 class MetricsSampler:
-    """Thread-safe rolling buffer of GPU samples.
+    """Thread-safe rolling buffer of GPU samples, with optional SQLite persistence.
 
     Usage:
-        sampler = MetricsSampler(interval=5, maxlen=720)
+        from gpu_dashboard.storage import Storage
+        storage = Storage("~/.local/share/gpu-dashboard/metrics.db")
+        sampler = MetricsSampler(interval=5, maxlen=720, storage=storage)
         sampler.start()
         # later:
         samples = sampler.snapshot()
@@ -37,6 +40,7 @@ class MetricsSampler:
         maxlen: int = 720,
         nvidia_settings_display: Optional[str] = None,
         nvidia_settings_xauthority: Optional[str] = None,
+        storage=None,
     ):
         self.interval = interval
         self._buffer = collections.deque(maxlen=maxlen)
@@ -45,6 +49,7 @@ class MetricsSampler:
         self._thread: Optional[threading.Thread] = None
         self._display = nvidia_settings_display
         self._xauth = nvidia_settings_xauthority
+        self._storage = storage
 
     def start(self) -> None:
         if self._thread is not None:
@@ -61,14 +66,44 @@ class MetricsSampler:
         with self._lock:
             return list(self._buffer)
 
+    def record_event(self, kind: str, payload: Optional[dict] = None) -> None:
+        """Forward to storage if available, no-op otherwise."""
+        if self._storage is not None:
+            try:
+                self._storage.record_event(kind, payload)
+            except Exception:
+                pass  # never let a logging failure break the caller
+
     def _loop(self) -> None:
         while not self._stop.is_set():
             sample = self._poll()
             if sample is not None:
                 with self._lock:
                     self._buffer.append(sample)
-            # Sleep responsive to stop()
+                self._persist(sample)
             self._stop.wait(self.interval)
+
+    def _persist(self, sample: dict) -> None:
+        """Write the sample to storage with epoch ts + DB column mapping."""
+        if self._storage is None:
+            return
+        try:
+            db_sample = {
+                "ts": int(_time.time()),
+                "temp": sample.get("temp"),
+                "fan_pct": sample.get("fan"),
+                "fan0_rpm": sample.get("fan0_rpm"),
+                "fan1_rpm": sample.get("fan1_rpm"),
+                "clk_gpu": sample.get("clk_gpu"),
+                "clk_mem": sample.get("clk_mem"),
+                "power": sample.get("power"),
+                "power_limit": sample.get("power_limit"),
+                "util_gpu": sample.get("util_gpu"),
+                "mem_used_mib": sample.get("mem_used_mib"),
+            }
+            self._storage.record_sample(db_sample)
+        except Exception:
+            pass  # never let DB write failures break the sampler thread
 
     def _poll(self) -> Optional[dict]:
         try:
@@ -84,17 +119,34 @@ class MetricsSampler:
             return None
 
         parts = [p.strip() for p in out.stdout.strip().split(",")] if out.stdout.strip() else []
+        # 8 champs attendus depuis _NVIDIA_SMI_QUERY
         if len(parts) < 5 or not parts[0].isdigit():
             return None
 
+        def _int(s, default=0):
+            try:
+                return int(s)
+            except (ValueError, TypeError):
+                return default
+
+        def _float(s, default=0.0):
+            try:
+                return float(s)
+            except (ValueError, TypeError):
+                return default
+
         sample = {
             "ts": datetime.datetime.now().strftime("%H:%M:%S"),
-            "temp": int(parts[0]),
-            "fan": int(parts[1]) if parts[1].isdigit() else 0,
-            "clk_gpu": int(parts[2]) if parts[2].isdigit() else 0,
-            "clk_mem": int(parts[3]) if parts[3].isdigit() else 0,
-            "power": float(parts[4]),
+            "temp": _int(parts[0]),
+            "fan": _int(parts[1]),
+            "clk_gpu": _int(parts[2]),
+            "clk_mem": _int(parts[3]),
+            "power": _float(parts[4]),
         }
+        # Champs étendus (peuvent manquer si vieux driver, on parse défensivement)
+        if len(parts) > 5: sample["power_limit"] = _float(parts[5])
+        if len(parts) > 6: sample["util_gpu"]    = _int(parts[6])
+        if len(parts) > 7: sample["mem_used_mib"] = _int(parts[7])
 
         # Per-fan RPM via nvidia-settings, if a DISPLAY is configured
         if self._display:

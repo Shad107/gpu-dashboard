@@ -1,8 +1,9 @@
 <script lang="ts">
   import { modal, live, toast } from "../lib/stores.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
-  import { api } from "../lib/api";
+  import { api, type HistorySample } from "../lib/api";
   import { perfEstimate, colorFan } from "../lib/charts";
+  import HistoryChart from "./HistoryChart.svelte";
 
   // ── Power Limit state ────────────────────────────────────────────────────
   let plWatts = $state(250);
@@ -122,6 +123,65 @@
   });
   const svcEntries = $derived(Object.entries(live.data?.services ?? {}));
 
+  // ── History state ─────────────────────────────────────────────────────────
+  type HistoryRange = "1h" | "6h" | "24h" | "7d" | "30d";
+  type HistoryMetric = "power" | "temp" | "fan_pct" | "util_gpu";
+  let historyRange = $state<HistoryRange>("24h");
+  let historyMetric = $state<HistoryMetric>("power");
+  let historySamples = $state<HistorySample[]>([]);
+  let historyLoading = $state(false);
+
+  const RANGE_SECONDS: Record<HistoryRange, number> = {
+    "1h": 3600, "6h": 21600, "24h": 86400, "7d": 7 * 86400, "30d": 30 * 86400,
+  };
+  const RANGE_STEP: Record<HistoryRange, number> = {
+    // step de rééchantillonnage pour éviter 30j × 17280 samples sur le client
+    "1h": 0, "6h": 0, "24h": 60, "7d": 600, "30d": 1800,
+  };
+
+  const METRIC_INFO: Record<HistoryMetric, { color: string; unit: string }> = {
+    "power":    { color: "#22d3ee", unit: "W" },
+    "temp":     { color: "#fbbf24", unit: "°C" },
+    "fan_pct":  { color: "#4ade80", unit: "%" },
+    "util_gpu": { color: "#a855f7", unit: "%" },
+  };
+
+  async function loadHistory() {
+    historyLoading = true;
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const from = now - RANGE_SECONDS[historyRange];
+      const step = RANGE_STEP[historyRange] || undefined;
+      const r = await api.history(from, now, step);
+      historySamples = r.samples ?? [];
+    } catch (e) {
+      toast.emit("✗ " + i18n.t("ts.network_error") + ": " + (e as Error).message, "err");
+      historySamples = [];
+    } finally {
+      historyLoading = false;
+    }
+  }
+
+  function exportCsv() {
+    const now = Math.floor(Date.now() / 1000);
+    const since = now - RANGE_SECONDS[historyRange];
+    window.location.href = api.exportCsvUrl(since);
+  }
+
+  // Auto-load quand la section History s'ouvre
+  $effect(() => {
+    if (modal.open && modal.section === "history") {
+      loadHistory();
+    }
+  });
+  // Recharge quand range change
+  $effect(() => {
+    historyRange;  // dependency
+    if (modal.open && modal.section === "history") {
+      loadHistory();
+    }
+  });
+
   // ── Language selection ────────────────────────────────────────────────────
   function selectLang(l: Lang) { i18n.setLang(l); }
 
@@ -146,6 +206,8 @@
       icon: "M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22m6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" },
     { id: "language", labelKey: "modal.language" as const,
       icon: "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" },
+    { id: "history", labelKey: "modal.history" as const,
+      icon: "M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 7 7c-2.94 0-5.49-1.81-6.56-4.4l-1.89.61C5.84 18.45 9.16 21 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z" },
   ];
 </script>
 
@@ -329,6 +391,60 @@
             <button class="btn btn-primary" onclick={saveAlerts}>{i18n.t("alerts.save")}</button>
             <button class="btn" onclick={testAlerts}>{i18n.t("alerts.test_btn")}</button>
             <span class="warn-text">{i18n.t("alerts.token_note")}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="modal-section" class:active={modal.section === "history"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={sections[6].icon} /></svg>
+          <span>{i18n.t("history.title")}</span>
+        </h3>
+        <p class="sub" style="margin:0 0 1em">{i18n.t("history.description")}</p>
+
+        <div class="controls" style="background:transparent;border:none;padding:0">
+          <div class="btn-row" style="margin-bottom:.8em">
+            {#each ["1h", "6h", "24h", "7d", "30d"] as r}
+              <button
+                class="btn"
+                class:btn-primary={historyRange === r}
+                onclick={() => (historyRange = r as HistoryRange)}
+              >{i18n.t(`history.range_${r}` as any)}</button>
+            {/each}
+          </div>
+
+          <div class="form-row">
+            <span class="form-lbl">{i18n.t("history.metric")}</span>
+            <span class="form-val">
+              <select bind:value={historyMetric} class="al-input" style="max-width:240px">
+                <option value="power">{i18n.t("history.metric_power")}</option>
+                <option value="temp">{i18n.t("history.metric_temp")}</option>
+                <option value="fan_pct">{i18n.t("history.metric_fan")}</option>
+                <option value="util_gpu">{i18n.t("history.metric_util")}</option>
+              </select>
+            </span>
+          </div>
+
+          <div style="height:340px;background:#0e1014;border-radius:8px;padding:6px;margin-top:.8em">
+            {#if historyLoading}
+              <div style="color:#7c8aa3;padding:2em;text-align:center">{i18n.t("history.loading")}</div>
+            {:else}
+              <HistoryChart
+                samples={historySamples}
+                metric={historyMetric}
+                color={METRIC_INFO[historyMetric].color}
+                unit={METRIC_INFO[historyMetric].unit}
+              >
+                <span slot="empty">{i18n.t("history.no_data")}</span>
+              </HistoryChart>
+            {/if}
+          </div>
+
+          <div class="btn-row" style="margin-top:.8em">
+            <button class="btn btn-primary" onclick={loadHistory}>{i18n.t("history.refresh")}</button>
+            <button class="btn" onclick={exportCsv}>📥 {i18n.t("history.export_csv")}</button>
+            <span class="warn-text">{i18n.t("history.samples_count", { n: historySamples.length })}</span>
           </div>
         </div>
       </div>
