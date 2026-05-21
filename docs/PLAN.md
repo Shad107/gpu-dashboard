@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 22:36 (cycle 63 done)
-**Latest commit** : `668971a` — Phase A card hide/show toggle
-**Tests** : 428 passing · **CI** : ✅ green · **Bundle** : 51.90 KB gzip
+**Last updated** : 2026-05-21 22:48 (cycle 64 done)
+**Latest commit** : `d89b9db` — Phase B drag-and-drop reorder
+**Tests** : 428 passing · **CI** : ✅ green · **Bundle** : 64.11 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Phase B : Drag-and-drop reorder**.
+Nothing — between cycles. Wakeup soon will start **Phase C : Custom URL iframe card**.
 
 ---
 
@@ -19,15 +19,7 @@ Nothing — between cycles. Wakeup soon will start **Phase B : Drag-and-drop reo
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 64 (next) — Phase B : Drag-and-drop card reorder (~2-3h)
-- Install `svelte-dnd-action` (~5 KB gzip)
-- Drag handle on each card (top-right tiny icon)
-- Order persisted in localStorage alongside visibility
-- "Reset layout" button in Layout tab
-- Tests : reorder persists, reset works, mobile not broken
-- Screenshot
-
-### Cycle 65 — Phase C : Custom URL card (iframe embed) (~2-3h)
+### Cycle 65 (next) — Phase C : Custom URL card (iframe embed) (~2-3h)
 - Allow user to add an arbitrary URL card (Grafana panel, Home Assistant card, an image, etc.)
 - Sandboxed iframe (sandbox="allow-scripts" — no parent navigation)
 - Multiple custom cards possible
@@ -58,6 +50,16 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 64 — Dashboard customization Phase B (1 commit)
+- `d89b9db` Phase B : drag-and-drop card reorder via svelte-dnd-action
+  - layout.svelte.ts extended with order: string[] + indexOf() + setOrder()
+  - svelte-dnd-action installed (~12 KB gzip, larger than estimate)
+  - Cards.svelte : each card gets `style:order={layout.indexOf(name)}`
+  - .row container is now flex-wrap (was grid auto-fit)
+  - SettingsModal Layout tab : dndzone with drag handles ⋮⋮
+  - Reset button resets BOTH visibility AND order
+  - i18n EN+FR : drag_hint key
 
 ### Cycle 63 — Dashboard customization Phase A (1 commit)
 - `668971a` Phase A : card hide/show toggle in Layout tab
@@ -158,9 +160,9 @@ Rules :
 |---|---|
 | Tests | 428 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 150 KB raw / 51.90 KB gzip |
-| Bundle CSS | 15.28 KB raw / 3.76 KB gzip |
-| Commits since v0.1.0 | ~66 |
+| Bundle JS | 186 KB raw / 64.11 KB gzip |
+| Bundle CSS | 15.43 KB raw / 3.80 KB gzip |
+| Commits since v0.1.0 | ~67 |
 | API endpoints | 30+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
