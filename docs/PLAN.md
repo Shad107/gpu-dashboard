@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:25 (cycle 94 done — fan curve add/remove 3/8)
-**Latest commit** : `b21ebf7` — fan curve add/remove points
-**Tests** : 497 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 01:30 (cycle 95 done — fan curve persist 4/8)
+**Latest commit** : `1557911` — fan curve persistence
+**Tests** : 510 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 95 : fan curve slice 4/8 — POST /api/fan-curve persist**.
+Nothing — between cycles. Wakeup soon will start **Cycle 96 : fan curve slice 5/8 — presets (silent/balanced/aggressive)**.
 
 ---
 
@@ -19,15 +19,17 @@ Nothing — between cycles. Wakeup soon will start **Cycle 95 : fan curve slice 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 95 (next) — Fan curve slice 4/8 — persist edits
-- New POST /api/fan-curve endpoint that accepts {curve: [[t,p],...]}
-- Validates : sorted by temp, all [t,p] in [0,100], at least 2 points
-- Writes to ~/.config/gpu-dashboard/fan_curve.json (override over env)
-- pick_curve() reads the override file first
-- Save button in editor → POST → toast success
-- 4+ TDD tests
+### Cycle 96 (next) — Fan curve slice 5/8 — presets
+- 3 preset buttons : 🤫 Silent · ⚖️ Balanced · 🔥 Aggressive
+- Click → loads the preset into editedCurve (still requires Save to persist)
+- Presets defined in lib :
+  silent     = [[30,0],[55,20],[70,40],[80,60],[90,80]]
+  balanced   = [[30,0],[50,30],[65,50],[75,70],[85,100]]  (current default)
+  aggressive = [[30,20],[45,40],[60,70],[70,90],[80,100]]
 
-### Cycles 96-99 : per-fan curves, presets, tests, polish
+### Cycle 97 — Slice 6/8 : per-fan curves (fan 0 / fan 1 if available)
+### Cycle 98 — Slice 7/8 : keyboard shortcuts in editor (arrow keys for fine tuning)
+### Cycle 99 — Slice 8/8 : README + final screenshot showing the editor
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
 ### Cycle 82+ — Browser push, Multi-GPU picker, Fan curve editor
@@ -52,6 +54,14 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 95 — Fan curve persistence (2 commits)
+- `c6602ad` POST /api/fan-curve + validate_user_curve + Save button
+- `1557911` Fix : rename validate_user_curve (name collision)
+- ~/.config/gpu-dashboard/fan_curve.json override file
+- pick_curve() priority : explicit arg > override file > profile > default
+- 13 new TDD tests : 8 validation + 3 POST + 2 override
+- Tests : 497 → 510
 
 ### Cycle 94 — Fan curve add/remove points (1 commit)
 - `b21ebf7` Double-click SVG empty area → add point (sorted insertion)
@@ -386,11 +396,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 497 passing on Py 3.9-3.13 |
+| Tests | 510 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~102 |
+| Commits since v0.1.0 | ~104 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
