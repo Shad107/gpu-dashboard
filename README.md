@@ -291,6 +291,11 @@ what your env supports.
 
 ## Integrations
 
+**🎁 Ready-to-import Grafana dashboard** — see [`docs/grafana/yearly_dashboard.json`](docs/grafana/yearly_dashboard.json).
+Imports as **Yearly overview** with 9 panels : year-to-date kWh + cost + tokens, latest-alert age,
+live power + temp + fan, today's energy, OcuLink drops, GPU alive status.
+Grafana → Dashboards → New → Import → paste JSON (or upload the file).
+
 ```bash
 # Grafana / VictoriaMetrics — Prometheus scrape config
 - job_name: gpu-dashboard
