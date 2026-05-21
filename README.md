@@ -21,6 +21,20 @@
 ### Mobile responsive
 <img src="docs/mobile/dashboard-mobile.png" width="280" alt="Single-column mobile layout" />
 
+### 🖥️🖥️ Multi-GPU support
+
+On rigs with more than one NVIDIA GPU detected, the header gains a picker
+dropdown listing each card. Selecting a different GPU instantly switches
+**all** displayed data — Cards, History chart, Stats sparklines, electricity,
+LLM throughput — to that GPU's samples.
+
+- The sampler polls all GPUs every tick ; each sample is stored with
+  its `gpu_index` (DB schema v4)
+- Picker selection persists in `localStorage`, bookmarkable via `?gpu=N`
+- Per-GPU API : every data endpoint accepts `?gpu_index=N`
+- Single-GPU rigs : zero change — the picker is hidden, everything works
+  as before
+
 ### 🎨 Themes — dark (default) + light
 
 Toggle via **Settings → Préférences → Layout → 🎨 Thème**, or use the

@@ -4,6 +4,39 @@ All notable changes to gpu-dashboard. Format inspired by [Keep a Changelog](http
 
 ## [Unreleased / 0.3.0-dev]
 
+### Added — Multi-GPU full pipeline (cycles 86-91)
+- **Per-GPU sampling** — sampler now polls ALL detected NVIDIA GPUs each tick; each sample is persisted with a `gpu_index` field (DB schema v4, composite PK on `(ts, gpu_index)`).
+- **Per-GPU API** — every data endpoint (`/api/state`, `/api/history`, `/api/llm/perf`, `/api/llm/lifetime`, `/api/thermal-stats`, `/api/power-stats`, `/api/power-heatmap`, `/api/electricity`) accepts `?gpu_index=N`. Default 0 = back-compat.
+- **GPU picker dropdown in header** — appears only when `gpus_available.length > 1`. Selection persists in localStorage, bookmarkable via `?gpu=N`. Drives all data fetches across Cards / History / Stats / live tick.
+- **6 cycles, 6 commits, 18 new TDD tests** — schema v4 + sampler + API + picker UI + propagation + README.
+
+### Added — Theme toggle light/dark (cycles 78-81)
+- **CSS variables foundation** — `:root, html.theme-dark` source of truth for all colors. `html.theme-light` overrides with white bg + darker accents.
+- **Theme store** (`lib/theme.svelte.ts`) — `theme.set("dark" | "light")`, persists to localStorage, applies class on `<html>` at boot.
+- **Toggle in Layout tab** — 2 mode-tiles (🌙 Dark · ☀️ Light). URL `?theme=light|dark` override.
+- **27 new color variables** + smooth 0.25s crossfade on theme swap.
+
+### Added — Browser push notifications (cycles 82-85, 3 slices)
+- **VAPID keypair generation** via openssl subprocess (no new Python dep). Persisted as `~/.config/gpu-dashboard/vapid.json` + `vapid_priv.pem` mode 0600.
+- **`/api/push/subscribe`**, **`/api/push/unsubscribe`**, **`/api/push/status`** — Storage v3 push_subscriptions table.
+- **Service worker** (`public/sw.js`) — registered from App.svelte. On push, fetches `/api/alerts/latest` to populate notification text (pragmatic alternative to RFC 8291 encryption).
+- **VAPID JWT (ES256)** signing for the Authorization header. `_der_to_jose()` converts openssl's DER signature to JOSE raw 64-byte.
+- **`alert_monitor`** now sends a push to all subscribers when an alert fires; expired subscriptions (404/410) auto-pruned.
+- **Sound notification toggle** in Alerts tab — Web Audio API beep on err toasts.
+
+### Added — Top-level navigation restructure (cycles 69-77)
+- **3 top-level views** — 🏠 Dashboard / 📈 Statistiques / 📊 Historique. URL hash routing (`#history`, `#stats`).
+- **History extracted from Settings modal** as standalone view. Stats rewritten with multi-section sparklines (LLM perf, Power, Thermal, Profiles, Fan dist, Heatmap).
+- **Settings modal reduced** from 11 → 9 tabs (History + Stats removed). About stays in Settings per user feedback.
+- **Sparkline component** (`Sparkline.svelte`) — compact SVG mini-chart used across all Stats sections + LLM card live tok/s.
+- **3 new backend endpoints** for Stats : `/api/llm/perf`, `/api/thermal-stats`, `/api/power-stats` (rolling-window aggregates + downsampled sparkline series).
+- **Simple mode** for users without LLM — wizard step 4 mode-tiles (Standard / LLM rig), History dropdown hides tokens/s + tokens/W if no LLM_SERVER_URL.
+
+### Added — Dashboard customization (cycles 63-65)
+- **Card hide/show toggles** in Layout tab (10 cards independently controllable, persisted in localStorage)
+- **Drag-and-drop card reorder** via svelte-dnd-action (~12 KB gzip), order persisted alongside visibility
+- **Custom URL iframe cards** — embed Grafana panel / Home Assistant card / any external URL as a sandboxed iframe card
+
 ### Added — Round 4 / polish + integrations
 - **`python3 -m gpu_dashboard --status`** — CLI one-shot output for SSH/cron. Prints a unicode-bordered box with temp / mem_temp / power / VRAM / fan RPMs / electricity / LLM tokens / OcuLink / health components. Exits 0 if GPU alive, 2 if degraded.
 - **`modules/webhook.py`** — generic outbound webhook (Discord / Slack / n8n / Home Assistant). Auto-detects payload shape based on URL. Used in parallel with Telegram if both configured.
