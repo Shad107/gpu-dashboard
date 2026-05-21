@@ -72,6 +72,8 @@ DEFAULTS = {
     "ALERT_MIN_CONSECUTIVE": "3",
     "ALERT_COOLDOWN_SECONDS": "300",
     "ALERT_MONITOR_INTERVAL": "30",
+    "WEBHOOK_URL": "",
+    "WEBHOOK_ENABLED": "0",
     "POWER_LIMIT_WRAPPER": "/usr/local/bin/set-power-limit",
     "CLOCK_OFFSETS_DISPLAY": ":0",
     "TG_ENABLED": "0",
@@ -136,30 +138,50 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     )
     retention.start()
 
-    # alert_monitor daemon (optional) — fires Telegram alerts on thresholds
+    # alert_monitor daemon (optional) — fires Telegram + webhook alerts on thresholds
     alert_monitor_daemon = None
-    if cfg.get_bool("MODULE_ALERT_MONITOR") and cfg.get_bool("TG_ENABLED"):
+    tg_enabled = cfg.get_bool("TG_ENABLED")
+    webhook_enabled = cfg.get_bool("WEBHOOK_ENABLED")
+    if cfg.get_bool("MODULE_ALERT_MONITOR") and (tg_enabled or webhook_enabled):
         try:
             from .modules.alert_monitor import AlertMonitorDaemon
             from .modules.telegram_alerts import send_message as _tg_send
+            from .modules.webhook import send as _wh_send
+
             tg_token = cfg.get("TG_TOKEN", "")
             tg_chat = cfg.get("TG_CHAT", "")
-            if tg_token and tg_chat:
-                def _send_telegram(text):
-                    return _tg_send(token=tg_token, chat_id=tg_chat, text=text)
-                alert_monitor_daemon = AlertMonitorDaemon(
-                    sampler=sampler,
-                    telegram_send_fn=_send_telegram,
-                    thresholds={
-                        "gpu_temp": cfg.get_int("ALERT_GPU_TEMP_THRESHOLD", default=85),
-                        "mem_temp": cfg.get_int("ALERT_MEM_TEMP_THRESHOLD", default=95),
-                        "fan_pct":  cfg.get_int("ALERT_FAN_PCT_THRESHOLD", default=95),
-                        "min_consecutive": cfg.get_int("ALERT_MIN_CONSECUTIVE", default=3),
-                        "cooldown_seconds": cfg.get_int("ALERT_COOLDOWN_SECONDS", default=300),
-                    },
-                    interval=float(cfg.get_int("ALERT_MONITOR_INTERVAL", default=30)),
-                )
-                alert_monitor_daemon.start()
+            webhook_url = cfg.get("WEBHOOK_URL", "")
+
+            def _send_alert(text):
+                """Multi-channel dispatch — Telegram + webhook in parallel."""
+                results = []
+                if tg_enabled and tg_token and tg_chat:
+                    try:
+                        ok, msg = _tg_send(token=tg_token, chat_id=tg_chat, text=text)
+                        results.append(("telegram", ok, msg))
+                    except Exception as e:
+                        results.append(("telegram", False, str(e)))
+                if webhook_enabled and webhook_url:
+                    try:
+                        ok, msg = _wh_send(url=webhook_url, text=text, kind="alert")
+                        results.append(("webhook", ok, msg))
+                    except Exception as e:
+                        results.append(("webhook", False, str(e)))
+                return results
+
+            alert_monitor_daemon = AlertMonitorDaemon(
+                sampler=sampler,
+                telegram_send_fn=_send_alert,
+                thresholds={
+                    "gpu_temp": cfg.get_int("ALERT_GPU_TEMP_THRESHOLD", default=85),
+                    "mem_temp": cfg.get_int("ALERT_MEM_TEMP_THRESHOLD", default=95),
+                    "fan_pct":  cfg.get_int("ALERT_FAN_PCT_THRESHOLD", default=95),
+                    "min_consecutive": cfg.get_int("ALERT_MIN_CONSECUTIVE", default=3),
+                    "cooldown_seconds": cfg.get_int("ALERT_COOLDOWN_SECONDS", default=300),
+                },
+                interval=float(cfg.get_int("ALERT_MONITOR_INTERVAL", default=30)),
+            )
+            alert_monitor_daemon.start()
         except Exception as e:
             print(f"warning: alert_monitor daemon failed: {e}", file=sys.stderr)
 
