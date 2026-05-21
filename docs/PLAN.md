@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:02 (cycle 103 done — yearly aggregates)
-**Latest commit** : `413f6f4` — yearly stats backend
+**Last updated** : 2026-05-22 02:06 (cycle 104 done — yearly UI in About)
+**Latest commit** : `539231d` — yearly stats UI in About
 **Tests** : 520 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup 104 = wire yearly stats into About tab UI + screenshot.
+Nothing — between cycles. Wakeup will pick another small follow-up or wait for user.
 
 ---
 
@@ -59,6 +59,13 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 104 — Yearly aggregates UI in About tab (1 commit)
+- `539231d` New '📊 Year-to-date totals' section in About tab
+  - Shows ⚡ kWh + cost in € · 🪙 tokens (if LLM available)
+  - 'Since Jan 1, 2026' locale-aware date label
+  - fmtYearSince() + fmtTokens() helpers
+  - 4 new i18n keys × 2 langs
 
 ### Cycle 103 — Yearly aggregates backend (1 commit)
 - `413f6f4` /api/power-stats : kwh_year, cost_year, year_start_ts
@@ -459,7 +466,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~112 |
+| Commits since v0.1.0 | ~113 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
