@@ -1373,6 +1373,21 @@ def handle_health(ctx: dict) -> Response:
 # ────────────────────────── GET /api/about ────────────────────────────────
 
 
+def handle_push_vapid(ctx: dict) -> Response:
+    """Return the VAPID public key for browser push subscription.
+
+    The frontend feeds this into PushManager.subscribe({applicationServerKey}).
+    Private key stays server-side, never exposed.
+    """
+    from .modules import web_push
+    cfg_dir = os.path.expanduser("~/.config/gpu-dashboard")
+    try:
+        data = web_push.ensure_vapid_keys(cfg_dir)
+    except Exception as e:
+        return 500, {"ok": False, "error": f"VAPID generation failed: {e}"}
+    return 200, {"ok": True, "public_key": data["public_key"]}
+
+
 def handle_about(ctx: dict) -> Response:
     """Static info about the running server : version, paths, uptime, vBIOS."""
     import platform

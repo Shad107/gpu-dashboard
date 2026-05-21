@@ -371,6 +371,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_about(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/push/vapid":
+                code, body = api.handle_push_vapid(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/health":
                 code, body = api.handle_health(ctx)
                 self._send_json(code, body)
