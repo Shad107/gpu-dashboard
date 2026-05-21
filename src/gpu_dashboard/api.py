@@ -522,6 +522,98 @@ def handle_stop(ctx: dict) -> Response:
     return 200, {"ok": True, "message": "stopping"}
 
 
+# ────────────────────────── /api/update/* ─────────────────────────────────
+
+
+def _git(repo_path: str, *args, timeout=5):
+    """Run git in `repo_path`, returns CompletedProcess. Never raises."""
+    try:
+        return subprocess.run(
+            ["git", "-C", repo_path, *args],
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError) as e:
+        class _Fail:
+            returncode = 127; stdout = ""; stderr = str(e)
+        return _Fail()
+
+
+def handle_update_check(ctx: dict) -> Response:
+    """Check if the repo is behind the remote. Runs `git fetch` then computes
+    behind count via `git rev-list HEAD..@{u} --count`.
+
+    Returns:
+      ok: bool
+      current_sha: str (HEAD)
+      remote_sha: str (origin/main) — None if no remote
+      behind: int — commits behind. None if no upstream tracking.
+      last_remote_msg: str — subject line of the remote HEAD
+    """
+    repo_path = ctx.get("repo_path") or ""
+    if not repo_path or not os.path.isdir(os.path.join(repo_path, ".git")):
+        return 400, {"ok": False, "error": "not a git repo"}
+
+    # Get current SHA
+    r_head = _git(repo_path, "rev-parse", "--short", "HEAD")
+    current_sha = r_head.stdout.strip() if r_head.returncode == 0 else None
+
+    # Try to fetch (silent on network failure)
+    _git(repo_path, "fetch", "--quiet", timeout=15)
+
+    # Get upstream SHA (may not exist if no tracking branch)
+    r_up = _git(repo_path, "rev-parse", "--short", "@{u}")
+    if r_up.returncode != 0:
+        # No upstream — can't compute behind
+        return 200, {
+            "ok": True,
+            "current_sha": current_sha,
+            "remote_sha": None,
+            "behind": None,
+            "last_remote_msg": None,
+        }
+    remote_sha = r_up.stdout.strip()
+
+    r_behind = _git(repo_path, "rev-list", "HEAD..@{u}", "--count")
+    behind = int(r_behind.stdout.strip()) if r_behind.returncode == 0 and r_behind.stdout.strip().isdigit() else 0
+
+    r_log = _git(repo_path, "log", "-1", "--format=%s", "@{u}")
+    last_msg = r_log.stdout.strip() if r_log.returncode == 0 else None
+
+    return 200, {
+        "ok": True,
+        "current_sha": current_sha,
+        "remote_sha": remote_sha,
+        "behind": behind,
+        "last_remote_msg": last_msg,
+    }
+
+
+def handle_update_pull(ctx: dict) -> Response:
+    """Run `git pull --ff-only`. Refuses if the working tree is dirty."""
+    repo_path = ctx.get("repo_path") or ""
+    if not repo_path or not os.path.isdir(os.path.join(repo_path, ".git")):
+        return 400, {"ok": False, "error": "not a git repo"}
+
+    # Check if working tree is clean
+    r_status = _git(repo_path, "status", "--porcelain")
+    if r_status.returncode == 0 and r_status.stdout.strip():
+        return 409, {
+            "ok": False,
+            "error": "working tree is dirty (uncommitted changes). Commit or stash first.",
+            "dirty_files": [line[3:] for line in r_status.stdout.splitlines()],
+        }
+
+    # Try pull --ff-only
+    r_pull = _git(repo_path, "pull", "--ff-only", timeout=30)
+    if r_pull.returncode != 0:
+        return 500, {
+            "ok": False,
+            "error": "git pull failed",
+            "stderr": r_pull.stderr.strip(),
+        }
+    return 200, {"ok": True, "output": r_pull.stdout.strip()}
+
+
 # ────────────────────────── GET /api/snapshot ─────────────────────────────
 
 

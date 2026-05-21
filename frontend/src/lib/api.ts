@@ -207,4 +207,23 @@ export const api = {
       license: string;
       repo_url: string;
     }>),
+
+  updateCheck: () =>
+    fetch("/api/update/check").then(jsonOf<{
+      ok: boolean;
+      current_sha?: string;
+      remote_sha?: string;
+      behind?: number | null;
+      last_remote_msg?: string | null;
+      error?: string;
+    }>),
+
+  updatePull: () =>
+    fetch("/api/update/pull", { method: "POST" }).then(jsonOf<{
+      ok: boolean;
+      output?: string;
+      error?: string;
+      stderr?: string;
+      dirty_files?: string[];
+    }>),
 };

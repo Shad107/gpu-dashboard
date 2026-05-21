@@ -234,6 +234,43 @@
     setTimeout(tryReconnect, 1500);
   }
 
+  // ── Update check state ────────────────────────────────────────────────────
+  let updateChecking = $state(false);
+  let pulling = $state(false);
+  let updateStatus = $state<Awaited<ReturnType<typeof api.updateCheck>> | null>(null);
+
+  async function checkUpdate() {
+    updateChecking = true;
+    try {
+      updateStatus = await api.updateCheck();
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally {
+      updateChecking = false;
+    }
+  }
+
+  async function pullAndRestart() {
+    pulling = true;
+    try {
+      const r = await api.updatePull();
+      if (!r.ok) {
+        toast.emit("✗ " + (r.error || r.stderr || "pull failed"), "err");
+        if (r.dirty_files?.length) {
+          toast.emit("Dirty: " + r.dirty_files.slice(0, 3).join(", "), "err");
+        }
+        pulling = false;
+        return;
+      }
+      toast.emit("✓ Pulled. Restarting…", "ok");
+      try { await api.restart(); } catch {}
+      setTimeout(() => location.reload(), 2500);
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+      pulling = false;
+    }
+  }
+
   async function stopServer() {
     if (!confirm(i18n.t("services.stop_confirm"))) return;
     try {
@@ -473,6 +510,34 @@
             📦 {i18n.t("services.snapshot_btn")}
           </button>
         </div>
+
+        <h3 style="margin-top:1.8em;color:#cdd2da;font-size:.95em;font-weight:600">
+          {i18n.t("services.update_label")}
+        </h3>
+        <p class="sub">{i18n.t("services.update_description")}</p>
+        <div class="btn-row" style="margin-top:.8em">
+          <button class="btn" disabled={updateChecking} onclick={checkUpdate}>
+            🔍 {updateChecking ? "…" : i18n.t("services.update_check_btn")}
+          </button>
+          {#if updateStatus}
+            {#if updateStatus.behind === null}
+              <span class="sub">{i18n.t("services.update_unknown")}</span>
+            {:else if updateStatus.behind === 0}
+              <span class="ok">{i18n.t("services.update_up_to_date")}</span>
+              <span class="sub">@{updateStatus.current_sha}</span>
+            {:else}
+              <span class="warn">{i18n.t("services.update_behind", { n: updateStatus.behind, s: (updateStatus.behind || 0) > 1 ? "s" : "" })}</span>
+              <button class="btn btn-primary" disabled={pulling} onclick={pullAndRestart}>
+                ⬇️ {pulling ? "…" : i18n.t("services.update_pull_btn")}
+              </button>
+            {/if}
+          {/if}
+        </div>
+        {#if updateStatus?.last_remote_msg}
+          <p class="sub" style="margin-top:.4em;font-size:.78em;font-style:italic">
+            Latest: "{updateStatus.last_remote_msg}"
+          </p>
+        {/if}
       </div>
 
       <!-- Alerts -->

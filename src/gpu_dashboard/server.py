@@ -114,6 +114,17 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
 
     import time as _t
     home = os.path.expanduser("~")
+
+    # Best-effort repo_path detection: walk up from this file until .git found
+    repo_path = None
+    p = os.path.dirname(os.path.abspath(__file__))
+    for _ in range(6):
+        if os.path.isdir(os.path.join(p, ".git")):
+            repo_path = p; break
+        parent = os.path.dirname(p)
+        if parent == p: break
+        p = parent
+
     return {
         "config": cfg, "profile": profile,
         "sampler": sampler, "storage": storage, "retention": retention,
@@ -123,6 +134,7 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
         "config_path": (config_files[0] if config_files else os.path.join(home, ".config/gpu-dashboard/config.env")),
         "secrets_path": os.path.join(home, ".config/gpu-dashboard/secrets.env"),
         "storage_path": db_path,
+        "repo_path": repo_path,
     }
 
 
@@ -231,6 +243,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_health(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/update/check":
+                code, body = api.handle_update_check(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/snapshot":
                 code, body = api.handle_snapshot(ctx)
                 if isinstance(body, bytes):
@@ -278,6 +294,10 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/stop":
                 code, body = api.handle_stop(ctx)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/update/pull":
+                code, body = api.handle_update_pull(ctx)
                 self._send_json(code, body)
                 return
 
