@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:50 (cycle 100 done — screenshots refresh)
-**Latest commit** : `1174de2` — fresh README screenshots
+**Last updated** : 2026-05-22 01:54 (cycle 101 done — profile activity log)
+**Latest commit** : `8310f43` — profile activity log in About
 **Tests** : 510 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup will start an optional follow-up (per-fan curves / coolbits / profile activity log).
+Nothing — between cycles. Wakeup will pick next small follow-up (coolbits / per-fan / health endpoint).
 
 ---
 
@@ -59,6 +59,12 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 101 — Profile activity log in About tab (1 commit)
+- `8310f43` GET /api/profile-stats now returns `recent_events`
+  - About tab gains 'Recent profile switches' section
+  - Last 10 switches with emoji + relative time
+  - 2 new i18n keys × 2 langs
 
 ### Cycle 100 — Screenshots housekeeping (1 commit)
 - `1174de2` Refreshed all docs/modal/*.png + docs/screenshot.png + theme captures
@@ -437,7 +443,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~109 |
+| Commits since v0.1.0 | ~110 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
