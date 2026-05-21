@@ -21,6 +21,24 @@
   let error = $state<string>("");
   let draggingIdx = $state<number | null>(null);
 
+  // ─── Presets (cycle 96) ──────────────────────────────────────────────
+  const PRESETS: Record<string, { curve: CurvePoint[]; emoji: string }> = {
+    silent:     { emoji: "🤫", curve: [[30,0],[55,20],[70,40],[80,60],[90,80]] },
+    balanced:   { emoji: "⚖️", curve: [[30,0],[50,30],[65,50],[75,70],[85,100]] },
+    aggressive: { emoji: "🔥", curve: [[30,20],[45,40],[60,70],[70,90],[80,100]] },
+  };
+  function loadPreset(name: keyof typeof PRESETS) {
+    editedCurve = PRESETS[name].curve.map(p => [p[0], p[1]] as CurvePoint);
+  }
+  /** Returns the preset name if editedCurve matches one exactly, else "". */
+  const matchedPreset = $derived.by(() => {
+    const j = JSON.stringify(editedCurve);
+    for (const [name, p] of Object.entries(PRESETS)) {
+      if (JSON.stringify(p.curve) === j) return name;
+    }
+    return "";
+  });
+
   async function load() {
     loading = true;
     error = "";
@@ -198,6 +216,20 @@
       {/if}
     </div>
 
+    <div class="preset-row">
+      <span class="preset-label">{i18n.t("fancurve.presets_label")}</span>
+      {#each Object.entries(PRESETS) as [name, p]}
+        <button
+          class="btn"
+          class:btn-primary={matchedPreset === name}
+          title={i18n.t(("fancurve.preset_" + name + "_desc") as any)}
+          onclick={() => loadPreset(name as keyof typeof PRESETS)}
+        >
+          {p.emoji} {i18n.t(("fancurve.preset_" + name) as any)}
+        </button>
+      {/each}
+    </div>
+
     <svg viewBox="0 0 {W} {H}" class="curve-svg" preserveAspectRatio="xMidYMid meet"
          bind:this={svgEl} class:dragging={draggingIdx !== null}
          ondblclick={onSvgDoubleClick}>
@@ -277,6 +309,18 @@
     border-radius: 6px;
     padding: 4px;
     touch-action: none;  /* prevent scroll on touch drag */
+  }
+  .preset-row {
+    display: flex;
+    gap: 0.4em;
+    align-items: center;
+    margin-bottom: 0.6em;
+    flex-wrap: wrap;
+  }
+  .preset-label {
+    color: var(--text-dim);
+    font-size: 0.82em;
+    margin-right: 0.2em;
   }
   .curve-svg { cursor: copy; }  /* dbl-click empty area = add point */
   .curve-svg.dragging { cursor: grabbing; }
