@@ -213,7 +213,16 @@
   let historySamples = $state<HistorySample[]>([]);
   let historyEvents = $state<StoredEvent[]>([]);
   let historyCompare = $state<HistorySample[]>([]);
-  let historyCompareMode = $state(false);
+  /** Seconds offset for comparison series. 0 = disabled. Common values :
+   *  86400 (24h), 604800 (7d), 2592000 (30d) */
+  let historyCompareOffset = $state(0);
+  const historyCompareMode = $derived(historyCompareOffset > 0);
+  function compareLabelFor(offset: number): string {
+    if (offset === 86400) return i18n.t("history.compare_label_24h");
+    if (offset === 604800) return i18n.t("history.compare_label_7d");
+    if (offset === 2592000) return i18n.t("history.compare_label_30d");
+    return "";
+  }
 
   // Power heatmap (24 hours × N days window)
   let heatmapData = $state<Awaited<ReturnType<typeof api.powerHeatmap>> | null>(null);
@@ -293,22 +302,21 @@
       const now = Math.floor(Date.now() / 1000);
       const from = now - RANGE_SECONDS[historyRange];
       const step = RANGE_STEP[historyRange] || undefined;
-      const ONE_DAY = 86400;
-
-      // Parallel fetch: samples + events overlay + optional yesterday-overlay
+      // Parallel fetch: samples + events overlay + optional historical overlay (offset by N seconds)
+      const offset = historyCompareOffset;
       const promises: Promise<any>[] = [
         api.history(from, now, step),
         api.events(from).catch(() => ({ ok: false, events: [] })),
       ];
-      if (historyCompareMode) {
+      if (offset > 0) {
         promises.push(
-          api.history(from - ONE_DAY, now - ONE_DAY, step).catch(() => ({ ok: false, samples: [] })),
+          api.history(from - offset, now - offset, step).catch(() => ({ ok: false, samples: [] })),
         );
       }
       const results = await Promise.all(promises);
       historySamples = results[0].samples ?? [];
       historyEvents = results[1].events ?? [];
-      historyCompare = historyCompareMode ? (results[2].samples ?? []) : [];
+      historyCompare = offset > 0 ? (results[2].samples ?? []) : [];
     } catch (e) {
       toast.emit("✗ " + i18n.t("ts.network_error") + ": " + (e as Error).message, "err");
       historySamples = []; historyEvents = []; historyCompare = [];
@@ -318,7 +326,7 @@
   }
   // Reload when compare toggle flips
   $effect(() => {
-    historyCompareMode;  // dependency
+    historyCompareOffset;  // dependency
     if (modal.open && modal.section === "history" && historySamples.length > 0) {
       loadHistory();
     }
@@ -889,7 +897,7 @@
                 color={METRIC_INFO[historyMetric].color}
                 unit={METRIC_INFO[historyMetric].unit}
                 compareSamples={historyCompareMode ? historyCompare : []}
-                compareLabel={historyCompareMode ? i18n.t("history.compare_label") : ""}
+                compareLabel={compareLabelFor(historyCompareOffset)}
               >
                 <span slot="empty">{i18n.t("history.no_data")}</span>
               </HistoryChart>
@@ -903,9 +911,14 @@
               <input type="checkbox" bind:checked={historyAutoRefresh} />
               ⏱️ {i18n.t("history.auto_refresh")}
             </label>
-            <label style="display:flex;align-items:center;gap:.4em;cursor:pointer;font-size:.85em">
-              <input type="checkbox" bind:checked={historyCompareMode} />
-              📊 {i18n.t("history.compare_yesterday")}
+            <label style="display:flex;align-items:center;gap:.4em;font-size:.85em">
+              📊 {i18n.t("history.compare_to")}
+              <select bind:value={historyCompareOffset} class="al-input" style="max-width:160px;font-size:.95em">
+                <option value={0}>{i18n.t("history.compare_off")}</option>
+                <option value={86400}>{i18n.t("history.compare_label_24h")}</option>
+                <option value={604800}>{i18n.t("history.compare_label_7d")}</option>
+                <option value={2592000}>{i18n.t("history.compare_label_30d")}</option>
+              </select>
             </label>
             <span class="warn-text">{i18n.t("history.samples_count", { n: historySamples.length })}</span>
           </div>
