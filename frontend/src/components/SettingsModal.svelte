@@ -909,6 +909,41 @@
             </label>
             <span class="warn-text">{i18n.t("history.samples_count", { n: historySamples.length })}</span>
           </div>
+
+          {#if heatmapData}
+            {@const sym = heatmapData.currency === "EUR" ? "€" : heatmapData.currency === "USD" ? "$" : heatmapData.currency}
+            <h3 style="margin-top:1.6em;color:#cdd2da;font-size:.95em;font-weight:600">
+              ⏰ {i18n.t("heatmap.title")}
+            </h3>
+            <p class="sub" style="margin:0 0 .6em;font-size:.82em">
+              {i18n.t("heatmap.description", { days: heatmapData.days })}
+            </p>
+            <div class="form-row" style="margin-bottom:.6em">
+              <span class="form-lbl">{i18n.t("heatmap.days_label")}</span>
+              <span class="form-val">
+                <select bind:value={heatmapDays} class="al-input" style="max-width:120px">
+                  <option value={1}>1 day</option>
+                  <option value={7}>7 days</option>
+                  <option value={14}>14 days</option>
+                  <option value={30}>30 days</option>
+                </select>
+              </span>
+            </div>
+            {#if heatmapData.hours.every(h => h.sample_count === 0)}
+              <p class="sub">{i18n.t("heatmap.no_data")}</p>
+            {:else}
+              <div class="heatmap-grid">
+                {#each heatmapData.hours as cell}
+                  <div class="heatmap-cell" style:background={heatmapBg(cell.cost_per_hour)}
+                       title="{cell.hour}:00 — {cell.avg_watts}W · {cell.cost_per_hour.toFixed(3)}{sym}/h · {cell.sample_count} samples">
+                    <div class="heatmap-hour">{cell.hour}h</div>
+                    <div class="heatmap-watts">{cell.avg_watts.toFixed(0)}W</div>
+                    <div class="heatmap-cost">{cell.cost_per_hour.toFixed(2)}{sym}</div>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          {/if}
         </div>
       </div>
 
