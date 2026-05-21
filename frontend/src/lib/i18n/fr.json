@@ -165,6 +165,7 @@
   "card.llm_throughput": "Débit LLM",
   "llm.tokens_generated": "tokens générés",
   "llm.tok_per_watt": "tok/W",
+  "shortcuts.hint": "Appuie sur ? pour les raccourcis clavier",
   "about.vbios": "vBIOS",
   "power.section_title": "Power Limit",
   "power.description": "Plafond de consommation (nvidia-smi -pl). Persistant au reboot via le wrapper sudoers.",

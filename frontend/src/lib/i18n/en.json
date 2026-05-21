@@ -165,6 +165,7 @@
   "card.llm_throughput": "LLM throughput",
   "llm.tokens_generated": "tokens generated",
   "llm.tok_per_watt": "tok/W",
+  "shortcuts.hint": "Press ? for keyboard shortcuts",
   "about.vbios": "vBIOS",
   "power.section_title": "Power Limit",
   "power.description": "Power consumption cap (nvidia-smi -pl). Persistent across reboot via the sudoers wrapper.",
