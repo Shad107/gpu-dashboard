@@ -557,6 +557,58 @@ def handle_llm_stats(ctx: dict) -> Response:
     }
 
 
+# ────────────────────────── POST /api/electricity/config ──────────────────
+
+
+def handle_electricity_config(ctx: dict, payload: dict) -> Response:
+    """Update electricity price + currency at runtime.
+
+    Persists to config.env so the change survives restart. Also updates the
+    in-memory Config so /api/electricity uses the new rate immediately
+    (no restart required for this specific setting).
+    """
+    cfg = ctx.get("config")
+    if cfg is None:
+        return 500, {"ok": False, "error": "no config loaded"}
+
+    try:
+        price = float(payload.get("price_per_kwh"))
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "price_per_kwh must be a number"}
+    if not (0 < price < 5):  # sanity check (0 < x < 5 €/kWh)
+        return 400, {"ok": False, "error": "price_per_kwh out of reasonable range (0, 5)"}
+
+    currency = str(payload.get("currency", "EUR")).strip().upper() or "EUR"
+    if len(currency) > 4:
+        return 400, {"ok": False, "error": "currency code too long"}
+
+    # 1) Update in-memory Config (effective immediately)
+    cfg.set("ELECTRICITY_PRICE_EUR_PER_KWH", price)
+    cfg.set("ELECTRICITY_CURRENCY", currency)
+
+    # 2) Persist to config.env so it survives restart
+    config_path = ctx.get("config_path") or os.path.expanduser(
+        "~/.config/gpu-dashboard/config.env"
+    )
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        # Read existing, update / add the keys, write back
+        existing = {}
+        if os.path.isfile(config_path):
+            from .config import parse_env_file
+            existing = parse_env_file(config_path)
+        existing["ELECTRICITY_PRICE_EUR_PER_KWH"] = str(price)
+        existing["ELECTRICITY_CURRENCY"] = currency
+        from .config import write_env_file
+        write_env_file(config_path, existing,
+                       header="# Auto-updated by gpu-dashboard /api/electricity/config")
+    except OSError as e:
+        return 500, {"ok": False, "error": f"could not write config.env: {e}"}
+
+    return 200, {"ok": True, "price_per_kwh": price, "currency": currency,
+                 "config_path": config_path}
+
+
 # ────────────────────────── GET /api/electricity ──────────────────────────
 
 

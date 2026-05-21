@@ -163,6 +163,9 @@
         {elec.daily_kwh.toFixed(2)} kWh{i18n.t("electricity.per_day")} ·
         <span style="color:#a3e635">{elec.monthly_cost.toFixed(2)} {symbol}{i18n.t("electricity.per_month")}</span>
       </div>
+      <div class="sub" style="font-size:.72em;margin-top:.15em;color:#7c8aa3">
+        {i18n.t("electricity.at_rate", { price: elec.price_per_kwh.toFixed(3), sym: symbol })}
+      </div>
     </div>
   {/if}
 

@@ -407,6 +407,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_power_profile_apply(ctx, name)
                 self._send_json(code, body)
                 return
+            if self.path == "/api/electricity/config":
+                code, body = api.handle_electricity_config(ctx, payload)
+                self._send_json(code, body)
+                return
 
             self.send_response(404)
             self.end_headers()

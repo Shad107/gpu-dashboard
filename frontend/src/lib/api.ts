@@ -282,6 +282,18 @@ export const api = {
       error?: string;
     }>),
 
+  electricityConfigSave: (price_per_kwh: number, currency: string) =>
+    fetch("/api/electricity/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ price_per_kwh, currency }),
+    }).then(jsonOf<{
+      ok: boolean;
+      price_per_kwh?: number;
+      currency?: string;
+      error?: string;
+    }>),
+
   llmStats: () =>
     fetch("/api/llm/stats").then(jsonOf<{
       available: boolean;
