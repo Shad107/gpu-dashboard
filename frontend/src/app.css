@@ -362,6 +362,77 @@ td:nth-child(2) { text-align: right; color: #cdd2da; }
 .about-table td:first-child { color: #7c8aa3; width: 130px; }
 .about-table code { background: #0e1014; padding: 0.15em 0.45em; border-radius: 3px; color: #a3e635; font-size: 0.85em; word-break: break-all; }
 
+/* ────────────────────────────────────────────────────────────────────────
+   Mobile breakpoints (≤ 768px tablet, ≤ 600px phone)
+   ──────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  body {
+    /* Relax the locked viewport — let the page scroll vertically */
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.4em 0.5em;
+  }
+  h1 { font-size: 1.1em; }
+  .row {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.4em;
+  }
+  .card { padding: 0.55em 0.65em; }
+  .big { font-size: 1.4em; }
+  .card h2 { font-size: 0.68em; }
+  .chart-row { min-height: 220px; }
+  .hist, .hist-power { min-height: 200px; }
+  .modal {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    flex-direction: column;
+  }
+  .modal-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.5em;
+    border-right: none;
+    border-bottom: 1px solid #2a2e38;
+    flex-shrink: 0;
+  }
+  .modal-sidebar h3 { display: none; }
+  .sidebar-item { flex: 0 0 auto; padding: 0.4em 0.6em; font-size: 0.78em; }
+  .sidebar-item span { display: none; }   /* icon-only on mobile */
+  .modal-content { padding: 0.8em; }
+}
+
+@media (max-width: 600px) {
+  .row { grid-template-columns: 1fr; }   /* single-column cards */
+  .chart-row {
+    min-height: 180px;
+    overflow-x: auto;
+  }
+  .slider-row {
+    grid-template-columns: 80px 1fr 80px;
+    font-size: 0.82em;
+  }
+  .form-row { grid-template-columns: 90px 1fr; font-size: 0.82em; }
+  .btn { padding: 0.4em 0.7em; font-size: 0.82em; }
+  .btn-row { gap: 0.35em; }
+  .footer { font-size: 0.7em; }
+
+  /* Setup wizard — relax constraints */
+  .setup-container {
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+  .setup-header, .setup-body, .setup-footer { padding-left: 1em; padding-right: 1em; }
+  .detect-table td:first-child { width: 80px; font-size: 0.85em; }
+  .sudo-cmd code { font-size: 0.72em; }
+}
+
 /* Profile editor */
 .profile-editor {
   width: 100%;
