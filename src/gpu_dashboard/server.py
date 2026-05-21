@@ -411,6 +411,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_llm_stats(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/llm/lifetime":
+                code, body = api.handle_llm_lifetime(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/prom":
                 code, body = api.handle_prom(ctx)
                 data = body.encode("utf-8")

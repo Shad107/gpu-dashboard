@@ -468,6 +468,77 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── GET /api/llm/lifetime ─────────────────────────
+
+
+def handle_llm_lifetime(ctx: dict) -> Response:
+    """Cumulative LLM stats since the first sample with a tokens count.
+
+    Walks the samples table, sums positive deltas of tokens_total_snapshot
+    (negative deltas = llama-server restart, ignored). Returns avg power
+    and avg tokens-per-watt over the same window.
+
+    Returns :
+      ok: bool
+      available: bool         — whether any sample had a tokens count
+      since_ts: int | None    — first sample with tokens, in epoch seconds
+      latest_snapshot: int    — last seen tokens_total_snapshot
+      total_tokens_generated: int  — sum of positive deltas
+      restart_count: int      — number of detected counter resets
+      avg_power_watts: float
+      avg_tokens_per_watt: float | None
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+
+    samples = storage.get_samples(from_ts=0)
+    total = 0
+    restarts = 0
+    prev = None
+    first_ts = None
+    latest = None
+    powers: list = []
+    for s in samples:
+        tok = s.get("tokens_total_snapshot")
+        if tok is None:
+            continue
+        if first_ts is None:
+            first_ts = s["ts"]
+        latest = tok
+        if prev is not None:
+            delta = tok - prev
+            if delta > 0:
+                total += delta
+            elif delta < 0:
+                restarts += 1
+        prev = tok
+        if s.get("power"):
+            powers.append(s["power"])
+
+    available = first_ts is not None
+    avg_power = (sum(powers) / len(powers)) if powers else 0.0
+
+    avg_tpw = None
+    if available and latest is not None and powers and total > 0:
+        # span : last sample with tokens minus first sample with tokens
+        span = max(1, samples[-1]["ts"] - first_ts)
+        tps = total / span
+        if avg_power > 0:
+            avg_tpw = tps / avg_power
+
+    return 200, {
+        "ok": True,
+        "available": available,
+        "since_ts": first_ts,
+        "latest_snapshot": latest or 0,
+        "total_tokens_generated": total,
+        "restart_count": restarts,
+        "avg_power_watts": round(avg_power, 2),
+        "avg_tokens_per_watt": round(avg_tpw, 4) if avg_tpw else None,
+    }
+
+
 # ────────────────────────── GET /api/llm/stats ────────────────────────────
 
 

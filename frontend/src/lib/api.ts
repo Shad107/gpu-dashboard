@@ -313,6 +313,18 @@ export const api = {
       reason?: string;
     }>),
 
+  llmLifetime: () =>
+    fetch("/api/llm/lifetime").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      since_ts: number | null;
+      latest_snapshot: number;
+      total_tokens_generated: number;
+      restart_count: number;
+      avg_power_watts: number;
+      avg_tokens_per_watt: number | null;
+    }>),
+
   electricity: (since = 3600) =>
     fetch(`/api/electricity?since=${since}`).then(jsonOf<{
       ok: boolean;
