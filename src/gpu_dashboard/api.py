@@ -417,6 +417,51 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── GET /api/health ───────────────────────────────
+
+
+def handle_health(ctx: dict) -> Response:
+    """JSON health status for external monitoring (Uptime Kuma, Grafana, etc.).
+
+    Returns 200 + {status: "ok"} if all critical components are healthy.
+    Returns 503 + {status: "degraded"} if any one fails. The components dict
+    lets the caller diagnose which subsystem is down.
+    """
+    import time as _time
+    from . import __version__ as _ver
+
+    components = {"gpu": False, "sampler": False, "storage": False}
+
+    # GPU = nvidia-smi responds + returns a valid sample
+    try:
+        gpu = _gpu_card_snapshot()
+        components["gpu"] = bool(gpu.get("alive"))
+    except Exception:
+        components["gpu"] = False
+
+    # Sampler = the daemon thread is alive
+    sampler = ctx.get("sampler")
+    components["sampler"] = sampler is not None and getattr(sampler, "_thread", None) is not None
+
+    # Storage = DB connection accepts a trivial query
+    storage = ctx.get("storage")
+    if storage is not None:
+        try:
+            _ = storage.schema_version()
+            components["storage"] = True
+        except Exception:
+            components["storage"] = False
+
+    all_ok = all(components.values())
+    code = 200 if all_ok else 503
+    return code, {
+        "status": "ok" if all_ok else "degraded",
+        "components": components,
+        "uptime_seconds": max(0, int(_time.time() - (ctx.get("started_at") or _time.time()))),
+        "version": _ver,
+    }
+
+
 # ────────────────────────── GET /api/about ────────────────────────────────
 
 
