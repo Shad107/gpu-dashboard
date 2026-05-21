@@ -230,6 +230,8 @@
   "zone.aggressive": "agressif",
   "zone.danger": "dangereux",
   "stats.title": "Distribution paliers fan (depuis démarrage)",
+  "stats.description": "Distribution des consignes ventilo dans le buffer en mémoire du sampler.",
+  "stats.no_data": "Pas encore de données — laisse le sampler tourner quelques minutes.",
   "services.title": "Services système",
   "alerts.title": "Alertes Telegram",
   "alerts.description": "Notifications push sur ton téléphone (décrochage/reprise OcuLink). Le watchdog recharge la conf à chaque tick (~60s) — pas de restart nécessaire.",
