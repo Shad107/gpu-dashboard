@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:22 (cycle 93 done — fan curve drag 2/8)
-**Latest commit** : `728c07d` — fan curve drag handling
+**Last updated** : 2026-05-22 01:25 (cycle 94 done — fan curve add/remove 3/8)
+**Latest commit** : `b21ebf7` — fan curve add/remove points
 **Tests** : 497 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 94 : fan curve slice 3/8 — add/remove points**.
+Nothing — between cycles. Wakeup soon will start **Cycle 95 : fan curve slice 4/8 — POST /api/fan-curve persist**.
 
 ---
 
@@ -19,13 +19,14 @@ Nothing — between cycles. Wakeup soon will start **Cycle 94 : fan curve slice 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 94 (next) — Fan curve slice 3/8 — add/remove control points
-- Right-click on a point → confirm + delete from curve
-- Double-click empty SVG area → insert new point at that temp/fan
-- Min 2 points enforced (can't remove the last 2)
-- Visual cue : "+" cursor when hovering empty area
+### Cycle 95 (next) — Fan curve slice 4/8 — persist edits
+- New POST /api/fan-curve endpoint that accepts {curve: [[t,p],...]}
+- Validates : sorted by temp, all [t,p] in [0,100], at least 2 points
+- Writes to ~/.config/gpu-dashboard/fan_curve.json (override over env)
+- pick_curve() reads the override file first
+- Save button in editor → POST → toast success
+- 4+ TDD tests
 
-### Cycle 95 — Slice 4/8 : POST /api/fan-curve to persist
 ### Cycles 96-99 : per-fan curves, presets, tests, polish
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
@@ -51,6 +52,12 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 94 — Fan curve add/remove points (1 commit)
+- `b21ebf7` Double-click SVG empty area → add point (sorted insertion)
+  - Right-click circle → confirm + remove (min 2 enforced)
+  - cursor: copy on SVG hints at the add gesture
+  - 5 new i18n keys × 2 langs
 
 ### Cycle 93 — Fan curve drag handling (1 commit)
 - `728c07d` Pointer drag of control points
@@ -383,7 +390,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~101 |
+| Commits since v0.1.0 | ~102 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
