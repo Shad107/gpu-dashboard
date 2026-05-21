@@ -274,6 +274,15 @@ def make_handler(ctx: dict):
                 code, body = api.handle_fan_curve_get(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/prom":
+                code, body = api.handle_prom(ctx)
+                data = body.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path == "/api/snapshot":
                 code, body = api.handle_snapshot(ctx)
                 if isinstance(body, bytes):

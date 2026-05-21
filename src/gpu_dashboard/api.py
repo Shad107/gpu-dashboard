@@ -453,6 +453,57 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── GET /api/prom ─────────────────────────────────
+
+
+def handle_prom(ctx: dict) -> Response:
+    """Prometheus text-format exporter. Pluggable into Grafana, VictoriaMetrics,
+    Uptime Kuma, blackbox-exporter, etc.
+
+    Returns (200, str). The server wraps with Content-Type: text/plain.
+    """
+    cfg = ctx["config"]
+    gpu_index = cfg.get_int("GPU_INDEX", default=0)
+    gpu = _gpu_card_snapshot(gpu_index=gpu_index)
+    label = f'{{gpu="{gpu_index}",name="{gpu.get("name", "?")}"}}'
+
+    lines = []
+
+    def metric(name, help_text, mtype, value, lbl=label):
+        lines.append(f"# HELP {name} {help_text}")
+        lines.append(f"# TYPE {name} {mtype}")
+        lines.append(f"{name}{lbl} {value}")
+
+    alive = 1 if gpu.get("alive") else 0
+    metric("gpu_alive", "1 if nvidia-smi responded for this GPU", "gauge", alive)
+
+    if gpu.get("alive"):
+        metric("gpu_temp_celsius", "GPU temperature in Celsius",
+               "gauge", gpu.get("temp", 0))
+        metric("gpu_fan_percent", "GPU fan speed in percent",
+               "gauge", gpu.get("fan_pct", 0))
+        metric("gpu_power_watts", "GPU power draw in watts",
+               "gauge", gpu.get("power", 0))
+        metric("gpu_power_limit_watts", "GPU power limit in watts",
+               "gauge", gpu.get("power_limit", 0))
+        metric("gpu_util_percent", "GPU utilization in percent",
+               "gauge", gpu.get("util_gpu", 0))
+        # Memory in bytes (Prometheus convention) — convert from MiB
+        mem_used = gpu.get("mem_used_mib", 0) * 1024 * 1024
+        mem_total = gpu.get("mem_total_mib", 0) * 1024 * 1024
+        metric("gpu_memory_used_bytes", "GPU VRAM in use, bytes",
+               "gauge", mem_used)
+        metric("gpu_memory_total_bytes", "GPU VRAM total, bytes",
+               "gauge", mem_total)
+
+    # OcuLink watchdog status if module is on
+    if ctx.get("watchdog_drops") is not None:
+        metric("gpu_oculink_drops_total", "OcuLink drop count since boot",
+               "counter", ctx["watchdog_drops"])
+
+    return 200, "\n".join(lines) + "\n"
+
+
 # ────────────────────────── /api/profile/save ─────────────────────────────
 
 
