@@ -445,6 +445,32 @@ td:nth-child(2) { text-align: right; color: #cdd2da; }
   .sudo-cmd code { font-size: 0.72em; }
 }
 
+/* Setup wizard — mode choice tiles */
+.mode-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8em;
+  margin-top: 0.4em;
+}
+.mode-tile {
+  background: #0e1014;
+  border: 2px solid #22262e;
+  border-radius: 8px;
+  padding: 1.2em 1em;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: #cdd2da;
+}
+.mode-tile:hover { background: #14171f; border-color: #2a3038; }
+.mode-tile.active { border-color: #4ade80; background: #14211a; }
+.mode-tile-emoji { font-size: 1.8em; margin-bottom: 0.3em; }
+.mode-tile-name { font-weight: 600; font-size: 0.95em; margin-bottom: 0.2em; }
+.mode-tile-desc { color: #7c8aa3; font-size: 0.82em; line-height: 1.35; }
+@media (max-width: 600px) {
+  .mode-tiles { grid-template-columns: 1fr; }
+}
+
 /* Top-level navigation */
 .top-nav {
   display: flex;

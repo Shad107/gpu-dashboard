@@ -29,6 +29,9 @@
   // Final config
   let port = $state(9999);
   let powerDefault = $state(250);
+  // Cycle 77 : Simple mode vs LLM rig (user feedback 23:32)
+  let llmMode = $state<"standard" | "llm">("standard");
+  let llmServerUrl = $state("http://127.0.0.1:8080");
 
   async function loadDetect() {
     loading = true;
@@ -104,6 +107,7 @@
         modules: selected,
         port,
         power_default: powerDefault,
+        llm_server_url: llmMode === "llm" ? llmServerUrl.trim() : "",
       });
       if (r.ok) {
         step = 5;
@@ -260,6 +264,41 @@
               <input class="al-input" type="number" bind:value={powerDefault} min="100" max="600" />
             </label>
           </div>
+
+          <h3 style="margin-top:1.4em;color:#cdd2da;font-size:.95em;font-weight:600">
+            {i18n.t("setup.llm_mode_title")}
+          </h3>
+          <p class="sub" style="margin:0 0 .8em">{i18n.t("setup.llm_mode_description")}</p>
+          <div class="mode-tiles">
+            <button
+              class="mode-tile"
+              class:active={llmMode === "standard"}
+              onclick={() => llmMode = "standard"}
+            >
+              <div class="mode-tile-emoji">🖥️</div>
+              <div class="mode-tile-name">{i18n.t("setup.llm_mode_standard")}</div>
+              <div class="mode-tile-desc">{i18n.t("setup.llm_mode_standard_desc")}</div>
+            </button>
+            <button
+              class="mode-tile"
+              class:active={llmMode === "llm"}
+              onclick={() => llmMode = "llm"}
+            >
+              <div class="mode-tile-emoji">🤖</div>
+              <div class="mode-tile-name">{i18n.t("setup.llm_mode_llm")}</div>
+              <div class="mode-tile-desc">{i18n.t("setup.llm_mode_llm_desc")}</div>
+            </button>
+          </div>
+          {#if llmMode === "llm"}
+            <label class="form-row" style="margin-top:.8em">
+              <span class="form-lbl">{i18n.t("setup.llm_url_label")}</span>
+              <input class="al-input" type="url" bind:value={llmServerUrl}
+                placeholder="http://127.0.0.1:8080" />
+            </label>
+            <p class="sub" style="font-size:.78em;margin:.2em 0 0 130px">
+              {i18n.t("setup.llm_url_hint")}
+            </p>
+          {/if}
         {/if}
 
         <!-- Step 5: Done -->

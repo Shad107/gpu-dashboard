@@ -199,6 +199,7 @@ export const api = {
     port?: number;
     bind?: string;
     power_default?: number;
+    llm_server_url?: string;
   }) =>
     fetch("/api/setup/save", {
       method: "POST",

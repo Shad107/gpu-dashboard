@@ -1775,9 +1775,19 @@ def handle_setup_save(ctx: dict, payload: dict) -> Response:
 
     bind = str(payload.get("bind", "0.0.0.0"))
 
+    # Optional LLM_SERVER_URL — empty string = "Standard mode" (no LLM monitoring)
+    llm_url_raw = payload.get("llm_server_url", "")
+    llm_server_url = str(llm_url_raw).strip() if llm_url_raw else ""
+    # Basic validation — must be http(s) URL if provided
+    if llm_server_url and not (llm_server_url.startswith("http://") or llm_server_url.startswith("https://")):
+        return 400, {"ok": False, "error": "llm_server_url must start with http:// or https://"}
+
     config_path = os.path.expanduser("~/.config/gpu-dashboard/config.env")
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
-    content = generate_config_env(choices, port=port, power_default=power_default, bind=bind)
+    content = generate_config_env(
+        choices, port=port, power_default=power_default, bind=bind,
+        llm_server_url=llm_server_url,
+    )
     with open(config_path, "w") as f:
         f.write(content)
     return 200, {"ok": True, "path": config_path}
