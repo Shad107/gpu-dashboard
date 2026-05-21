@@ -706,6 +706,9 @@
               <tr><td>{i18n.t("about.uptime")}</td><td>{fmtUptime(aboutData.uptime_seconds)}</td></tr>
               <tr><td>{i18n.t("about.python")}</td><td>{aboutData.python_version}</td></tr>
               <tr><td>{i18n.t("about.platform")}</td><td style="font-size:.82em">{aboutData.platform}</td></tr>
+              {#if aboutData.vbios_version}
+                <tr><td>{i18n.t("about.vbios")}</td><td><code>{aboutData.vbios_version}</code></td></tr>
+              {/if}
               <tr><td>{i18n.t("about.config_path")}</td><td><code>{aboutData.config_path}</code></td></tr>
               <tr><td>{i18n.t("about.storage_path")}</td><td><code>{aboutData.storage_path}</code></td></tr>
               <tr><td>{i18n.t("about.license")}</td><td>{aboutData.license}</td></tr>

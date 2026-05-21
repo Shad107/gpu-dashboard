@@ -144,6 +144,8 @@
   "processes.pid": "PID",
   "processes.name": "Process",
   "processes.vram": "VRAM",
+  "gpu.mem_temp": "junction mém.",
+  "about.vbios": "vBIOS",
   "power.section_title": "Power Limit",
   "power.description": "Plafond de consommation (nvidia-smi -pl). Persistant au reboot via le wrapper sudoers.",
   "power.limit_label": "Limite",

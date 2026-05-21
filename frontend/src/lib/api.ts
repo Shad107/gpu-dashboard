@@ -12,9 +12,10 @@ export type Sample = {
 };
 
 export type Gpu =
-  | { alive: false; name: string }
+  | { alive: false; name: string; index?: number }
   | {
       alive: true;
+      index?: number;
       name: string;
       temp: number;
       fan_pct: number;
@@ -23,6 +24,8 @@ export type Gpu =
       util_gpu: number;
       mem_used_mib: number;
       mem_total_mib: number;
+      mem_temp?: number | null;
+      vbios_version?: string | null;
     };
 
 export type Fan = { idx: number; rpm?: number; pct?: number; target?: number };
@@ -222,6 +225,7 @@ export const api = {
       storage_path: string;
       license: string;
       repo_url: string;
+      vbios_version: string | null;
     }>),
 
   updateCheck: () =>

@@ -144,6 +144,8 @@
   "processes.pid": "PID",
   "processes.name": "Process",
   "processes.vram": "VRAM",
+  "gpu.mem_temp": "mem junction",
+  "about.vbios": "vBIOS",
   "power.section_title": "Power Limit",
   "power.description": "Power consumption cap (nvidia-smi -pl). Persistent across reboot via the sudoers wrapper.",
   "power.limit_label": "Limit",

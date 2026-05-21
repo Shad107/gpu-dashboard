@@ -39,6 +39,11 @@
       <h2>{i18n.t("card.gpu")}</h2>
       <div class="big" style:color={tempColor(g.temp)}>{g.temp}°C</div>
       <div class="sub">{i18n.t("gpu.util")} {g.util_gpu}% · {i18n.t("gpu.draw")} {g.power.toFixed(0)} W</div>
+      {#if g.mem_temp !== null && g.mem_temp !== undefined}
+        <div class="sub" style="margin-top:.2em" style:color={tempColor(g.mem_temp + 15)}>
+          {i18n.t("gpu.mem_temp")} {g.mem_temp}°C
+        </div>
+      {/if}
     </div>
 
     <div class="card">

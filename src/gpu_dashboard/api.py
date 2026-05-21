@@ -28,13 +28,17 @@ Response = Tuple[int, dict]
 
 
 def _gpu_card_snapshot(gpu_index: int = 0) -> dict:
-    """Fast nvidia-smi snapshot for ONE GPU (default: index 0)."""
+    """Fast nvidia-smi snapshot for ONE GPU (default: index 0).
+
+    Includes: temp, fan, power, util, memory.used/total + (optional, depends
+    on driver/GPU support) memory.temp (junction temp) and vbios_version.
+    """
     try:
         r = subprocess.run(
             ["nvidia-smi",
              "-i", str(int(gpu_index)),
              "--query-gpu=name,temperature.gpu,fan.speed,power.draw,power.limit,"
-             "utilization.gpu,memory.used,memory.total",
+             "utilization.gpu,memory.used,memory.total,temperature.memory,vbios_version",
              "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=3,
         )
@@ -48,6 +52,13 @@ def _gpu_card_snapshot(gpu_index: int = 0) -> dict:
     if len(parts) < 8 or not parts[1].isdigit():
         return {"alive": False, "name": parts[0] if parts else "?", "index": gpu_index}
 
+    def _intish(s, default=None):
+        try: return int(s)
+        except (ValueError, TypeError): return default
+
+    mem_temp = _intish(parts[8]) if len(parts) > 8 else None
+    vbios = parts[9] if len(parts) > 9 else None
+
     return {
         "alive": True,
         "index": gpu_index,
@@ -59,6 +70,8 @@ def _gpu_card_snapshot(gpu_index: int = 0) -> dict:
         "util_gpu": int(parts[5]),
         "mem_used_mib": int(parts[6]),
         "mem_total_mib": int(parts[7]),
+        "mem_temp": mem_temp,         # GDDR junction temp, °C (None if unsupported)
+        "vbios_version": vbios,       # str (None if unsupported)
     }
 
 
@@ -658,7 +671,7 @@ def handle_health(ctx: dict) -> Response:
 
 
 def handle_about(ctx: dict) -> Response:
-    """Static info about the running server : version, paths, uptime."""
+    """Static info about the running server : version, paths, uptime, vBIOS."""
     import platform
     import sys as _sys
     import time as _time
@@ -674,6 +687,16 @@ def handle_about(ctx: dict) -> Response:
     else:
         storage_path = os.path.expanduser("~/.local/share/gpu-dashboard/metrics.db")
 
+    # Best-effort: pull vBIOS version from a fresh snapshot
+    vbios = None
+    try:
+        cfg = ctx.get("config")
+        gpu_index = cfg.get_int("GPU_INDEX", default=0) if cfg else 0
+        snap = _gpu_card_snapshot(gpu_index=gpu_index)
+        vbios = snap.get("vbios_version")
+    except Exception:
+        pass
+
     return 200, {
         "version": _ver,
         "uptime_seconds": uptime,
@@ -683,6 +706,7 @@ def handle_about(ctx: dict) -> Response:
         "storage_path": storage_path,
         "license": "MIT",
         "repo_url": "https://github.com/Shad107/gpu-dashboard",
+        "vbios_version": vbios,
     }
 
 
