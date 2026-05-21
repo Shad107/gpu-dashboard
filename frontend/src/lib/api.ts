@@ -313,6 +313,44 @@ export const api = {
       reason?: string;
     }>),
 
+  llmPerf: () =>
+    fetch("/api/llm/perf").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      now?: number;
+      avg_tps_1m?: number;
+      avg_tps_5m?: number;
+      avg_tps_1h?: number;
+      avg_tps_24h?: number;
+      peak_tps?: number;
+      peak_ts?: number;
+      series_1h?: number[];
+    }>),
+
+  thermalStats: () =>
+    fetch("/api/thermal-stats").then(jsonOf<{
+      ok: boolean;
+      avg_temp_24h: number;
+      peak_temp_24h: number;
+      time_above_80c_seconds: number;
+      series_24h: number[];
+      samples_count: number;
+    }>),
+
+  powerStats: () =>
+    fetch("/api/power-stats").then(jsonOf<{
+      ok: boolean;
+      avg_watts_24h: number;
+      peak_watts_24h: number;
+      peak_ts: number;
+      kwh_today: number;
+      cost_today: number;
+      currency: string;
+      price_per_kwh: number;
+      series_24h: number[];
+      samples_count: number;
+    }>),
+
   llmLifetime: () =>
     fetch("/api/llm/lifetime").then(jsonOf<{
       ok: boolean;
