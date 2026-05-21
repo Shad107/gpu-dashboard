@@ -419,6 +419,18 @@ def make_handler(ctx: dict):
                 code, body = api.handle_llm_lifetime(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/llm/perf":
+                code, body = api.handle_llm_perf(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/thermal-stats":
+                code, body = api.handle_thermal_stats(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/power-stats":
+                code, body = api.handle_power_stats(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/prom":
                 code, body = api.handle_prom(ctx)
                 data = body.encode("utf-8")

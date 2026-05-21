@@ -539,6 +539,194 @@ def handle_llm_lifetime(ctx: dict) -> Response:
     }
 
 
+# ────────────────────────── GET /api/llm/perf ─────────────────────────────
+
+
+def handle_llm_perf(ctx: dict) -> Response:
+    """Live + recent tokens-per-second across multiple rolling windows.
+
+    Used by the Stats page sparklines + the LLM card live indicator.
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+
+    import time as _time
+    now = int(_time.time())
+
+    samples = storage.get_samples(from_ts=now - 86400, to_ts=now)
+    token_samples = [s for s in samples if s.get("tokens_total_snapshot") is not None]
+    if len(token_samples) < 2:
+        return 200, {"ok": True, "available": False}
+
+    def _avg_tps(from_ts: int) -> float:
+        window = [s for s in token_samples if s["ts"] >= from_ts]
+        if len(window) < 2:
+            return 0.0
+        total = 0
+        for i in range(1, len(window)):
+            d = window[i]["tokens_total_snapshot"] - window[i - 1]["tokens_total_snapshot"]
+            if d > 0:
+                total += d
+        span = max(1, window[-1]["ts"] - window[0]["ts"])
+        return total / span
+
+    avg_tps_1m  = _avg_tps(now - 60)
+    avg_tps_5m  = _avg_tps(now - 300)
+    avg_tps_1h  = _avg_tps(now - 3600)
+    avg_tps_24h = _avg_tps(now - 86400)
+
+    # 60-bucket sparkline series : 1 min buckets over the last hour
+    series = []
+    peak_tps = 0.0
+    peak_ts = 0
+    for bucket_idx in range(60):
+        bucket_start = now - (60 - bucket_idx) * 60
+        bucket_end = bucket_start + 60
+        in_bucket = [s for s in token_samples if bucket_start <= s["ts"] < bucket_end]
+        if len(in_bucket) >= 2:
+            d = in_bucket[-1]["tokens_total_snapshot"] - in_bucket[0]["tokens_total_snapshot"]
+            span = max(1, in_bucket[-1]["ts"] - in_bucket[0]["ts"])
+            tps = max(0.0, d / span)
+            series.append(round(tps, 2))
+            if tps > peak_tps:
+                peak_tps = tps
+                peak_ts = bucket_end
+        else:
+            series.append(0.0)
+
+    return 200, {
+        "ok": True,
+        "available": True,
+        "now": now,
+        "avg_tps_1m":  round(avg_tps_1m, 2),
+        "avg_tps_5m":  round(avg_tps_5m, 2),
+        "avg_tps_1h":  round(avg_tps_1h, 2),
+        "avg_tps_24h": round(avg_tps_24h, 2),
+        "peak_tps":    round(peak_tps, 2),
+        "peak_ts":     peak_ts,
+        "series_1h":   series,
+    }
+
+
+# ────────────────────────── GET /api/thermal-stats ─────────────────────────
+
+
+def handle_thermal_stats(ctx: dict) -> Response:
+    """Temperature aggregates over 24h + 24-point downsampled series."""
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+
+    import time as _time
+    now = int(_time.time())
+
+    samples_24h = storage.get_samples(from_ts=now - 86400, to_ts=now)
+    temps = [s["temp"] for s in samples_24h if s.get("temp") is not None]
+    avg_temp = sum(temps) / len(temps) if temps else 0
+    peak_temp = max(temps) if temps else 0
+
+    samples_7d = storage.get_samples(from_ts=now - 7 * 86400, to_ts=now)
+    above_80 = 0
+    prev = None
+    for s in samples_7d:
+        if s.get("temp") is None:
+            prev = None
+            continue
+        if s["temp"] > 80:
+            if prev is not None and prev["temp"] > 80:
+                dt = s["ts"] - prev["ts"]
+                above_80 += min(dt, 300)
+        prev = s
+
+    series = []
+    for h in range(24):
+        bucket_start = now - (24 - h) * 3600
+        bucket_end = bucket_start + 3600
+        in_bucket = [s["temp"] for s in samples_24h
+                     if bucket_start <= s["ts"] < bucket_end and s.get("temp") is not None]
+        series.append(round(sum(in_bucket) / len(in_bucket), 1) if in_bucket else 0)
+
+    return 200, {
+        "ok": True,
+        "avg_temp_24h": round(avg_temp, 1),
+        "peak_temp_24h": peak_temp,
+        "time_above_80c_seconds": above_80,
+        "series_24h": series,
+        "samples_count": len(samples_24h),
+    }
+
+
+# ────────────────────────── GET /api/power-stats ───────────────────────────
+
+
+def handle_power_stats(ctx: dict) -> Response:
+    """Power aggregates over 24h + 24-point downsampled series + cost today."""
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    cfg = ctx.get("config")
+
+    import time as _time
+    import datetime as _dt
+    now = int(_time.time())
+
+    today_start = int(_dt.datetime.fromtimestamp(now).replace(
+        hour=0, minute=0, second=0, microsecond=0).timestamp())
+
+    samples_24h = storage.get_samples(from_ts=now - 86400, to_ts=now)
+    powers = [s["power"] for s in samples_24h if s.get("power") is not None]
+    avg_w = sum(powers) / len(powers) if powers else 0
+    peak_w = max(powers) if powers else 0
+    peak_ts = 0
+    for s in samples_24h:
+        if s.get("power") == peak_w:
+            peak_ts = s["ts"]
+            break
+
+    today_samples = [s for s in samples_24h if s["ts"] >= today_start and s.get("power") is not None]
+    wh = 0.0
+    for i in range(1, len(today_samples)):
+        prev = today_samples[i - 1]
+        cur = today_samples[i]
+        dt = min(cur["ts"] - prev["ts"], 300)
+        avg = (prev["power"] + cur["power"]) / 2
+        wh += avg * dt / 3600
+    kwh_today = wh / 1000
+
+    price = 0.25
+    currency = "EUR"
+    if cfg is not None:
+        try:
+            price = float(cfg.get("ELECTRICITY_PRICE_EUR_PER_KWH", default="0.25"))
+        except (ValueError, TypeError):
+            price = 0.25
+        currency = cfg.get("ELECTRICITY_CURRENCY", default="EUR") or "EUR"
+
+    cost_today = round(kwh_today * price, 4)
+
+    series = []
+    for h in range(24):
+        bucket_start = now - (24 - h) * 3600
+        bucket_end = bucket_start + 3600
+        in_bucket = [s["power"] for s in samples_24h
+                     if bucket_start <= s["ts"] < bucket_end and s.get("power") is not None]
+        series.append(round(sum(in_bucket) / len(in_bucket), 1) if in_bucket else 0)
+
+    return 200, {
+        "ok": True,
+        "avg_watts_24h": round(avg_w, 1),
+        "peak_watts_24h": round(peak_w, 1),
+        "peak_ts": peak_ts,
+        "kwh_today": round(kwh_today, 4),
+        "cost_today": cost_today,
+        "currency": currency,
+        "price_per_kwh": price,
+        "series_24h": series,
+        "samples_count": len(samples_24h),
+    }
+
+
 # ────────────────────────── GET /api/llm/stats ────────────────────────────
 
 
