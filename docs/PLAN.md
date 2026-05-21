@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:54 (cycle 101 done — profile activity log)
-**Latest commit** : `8310f43` — profile activity log in About
-**Tests** : 510 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 01:58 (cycle 102 done — /api/health recent_alerts)
+**Latest commit** : `4354962` — /api/health recent_alerts
+**Tests** : 515 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup will pick next small follow-up (coolbits / per-fan / health endpoint).
+Nothing — between cycles. Wakeup will pick next small follow-up (lifetime yearly / coolbits / ?).
 
 ---
 
@@ -59,6 +59,13 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 102 — /api/health recent_alerts (1 commit)
+- `4354962` /api/health returns recent_alerts (last 5, 7-day window)
+  - Uptime Kuma + Grafana get operational context in 1 call
+  - Caps at 5 entries, alert-kind only, gracefully handles no storage
+  - 5 new TDD tests
+  - Tests : 510 → 515
 
 ### Cycle 101 — Profile activity log in About tab (1 commit)
 - `8310f43` GET /api/profile-stats now returns `recent_events`
@@ -439,11 +446,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 510 passing on Py 3.9-3.13 |
+| Tests | 515 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~110 |
+| Commits since v0.1.0 | ~111 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
