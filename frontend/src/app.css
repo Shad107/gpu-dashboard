@@ -445,6 +445,48 @@ td:nth-child(2) { text-align: right; color: #cdd2da; }
   .sudo-cmd code { font-size: 0.72em; }
 }
 
+/* Top-level navigation */
+.top-nav {
+  display: flex;
+  gap: 0.3em;
+  margin: 0.4em 0 0.8em;
+  border-bottom: 1px solid #22262e;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.top-nav-btn {
+  background: transparent;
+  border: none;
+  color: #7c8aa3;
+  padding: 0.6em 1em;
+  cursor: pointer;
+  font-size: 0.92em;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.top-nav-btn:hover { color: #cdd2da; background: #14171f; }
+.top-nav-btn.active {
+  color: #4ade80;
+  border-bottom-color: #4ade80;
+  background: #0e1014;
+}
+.top-nav-emoji { font-size: 1.1em; line-height: 1; }
+@media (max-width: 600px) {
+  .top-nav-label { display: none; }
+  .top-nav-btn { padding: 0.55em 0.8em; }
+}
+
+.view-placeholder {
+  text-align: center;
+  padding: 4em 1em;
+  color: #7c8aa3;
+}
+.view-placeholder h2 { color: #cdd2da; margin-bottom: 0.6em; font-weight: 500; }
+
 /* Layout tab */
 .layout-dnd {
   display: flex;
