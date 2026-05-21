@@ -69,7 +69,8 @@ label (e.g. "78°C · 65%") in amber.
 
 ### Settings — 10 tabs, all 1 click away
 
-Bookmarkable via `?modal=<tab>` (e.g. `http://localhost:9999/?modal=history`).
+Bookmarkable via `?modal=<tab>` (e.g. `http://localhost:9999/?modal=fancurve`).
+History and Stats are now top-level views (not modal tabs) — see the section above.
 
 <table>
 <tr>
@@ -77,16 +78,20 @@ Bookmarkable via `?modal=<tab>` (e.g. `http://localhost:9999/?modal=history`).
 <td width="50%"><img src="docs/modal/clocks.png" alt="Clock offsets sliders with safe/moderate/aggressive/danger zones" /><br/><sub><b>Clocks</b> — GPU/mem offsets with risk zones + Advanced unlock</sub></td>
 </tr>
 <tr>
-<td><img src="docs/modal/history.png" alt="24h history chart with 61 samples and Export CSV" /><br/><sub><b>History</b> — quick ranges (1h/6h/24h/7d/30d) × 6 metrics including tok/s + tok/W</sub></td>
-<td><img src="docs/modal/alerts.png" alt="Telegram alerts config form" /><br/><sub><b>Alerts</b> — Telegram token + chat + event filters · webhook outbound also supported</sub></td>
+<td><img src="docs/modal/fancurve.png" alt="Drag-and-drop fan curve editor SVG with presets" /><br/><sub><b>Fan curve</b> — drag/click/keyboard SVG editor + 3 presets (Silent/Balanced/Aggressive)</sub></td>
+<td><img src="docs/modal/alerts.png" alt="Telegram + webhook + browser push notifications config" /><br/><sub><b>Alerts</b> — Telegram + webhook outbound + browser push + sound toggle</sub></td>
 </tr>
 <tr>
 <td><img src="docs/modal/services.png" alt="Restart, Stop, Redo wizard, Snapshot, Update check buttons" /><br/><sub><b>Services</b> — Restart · Stop · Redo wizard · Snapshot · git pull + restart</sub></td>
-<td><img src="docs/modal/about.png" alt="About — version, paths, vBIOS, license, repo link" /><br/><sub><b>About</b> — version, uptime, Python, paths, vBIOS</sub></td>
+<td><img src="docs/modal/diagnostics.png" alt="Log tail viewer for support" /><br/><sub><b>Diagnostics</b> — tail LOG_FILE or journalctl, support-friendly</sub></td>
 </tr>
 <tr>
-<td><img src="docs/modal/diagnostics.png" alt="Log tail viewer for support" /><br/><sub><b>Diagnostics</b> — tail LOG_FILE or journalctl, support-friendly</sub></td>
 <td><img src="docs/modal/profile.png" alt="Profile JSON override editor" /><br/><sub><b>Profile</b> — JSON editor for the active GPU profile override</sub></td>
+<td><img src="docs/modal/layout.png" alt="Layout : drag-and-drop card reorder + visibility + theme toggle + custom URL embeds" /><br/><sub><b>Layout</b> — hide/show cards · drag-reorder · custom URL embeds · 🎨 theme picker</sub></td>
+</tr>
+<tr>
+<td><img src="docs/modal/language.png" alt="Language picker EN/FR" /><br/><sub><b>Language</b> — EN / FR full coverage</sub></td>
+<td><img src="docs/modal/about.png" alt="About — version, paths, vBIOS, profile time breakdown" /><br/><sub><b>About</b> — version · vBIOS · profile time breakdown (24h)</sub></td>
 </tr>
 </table>
 
