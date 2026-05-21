@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 01:33 (cycle 96 done — fan curve presets 5/8)
-**Latest commit** : `ef4240c` — fan curve presets
+**Last updated** : 2026-05-22 01:37 (cycle 97 done — fan curve keyboard 6/8)
+**Latest commit** : `07cfa31` — fan curve keyboard nudge
 **Tests** : 510 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 97 : fan curve slice 6/8 — keyboard shortcuts (arrow keys)**.
+Nothing — between cycles. Wakeup soon will start **Cycle 98 : fan curve slice 7/8 — UX polish + tooltips**.
 
 ---
 
@@ -19,14 +19,13 @@ Nothing — between cycles. Wakeup soon will start **Cycle 97 : fan curve slice 
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 97 (next) — Fan curve slice 6/8 — keyboard fine-tuning
-- Click a control point to select (without dragging)
-- Arrow keys nudge the selected point : ←→ = ±1°C, ↑↓ = ±1%
-- Shift+arrow = ±5
-- Delete key removes selected point (with same min-2 enforcement)
-- Tab cycles to next point
+### Cycle 98 (next) — Fan curve slice 7/8 — UX polish
+- Live preview : highlight the SVG region for the temp range above the current GPU temp
+- Show current point coords as text label next to selected circle
+- Smooth Catmull-Rom curve interpolation between control points (currently
+  straight lines — apply same smoothing as HistoryChart)
+- Hysteresis hint (small text mentioning the daemon adds ±2°C buffer)
 
-### Cycle 98 — Slice 7/8 : enriched validation + UX polish
 ### Cycle 99 — Slice 8/8 : README + final screenshot showing the editor
 
 ### Cycle 92+ — Drag-and-drop fan curve editor SVG (~4h ≈ 8 cycles)
@@ -52,6 +51,13 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 97 — Fan curve keyboard fine-tuning (1 commit)
+- `07cfa31` selectedIdx + arrow-key nudge
+  - Click point → select (amber ring, r=7)
+  - Arrows ±1 (Shift ±5) · Tab next · Delete remove · ESC deselect
+  - Reuses nudgePoint() with same temp-neighbor clamping
+  - Keyboard hint appears below buttons when selected
 
 ### Cycle 96 — Fan curve presets (1 commit)
 - `ef4240c` 3 preset buttons : 🤫 Silent / ⚖️ Balanced / 🔥 Aggressive
@@ -404,7 +410,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~105 |
+| Commits since v0.1.0 | ~106 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
