@@ -35,6 +35,27 @@ export const live = new LiveStore();
 
 // Toast store
 type ToastKind = "ok" | "err";
+
+/** Short Web Audio "boop" — no external sound file, no permission needed.
+ * 350 Hz square wave for errors (low pitch), 800 Hz sine for OK. */
+function beep(kind: ToastKind) {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem("gpu-dashboard-sound") !== "1") return;
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = kind === "err" ? "square" : "sine";
+    o.frequency.value = kind === "err" ? 350 : 800;
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    o.connect(g); g.connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.16);
+    setTimeout(() => ctx.close().catch(() => {}), 300);
+  } catch { /* AudioContext unsupported / blocked → silent */ }
+}
+
 class ToastStore {
   message = $state<string>("");
   kind = $state<ToastKind>("ok");
@@ -47,6 +68,8 @@ class ToastStore {
     this.show = true;
     if (this.hideTimer) clearTimeout(this.hideTimer);
     this.hideTimer = setTimeout(() => { this.show = false; }, ms);
+    // Only beep on errors by default (sounds for every OK is annoying)
+    if (kind === "err") beep(kind);
   }
 }
 

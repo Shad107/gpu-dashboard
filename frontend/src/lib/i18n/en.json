@@ -226,6 +226,8 @@
   "alerts.save": "Save",
   "alerts.test_btn": "📤 Send a test",
   "alerts.token_note": "Configure your Telegram bot token in secrets.env",
+  "alerts.sound_label": "Play a short beep on error toasts",
+  "alerts.sound_hint": "Uses Web Audio API — no sound file needed. Click anywhere on the page first if your browser blocks autoplay.",
   "alerts.config_saved": "Config saved — applied at next watchdog tick (< 60s)",
   "alerts.message_sent": "Message sent — check your phone",
   "alerts.telegram_error": "Telegram error",

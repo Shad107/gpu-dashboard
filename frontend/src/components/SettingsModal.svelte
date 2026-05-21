@@ -102,6 +102,18 @@
     }
   }
 
+  // ── Sound notification toggle ────────────────────────────────────────────
+  let soundEnabled = $state(
+    typeof localStorage !== "undefined" && localStorage.getItem("gpu-dashboard-sound") === "1"
+  );
+  function onSoundToggle() {
+    localStorage.setItem("gpu-dashboard-sound", soundEnabled ? "1" : "0");
+    // Preview the sound on enable so the user knows what to expect
+    if (soundEnabled) {
+      toast.emit("🔊 Sound enabled — test beep", "err", 1500);
+    }
+  }
+
   // ── Alerts state ──────────────────────────────────────────────────────────
   let alEnabled = $state(false);
   let alToken = $state("");
@@ -750,6 +762,15 @@
             <button class="btn" onclick={testAlerts}>{i18n.t("alerts.test_btn")}</button>
             <span class="warn-text">{i18n.t("alerts.token_note")}</span>
           </div>
+
+          <label class="form-row" style="margin-top:1.4em;cursor:pointer">
+            <span class="form-lbl">🔊 {i18n.t("alerts.sound_label").split(" ")[0]}</span>
+            <span class="form-val">
+              <input type="checkbox" bind:checked={soundEnabled} onchange={onSoundToggle} />
+              {i18n.t("alerts.sound_label")}
+            </span>
+          </label>
+          <p class="sub" style="margin:.2em 0 0 110px;font-size:.78em">{i18n.t("alerts.sound_hint")}</p>
         </div>
       </div>
 

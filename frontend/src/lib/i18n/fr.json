@@ -226,6 +226,8 @@
   "alerts.save": "Sauver",
   "alerts.test_btn": "📤 Envoyer un test",
   "alerts.token_note": "Configure ton token Telegram dans secrets.env",
+  "alerts.sound_label": "Beep court sur les toasts d'erreur",
+  "alerts.sound_hint": "Utilise Web Audio API — pas de fichier son. Clique d'abord quelque part sur la page si le browser bloque l'autoplay.",
   "alerts.config_saved": "Config sauvegardée — appliquée au prochain tick du watchdog (< 60s)",
   "alerts.message_sent": "Message envoyé — check ton téléphone",
   "alerts.telegram_error": "Erreur Telegram",
