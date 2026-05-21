@@ -10,6 +10,7 @@
   import SettingsModal from "./components/SettingsModal.svelte";
   import SetupWizard from "./components/SetupWizard.svelte";
   import IdleBanner from "./components/IdleBanner.svelte";
+  import LatestAlertFooter from "./components/LatestAlertFooter.svelte";
   import Toast from "./components/Toast.svelte";
   import { live, wizard, modal, toast } from "./lib/stores.svelte";
   import { view } from "./lib/view.svelte";
@@ -113,6 +114,7 @@
     <Cards />
     <CoolingChart />
     <PowerChart />
+    <LatestAlertFooter />
   {:else if view.current === "history"}
     <HistoryView />
   {:else if view.current === "stats"}
