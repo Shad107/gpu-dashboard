@@ -348,28 +348,46 @@
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  // Sections grouped by usage frequency + category:
+  //   🎚️ Tuning (most-used)     : Power Limit, Clocks
+  //   📊 Review                  : History, Stats (fan-distribution)
+  //   🔔 Notifications           : Alerts
+  //   ⚙️ Operations              : Services (restart/stop/snapshot/update), Diagnostics
+  //   🧩 Advanced configuration  : Profile (JSON override)
+  //   🌐 Preferences / meta      : Language, About
+  // Section labels in the sidebar render group separators (see HTML below).
   const sections = [
-    { id: "power", labelKey: "modal.power" as const,
+    { id: "power", group: "tuning", labelKey: "modal.power" as const,
       icon: "M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z" },
-    { id: "clocks", labelKey: "modal.clocks" as const,
+    { id: "clocks", group: "tuning", labelKey: "modal.clocks" as const,
       icon: "M3 17v2h6v-2H3M3 5v2h10V5H3m10 16v-2h8v-2h-8v-2h-2v6h2M7 9v2H3v2h4v2h2V9H7m14 4v-2H11v2h10m-6-4h2V7h4V5h-4V3h-2v6z" },
-    { id: "stats", labelKey: "modal.stats" as const,
-      icon: "M22 21H2V3h2v16h2v-9h4v9h2V6h4v13h2v-7h4v9z" },
-    { id: "services", labelKey: "modal.services" as const,
-      icon: "M14.06 9L15 9.94 5.92 19H5v-.92L14.06 9m3.6-6c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83a.996.996 0 0 0 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
-    { id: "alerts", labelKey: "modal.alerts" as const,
-      icon: "M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22m6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" },
-    { id: "language", labelKey: "modal.language" as const,
-      icon: "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" },
-    { id: "history", labelKey: "modal.history" as const,
+    { id: "history", group: "review", labelKey: "modal.history" as const,
       icon: "M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 7 7c-2.94 0-5.49-1.81-6.56-4.4l-1.89.61C5.84 18.45 9.16 21 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z" },
-    { id: "about", labelKey: "modal.about" as const,
-      icon: "M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z" },
-    { id: "diagnostics", labelKey: "modal.diagnostics" as const,
+    { id: "stats", group: "review", labelKey: "modal.stats" as const,
+      icon: "M22 21H2V3h2v16h2v-9h4v9h2V6h4v13h2v-7h4v9z" },
+    { id: "alerts", group: "notify", labelKey: "modal.alerts" as const,
+      icon: "M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22m6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" },
+    { id: "services", group: "ops", labelKey: "modal.services" as const,
+      icon: "M14.06 9L15 9.94 5.92 19H5v-.92L14.06 9m3.6-6c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83a.996.996 0 0 0 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
+    { id: "diagnostics", group: "ops", labelKey: "modal.diagnostics" as const,
       icon: "M14.6 16.6L19.2 12L14.6 7.4L16 6l6 6-6 6-1.4-1.4M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4z" },
-    { id: "profile", labelKey: "modal.profile" as const,
+    { id: "profile", group: "advanced", labelKey: "modal.profile" as const,
       icon: "M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
+    { id: "language", group: "meta", labelKey: "modal.language" as const,
+      icon: "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" },
+    { id: "about", group: "meta", labelKey: "modal.about" as const,
+      icon: "M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z" },
   ];
+
+  // Group headers (only shown on desktop sidebar)
+  const GROUP_LABELS: Record<string, string> = {
+    tuning: "modal.group_tuning",
+    review: "modal.group_review",
+    notify: "modal.group_notify",
+    ops: "modal.group_ops",
+    advanced: "modal.group_advanced",
+    meta: "modal.group_meta",
+  };
 
   // ── Profile editor state ──────────────────────────────────────────────────
   let profileText = $state("");
@@ -451,7 +469,10 @@
   <div class="modal">
     <div class="modal-sidebar">
       <h3>{i18n.t("modal.settings")}</h3>
-      {#each sections as s}
+      {#each sections as s, i}
+        {#if i === 0 || sections[i - 1].group !== s.group}
+          <div class="sidebar-group">{i18n.t(GROUP_LABELS[s.group] as any)}</div>
+        {/if}
         <button
           class="sidebar-item"
           class:active={modal.section === s.id}

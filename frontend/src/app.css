@@ -295,6 +295,18 @@ td:nth-child(2) { text-align: right; color: #cdd2da; }
 }
 .sidebar-item:hover { background: #1a1d24; color: #e6e6ee; }
 .sidebar-item.active { background: #1a1d24; color: #4ade80; }
+.sidebar-group {
+  margin: 0.7em 0.7em 0.2em;
+  font-size: 0.62em;
+  color: #5a606c;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+.sidebar-group:first-of-type { margin-top: 0.1em; }
+@media (max-width: 768px) {
+  .sidebar-group { display: none; }   /* keep mobile sidebar compact */
+}
 .sidebar-item.active .icon { color: #4ade80; }
 .sidebar-item .icon { width: 18px; height: 18px; flex-shrink: 0; color: #7c8aa3; transition: color 0.15s; }
 .modal-content { flex: 1; padding: 1.3em 1.7em; overflow-y: auto; position: relative; }
