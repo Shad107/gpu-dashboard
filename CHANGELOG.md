@@ -4,6 +4,17 @@ All notable changes to gpu-dashboard. Format inspired by [Keep a Changelog](http
 
 ## [Unreleased / 0.3.0-dev]
 
+### Added — Round 4 / polish + integrations
+- **`python3 -m gpu_dashboard --status`** — CLI one-shot output for SSH/cron. Prints a unicode-bordered box with temp / mem_temp / power / VRAM / fan RPMs / electricity / LLM tokens / OcuLink / health components. Exits 0 if GPU alive, 2 if degraded.
+- **`modules/webhook.py`** — generic outbound webhook (Discord / Slack / n8n / Home Assistant). Auto-detects payload shape based on URL. Used in parallel with Telegram if both configured.
+- **`modules/alert_monitor.py`** — threshold-alerts daemon. Fires on GPU temp / VRAM junction / fan % crossings (3-consecutive + 5-min cooldown). Dispatches through whatever alert backends are configured (Telegram + webhook).
+- **`modules/auto_profile.py`** — auto-classify load (silent / sweet / boost) and switch profile after `MIN_STABLE` seconds. Pure-function classifier (`classify_load`) is unit-tested independently of the daemon.
+- **`POST /api/electricity/config`** — live edit of `ELECTRICITY_PRICE_EUR_PER_KWH` + currency, persisted to config.env. No restart needed for this setting.
+- **Idle banner** — when GPU has been <5% util for 30 min, a discrete banner appears with the calculated €/month savings if the user stops the server now.
+- **Global keyboard shortcuts** — `g` (settings) · `h` (history) · `a` (about) · `r` (redo wizard) · `?` (hint) · `ESC` (close). Ignored when typing in inputs.
+- **GitHub Actions CI** (`.github/workflows/ci.yml`) — pytest matrix on Python 3.9 → 3.13, pnpm frontend build, shell scripts smoke (`--print` + `--check`). Badge added to README.
+- **CHANGELOG + README** comprehensive recap of all v0.3 features, API endpoints table (27 routes), Integrations section (Grafana / Discord / n8n / Uptime Kuma copy-paste configs), updated architecture tree.
+
 ### Added — LLM-specific killer features (v0.3 originals)
 - **🪙 LLM throughput card** (`GET /api/llm/stats`) — fetches llama-server `/metrics` and computes **tokens/Watt** efficiency using the avg power from the last hour. *No other GPU monitoring tool on either platform surfaces this metric.* Positions gpu-dashboard as the LLM-focused dashboard.
 - **⚡ Electricity cost widget** (`GET /api/electricity`) — computes kWh + €/month from stored samples × configured `ELECTRICITY_PRICE_EUR_PER_KWH`. Dashboard card shows daily kWh + monthly cost extrapolation.
