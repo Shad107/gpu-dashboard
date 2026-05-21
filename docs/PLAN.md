@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-21 23:50 (cycle 73 done — live tok/s + sparkline)
-**Latest commit** : `2ce85a6` — Live tok/s + sparkline on LLM card
-**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 72.79 KB gzip
+**Last updated** : 2026-05-21 23:54 (cycle 74 done — Stats multi-section)
+**Latest commit** : `ced093d` — Stats multi-section sparklines
+**Tests** : 455 passing · **CI** : ✅ green · **Bundle** : 74.25 KB gzip
 
 ---
 
 ## 🔄 In progress
 
-Nothing — between cycles. Wakeup soon will start **Cycle 74 : Rewrite StatsView with sparklines**.
+Nothing — between cycles. Wakeup soon will start **Cycle 75 : Modal cleanup + heatmap migration**.
 
 ---
 
@@ -19,11 +19,11 @@ Nothing — between cycles. Wakeup soon will start **Cycle 74 : Rewrite StatsVie
 
 Per user discussion 2026-05-21 22:30 : dashboard customization is the new priority.
 
-### Cycle 74 (next) — Rewrite StatsView with sparklines (the BIG cycle, may span)
-- Sections : Performance LLM / Power & cost / Thermal / Profiles / Fan dist / Heatmap
-- Each section : key numbers + Sparkline (reuse existing component)
+### Cycle 75 (next) — Modal cleanup + heatmap migration
+- Remove History + Stats sections from SettingsModal.svelte
+- Move power-cost heatmap from HistoryView to StatsView (more thematic fit)
+- Sidebar drops to 9 tabs (Tuning · Alerts · Operations · Advanced · Préférences)
 
-### Cycle 75 — Modal cleanup (remove History + Stats from modal)
 ### Cycle 76 — Simple mode (filter LLM UI if not configured)
 ### Cycle 77+ — Theme toggle, Browser push, Multi-GPU, Fan curve editor
 
@@ -47,6 +47,13 @@ Per user discussion 2026-05-21 22:30 : dashboard customization is the new priori
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 74 — Rewrite StatsView with multi-section sparklines (1 commit)
+- `ced093d` 5 stats-card sections : LLM perf · Power · Thermal · Profiles · Fan dist
+  - Each section : title + big headline + sparkline + key-stats row
+  - Polls /api/llm/perf, /thermal-stats, /power-stats, /profile-stats every 30s
+  - Mobile responsive
+  - 10 new i18n keys × 2 langs
 
 ### Cycle 73 — Sparkline + live tok/s on LLM card (2 commits)
 - `4d832fc` Sparkline.svelte + api.ts typed wrappers
@@ -221,9 +228,9 @@ Rules :
 |---|---|
 | Tests | 455 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
-| Bundle JS | 211.34 KB raw / 72.79 KB gzip |
-| Bundle CSS | 18.25 KB raw / 4.35 KB gzip |
-| Commits since v0.1.0 | ~80 |
+| Bundle JS | 218.41 KB raw / 74.25 KB gzip |
+| Bundle CSS | 20.03 KB raw / 4.62 KB gzip |
+| Commits since v0.1.0 | ~81 |
 | API endpoints | 35+ |
 | Opt-in modules | 8 (power_limit, clock_offsets, telegram_alerts, fan_curve, auto_profile, alert_monitor, webhook, oculink_watchdog) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
