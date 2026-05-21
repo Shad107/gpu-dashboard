@@ -112,6 +112,23 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     )
     retention.start()
 
+    # fan_curve daemon (optional)
+    fan_curve_daemon = None
+    if cfg.get_bool("MODULE_FAN_CURVE"):
+        try:
+            from .modules import fan_curve as _fc
+            curve = _fc.pick_curve(profile=profile)
+            display = cfg.get("CLOCK_OFFSETS_DISPLAY", ":0")
+            xauth = cfg.get("CLOCK_OFFSETS_XAUTHORITY") or None
+            fan_curve_daemon = _fc.FanCurveDaemon(
+                curve=curve, display=display, xauthority=xauth,
+                interval=float(cfg.get_int("FAN_CURVE_INTERVAL", default=5)),
+                sampler=sampler,
+            )
+            fan_curve_daemon.start()
+        except Exception as e:
+            print(f"warning: fan_curve daemon failed to start: {e}", file=sys.stderr)
+
     import time as _t
     home = os.path.expanduser("~")
 
@@ -128,6 +145,7 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     return {
         "config": cfg, "profile": profile,
         "sampler": sampler, "storage": storage, "retention": retention,
+        "fan_curve_daemon": fan_curve_daemon,
         "setup_required": setup_required,
         "profiles_dir": profiles_dir,
         "started_at": _t.time(),
@@ -251,6 +269,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_logs(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/fan-curve":
+                code, body = api.handle_fan_curve_get(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/snapshot":
                 code, body = api.handle_snapshot(ctx)
                 if isinstance(body, bytes):
@@ -335,6 +357,8 @@ def main(argv: Optional[list] = None) -> int:
             ctx["sampler"].stop()
             if "retention" in ctx:
                 ctx["retention"].stop()
+            if ctx.get("fan_curve_daemon"):
+                ctx["fan_curve_daemon"].stop()
             if "storage" in ctx:
                 ctx["storage"].close()
     return 0

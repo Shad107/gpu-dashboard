@@ -453,6 +453,23 @@ def handle_export(ctx: dict, params: dict):
     return 200, storage.export_csv(from_ts=since)
 
 
+# ────────────────────────── /api/fan-curve ────────────────────────────────
+
+
+def handle_fan_curve_get(ctx: dict) -> Response:
+    """Return the active fan curve + current target % + daemon status."""
+    from .modules import fan_curve as _fc
+    profile = ctx.get("profile") or {}
+    curve = _fc.pick_curve(profile)
+    daemon = ctx.get("fan_curve_daemon")
+    return 200, {
+        "enabled": ctx["config"].get_bool("MODULE_FAN_CURVE"),
+        "running": daemon is not None and getattr(daemon, "_thread", None) is not None,
+        "curve": curve,
+        "current_target_pct": getattr(daemon, "_last_pct", None) if daemon else None,
+    }
+
+
 # ────────────────────────── GET /api/health ───────────────────────────────
 
 
