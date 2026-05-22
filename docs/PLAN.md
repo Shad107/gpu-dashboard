@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 07:48 (cycle 119 done — R&D #1 COMPLETE — app_triggers shipped)
-**Latest commit** : `0758ffc` — README + gallery + CHANGELOG entry
+**Last updated** : 2026-05-22 07:52 (cycle 120 done — R&D #2 NVENC/NVDEC/PCIe)
+**Latest commit** : `1b9dbf8` — encoder/decoder + PCIe link state
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -50,7 +50,11 @@ no SaaS, no paid tier).
    - Cycle 117 ✓ : wired into auto_profile_daemon (`c5615f5`)
    - Cycle 118 ✓ : UI tab + GET/POST + 8 tests (`f07c6c6` + `03001ff` + `241be22`)
    - Cycle 119 ✓ : README + CHANGELOG + permanent gallery screenshot (`0758ffc`)
-2. **NVENC/NVDEC + PCIe metrics** (cycle 120) — nvidia-smi exposes encoder/decoder util + pcie.link.gen/width.
+2. **NVENC/NVDEC + PCIe metrics** (cycle 120) ✅ DONE
+   - util_enc/util_dec/pcie_gen/pcie_width plumbed into /api/state
+   - GPU card shows 'ENC X% · DEC Y%' when active
+   - New PCIe card with downgrade warning (current < max)
+   - 5 new TDD tests · 567 → 572
 3. **Monthly power budget tracker** (cycle 121) — kWh budget config + dashboard progress bar + forecast alert.
 4. **Compare-A-vs-B benchmark** (cycle 122-123) — modal to run workload on 2 profiles + compare.
 5. **Plot SVG export** (cycle 124) — ⬇️ button on each chart → download SVG.
