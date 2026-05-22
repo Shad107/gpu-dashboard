@@ -273,3 +273,4 @@ from .hf_dedup import handle_hf_dedup_plan, handle_hf_dedup_execute  # noqa: F40
 from .discord_rpc import handle_discord_rpc_status  # noqa: F401,F811
 from .noc import handle_noc  # noqa: F401,F811
 from .dr_bundle import handle_dr_bundle_list, handle_dr_bundle_create, handle_dr_bundle_delete  # noqa: F401,F811
+from .lm_studio import handle_lm_studio_inventory  # noqa: F401,F811

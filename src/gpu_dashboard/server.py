@@ -615,6 +615,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_dr_bundle_list(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/lm-studio/inventory":
+                # R&D #16.7 — LM-Studio model inventory + dedup-suspect
+                code, body = api.handle_lm_studio_inventory(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/noc":
                 # R&D #16.6 — NOC board for wall-mounted screens
                 code, html_text = api.handle_noc(ctx, params)
