@@ -241,6 +241,8 @@
   "about.year_since": "Depuis le {date} (année calendaire en cours)",
   "about.year_electricity": "Électricité consommée",
   "about.year_tokens": "Tokens LLM générés",
+  "about.stats_moved_hint": "Performance et totaux annuels sont maintenant dans Statistiques (top-nav).",
+  "stats.section_year": "Totaux depuis le 1er janvier",
   "alertfooter.last": "Dernière alerte",
   "alertfooter.ago": "",
   "alertfooter.no_alerts_7d": "Aucune alerte depuis 7 jours",

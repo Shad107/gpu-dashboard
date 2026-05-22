@@ -241,6 +241,8 @@
   "about.year_since": "Since {date} (current calendar year)",
   "about.year_electricity": "Electricity consumed",
   "about.year_tokens": "LLM tokens generated",
+  "about.stats_moved_hint": "Performance + yearly totals now live in the Stats page (top-nav).",
+  "stats.section_year": "Year-to-date totals",
   "alertfooter.last": "Last alert",
   "alertfooter.ago": "ago",
   "alertfooter.no_alerts_7d": "No alerts in the last 7 days",
