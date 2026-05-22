@@ -48,6 +48,14 @@ saved in localStorage.
 </tr>
 </table>
 
+### 📈 Stats page — perf overview at a glance
+
+A single top-level page (`#stats`) showing year-to-date energy/cost,
+LLM tokens, thermal & power sparklines, profile time breakdown,
+heatmap, fan distribution, and the recent alerts list.
+
+<img src="docs/stats.png" alt="Stats page — 6 sections : LLM perf · Power · Thermal · Profile time · Heatmap · Alerts" width="640" />
+
 ### 🌀 Fan curve editor
 
 Visual editor for the fan curve daemon — drag, click, keyboard. Lives in
