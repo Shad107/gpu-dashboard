@@ -299,6 +299,7 @@
   "update.timeout": "Timeout — recharge la page",
   "about.update_section": "Mise à jour",
   "about.update_description": "Vérifie la version distante sur GitHub. Si une nouvelle est dispo, applique avec git pull + restart automatique.",
+  "about.idle_audit": "Audit veille (idle)",
   "services.update_moved_hint": "Mise à jour : voir l'onglet À propos.",
   "header.update_chip_title": "Nouvelle version dispo — clic pour ouvrir Services et mettre à jour",
   "history.anomaly_band": "Bande d'anomalie (μ±2σ)",
