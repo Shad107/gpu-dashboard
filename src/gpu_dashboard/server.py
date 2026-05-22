@@ -695,6 +695,15 @@ def make_handler(ctx: dict):
                 code, body = api.handle_xid(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/hot-swap":
+                # R&D #14.5 — PCIe / DRM drift events
+                code, body = api.handle_hot_swap_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/hot-swap/evaluate":
+                code, body = api.handle_hot_swap_evaluate(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/xid/decode":
                 code, body = api.handle_xid_decode(ctx, params)
                 self._send_json(code, body)
