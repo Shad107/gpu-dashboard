@@ -610,6 +610,11 @@ def make_handler(ctx: dict):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if path == "/api/dr-bundle":
+                # R&D #16.8 — list existing DR bundles
+                code, body = api.handle_dr_bundle_list(ctx)
+                self._send_json(code, body)
+                return
             if path == "/noc":
                 # R&D #16.6 — NOC board for wall-mounted screens
                 code, html_text = api.handle_noc(ctx, params)
@@ -1032,6 +1037,16 @@ def make_handler(ctx: dict):
             if self.path == "/api/hf-dedup/execute":
                 # R&D #15.3 — execute a dedup plan (dry-run default)
                 code, body = api.handle_hf_dedup_execute(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/dr-bundle":
+                # R&D #16.8 — build a fresh DR bundle
+                code, body = api.handle_dr_bundle_create(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path.startswith("/api/dr-bundle/delete/"):
+                name = self.path[len("/api/dr-bundle/delete/"):]
+                code, body = api.handle_dr_bundle_delete(ctx, name)
                 self._send_json(code, body)
                 return
             if self.path == "/api/boot-profile/clear":
