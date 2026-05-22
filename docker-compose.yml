@@ -1,0 +1,67 @@
+# GreenWatts — docker-compose example.
+#
+# REQUIRES :
+#   - Docker Compose v2.20+ (for `gpus` directive)
+#   - NVIDIA Container Toolkit installed on the host
+#       https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+#
+# Usage :
+#   docker compose up -d
+#   open http://localhost:9999/
+#
+# Logs :
+#   docker compose logs -f greenwatts
+#
+# Stop :
+#   docker compose down
+
+services:
+  greenwatts:
+    build: .
+    # Or use a published image once shipped :
+    # image: ghcr.io/shad107/gpu-dashboard:latest
+
+    container_name: greenwatts
+
+    # Required for R&D #6.8 cgroup-power attribution + R&D #8.7 Jupyter
+    # kernel detection : we walk /proc/<pid>/* of host processes.
+    pid: host
+
+    # GPU access via nvidia-container-toolkit (Compose v2.20+ syntax).
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, utility]
+
+    ports:
+      - "9999:9999"
+
+    # Persistent storage — config + history DB.
+    volumes:
+      - greenwatts-config:/root/.config/gpu-dashboard
+      - greenwatts-data:/root/.local/share/gpu-dashboard
+      # Optional : mount the host's HF cache so R&D #9.4 janitor can scan it.
+      # - ${HOME}/.cache/huggingface:/root/.cache/huggingface:ro
+
+    # Optional environment overrides — see config.env reference in README.
+    environment:
+      DASHBOARD_PORT: 9999
+      # MODULE_FAN_CURVE: "0"   # disable fan curve daemon if no Coolbits
+      # ELECTRICITY_PRICE_EUR_PER_KWH: "0.25"
+
+    restart: unless-stopped
+
+    # Native healthcheck reuses the R&D #11.1 endpoint
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:9999/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  greenwatts-config:
+  greenwatts-data:

@@ -1,0 +1,44 @@
+# Files NOT to include in the Docker build context.
+
+# Local-only docs (not for the public image)
+PROMOTE.md
+
+# Build artifacts of the frontend (we ship pre-built ones from src/gpu_dashboard/static/)
+frontend/node_modules/
+frontend/dist/
+frontend/.svelte-kit/
+
+# Python build/test artifacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Local SQLite / cache state
+*.db
+*.db-shm
+*.db-wal
+
+# Promo screenshots — too big for container, served via README anyway
+docs/promo/
+
+# CI / docs
+.github/
+docs/screenshots/
+docs/mobile/
