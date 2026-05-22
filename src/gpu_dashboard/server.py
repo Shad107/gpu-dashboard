@@ -667,6 +667,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_process_nice_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/warmup-profile":
+                # R&D #19.4 — Per-model warm-up profiler
+                code, body = api.handle_warmup_profile_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
@@ -1171,6 +1176,11 @@ def make_handler(ctx: dict):
             if self.path == "/api/llm-swap/pin":
                 # R&D #17.5 — pin/unpin a model from LRU eviction
                 code, body = api.handle_llm_swap_pin(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/warmup-profile/probe":
+                # R&D #19.4 — fire a TTFT probe and record sample
+                code, body = api.handle_warmup_profile_probe(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/boot-profile/clear":
