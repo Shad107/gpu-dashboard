@@ -162,16 +162,56 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
   flex-wrap: nowrap;
   gap: 0.5em;
 }
-.strip-cards > .card {
+.strip-cards > .card,
+.strip-merged > .card {
   flex: 0 0 200px;
   scroll-snap-align: start;
 }
-/* Legacy .row + .strip-block kept for back-compat */
+/* Group separators between card groups in the merged strip.
+ * Horizontal label rendered ABOVE the next card (cycle 144d :
+ * 'mettre tunning etc au dessus pas sur le côte du groupe'). */
+.group-divider {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border-left: 1px dashed var(--border-subtle);
+  padding-left: 0.6em;
+  margin-left: 0.3em;
+  min-width: 1em;
+}
+.group-divider:first-child { border-left: none; padding-left: 0; margin-left: 0; }
+.group-divider-label {
+  color: var(--text-muted);
+  font-size: 0.72em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  margin-bottom: 0.4em;
+}
+/* Legacy compat */
 .row, .strip-block { display: contents; }
-.group-label, .group-divider { display: none; }
+.group-label { display: none; }
 
-/* (cycle 142b) Removed .dash-scroll + flex tricks — too brittle with
- * variable tile counts. Body scroll is the single source of truth. */
+/* Sticky top + sticky bottom — middle (charts) scrolls vertically.
+ * Cycle 144e (user : 'sticky de la partie card en haut et pareil pour
+ * la version en fait seul les graph doivent avoir un scroll vertical'). */
+.header, .top-nav, .strip-container {
+  position: sticky;
+  z-index: 5;
+  background: var(--bg-page);
+}
+.header { top: 0; }
+.top-nav { top: 3em; }
+.strip-container { top: 5.5em; padding-bottom: 0.3em; }
+.version-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: var(--bg-page);
+}
 
 .card {
   background: var(--bg-card);
