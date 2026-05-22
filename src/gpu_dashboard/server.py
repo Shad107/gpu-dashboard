@@ -514,6 +514,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sys_context(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cgroup-power":
+                code, body = api.handle_cgroup_power(ctx)
+                self._send_json(code, body)
+                return
             # /api/heartbeat/<token> — inbound ping from training scripts
             if path.startswith("/api/heartbeat/"):
                 token = path[len("/api/heartbeat/"):].strip("/")

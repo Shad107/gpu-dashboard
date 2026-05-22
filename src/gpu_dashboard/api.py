@@ -2772,6 +2772,158 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #6.8 — cgroup per-process GPU power accounting ──────────────────────
+def _read_pid_cgroup(pid: int) -> Optional[str]:
+    """Read /proc/<pid>/cgroup and return the cgroup v2 path (or v1 main path).
+
+    Format examples :
+      v2 : '0::/system.slice/llama-server.service'
+      v1 : '12:memory:/user.slice/user-1000.slice/...'
+
+    Returns the first sensible path or None on error.
+    """
+    try:
+        with open(f"/proc/{pid}/cgroup") as f:
+            for line in f:
+                parts = line.strip().split(":", 2)
+                if len(parts) >= 3:
+                    return parts[2]
+    except OSError:
+        pass
+    return None
+
+
+def _normalize_cgroup(path: str) -> str:
+    """Reduce a cgroup path to its meaningful slice / scope name.
+    Examples :
+      /system.slice/llama-server.service → system.slice/llama-server.service
+      /user.slice/user-1000.slice/user@1000.service/app.slice/firefox.service
+        → user.slice/firefox.service
+      / (root) → root
+    """
+    if not path or path == "/":
+        return "root"
+    p = path.strip("/")
+    # Collapse user-XXXX.slice / user@XXXX.service noise — keep first slice + final unit
+    parts = p.split("/")
+    if len(parts) == 1:
+        return parts[0]
+    # First slice (system.slice / user.slice / ...) + last segment
+    return f"{parts[0]}/{parts[-1]}"
+
+
+def handle_cgroup_power(ctx: dict) -> Response:
+    """Attribute total GPU power to cgroups via per-PID SM% share.
+
+    Algorithm :
+      1. Read total board power via nvidia-smi
+      2. Read per-PID SM% via nvidia-smi pmon
+      3. For each PID with SM% > 0, resolve cgroup
+      4. Sum SM% per cgroup → est_watts = total * (cgroup_sm / total_sm)
+      5. If total SM% == 0 (all idle), attribute proportionally by VRAM
+         (fb column) so the user still sees who is HOLDING the GPU
+
+    Response :
+      {ok, available, total_power_w, total_sm_pct,
+       cgroups: [{name, pids: [...], sm_pct, vram_mib, est_watts}]}
+    """
+    # Read total power
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "--query-gpu=power.draw", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=2,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return 200, {"ok": True, "available": False}
+    if r.returncode != 0 or not r.stdout.strip():
+        return 200, {"ok": True, "available": False}
+    try:
+        total_power = float(r.stdout.strip().splitlines()[0])
+    except (ValueError, IndexError):
+        return 200, {"ok": True, "available": False}
+
+    # Read per-PID pmon (sm + fb columns)
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "pmon", "-c", "1", "-s", "um"],
+            capture_output=True, text=True, timeout=2,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return 200, {"ok": True, "available": False}
+    if r.returncode != 0:
+        return 200, {"ok": True, "available": False}
+
+    # Aggregate by cgroup
+    cgroups: dict = {}
+    total_sm = 0.0
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Columns : gpu pid type sm mem enc dec jpg ofa fb ccpm command
+        parts = line.split()
+        if len(parts) < 11:
+            continue
+        try:
+            pid = int(parts[1])
+        except ValueError:
+            continue
+        sm_pct = 0.0
+        try:
+            sm_pct = float(parts[3])
+        except ValueError:
+            pass  # "-" → 0
+        vram_mib = 0
+        try:
+            vram_mib = int(parts[9])
+        except ValueError:
+            pass
+
+        cg_path = _read_pid_cgroup(pid)
+        cg_name = _normalize_cgroup(cg_path) if cg_path else f"pid:{pid}"
+        cmd = parts[-1] if len(parts) > 11 else ""
+
+        entry = cgroups.setdefault(cg_name, {
+            "name": cg_name, "pids": [], "sm_pct": 0.0,
+            "vram_mib": 0, "commands": [],
+        })
+        entry["pids"].append(pid)
+        entry["sm_pct"] += sm_pct
+        entry["vram_mib"] += vram_mib
+        if cmd and cmd not in entry["commands"]:
+            entry["commands"].append(cmd)
+        total_sm += sm_pct
+
+    # Compute est_watts
+    total_vram = sum(c["vram_mib"] for c in cgroups.values()) or 1
+    result_list = []
+    for name, c in cgroups.items():
+        if total_sm > 0:
+            # Distribute by SM% share
+            est_w = round(total_power * (c["sm_pct"] / total_sm), 2)
+        else:
+            # All idle — distribute by VRAM share so user sees who's holding
+            est_w = round(total_power * (c["vram_mib"] / total_vram), 2)
+        result_list.append({
+            "name": name,
+            "pids": sorted(c["pids"]),
+            "commands": c["commands"],
+            "sm_pct": round(c["sm_pct"], 2),
+            "vram_mib": c["vram_mib"],
+            "est_watts": est_w,
+        })
+    # Sort by est_watts desc
+    result_list.sort(key=lambda x: x["est_watts"], reverse=True)
+
+    return 200, {
+        "ok": True,
+        "available": True,
+        "total_power_w": round(total_power, 2),
+        "total_sm_pct": round(total_sm, 2),
+        "cgroups": result_list,
+    }
+
+
 # ─── R&D #6.3 — System-context sidecar (CPU/iowait/swap/load) ────────────────
 # Cached previous readings to compute deltas between calls.
 _LAST_CPU_LINE: Optional[list] = None
