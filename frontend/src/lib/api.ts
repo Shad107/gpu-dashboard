@@ -434,13 +434,10 @@ export const api = {
     fetch("/api/update/check").then(jsonOf<{
       ok: boolean;
       error?: string;
-      local_sha?: string;
-      local_short?: string;
-      remote_sha?: string;
-      remote_short?: string;
-      behind_count?: number;
-      update_available?: boolean;
-      last_checked_ts?: number;
+      current_sha?: string;
+      remote_sha?: string | null;
+      behind?: number | null;
+      last_remote_msg?: string | null;
     }>),
 
   lifetimeStats: (gpu = 0) =>

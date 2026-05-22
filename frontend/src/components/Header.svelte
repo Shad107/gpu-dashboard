@@ -48,11 +48,11 @@
   async function refreshChip() {
     try {
       // Update available trumps everything else
-      if (updateInfo?.update_available && updateInfo.behind_count) {
+      if (updateInfo?.behind && updateInfo.behind > 0) {
         chip = {
           kind: "update",
-          label: `🔔 ${updateInfo.behind_count} ${i18n.t("header.commits_behind") ?? "commits behind"}`,
-          ts: updateInfo.last_checked_ts || 0,
+          label: `🔔 ${updateInfo.behind} ${i18n.t("header.commits_behind") ?? "commits behind"}`,
+          ts: 0,
         };
         return;
       }

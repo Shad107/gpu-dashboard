@@ -400,10 +400,6 @@ def make_handler(ctx: dict):
                 code, body = api.handle_version(ctx)
                 self._send_json(code, body)
                 return
-            if path == "/api/update/check":
-                code, body = api.handle_update_check(ctx)
-                self._send_json(code, body)
-                return
             if path == "/api/sysreport":
                 code, body = api.handle_sysreport(ctx)
                 self._send_json(code, body)
