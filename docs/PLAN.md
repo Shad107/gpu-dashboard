@@ -11,6 +11,31 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #8 (2026-05-22 14:45) — AUTO-OPENED post #7 complete
+
+Per the auto-rebound rule. Surveyed angle : visual / demo-able features
+to defuse "yet another wrapper" criticism. 8 candidates :
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 8.1 | **History scrubber (time-travel slider)** | S | 5 | Drag timeline → all gauges snap to past second. *The* killer demo GIF |
+| 8.2 | **Predictive throttle alert** | S | 5 | Linreg on temp → '⚠ throttle in ~4min32s'. Magical, zero deps |
+| 8.3 | ROCm backend (AMD support) | L | 5 | Doubles addressable audience. Defuses 'NVIDIA-only' objection |
+| 8.4 | llama-bench scheduled runner | M | 5 | Nightly bench + drift chart. Catches driver regressions |
+| 8.5 | ComfyUI workflow overlay | M | 5 | Annotate timeline with node spans. Image-gen audience |
+| 8.6 | Power-draw replay calibration | L | 4 | Replay last hour as synthetic CUDA load. Niche but unique |
+| 8.7 | Jupyter kernel monitor | S | 4 | Per-notebook GPU attribution |
+| 8.8 | TensorBoard plugin | M | 4 | Credibility in ML ecosystem |
+
+**Start order** : 8.1 (S, instant demo) → 8.2 (S, magical) → 8.5 (M, very visual) → 8.3 (L, audience expansion).
+
+---
+
+## ✅ R&D iteration #7 complete (3/3 priority shipped — 2026-05-22 14:40)
+7.4 InfluxDB line protocol · 7.10 Prometheus AlertManager rules · 7.5 UPS/NUT awareness.
+
+---
+
 ## 💡 R&D iteration #7 (2026-05-22 14:25) — AUTO-OPENED post #6 complete
 
 Per the standing **auto-rebound rule**, surveyed NEW tools (OpenTelemetry,

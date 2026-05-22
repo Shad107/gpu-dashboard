@@ -2772,6 +2772,67 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #8.1 — History scrubber (snapshot at past timestamp) ────────────────
+def handle_snapshot_at(ctx: dict, params: Optional[dict] = None) -> Response:
+    """Return the GPU sample CLOSEST (within ±60s by default) to the
+    requested timestamp.
+
+    Query params :
+      t           = unix epoch seconds (required)
+      gpu_index   = GPU to query (default 0)
+      tolerance   = max distance in seconds (default 60)
+
+    Response :
+      {ok, found, t_requested, t_actual, distance_s, sample: {...}}
+      404 if no sample within tolerance.
+    """
+    storage = ctx.get("storage")
+    if not storage:
+        return 503, {"ok": False, "error": "storage unavailable"}
+    params = params or {}
+    try:
+        t_req = int(float(params.get("t", "0")))
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "t must be a unix timestamp"}
+    if t_req <= 0:
+        return 400, {"ok": False, "error": "t required"}
+    try:
+        gpu_index = int(params.get("gpu_index", "0"))
+    except (ValueError, TypeError):
+        gpu_index = 0
+    try:
+        tolerance = int(params.get("tolerance", "60"))
+        tolerance = max(1, min(3600, tolerance))
+    except (ValueError, TypeError):
+        tolerance = 60
+
+    # Find sample within tolerance window, closest to t_req
+    cols = ",".join(["ts", "temp", "fan_pct", "fan0_rpm", "fan1_rpm",
+                     "clk_gpu", "clk_mem", "power", "power_limit",
+                     "util_gpu", "mem_used_mib", "tokens_total_snapshot"])
+    with storage._lock:
+        row = storage._conn.execute(
+            f"SELECT {cols} FROM samples "
+            f"WHERE gpu_index = ? AND ts BETWEEN ? AND ? "
+            f"ORDER BY ABS(ts - ?) ASC LIMIT 1",
+            (gpu_index, t_req - tolerance, t_req + tolerance, t_req),
+        ).fetchone()
+    if row is None:
+        return 404, {
+            "ok": False, "found": False, "t_requested": t_req,
+            "error": f"no sample within ±{tolerance}s",
+        }
+    sample = dict(row)
+    distance = abs(sample["ts"] - t_req)
+    return 200, {
+        "ok": True, "found": True,
+        "t_requested": t_req,
+        "t_actual": sample["ts"],
+        "distance_s": distance,
+        "sample": sample,
+    }
+
+
 # ─── R&D #7.5 — UPS/NUT awareness ────────────────────────────────────────────
 def handle_ups_status(ctx: dict) -> Response:
     """Query the local NUT server and return the first UPS' state."""
