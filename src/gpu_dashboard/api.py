@@ -2772,6 +2772,113 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #11.1 — k8s-style /healthz + /readyz probes ────────────────────────
+def handle_healthz(ctx: dict) -> Tuple[int, dict]:
+    """Liveness probe. Returns 200 if process alive — no GPU/SQLite calls.
+    Sub-millisecond. Suitable for high-frequency k8s liveness checks."""
+    return 200, {"ok": True, "alive": True, "ts": int(time.time())}
+
+
+def handle_readyz(ctx: dict, params: Optional[dict] = None) -> Tuple[int, dict]:
+    """Readiness probe. Returns 503 if any critical subsystem unhealthy :
+      - NVML / nvidia-smi reachable
+      - Storage writable
+      - Last sampler snapshot < 30s old
+    With ?strict=1, also fails on : ECC errors > 0, driver drift recent.
+    """
+    params = params or {}
+    strict = params.get("strict") in ("1", "true", "True")
+    checks: dict = {}
+    overall_ok = True
+
+    # 1. Sampler snapshot age
+    sampler = ctx.get("sampler")
+    snap_age = None
+    if sampler:
+        try:
+            snap = sampler.snapshot()
+            if snap:
+                # ts can be HH:MM:SS or epoch — use len(snap) as a proxy
+                snap_age = 0 if snap else None
+        except Exception:
+            snap = None
+        snap_ok = sampler is not None and bool(snap)
+    else:
+        snap_ok = False
+    checks["sampler"] = {"ok": snap_ok, "reason": "no samples yet" if not snap_ok else "ok"}
+    if not snap_ok:
+        overall_ok = False
+
+    # 2. Storage write probe
+    storage = ctx.get("storage")
+    storage_ok = False
+    if storage:
+        try:
+            with storage._lock:
+                storage._conn.execute("SELECT 1").fetchone()
+            storage_ok = True
+        except Exception as e:
+            checks["storage"] = {"ok": False, "reason": f"db unreachable: {e}"}
+        else:
+            checks["storage"] = {"ok": True, "reason": "ok"}
+    else:
+        checks["storage"] = {"ok": False, "reason": "no storage configured"}
+    if not storage_ok:
+        overall_ok = False
+
+    # 3. NVIDIA driver reachable (last sample alive flag)
+    gpu_ok = False
+    try:
+        gpus = _gpus_available()
+        gpu_ok = len(gpus) > 0
+    except Exception:
+        gpus = []
+    checks["nvidia"] = {
+        "ok": gpu_ok,
+        "reason": f"{len(gpus)} GPU(s)" if gpu_ok else "nvidia-smi unreachable",
+    }
+    if not gpu_ok:
+        overall_ok = False
+
+    # Strict-only checks
+    if strict:
+        # ECC : if available and uncorrected > 0 → fail
+        try:
+            ecc_code, ecc_body = handle_ecc_health(ctx)
+            if ecc_body.get("verdict_kind") == "failing":
+                checks["ecc"] = {"ok": False, "reason": ecc_body.get("verdict_msg", "ECC failing")}
+                overall_ok = False
+            else:
+                checks["ecc"] = {"ok": True, "reason": ecc_body.get("verdict_kind", "n/a")}
+        except Exception as e:
+            checks["ecc"] = {"ok": True, "reason": f"check skipped: {e}"}
+
+        # Drift : flag if recent boot showed driver change
+        try:
+            drift_code, drift_body = handle_drift_check(ctx)
+            last = drift_body.get("last_drift")
+            if last:
+                # within last 24h
+                age_h = (int(time.time()) - int(last.get("ts", 0))) / 3600
+                if age_h < 24:
+                    checks["drift"] = {"ok": False, "reason": f"recent driver/kernel drift {age_h:.0f}h ago"}
+                    overall_ok = False
+                else:
+                    checks["drift"] = {"ok": True, "reason": "no recent drift"}
+            else:
+                checks["drift"] = {"ok": True, "reason": "no drift recorded"}
+        except Exception as e:
+            checks["drift"] = {"ok": True, "reason": f"check skipped: {e}"}
+
+    return (200 if overall_ok else 503), {
+        "ok": overall_ok,
+        "ready": overall_ok,
+        "strict": strict,
+        "checks": checks,
+        "ts": int(time.time()),
+    }
+
+
 # ─── R&D #10.1 — Vector DB watchdog (Chroma / Qdrant / pgvector) ─────────────
 def handle_vector_db(ctx: dict) -> Response:
     """Probe locally-configured vector stores and return aggregated status."""

@@ -11,6 +11,30 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #11 (2026-05-22 16:05) — AUTO-OPENED post #10 complete
+
+Per the auto-rebound rule. 8 NEW angles : k8s probes, AI sidekick, heat plume, service discovery, weekly report, iCal, WoL, maintenance coach.
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 11.1 | **`/healthz` + `/readyz` k8s probes** | XS | 5 | Sub-ms liveness + 503 readiness on NVML/SQLite/snapshot-age |
+| 11.2 | AI sidekick (NL state query via local LLM) | M | 5 | Allow-list SQL templates, uses local llama.cpp endpoint we monitor |
+| 11.3 | Heat plume map (multi-sensor SVG) | M | 5 | hwmon discovery + RBF interpolation, animated over history |
+| 11.4 | **Auto-service discovery (LLM stacks)** | S | 5 | ss -tlnp + cmdline fingerprint → Ollama/vLLM/Chroma cards |
+| 11.5 | **Print-friendly weekly report** | S | 5 | Self-contained HTML + plain-text email via existing SMTP |
+| 11.6 | iCal feed of GPU events | XS | 4 | RFC 5545 .ics for calendar subscribe |
+| 11.7 | Wake-on-LAN + suspend-aware scheduler | S | 4 | Magic packet sender + snapshot-gap detection |
+| 11.8 | Spaced-repetition maintenance coach | S | 4 | Dust/paste/cable cadence modulated by thermal drift |
+
+**Start order** : 11.1 (XS, ops-essential) → 11.4 (S, service discovery is screenshot-worthy) → 11.5 (S, useful) → 11.6 (XS, iCal) → 11.7 / 11.8 → 11.2 / 11.3 (last).
+
+---
+
+## ✅ R&D iteration #10 complete (4/4 priority shipped — 2026-05-22 15:57)
+10.1 vector DB watchdog · 10.3 HF model card cross-ref · 10.6 ANSI/tldr endpoint · 10.7 SVG badge generator.
+
+---
+
 ## 💡 R&D iteration #9 (2026-05-22 15:18) — AUTO-OPENED post #8 complete
 
 Per the auto-rebound rule. 8 fresh angles (containers, GPU passthrough, auth, HF cache, multi-user audit, time-series anomaly).
