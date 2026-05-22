@@ -506,6 +506,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_journal_tail(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/notif/channels":
+                code, body = api.handle_notif_channels_list(ctx)
+                self._send_json(code, body)
+                return
             # /api/heartbeat/<token> — inbound ping from training scripts
             if path.startswith("/api/heartbeat/"):
                 token = path[len("/api/heartbeat/"):].strip("/")
@@ -695,6 +699,14 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/heartbeat/config":
                 code, body = api.handle_heartbeat_config(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/notif/channels":
+                code, body = api.handle_notif_channel_save(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/notif/test":
+                code, body = api.handle_notif_channel_test(ctx, payload)
                 self._send_json(code, body)
                 return
 

@@ -2772,6 +2772,62 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #6.1 — Unified notification hub (Apprise-style fanout) ──────────────
+def handle_notif_channels_list(ctx: dict) -> Response:
+    """Return all configured channels (with secrets masked)."""
+    from .modules import notif_hub as _nh
+    channels = _nh.load_channels()
+    out: list = []
+    for ch in channels:
+        masked = dict(ch)
+        # Mask sensitive fields
+        for k in ("token", "password", "user", "url"):
+            if k in masked and isinstance(masked[k], str) and len(masked[k]) > 8:
+                masked[k] = masked[k][:6] + "…" + masked[k][-3:]
+        out.append(masked)
+    return 200, {"ok": True, "channels": out,
+                 "types_supported": list(_nh._ADAPTERS.keys())}
+
+
+def handle_notif_channel_save(ctx: dict, payload: dict) -> Response:
+    """Create or update a channel by id. Payload :
+      {id, type, name, enabled, min_level, gpu_filter, quiet_hours, ...adapter-specific...}
+    Or {delete: id}."""
+    from .modules import notif_hub as _nh
+    if not isinstance(payload, dict):
+        return 400, {"ok": False, "error": "payload must be a dict"}
+    channels = _nh.load_channels()
+    if "delete" in payload:
+        target = str(payload["delete"])
+        channels = [c for c in channels if c.get("id") != target]
+        _nh.save_channels(channels)
+        return 200, {"ok": True, "deleted": target}
+
+    cid = str(payload.get("id", "")).strip()
+    ctype = str(payload.get("type", "")).strip()
+    if not cid:
+        return 400, {"ok": False, "error": "id required"}
+    if ctype not in _nh._ADAPTERS:
+        return 400, {"ok": False, "error": f"unknown type. Available : {list(_nh._ADAPTERS.keys())}"}
+
+    # Replace existing or append
+    new_channel = {k: v for k, v in payload.items() if k != "_test"}
+    channels = [c for c in channels if c.get("id") != cid] + [new_channel]
+    _nh.save_channels(channels)
+    return 200, {"ok": True, "id": cid}
+
+
+def handle_notif_channel_test(ctx: dict, payload: dict) -> Response:
+    """Fire a test notification to the channel specified in payload (no save).
+    Useful before saving — user can validate the credentials inline."""
+    from .modules import notif_hub as _nh
+    if not isinstance(payload, dict) or "type" not in payload:
+        return 400, {"ok": False, "error": "payload requires 'type'"}
+    ok, msg = _nh.send_test(payload)
+    code = 200 if ok else 502
+    return code, {"ok": ok, "msg": msg}
+
+
 # ─── R&D #6.7 — journalctl bridge with saved filters ─────────────────────────
 # Pre-canned filters for GPU-relevant log noise. Each maps to a regex applied
 # to journalctl messages.
