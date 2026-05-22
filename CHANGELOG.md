@@ -2,7 +2,11 @@
 
 All notable changes to gpu-dashboard. Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased / 0.3.0-dev]
+## [Unreleased]
+
+_Nothing yet — small polish work continues on the autonomous loop ; see `docs/PLAN.md` for cycle-level detail._
+
+## [0.3.0] — 2026-05-22
 
 ### Added — Fan curve editor with drag-and-drop (cycles 92-99)
 - **Visual SVG editor** of the daemon's fan curve in Settings → Tuning → Courbe ventilo.
