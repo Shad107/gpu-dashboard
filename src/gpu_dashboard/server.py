@@ -561,6 +561,20 @@ def make_handler(ctx: dict):
                 code, body = api.handle_service_discovery(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/report/weekly":
+                code, body_text = api.handle_weekly_report(ctx, params)
+                fmt = (params or {}).get("fmt", "html")
+                data = body_text.encode("utf-8")
+                self.send_response(code)
+                if fmt == "text":
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                else:
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path.startswith("/badge/") and path.endswith(".svg"):
                 # R&D #10.7 — live README SVG badge
                 metric = path[len("/badge/"):-len(".svg")]

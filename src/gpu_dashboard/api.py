@@ -2772,6 +2772,30 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #11.5 — Weekly HTML + plain-text report ─────────────────────────
+def handle_weekly_report(ctx: dict, params: Optional[dict] = None) -> Tuple[int, str]:
+    """Generate the weekly summary report.
+
+    Query params :
+      fmt = html (default) | text
+      days = period length (default 7, max 90)
+    """
+    storage = ctx.get("storage")
+    if not storage:
+        return 503, "Storage unavailable"
+    params = params or {}
+    fmt = params.get("fmt", "html")
+    try:
+        days = max(1, min(90, int(params.get("days", "7"))))
+    except (ValueError, TypeError):
+        days = 7
+    from .modules import weekly_report
+    stats = weekly_report.compute_stats(storage, days=days)
+    if fmt == "text":
+        return 200, weekly_report.render_text(stats, ctx.get("config"))
+    return 200, weekly_report.render_html(stats, ctx.get("config"))
+
+
 # ─── R&D #11.4 — Auto-discover well-known LLM/RAG/GPU services ────────────
 def handle_service_discovery(ctx: dict, params: Optional[dict] = None) -> Response:
     """Return list of detected services + unknown listeners on the host."""
