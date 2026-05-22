@@ -317,11 +317,28 @@ def make_handler(ctx: dict):
                 ctype = "text/css"
             elif filename.endswith(".js"):
                 ctype = "application/javascript"
+            elif filename.endswith(".svg"):
+                ctype = "image/svg+xml"
+            elif filename.endswith(".png"):
+                ctype = "image/png"
+            elif filename.endswith(".json"):
+                ctype = "application/json"
             with open(full, "rb") as f:
                 body = f.read()
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
+            # Cache policy (cycle 144 user fb : 'j'ai bien l'ancienne version')
+            # - assets/<hashed>.{js,css,svg,png} : immutable (vite hashes by content)
+            # - index.html / sw.js / manifest.json : no-cache so updates land instantly
+            is_hashed_asset = ("assets/" in filename or filename.startswith("assets/")) and any(
+                filename.endswith(ext) for ext in (".js", ".css", ".woff2", ".png", ".jpg", ".svg")
+            )
+            if is_hashed_asset:
+                self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+            else:
+                self.send_header("Cache-Control", "no-cache, must-revalidate")
+                self.send_header("Pragma", "no-cache")
             self.end_headers()
             self.wfile.write(body)
 
