@@ -11,6 +11,29 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #17 (2026-05-23 00:58) — AUTO-OPENED post #16 complete
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 17.1 | **ECC remap scrubber scheduler** | S | 5 | nightly --query-remapped-rows, EOL prediction |
+| 17.2 | Per-prompt energy receipt (signed) | M | 5 | tamper-evident JSONL chain, Wh+€+gCO2 |
+| 17.3 | TDP profile auto-switch | S | 5 | rolling 60s util → pick 1 of 3 power caps |
+| 17.4 | GPU reservation calendar | M | 4 | iCal export + cgroup soft enforce |
+| 17.5 | **LLM hot-swap orchestrator** | M | 5 | Ollama/llama.cpp LRU eviction, swap timeline |
+| 17.6 | Tokenizer-aware cost + ctx pressure | M | 4 | stdlib tokenizer.json walk |
+| 17.7 | **Idle-rig one-liner probe** | XS | 5 | GET /idle.txt for tmux/Conky/motd |
+| 17.8 | Scheduled lm-eval-harness runs | M | 4 | subprocess wrap, accuracy regression |
+
+Start order : 17.7 (XS, quickest win) → 17.1 (S, RMA-grade ECC) → 17.3 (S) → 17.5/17.2/17.4/17.6/17.8 (mid effort).
+
+---
+
+## ✅ R&D iteration #16 complete (4/4 — 2026-05-23 00:43) + UI sprint 7
+Backend : 16.4 driver vault · 16.6 NOC · 16.7 LM-Studio · 16.8 DR bundle.
+UI cycle 7 : 4 cards added (Settings → Integrations now has 25 cards total).
+
+---
+
 ## 💡 R&D iteration #16 (2026-05-23 00:30) — AUTO-OPENED post #15 complete
 
 | # | Feature | Effort | Fit | Notes |

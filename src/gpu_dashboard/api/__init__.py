@@ -275,3 +275,4 @@ from .noc import handle_noc  # noqa: F401,F811
 from .dr_bundle import handle_dr_bundle_list, handle_dr_bundle_create, handle_dr_bundle_delete  # noqa: F401,F811
 from .lm_studio import handle_lm_studio_inventory  # noqa: F401,F811
 from .driver_vault import handle_driver_vault_status, handle_driver_vault_stash, handle_driver_vault_rollback_script  # noqa: F401,F811
+from .idle_probe import handle_idle_txt, handle_idle_json  # noqa: F401,F811
