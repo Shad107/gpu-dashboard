@@ -2772,6 +2772,28 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #7.4 — InfluxDB line protocol pusher status ─────────────────────────
+def handle_influxdb_status(ctx: dict) -> Response:
+    """Return the InfluxDB pusher's current status (last push ok/error)."""
+    pusher = ctx.get("influxdb_pusher")
+    cfg = ctx["config"]
+    url = cfg.get("INFLUXDB_URL", "")
+    if not url:
+        return 200, {"ok": True, "enabled": False}
+    if pusher is None:
+        return 200, {"ok": True, "enabled": True, "running": False}
+    s = pusher.status
+    return 200, {
+        "ok": True,
+        "enabled": True,
+        "running": True,
+        "url": url,
+        "bucket": cfg.get("INFLUXDB_BUCKET") or cfg.get("INFLUXDB_DATABASE", ""),
+        "interval_s": float(cfg.get("INFLUXDB_INTERVAL", "15") or "15"),
+        "last_push": s,
+    }
+
+
 # ─── R&D #6.8 — cgroup per-process GPU power accounting ──────────────────────
 def _read_pid_cgroup(pid: int) -> Optional[str]:
     """Read /proc/<pid>/cgroup and return the cgroup v2 path (or v1 main path).

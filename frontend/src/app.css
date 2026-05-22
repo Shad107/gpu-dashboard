@@ -876,6 +876,22 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
   background: var(--accent-cool, #60a5fa);
   border-color: var(--accent-cool, #60a5fa);
 }
+
+/* Cycle 149b — fan pct readable layout (2x2 grid) */
+.pct-grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 0.4em;
+  row-gap: 0.1em;
+  align-items: baseline;
+  font-size: 0.85em;
+  margin-top: 0.15em;
+  justify-content: center;
+}
+.pct-lbl { color: var(--text-faint); font-size: 0.85em; text-align: right; }
+.pct-val { color: var(--text); text-align: right; }
+.pct-target { color: #7c8aa3; }
+.pct-target-val { color: #7c8aa3; font-weight: normal; }
 .price-input {
   width: 70px;
   padding: 0.15em 0.35em;

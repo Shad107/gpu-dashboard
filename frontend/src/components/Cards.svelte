@@ -274,16 +274,15 @@
                 <path d={MDI_FAN} />
               </svg>
               <div class="rpm">{f.rpm ?? 0} RPM</div>
-              <!-- cycle 149 user fb : 'a quoi correspond 0% / 30%' —
-                   prefix réel/cible to clarify; tooltip explains the gap
-                   when measured % is 0 but a target was commanded -->
-              <div class="pct"
-                   title={i18n.t("fans.tooltip_pct") ?? "Réel = % de vitesse mesuré. Cible = consigne envoyée à la carte. Si Réel=0 mais Cible>0, le ventilo n'a pas encore démarré ou la commande n'est pas appliquée."}>
-                <span style="color:var(--text-faint);font-size:.85em">{i18n.t("fans.real_short") ?? "réel"}</span>
-                <b>{f.pct ?? 0}%</b>
-                <span style="color:#5a606c">·</span>
-                <span style="color:var(--text-faint);font-size:.85em">{i18n.t("fans.target_short") ?? "cible"}</span>
-                <span style="color:#7c8aa3">{f.target ?? 0}%</span>
+              <!-- cycle 149b user fb : 'pas lisible sur la meme ligne' —
+                   réel/cible on TWO separate lines, labels aligned, values
+                   right-aligned for visual rhythm. -->
+              <div class="pct-grid"
+                   title={i18n.t("fans.tooltip_pct") ?? "Réel = % mesuré. Cible = consigne envoyée."}>
+                <span class="pct-lbl">{i18n.t("fans.real_short") ?? "réel"}</span>
+                <b class="pct-val">{f.pct ?? 0}%</b>
+                <span class="pct-lbl pct-target">{i18n.t("fans.target_short") ?? "cible"}</span>
+                <span class="pct-val pct-target-val">{f.target ?? 0}%</span>
               </div>
             </div>
           {/each}

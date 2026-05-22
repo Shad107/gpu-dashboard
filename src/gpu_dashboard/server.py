@@ -133,6 +133,20 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     )
     sampler.start()
 
+    # R&D #7.4 — optional InfluxDB pusher (background, only if URL set)
+    influxdb_pusher = None
+    if cfg.get("INFLUXDB_URL"):
+        try:
+            from .modules.influxdb_push import InfluxPusher
+            influxdb_pusher = InfluxPusher(
+                sampler=sampler, cfg=cfg,
+                interval_s=float(cfg.get("INFLUXDB_INTERVAL", "15") or "15"),
+            )
+            influxdb_pusher.start()
+            print(f"[influxdb] pusher started → {cfg.get('INFLUXDB_URL')}")
+        except Exception as e:
+            print(f"[influxdb] pusher disabled : {e}")
+
     # R&D #5.2 — drift detection : capture driver/kernel/ECC fingerprint
     # on each startup and diff vs the saved baseline. Cheap (one nvidia-smi
     # call) so it runs unconditionally.
@@ -516,6 +530,10 @@ def make_handler(ctx: dict):
                 return
             if path == "/api/cgroup-power":
                 code, body = api.handle_cgroup_power(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/influxdb/status":
+                code, body = api.handle_influxdb_status(ctx)
                 self._send_json(code, body)
                 return
             # /api/heartbeat/<token> — inbound ping from training scripts
