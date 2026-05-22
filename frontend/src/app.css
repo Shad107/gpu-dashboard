@@ -213,18 +213,35 @@ h1 { margin: 0 0 0.1em; font-size: 0.95em; }
 .header, .top-nav, .strip-container {
   position: sticky;
   z-index: 5;
+  /* Cycle 151 user fb : 'sur les espace quand on scroll on voit un bout
+   * des graphiques etc' — sticky elements MUST have opaque background
+   * + extra padding to cover the content scrolling beneath. var(--bg-page)
+   * was already set but the gap between sticky-stack items leaked. */
   background: var(--bg-page);
 }
-/* Sticky stack order (cycle 148) : Header(0) → Cards(2.5em) → TopNav(stuck under cards).
- * Cards strip varies in height ; .top-nav sticks underneath via its own
- * sticky context. Each element has its own `top:` so the browser cascades
- * them correctly when scrolling. */
-.header { top: 0; }
-.strip-container { top: 2.5em; padding-bottom: 0.2em; }
+/* Sticky stack order (cycle 148) : Header(0) → Cards(2.5em) → TopNav(under cards). */
+.header { top: 0; padding-bottom: 0.3em; }
+.strip-container {
+  top: 2.5em;
+  padding-top: 0.3em;
+  padding-bottom: 0.3em;
+  /* opaque cover — extend beyond intrinsic content height */
+  background: var(--bg-page);
+}
 .top-nav {
-  /* Stick AFTER the strip — top value must be > strip's bottom edge.
-   * Strip is ~12em tall (label + cards 200px + paddings). */
   top: 14em;
+  background: var(--bg-page);
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
+}
+/* Force a solid backdrop behind the whole sticky stack so partial
+ * transparency anywhere won't leak the scrolling content. */
+.strip-container::before {
+  content: "";
+  position: absolute;
+  top: 0; left: -0.5em; right: -0.5em; bottom: 0;
+  background: var(--bg-page);
+  z-index: -1;
 }
 .version-footer {
   position: sticky;
