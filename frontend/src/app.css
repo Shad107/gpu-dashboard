@@ -1123,3 +1123,61 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
 .log-warn .log-msg  { color: #fbbf24; }
 .log-warn .log-time { color: #fbbf24; }
 .log-trace .log-msg { color: var(--text-dim); font-size: 0.92em; }
+
+/* R&D #12.8 — print mode. CSS @media print rendering for physical
+ * maintenance logs / B/W laser. Triggered by browser Ctrl+P or
+ * `window.print()`. Hides interactive chrome, swaps dark theme for
+ * white-on-black-ink, adds technician signature line. */
+@media print {
+  /* Reset background to white, force text to black for laser printers */
+  body, .card, .modal-section, .stats-card, .top-nav-btn, .btn {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  /* Hide interactive controls + sticky chrome */
+  .top-nav, .gear-btn, .strip-arrow, .btn, .edit-rate,
+  .version-footer .vf-pull, .toast, .modal-overlay,
+  .footer { display: none !important; }
+  /* Make sticky elements flow inline (no fixed positioning on paper) */
+  .header, .strip-container, .strip {
+    position: static !important;
+    background: #fff !important;
+    z-index: auto !important;
+  }
+  /* Cards : flat 2-col grid for paper, page-break aware */
+  .strip-cards { flex-wrap: wrap !important; gap: 6mm !important; }
+  .strip-cards > .card {
+    border: 1px solid #000 !important;
+    flex: 0 0 calc(50% - 4mm) !important;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    min-height: 0 !important;
+  }
+  /* Charts shrink + force readable proportions on paper */
+  .chart-card, .chart-row { page-break-inside: avoid; }
+  svg { max-width: 100% !important; }
+  /* Add a maintenance signature footer to every printed sheet */
+  @page { margin: 1.5cm; }
+  body::after {
+    content: "Technician signature : ______________________  Date : _____________";
+    display: block;
+    margin-top: 2em;
+    padding-top: 1em;
+    border-top: 1px solid #000;
+    font-family: serif;
+    font-size: 10pt;
+    color: #000;
+  }
+  /* Banner header for the print : project name + date */
+  body::before {
+    content: "GreenWatts — maintenance log";
+    display: block;
+    margin-bottom: 0.6em;
+    padding-bottom: 0.4em;
+    border-bottom: 2px solid #000;
+    font-family: serif;
+    font-size: 14pt;
+    font-weight: bold;
+    color: #000;
+  }
+}

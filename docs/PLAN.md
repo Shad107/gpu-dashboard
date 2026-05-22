@@ -11,6 +11,30 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #12 (2026-05-22 16:18) — AUTO-OPENED post #11 complete
+
+Per auto-rebound rule. 8 NEW angles : wall-meter, SMART disk, LAN peers, rule engine, CI runner tag, embed iframe, air-gap, print mode.
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 12.1 | **Wall-meter reconciler (Shelly/Tasmota)** | S | 5 | Real PSU+idle delta via smart-plug, true tok/Wh |
+| 12.2 | SMART disk health correlator | S | 4 | Disk-vs-GPU read latency overlay |
+| 12.3 | **LAN peer discovery (UDP beacon)** | M | 5 | Zero-config Fleet tab via mDNS/SO_BROADCAST |
+| 12.4 | **Rule engine (declarative JSON)** | M | 5 | IF temp>80 FOR 5min THEN ... — no plugin file |
+| 12.5 | CI runner GPU tag endpoint | S | 4 | /api/ci-tag for self-hosted GH runners / Jenkins |
+| 12.6 | **`/embed` read-only iframe view** | S | 5 | Token-gated single-card for Notion/status pages |
+| 12.7 | Air-gapped mode | M | 5 | Disable all outbound URL fetches, audit attempts |
+| 12.8 | **Print mode (CSS @media print)** | XS | 4 | Maintenance log printable, signature line |
+
+**Start order** : 12.8 (XS, quick win) → 12.6 (S, demo-friendly) → 12.1 (S) → 12.5 (S) → 12.3/12.4 (M, longer).
+
+---
+
+## ✅ R&D iteration #11 complete (4/4 priority + Docker bonus — 2026-05-22 16:16)
+11.1 healthz/readyz + watchdog · 11.4 service discovery · 11.5 weekly report · 11.6 iCal feed · Dockerfile + docker-compose.
+
+---
+
 ## 💡 R&D iteration #11 (2026-05-22 16:05) — AUTO-OPENED post #10 complete
 
 Per the auto-rebound rule. 8 NEW angles : k8s probes, AI sidekick, heat plume, service discovery, weekly report, iCal, WoL, maintenance coach.
