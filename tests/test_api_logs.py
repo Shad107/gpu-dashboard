@@ -38,7 +38,16 @@ class TestHandleLogs:
         assert code == 200
         assert body["lines"] == []
 
-    def test_no_log_configured(self):
+    def test_no_log_configured(self, monkeypatch):
+        # Force auto-detect of gpu-dashboard.service to FAIL so the test
+        # reaches the "no log source configured" path. Otherwise on a
+        # machine running the canonical install, auto-detect would pick
+        # up journalctl successfully.
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(
+            "gpu_dashboard.api.subprocess.run",
+            lambda *a, **kw: MagicMock(returncode=3, stdout="inactive", stderr=""),
+        )
         ctx = {"config": Config(defaults={})}
         code, body = api.handle_logs(ctx, {})
         assert code == 200
