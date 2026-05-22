@@ -687,6 +687,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ups_runtime_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/vbios-drift":
+                # R&D #20.2 — VBIOS / ROM drift tracker
+                code, body = api.handle_vbios_drift_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
@@ -1196,6 +1201,11 @@ def make_handler(ctx: dict):
             if self.path == "/api/warmup-profile/probe":
                 # R&D #19.4 — fire a TTFT probe and record sample
                 code, body = api.handle_warmup_profile_probe(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/vbios-drift/rebaseline":
+                # R&D #20.2 — capture current VBIOS / ROM as new baseline
+                code, body = api.handle_vbios_drift_rebaseline(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/boot-profile/clear":

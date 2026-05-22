@@ -290,3 +290,4 @@ from .warmup_profile import handle_warmup_profile_status, handle_warmup_profile_
 from .suspend_guard import handle_suspend_guard_status  # noqa: F401,F811
 from .container_audit import handle_container_audit_status  # noqa: F401,F811
 from .ups_runtime import handle_ups_runtime_status  # noqa: F401,F811
+from .vbios_drift import handle_vbios_drift_status, handle_vbios_drift_rebaseline  # noqa: F401,F811
