@@ -303,6 +303,7 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
         "fan_curve_daemon": fan_curve_daemon,
         "auto_profile_daemon": auto_profile_daemon,
         "alert_monitor_daemon": alert_monitor_daemon,
+        "influxdb_pusher": influxdb_pusher,
         "setup_required": setup_required,
         "profiles_dir": profiles_dir,
         "overrides_dir": os.path.join(home, ".config/gpu-dashboard/profile-overrides"),
