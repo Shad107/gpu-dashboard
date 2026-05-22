@@ -21,18 +21,45 @@ from .auth import (  # noqa: F401
     handle_auth_share_create,
     handle_audit_log,
 )
+from .integrations import (  # noqa: F401
+    handle_ical_feed,
+    handle_weekly_report,
+    handle_service_discovery,
+    handle_watchdog_status,
+    handle_watchdog_enable,
+    handle_watchdog_disable,
+    handle_healthz,
+    handle_readyz,
+    handle_vector_db,
+    handle_hf_card,
+    handle_hf_janitor,
+    handle_vfio_status,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
 
-# Re-import migrated symbols AFTER the wildcard so they're not shadowed
-# by stale references in _monolith.py.
+# Re-import migrated symbols AFTER the wildcard so they're not shadowed.
 from .auth import (  # noqa: F401,F811
     handle_auth_tokens_list,
     handle_auth_token_create,
     handle_auth_token_delete,
     handle_auth_share_create,
     handle_audit_log,
+)
+from .integrations import (  # noqa: F401,F811
+    handle_ical_feed,
+    handle_weekly_report,
+    handle_service_discovery,
+    handle_watchdog_status,
+    handle_watchdog_enable,
+    handle_watchdog_disable,
+    handle_healthz,
+    handle_readyz,
+    handle_vector_db,
+    handle_hf_card,
+    handle_hf_janitor,
+    handle_vfio_status,
 )
 
 # Private helpers used by tests (and by future submodules during migration).
