@@ -50,8 +50,21 @@ def _services_state(cfg):
     return _m._services_state(cfg)
 
 
+def handle_processes(ctx):
+    # Forward to ops.handle_processes — used by handle_state. Late import
+    # to keep this a 2-statement forwarding stub (recognized by test_api_structure).
+    from . import ops as _ops
+    return _ops.handle_processes(ctx)
+
+
 def _fan_distribution(cfg):
     return _m._fan_distribution(cfg)
+
+
+def _llm_model_served(cfg):
+    # llm_model_served lives in api.llm — forward via late import
+    from . import llm as _llm
+    return _llm._llm_model_served(cfg)
 
 
 # ─────────────────────────── GET /api/state ────────────────────────────────
