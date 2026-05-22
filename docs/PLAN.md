@@ -3,7 +3,7 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:19 (cycle 126 done — R&D consolidation)
+**Last updated** : 2026-05-22 09:18 (cycle 127 — R&D survey #2 opened)
 **Latest commit** : `85b2528` — CHANGELOG + refresh dashboard/stats.png
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
@@ -74,7 +74,36 @@ no SaaS, no paid tier).
 
 ---
 
-## 🎊 R&D iteration COMPLETE — 6/6 features shipped (cycles 115-125)
+## 💡 R&D iteration #2 — survey 2 (2026-05-22, cycle 127+)
+
+### New scan : tools not covered in iteration #1
+
+| Tool | Notable feature | Worth porting ? |
+|---|---|---|
+| **LibreHardwareMonitor** | Per-sensor min/max/avg lifetime tracking | ✅ small — extend power_stats with lifetime min/max |
+| **Psensor / xsensors** | Configurable per-sensor alarms (custom thresholds) | partial — we have global alerts, not per-metric thresholds editable in UI |
+| **hardinfo / inxi** | One-page system report (CPU + GPU + RAM + disks + kernel) | ✅ **HIGH** — `/api/sysreport` endpoint for support handoff |
+| **KSysGuard / gnome-system-monitor** | Drag-and-drop sensor selection in a config tab | already have Layout |
+| **HWMonitor** | Lifetime peak temperature alarm (warn if ever crossed) | ✅ small — extend alerts with sticky max trackers |
+| **nvitop interactive** | Right-click process → kill / send signal | ⚠️ security/UX risk — needs sudo-like trust |
+| **Aida64 stability test** | Stress test workload bundled | ❌ heavy ; users have their own |
+| **MangoHud config** | Per-game preset config files | partial overlap with app_triggers |
+| **systemd timer** | Scheduled benchmark runs (compare every Sunday at 3am) | ✅ small — extend benchmark with cron-like scheduling |
+| **inxi -F** | Bus topology with PCI device tree | ✅ small — /api/sysreport already partly does it |
+| **Custom** | Per-card cost split (multi-GPU rigs) | ✅ small — gpu_index-aware kwh_month |
+| **Custom** | Idle auto-undervolt (clock down when <5% util) | ⚠️ risky — could destabilize ; needs careful testing |
+
+### Picked for upcoming cycles (smallest first)
+
+1. **`/api/sysreport`** (cycle 127) — one-shot JSON dump of system info for support tickets (kernel, NVIDIA driver, CUDA, GPU list, modules enabled, disk free, RAM total)
+2. **Per-metric lifetime min/max** (cycle 128) — extend stats with peak_ever_temp, lowest_ever_idle_w, peak_ever_power. Sticky across restarts.
+3. **Per-GPU cost split** (cycle 129) — multi-GPU rigs : `/api/electricity?gpu_index=N` already filters by GPU ; surface per-card breakdown in About / Stats.
+4. **Sticky peak alerts** (cycle 130) — alert if recorded temp/power ever exceeds a configured threshold ; remembered across restarts via storage.
+5. **Scheduled benchmarks** (cycle 131) — POST /api/benchmark/schedule with cron-like spec ; runs in background thread.
+
+---
+
+## 🎊 R&D iteration #1 COMPLETE — 6/6 features shipped (cycles 115-125)
 - ✅ #1 Per-app profile triggers (4 cycles, 38 tests)
 - ✅ #2 NVENC/NVDEC/PCIe metrics (1 cycle, 5 tests)
 - ✅ #3 Monthly power budget tracker (1 cycle, 8 tests)
