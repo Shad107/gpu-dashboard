@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:30 (cycle 129 done — R&D #2.2 lifetime stats)
-**Latest commit** : `09bd3ae` — lifetime peak temp/power/fan + lowest idle
+**Last updated** : 2026-05-22 08:36 (cycle 130 done — R&D #2.3a lifetime UI)
+**Latest commit** : `fd3c884` — lifetime records in About tab
 **Tests** : 612 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -102,7 +102,10 @@ no SaaS, no paid tier).
    - GET /api/lifetime-stats : peak_temp_c, peak_power_w, peak_fan_pct, peak_fan_rpm, lowest_idle_power_w
    - Computed on-the-fly via SQL aggregates (no schema bump)
    - 6 new TDD tests · 606 → 612
-3. **Per-GPU cost split** (cycle 129) — multi-GPU rigs : `/api/electricity?gpu_index=N` already filters by GPU ; surface per-card breakdown in About / Stats.
+3a. **Lifetime records UI** (cycle 130) ✅ DONE
+   - About tab gains 🏆 Records section : peak temp / power / fan / lowest idle / tracking since
+   - 7 new i18n keys × 2 langs · live tested with planted data (87°C peak, 348W, 6.7W idle)
+3b. **Per-GPU cost split** (cycle 131 next) — multi-GPU per-card breakdown in Stats yearly card
 4. **Sticky peak alerts** (cycle 130) — alert if recorded temp/power ever exceeds a configured threshold ; remembered across restarts via storage.
 5. **Scheduled benchmarks** (cycle 131) — POST /api/benchmark/schedule with cron-like spec ; runs in background thread.
 
