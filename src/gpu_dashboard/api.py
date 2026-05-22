@@ -2463,6 +2463,78 @@ def handle_snapshot(ctx: dict):
 # ────────────────────────── POST /api/restart ─────────────────────────────
 
 
+def handle_modules_list(ctx: dict) -> Response:
+    """Returns the known opt-in modules and their current enabled state.
+
+    Used by the Services tab to render toggle switches that auto-restart.
+    """
+    cfg = ctx.get("config")
+    known = [
+        ("MODULE_POWER_LIMIT",      "Power Limit",       "Slider + 3 named profiles in Settings"),
+        ("MODULE_CLOCK_OFFSETS",    "Clock offsets",     "GPU + memory offset sliders"),
+        ("MODULE_FAN_CURVE",        "Fan curve daemon",  "Custom fan curve daemon (otherwise driver default)"),
+        ("MODULE_OCULINK_WATCHDOG", "OcuLink watchdog",  "Auto-detects + alerts on PCIe link drops"),
+        ("MODULE_TELEGRAM_ALERTS",  "Telegram alerts",   "Send alerts to a Telegram bot"),
+        ("MODULE_AUTO_PROFILE",     "Auto-profile",      "Switches profile by load (silent/sweet/boost)"),
+        ("MODULE_ALERT_MONITOR",    "Alert monitor",     "Threshold-based alerts (temp, fan, VRAM)"),
+    ]
+    out = []
+    for key, label, desc in known:
+        enabled = cfg.get_bool(key) if cfg is not None else False
+        out.append({"key": key, "label": label, "description": desc, "enabled": enabled})
+    return 200, {"ok": True, "modules": out}
+
+
+def handle_modules_toggle(ctx: dict, payload) -> Response:
+    """Set MODULE_<NAME>=0/1 in config.env, then trigger a service restart.
+
+    The frontend should poll /api/version until back up after this returns.
+    """
+    if not isinstance(payload, dict):
+        return 400, {"ok": False, "error": "payload must be an object"}
+    key = str(payload.get("key", "")).strip()
+    enabled = bool(payload.get("enabled"))
+    if not key.startswith("MODULE_") or not key.replace("_", "").isalnum():
+        return 400, {"ok": False, "error": f"invalid module key {key!r}"}
+
+    cfg = ctx.get("config")
+    if cfg is None:
+        return 500, {"ok": False, "error": "no config loaded"}
+
+    cfg.set(key, "1" if enabled else "0")
+
+    config_path = ctx.get("config_path") or os.path.expanduser(
+        "~/.config/gpu-dashboard/config.env"
+    )
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        existing = {}
+        if os.path.isfile(config_path):
+            from .config import parse_env_file
+            existing = parse_env_file(config_path)
+        existing[key] = "1" if enabled else "0"
+        from .config import write_env_file
+        write_env_file(config_path, existing,
+                       header="# Auto-updated by gpu-dashboard /api/modules/toggle")
+    except OSError as e:
+        return 500, {"ok": False, "error": f"could not write config.env: {e}"}
+
+    # Trigger restart in a background thread so we can return 200 first.
+    # The frontend will poll /api/version until the new process answers.
+    import threading as _th
+    def _delayed_restart():
+        import time as _t
+        _t.sleep(0.5)
+        try:
+            handle_restart(ctx)
+        except Exception:
+            pass
+    _th.Thread(target=_delayed_restart, daemon=True).start()
+
+    return 200, {"ok": True, "key": key, "enabled": enabled,
+                 "message": "config updated, restarting service…"}
+
+
 def handle_restart(ctx: dict) -> Response:
     """Restart the server in-place via os.execv.
 

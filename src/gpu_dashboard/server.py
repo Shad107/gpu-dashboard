@@ -409,6 +409,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_version(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/modules":
+                code, body = api.handle_modules_list(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/sysreport":
                 code, body = api.handle_sysreport(ctx)
                 self._send_json(code, body)
@@ -581,6 +585,10 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/app-triggers":
                 code, body = api.handle_app_triggers_post(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/modules/toggle":
+                code, body = api.handle_modules_toggle(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/benchmark/run":

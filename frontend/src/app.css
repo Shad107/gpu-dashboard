@@ -706,6 +706,21 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
   .heatmap-grid { grid-template-columns: repeat(6, 1fr); }
 }
 
+/* Module toggle list (Services tab, cycle 139) */
+.module-list { display: flex; flex-direction: column; gap: 0.4em; }
+.module-row {
+  display: flex; align-items: flex-start; gap: 0.7em;
+  padding: 0.55em 0.8em;
+  background: var(--bg-page);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.module-row:hover { background: var(--bg-card); border-color: var(--border); }
+.module-row input[type="checkbox"] { margin-top: 0.25em; cursor: pointer; }
+.module-info { display: flex; flex-direction: column; flex: 1; }
+.module-label { font-weight: 500; color: var(--text-muted); }
+
 /* Inline electricity rate edit (cycle 139) */
 .edit-rate {
   background: none; border: none; color: var(--text-dim);

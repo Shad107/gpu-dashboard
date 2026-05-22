@@ -363,6 +363,60 @@
     return () => { if (historyTimer) clearInterval(historyTimer); };
   });
 
+  // ── Module toggles (cycle 139, user feedback) ────────────────────────────
+  type ModuleInfo = { key: string; label: string; description: string; enabled: boolean };
+  let modulesList = $state<ModuleInfo[] | null>(null);
+  let togglingKey = $state<string | null>(null);
+  async function loadModules() {
+    try {
+      const r = await fetch("/api/modules");
+      const j = await r.json();
+      modulesList = j.modules ?? [];
+    } catch { modulesList = []; }
+  }
+  async function waitForServerBack(timeoutMs = 30000): Promise<boolean> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      await new Promise(r => setTimeout(r, 800));
+      try {
+        const r = await fetch("/api/version", { cache: "no-store" });
+        if (r.ok) return true;
+      } catch {}
+    }
+    return false;
+  }
+  async function toggleModule(key: string, enabled: boolean) {
+    togglingKey = key;
+    try {
+      const r = await fetch("/api/modules/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, enabled }),
+      });
+      const j = await r.json();
+      if (!j.ok) {
+        toast.show(j.error || "toggle failed", "error");
+        togglingKey = null;
+        return;
+      }
+      // Wait for the server to come back up after the auto-restart
+      const back = await waitForServerBack();
+      if (back) {
+        toast.show(i18n.t("services.modules_applied") ?? "Module appliqué", "success");
+        await loadModules();
+      } else {
+        toast.show(i18n.t("services.modules_timeout") ?? "Timeout — recharge la page", "error");
+      }
+    } catch (e: any) {
+      toast.show(e?.message || "toggle failed", "error");
+    } finally {
+      togglingKey = null;
+    }
+  }
+  $effect(() => {
+    if (modal.open && modal.section === "services" && modulesList === null) loadModules();
+  });
+
   // ── Restart action ────────────────────────────────────────────────────────
   let restarting = $state(false);
   async function restartServer() {
@@ -808,6 +862,35 @@
             </tr>
           {/each}
         </tbody></table>
+
+        <!-- ─── Modules (cycle 139, user feedback) ─────────────────── -->
+        <h3 style="margin-top:1.8em;color:#cdd2da;font-size:.95em;font-weight:600">
+          🧩 {i18n.t("services.modules_label") ?? "Modules optionnels"}
+        </h3>
+        <p class="sub">{i18n.t("services.modules_description") ?? "Active/désactive un module — le service redémarre automatiquement."}</p>
+        {#if modulesList === null}
+          <p class="sub">{i18n.t("history.loading")}</p>
+        {:else}
+          <div class="module-list">
+            {#each modulesList as m (m.key)}
+              <label class="module-row">
+                <input
+                  type="checkbox"
+                  checked={m.enabled}
+                  disabled={togglingKey === m.key}
+                  onchange={(e) => toggleModule(m.key, (e.target as HTMLInputElement).checked)}
+                />
+                <div class="module-info">
+                  <span class="module-label">{m.label}</span>
+                  <span class="sub" style="font-size:.78em">{m.description}</span>
+                </div>
+                {#if togglingKey === m.key}
+                  <span class="sub" style="font-size:.78em">⏳ {i18n.t("services.modules_applying") ?? "Redémarrage..."}</span>
+                {/if}
+              </label>
+            {/each}
+          </div>
+        {/if}
 
         <h3 style="margin-top:1.8em;color:#cdd2da;font-size:.95em;font-weight:600">
           {i18n.t("services.restart_label")}
