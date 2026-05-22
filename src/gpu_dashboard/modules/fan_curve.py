@@ -80,6 +80,25 @@ def validate_curve(curve) -> None:
         last_t = t
 
 
+def load_user_settings() -> dict:
+    """Read ~/.config/gpu-dashboard/fan_curve.json and return its settings dict.
+
+    Returns {} if missing/corrupt. Useful for the daemon to start with the
+    user's saved hysteresis params (R&D #4.4).
+    """
+    import json as _json
+    import os as _os
+    override_path = _os.path.expanduser("~/.config/gpu-dashboard/fan_curve.json")
+    if not _os.path.exists(override_path):
+        return {}
+    try:
+        with open(override_path) as f:
+            data = _json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, _json.JSONDecodeError):
+        return {}
+
+
 def pick_curve(profile: Optional[dict] = None, override: Optional[list] = None) -> list:
     """Return the active curve.
 
@@ -184,7 +203,16 @@ def apply_fan_speed(
 
 
 class FanCurveDaemon:
-    """Background thread that reads GPU temp and applies the fan curve."""
+    """Background thread that reads GPU temp and applies the fan curve.
+
+    Hysteresis (R&D #4.4) prevents fan-RPM oscillation when temperature
+    hovers around a curve breakpoint. Two knobs :
+      - hysteresis_c : minimum temp DROP (°C) required to allow a ramp-down
+                       even if hysteresis_s hasn't elapsed (default 3°C)
+      - hysteresis_s : minimum seconds between two ramp-down events
+                       (default 15s)
+    Ramp-UP is always immediate (safety — never delay cooling response).
+    """
 
     def __init__(
         self,
@@ -193,6 +221,8 @@ class FanCurveDaemon:
         xauthority: Optional[str] = None,
         interval: float = 5.0,
         sampler=None,
+        hysteresis_c: float = 3.0,
+        hysteresis_s: float = 15.0,
     ):
         self._curve = curve
         self._display = display
@@ -202,6 +232,10 @@ class FanCurveDaemon:
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._last_pct: Optional[int] = None
+        self._last_change_ts: float = 0.0
+        self._last_change_temp: Optional[float] = None
+        self._hysteresis_c = float(hysteresis_c)
+        self._hysteresis_s = float(hysteresis_s)
 
     def start(self) -> None:
         if self._thread is not None:
@@ -238,13 +272,42 @@ class FanCurveDaemon:
             pass
         return None
 
+    def _should_apply(self, target_pct: int, now_temp: float, now_ts: float) -> bool:
+        """Hysteresis gate. Returns True if the daemon should apply target_pct.
+
+        Rules :
+          1. First time (no _last_pct) → always apply.
+          2. target == last → skip (no-op, no nvidia-settings spam).
+          3. target > last (RAMP-UP / hotter) → always apply immediately (safety).
+          4. target < last (RAMP-DOWN / cooler) → only apply if EITHER :
+             a. enough seconds elapsed since last change (_hysteresis_s)
+             b. temp dropped enough since last change (_hysteresis_c)
+        """
+        if self._last_pct is None:
+            return True
+        if target_pct == self._last_pct:
+            return False
+        if target_pct > self._last_pct:
+            return True
+        # Ramp-down — apply gating
+        elapsed = now_ts - self._last_change_ts
+        if elapsed >= self._hysteresis_s:
+            return True
+        if self._last_change_temp is not None:
+            temp_drop = self._last_change_temp - now_temp
+            if temp_drop >= self._hysteresis_c:
+                return True
+        return False
+
     def _loop(self) -> None:
         while not self._stop.is_set():
             temp = self._read_temp()
             if temp is not None:
                 pct = interpolate(self._curve, temp)
-                # Avoid spamming nvidia-settings if value hasn't changed
-                if pct != self._last_pct:
+                now = _time.monotonic()
+                if self._should_apply(pct, temp, now):
                     apply_fan_speed(pct, self._display, self._xauth)
                     self._last_pct = pct
+                    self._last_change_ts = now
+                    self._last_change_temp = float(temp)
             self._stop.wait(self._interval)

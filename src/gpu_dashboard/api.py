@@ -1653,16 +1653,20 @@ def handle_profile_save(ctx: dict, payload: dict) -> Response:
 
 
 def handle_fan_curve_get(ctx: dict) -> Response:
-    """Return the active fan curve + current target % + daemon status."""
+    """Return the active fan curve + current target % + daemon status + hysteresis."""
     from .modules import fan_curve as _fc
     profile = ctx.get("profile") or {}
     curve = _fc.pick_curve(profile)
     daemon = ctx.get("fan_curve_daemon")
+    cfg = ctx["config"]
     return 200, {
-        "enabled": ctx["config"].get_bool("MODULE_FAN_CURVE"),
+        "enabled": cfg.get_bool("MODULE_FAN_CURVE"),
         "running": daemon is not None and getattr(daemon, "_thread", None) is not None,
         "curve": curve,
         "current_target_pct": getattr(daemon, "_last_pct", None) if daemon else None,
+        # R&D #4.4 — hysteresis settings (defaults match daemon defaults)
+        "hysteresis_c": float(cfg.get("FAN_CURVE_HYSTERESIS_C", "3") or "3"),
+        "hysteresis_s": float(cfg.get("FAN_CURVE_HYSTERESIS_S", "15") or "15"),
     }
 
 
@@ -1679,10 +1683,39 @@ def handle_fan_curve_post(ctx: dict, payload: dict) -> Response:
     if not ok:
         return 400, {"ok": False, "error": err}
 
+    # R&D #4.4 — optional hysteresis params (bounded sanity check)
+    hys_c_raw = payload.get("hysteresis_c") if isinstance(payload, dict) else None
+    hys_s_raw = payload.get("hysteresis_s") if isinstance(payload, dict) else None
+    hysteresis_c = None
+    hysteresis_s = None
+    if hys_c_raw is not None:
+        try:
+            v = float(hys_c_raw)
+            if 0 <= v <= 20:
+                hysteresis_c = v
+            else:
+                return 400, {"ok": False, "error": "hysteresis_c out of range [0,20]"}
+        except (TypeError, ValueError):
+            return 400, {"ok": False, "error": "hysteresis_c must be a number"}
+    if hys_s_raw is not None:
+        try:
+            v = float(hys_s_raw)
+            if 0 <= v <= 600:
+                hysteresis_s = v
+            else:
+                return 400, {"ok": False, "error": "hysteresis_s out of range [0,600]"}
+        except (TypeError, ValueError):
+            return 400, {"ok": False, "error": "hysteresis_s must be a number"}
+
     path = os.path.expanduser("~/.config/gpu-dashboard/fan_curve.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    payload_save: dict = {"curve": curve}
+    if hysteresis_c is not None:
+        payload_save["hysteresis_c"] = hysteresis_c
+    if hysteresis_s is not None:
+        payload_save["hysteresis_s"] = hysteresis_s
     with open(path, "w") as f:
-        json.dump({"curve": curve}, f, indent=2)
+        json.dump(payload_save, f, indent=2)
 
     # Apply the new curve to the running daemon NOW + force an immediate
     # tick so the fan speed updates within milliseconds of Save being clicked.
@@ -1692,6 +1725,11 @@ def handle_fan_curve_post(ctx: dict, payload: dict) -> Response:
     if daemon is not None:
         try:
             daemon.update_curve(curve)
+            # R&D #4.4 — apply hysteresis settings live to the running daemon
+            if hysteresis_c is not None:
+                daemon._hysteresis_c = hysteresis_c
+            if hysteresis_s is not None:
+                daemon._hysteresis_s = hysteresis_s
             # Force an immediate evaluation : read latest temp, interpolate,
             # apply via nvidia-settings.
             temp = daemon._read_temp() if hasattr(daemon, "_read_temp") else None

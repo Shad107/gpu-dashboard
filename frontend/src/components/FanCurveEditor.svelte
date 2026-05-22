@@ -14,10 +14,15 @@
     running: boolean;
     curve: CurvePoint[];
     current_target_pct: number | null;
+    hysteresis_c?: number;
+    hysteresis_s?: number;
   };
 
   let data = $state<FanCurveData | null>(null);
   let editedCurve = $state<CurvePoint[]>([]);
+  // R&D #4.4 — hysteresis controls (locally edited, saved with curve)
+  let hysteresisC = $state<number>(3);
+  let hysteresisS = $state<number>(15);
   let loading = $state(false);
   let error = $state<string>("");
   let draggingIdx = $state<number | null>(null);
@@ -51,6 +56,9 @@
       if (draggingIdx === null && !isDirty) {
         editedCurve = (data?.curve ?? []).map(p => [p[0], p[1]] as CurvePoint);
       }
+      // R&D #4.4 — hysteresis values from server
+      if (typeof data?.hysteresis_c === "number") hysteresisC = data.hysteresis_c;
+      if (typeof data?.hysteresis_s === "number") hysteresisS = data.hysteresis_s;
     } catch (e: any) {
       error = e?.message ?? String(e);
     } finally {
@@ -69,7 +77,11 @@
       const r = await fetch("/api/fan-curve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ curve: editedCurve }),
+        body: JSON.stringify({
+          curve: editedCurve,
+          hysteresis_c: hysteresisC,
+          hysteresis_s: hysteresisS,
+        }),
       });
       const j = await r.json();
       if (j.ok) {
@@ -365,9 +377,24 @@
         ⌨️ {i18n.t("fancurve.keyboard_hint")}
       </p>
     {/if}
-    <p class="sub" style="font-size:.74em;margin-top:.6em;color:var(--text-dim)">
-      💡 {i18n.t("fancurve.hysteresis_hint")}
-    </p>
+    <!-- R&D #4.4 hysteresis controls -->
+    <div class="hysteresis-row" style="margin-top:1em;padding-top:.6em;border-top:1px solid var(--border-subtle)">
+      <h4 style="margin:0 0 .4em;font-size:.85em;color:var(--text-muted)">
+        ⏱️ {i18n.t("fancurve.hysteresis_title") ?? "Anti-oscillation (hystérésis)"}
+      </h4>
+      <p class="sub" style="font-size:.74em;margin-bottom:.5em;color:var(--text-dim)">
+        💡 {i18n.t("fancurve.hysteresis_hint")}
+      </p>
+      <div style="display:grid;grid-template-columns:auto 1fr auto;gap:.5em;align-items:center;font-size:.85em">
+        <label for="hys-c">{i18n.t("fancurve.hysteresis_c") ?? "Seuil de baisse"}</label>
+        <input id="hys-c" type="range" min="0" max="10" step="0.5" bind:value={hysteresisC} />
+        <b style="min-width:3em;text-align:right">{hysteresisC} °C</b>
+
+        <label for="hys-s">{i18n.t("fancurve.hysteresis_s") ?? "Délai min."}</label>
+        <input id="hys-s" type="range" min="0" max="120" step="1" bind:value={hysteresisS} />
+        <b style="min-width:3em;text-align:right">{hysteresisS} s</b>
+      </div>
+    </div>
   {/if}
 </div>
 
