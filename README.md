@@ -10,13 +10,13 @@
 ![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![Status](https://img.shields.io/badge/status-alpha-orange.svg)
 
-![Dashboard](docs/screenshot.png)
+![Dashboard hero — GreenWatts main view](docs/promo/01-dashboard-main.png)
 
-> Showing 8 live cards : GPU temp · power-limit + perf% · fan RPM/target · VRAM ·
-> **LLM model** (real-time from llama-server) · **🪙 Tokens generated + tok/W
-> efficiency** (unique to gpu-dashboard) · **⚡ Electricity €/month** · Compute
-> processes. Below : Cooling chart (fan0/fan1 RPM + temp dashed) and Power chart
-> (live draw + power-limit cap).
+> Main dashboard, sticky cards strip with 4 group sections : **🖥️ GPU LIVE**
+> (temp / util / VRAM / PCIe folded into one card · fans) · **🔧 TUNING**
+> (power-limit · clocks · OcuLink) · **🪙 LLM** (model · tok/s + tok/Wh)
+> · **💸 COÛT** (€/month · forecast). Tabs (Dashboard / Stats / History)
+> stay fixed below ; the version + refresh footer is pinned at the bottom.
 
 ### Mobile responsive
 <img src="docs/mobile/dashboard-mobile.png" width="280" alt="Single-column mobile layout" />
@@ -56,10 +56,29 @@ heatmap, fan distribution, and the recent alerts list.
 
 <img src="docs/stats.png" alt="Stats page — 6 sections : LLM perf · Power · Thermal · Profile time · Heatmap · Alerts" width="640" />
 
+### 🩺 About tab — diagnostics built in
+
+![About tab — drift detector + idle audit + ECC + records](docs/promo/02-about-diagnostics.png)
+
+Single panel showing : version + 1-click update from GitHub, system info
+(driver, kernel, vBIOS, paths), lifetime records (max temp / power / RPM ·
+min idle watts · sample count), and the diagnostic features — **driver/kernel
+drift detector** (flags 'apt upgrade changed your nvidia driver' on each
+boot), **idle-state audit** ('your card pulls X W idle, expected Y-Z W' +
+checklist of fixes for stuck p-states / disabled persistence mode /
+compositor interference), **ECC + memory health** (corrected vs
+uncorrected error counters, remapped rows — only shows on datacenter
+cards that expose ECC).
+
 ### 🌀 Fan curve editor
 
+![Fan curve editor with anti-oscillation hysteresis](docs/promo/03-fan-curve.png)
+
 Visual editor for the fan curve daemon — drag, click, keyboard. Lives in
-**Settings → Tuning → Courbe ventilo** (modal tab, 10 tabs total).
+**Settings → Tuning → Courbe ventilo** (modal tab, 10 tabs total). Includes
+the **anti-oscillation hysteresis** controls (cycle 144d) — configurable
+temp-drop threshold + min ramp-down delay so fans don't cycle when temp
+hovers near a curve breakpoint.
 
 - **Drag** any control point to reshape (temp stays clamped between neighbors)
 - **Double-click** an empty area of the SVG to insert a new control point
