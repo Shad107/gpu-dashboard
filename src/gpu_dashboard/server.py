@@ -700,6 +700,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hot_swap_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/inference-cost":
+                # R&D #14.4 — €/prompt + tok/Wh over rolling windows
+                code, body = api.handle_inference_cost(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/hot-swap/evaluate":
                 code, body = api.handle_hot_swap_evaluate(ctx, params)
                 self._send_json(code, body)

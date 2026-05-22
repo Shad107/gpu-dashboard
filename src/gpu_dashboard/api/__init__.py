@@ -265,3 +265,4 @@ from .hot_gpu_wizard import handle_hot_gpu_wizard  # noqa: F401,F811
 from .carbon import handle_carbon  # noqa: F401,F811
 from .xid import handle_xid, handle_xid_decode  # noqa: F401,F811
 from .hot_swap import handle_hot_swap_status, handle_hot_swap_evaluate  # noqa: F401,F811
+from .inference_cost import handle_inference_cost  # noqa: F401,F811
