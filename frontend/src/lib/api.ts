@@ -472,6 +472,21 @@ export const api = {
       checklist?: Array<{ key: string; label: string; hint: string }>;
     }>),
 
+  eccHealth: () =>
+    fetch("/api/ecc-health").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      ecc_mode?: string | null;
+      corrected_total?: number | null;
+      uncorrected_total?: number | null;
+      remapped_correctable?: number | null;
+      remapped_uncorrectable?: number | null;
+      remapped_pending?: number | null;
+      remapped_failure?: number | null;
+      verdict_kind?: "ok" | "watch" | "failing";
+      verdict_msg?: string;
+    }>),
+
   lifetimeStats: (gpu = 0) =>
     fetch("/api/lifetime-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;

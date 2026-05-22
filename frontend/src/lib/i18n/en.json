@@ -295,6 +295,7 @@
   "about.update_section": "Update",
   "about.update_description": "Check the remote version on GitHub. If a newer one exists, apply with git pull + automatic restart.",
   "about.idle_audit": "Idle audit",
+  "about.ecc_health": "Memory health (ECC)",
   "services.update_moved_hint": "Update : see the About tab.",
   "header.update_chip_title": "A newer version is available — click to open Services and update",
   "history.anomaly_band": "Anomaly band (μ±2σ)",

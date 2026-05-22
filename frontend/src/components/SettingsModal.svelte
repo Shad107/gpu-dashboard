@@ -624,6 +624,10 @@
   async function loadIdleAudit() {
     try { idleAudit = await api.idleAudit(); } catch { idleAudit = null; }
   }
+  let eccHealth = $state<Awaited<ReturnType<typeof api.eccHealth>> | null>(null);
+  async function loadEccHealth() {
+    try { eccHealth = await api.eccHealth(); } catch { eccHealth = null; }
+  }
   let lifetimeStats = $state<Awaited<ReturnType<typeof api.lifetimeStats>> | null>(null);
   async function loadAbout() {
     try { aboutData = await api.about(); } catch { aboutData = null; }
@@ -632,6 +636,7 @@
   $effect(() => {
     if (modal.open && modal.section === "about" && !aboutData) loadAbout();
     if (modal.open && modal.section === "about") loadIdleAudit();
+    if (modal.open && modal.section === "about") loadEccHealth();
   });
 
   function fmtTrackingSince(ts: number | null): string {
@@ -1072,6 +1077,33 @@
                 </tr>
               </tbody>
             </table>
+          {/if}
+
+          <!-- ─── R&D #4.3 ECC + memory health ─── -->
+          {#if eccHealth?.available}
+            <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
+              💾 {i18n.t("about.ecc_health") ?? "Santé mémoire (ECC)"}
+            </h3>
+            {#if eccHealth.verdict_kind === "ok"}
+              <p class="sub" style="margin:0;font-size:.82em;color:var(--accent)">
+                ✓ {eccHealth.verdict_msg}
+              </p>
+            {:else if eccHealth.verdict_kind === "watch"}
+              <p class="sub" style="margin:0;font-size:.82em;color:var(--accent-warn)">
+                ⚠️ {eccHealth.verdict_msg}
+              </p>
+            {:else if eccHealth.verdict_kind === "failing"}
+              <p class="sub" style="margin:0;font-size:.82em;color:var(--accent-bad)">
+                🚨 {eccHealth.verdict_msg}
+              </p>
+            {/if}
+            <div class="sub" style="margin-top:.4em;font-size:.74em;display:grid;grid-template-columns:auto auto;gap:.2em .8em">
+              <span>ECC mode :</span><b>{eccHealth.ecc_mode ?? "—"}</b>
+              <span>Corrigées (total) :</span><b>{eccHealth.corrected_total ?? "—"}</b>
+              <span>Non-corrigées (total) :</span><b>{eccHealth.uncorrected_total ?? "—"}</b>
+              <span>Rows remapped (corr/uncorr) :</span><b>{eccHealth.remapped_correctable ?? "—"} / {eccHealth.remapped_uncorrectable ?? "—"}</b>
+              <span>Rows pending / failed :</span><b>{eccHealth.remapped_pending ?? "—"} / {eccHealth.remapped_failure ?? "—"}</b>
+            </div>
           {/if}
 
           <!-- ─── R&D #4.5 Idle-state audit ─── -->

@@ -2771,6 +2771,103 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #4.3 — ECC + memory health audit ────────────────────────────────────
+def _na(s: str) -> bool:
+    """nvidia-smi uses '[N/A]' or 'N/A' for unsupported fields."""
+    return s.strip().upper() in ("N/A", "[N/A]", "", "NOT SUPPORTED")
+
+
+def handle_ecc_health(ctx: dict) -> Response:
+    """ECC error counters + remapped rows health audit.
+
+    Most consumer cards (RTX 3090/4090 etc.) don't expose ECC — returns
+    available=false so the UI hides the panel. Datacenter cards (A100,
+    H100, Tesla) expose the full counters.
+
+    Response :
+      {ok, available, ecc_mode, corrected_total, uncorrected_total,
+       remapped_correctable, remapped_uncorrectable, remapped_pending,
+       remapped_failure, verdict_kind ('ok'|'watch'|'failing'), verdict_msg}
+    """
+    fields = [
+        "ecc.mode.current",
+        "ecc.errors.corrected.aggregate.total",
+        "ecc.errors.uncorrected.aggregate.total",
+        "remapped_rows.correctable",
+        "remapped_rows.uncorrectable",
+        "remapped_rows.pending",
+        "remapped_rows.failure",
+    ]
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "-i", "0", f"--query-gpu={','.join(fields)}",
+             "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=2,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return 200, {"ok": True, "available": False}
+    if r.returncode != 0 or not r.stdout.strip():
+        return 200, {"ok": True, "available": False}
+
+    parts = [p.strip() for p in r.stdout.strip().splitlines()[0].split(",")]
+    if len(parts) < 7:
+        return 200, {"ok": True, "available": False}
+
+    # Heuristic : if EVERY field is N/A, the card doesn't expose ECC at all
+    if all(_na(p) for p in parts):
+        return 200, {"ok": True, "available": False}
+
+    def _i(s: str) -> Optional[int]:
+        if _na(s):
+            return None
+        try:
+            return int(s)
+        except ValueError:
+            return None
+
+    ecc_mode = None if _na(parts[0]) else parts[0]
+    corr_total = _i(parts[1])
+    uncorr_total = _i(parts[2])
+    rem_corr = _i(parts[3])
+    rem_uncorr = _i(parts[4])
+    rem_pending = _i(parts[5])
+    rem_failure = _i(parts[6])
+
+    # Verdict logic
+    if rem_failure and rem_failure > 0:
+        verdict_kind = "failing"
+        verdict_msg = f"Row remap FAILED on {rem_failure} row(s). VRAM is exhausted of spare rows — replace the card."
+    elif uncorr_total and uncorr_total > 0:
+        verdict_kind = "failing"
+        verdict_msg = f"{uncorr_total} uncorrectable ECC error(s). Memory degrading — back up data + replace soon."
+    elif rem_uncorr and rem_uncorr > 0:
+        verdict_kind = "watch"
+        verdict_msg = f"{rem_uncorr} row(s) remapped due to uncorrectable errors. Monitor closely."
+    elif rem_pending and rem_pending > 0:
+        verdict_kind = "watch"
+        verdict_msg = f"{rem_pending} row(s) pending remap (reboot required to apply)."
+    elif corr_total and corr_total > 0:
+        verdict_kind = "watch"
+        verdict_msg = f"{corr_total} corrected ECC error(s) since last reset. Normal at low counts, alarming if growing fast."
+    else:
+        verdict_kind = "ok"
+        verdict_msg = "No ECC errors, no remapped rows. Memory healthy."
+
+    return 200, {
+        "ok": True,
+        "available": True,
+        "ecc_mode": ecc_mode,
+        "corrected_total": corr_total,
+        "uncorrected_total": uncorr_total,
+        "remapped_correctable": rem_corr,
+        "remapped_uncorrectable": rem_uncorr,
+        "remapped_pending": rem_pending,
+        "remapped_failure": rem_failure,
+        "verdict_kind": verdict_kind,
+        "verdict_msg": verdict_msg,
+    }
+
+
 # ─── R&D #4.5 — Idle-state audit ─────────────────────────────────────────────
 # Reference baselines : expected idle draw (W) per GPU family.
 # Sources : community reports + datasheet idle figures, conservative bands.
