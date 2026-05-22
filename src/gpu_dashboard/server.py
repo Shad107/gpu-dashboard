@@ -670,6 +670,22 @@ def make_handler(ctx: dict):
                 code, body = api.handle_disk_health(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/best-gpu":
+                # R&D #13.7 — workload power-balancer (JSON)
+                code, body = api.handle_best_gpu(ctx, params)
+                self._send_json(code, body)
+                return
+            if path == "/api/best-gpu/env":
+                # R&D #13.7 — shell-friendly variant
+                code, text = api.handle_best_gpu_env(ctx, params)
+                data = text.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path == "/api/airgap/audit":
                 code, body = api.handle_airgap_audit(ctx, params)
                 self._send_json(code, body)

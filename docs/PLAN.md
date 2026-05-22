@@ -11,6 +11,32 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #13 (2026-05-22 23:20) — AUTO-OPENED post #12 complete
+
+8 NEW angles :
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 13.1 | Undervolt auto-pilot (idle-aware) | M | 5 | Step `nvidia-smi -pl` down during idle, kWh saved tracker |
+| 13.2 | GPU reservation queue | M | 5 | SQLite-backed Gantt + iCal export reuses 11.6 infra |
+| 13.3 | **VRAM quota enforcer** | S | 5 | Per-process budget, dry-run logs hypothetical kills |
+| 13.4 | Carbon-intensity overlay (local CSV) | S | 4 | gCO2/kWh × W → gCO2/token, air-gap-safe (local file) |
+| 13.5 | Boot-time driver regression smoke test | M | 4 | 6s matmul perf vs rolling baseline tagged by driver version |
+| 13.6 | **Hot-GPU diagnostic wizard** | S | 5 | Step-through dust/driver/fan/ambient verdict tree |
+| 13.7 | **Workload power-balancer (multi-GPU)** | S | 5 | /api/best-gpu returns CUDA_VISIBLE_DEVICES suggestion |
+| 13.8 | Inference latency budget sentinel | M | 5 | p50/p95/p99 tok latency vs SLO, alerts via notif hub |
+
+Start order : 13.7 → 13.3 → 13.6 → 13.4 → 13.1 / 13.2 / 13.5 / 13.8.
+
+---
+
+## ✅ R&D iteration #12 complete (8/8 — 2026-05-22 23:13) + UI sprint 3
+Backend : 12.1 wall-meter · 12.2 SMART · 12.3 LAN peer beacon · 12.4 rule engine ·
+12.5 CI tag · 12.6 /embed iframe · 12.7 air-gap · 12.8 print mode.
+UI cards added to Settings → Integrations : disk / airgap / wall / peers (fdc7fb9).
+
+---
+
 ## 💡 R&D iteration #12 (2026-05-22 16:18) — AUTO-OPENED post #11 complete
 
 Per auto-rebound rule. 8 NEW angles : wall-meter, SMART disk, LAN peers, rule engine, CI runner tag, embed iframe, air-gap, print mode.
