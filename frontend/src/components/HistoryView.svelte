@@ -20,6 +20,7 @@
   let historyCompare = $state<HistorySample[]>([]);
   let historyCompareOffset = $state(0);
   const historyCompareMode = $derived(historyCompareOffset > 0);
+  let showAnomalyBand = $state(false);
   function compareLabelFor(offset: number): string {
     if (offset === 86400) return i18n.t("history.compare_label_24h");
     if (offset === 604800) return i18n.t("history.compare_label_7d");
@@ -184,6 +185,7 @@
         unit={METRIC_INFO[historyMetric].unit}
         compareSamples={historyCompareMode ? historyCompare : []}
         compareLabel={compareLabelFor(historyCompareOffset)}
+        showAnomalyBand={showAnomalyBand}
       >
         <span slot="empty">{i18n.t("history.no_data")}</span>
       </HistoryChart>
@@ -196,6 +198,10 @@
     <label style="display:flex;align-items:center;gap:.4em;cursor:pointer;font-size:.85em">
       <input type="checkbox" bind:checked={historyAutoRefresh} />
       ⏱️ {i18n.t("history.auto_refresh")}
+    </label>
+    <label style="display:flex;align-items:center;gap:.4em;cursor:pointer;font-size:.85em">
+      <input type="checkbox" bind:checked={showAnomalyBand} />
+      📈 {i18n.t("history.anomaly_band") ?? "Anomaly band"}
     </label>
     <label style="display:flex;align-items:center;gap:.4em;font-size:.85em">
       📊 {i18n.t("history.compare_to")}

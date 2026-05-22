@@ -275,6 +275,7 @@
   "benchmark.col_cost": "Coût",
   "chart.download_svg": "Télécharger en SVG",
   "header.chip_click_to_open": "Clic pour ouvrir le détail",
+  "history.anomaly_band": "Bande d'anomalie (μ±2σ)",
   "card.pcie": "PCIe",
   "pcie.downgrade": "bridé",
   "electricity.budget_label": "Budget",

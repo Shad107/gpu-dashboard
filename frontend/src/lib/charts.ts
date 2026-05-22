@@ -157,6 +157,49 @@ export const tempColor = (t: number) =>
 export const colorFan = (f: number) =>
   f < 40 ? "#4ade80" : f < 60 ? "#a3e635" : f < 80 ? "#fbbf24" : "#f87171";
 
+/** Compute rolling μ ± k*σ band for an array of numeric values.
+ *
+ * For each index i, the window is the [i-w/2, i+w/2] slice (clamped at edges).
+ * Returns parallel arrays {mean, upper, lower} of same length as `values`.
+ * Caller maps them to SVG x/y coordinates.
+ *
+ * k = 2 (default) gives the ~95% confidence band — points outside are
+ * statistical outliers worth investigating. */
+export function rollingBand(values: number[], window = 20, k = 2): { mean: number[]; upper: number[]; lower: number[] } {
+  const n = values.length;
+  const mean = new Array<number>(n);
+  const upper = new Array<number>(n);
+  const lower = new Array<number>(n);
+  const half = Math.max(1, Math.floor(window / 2));
+
+  for (let i = 0; i < n; i++) {
+    const lo = Math.max(0, i - half);
+    const hi = Math.min(n, i + half + 1);
+    let sum = 0, cnt = 0;
+    for (let j = lo; j < hi; j++) {
+      const v = values[j];
+      if (typeof v === "number" && Number.isFinite(v)) { sum += v; cnt++; }
+    }
+    if (cnt === 0) {
+      mean[i] = values[i] ?? 0;
+      upper[i] = mean[i];
+      lower[i] = mean[i];
+      continue;
+    }
+    const m = sum / cnt;
+    let varsum = 0;
+    for (let j = lo; j < hi; j++) {
+      const v = values[j];
+      if (typeof v === "number" && Number.isFinite(v)) varsum += (v - m) * (v - m);
+    }
+    const sd = Math.sqrt(varsum / cnt);
+    mean[i] = m;
+    upper[i] = m + k * sd;
+    lower[i] = m - k * sd;
+  }
+  return { mean, upper, lower };
+}
+
 /** Serialize an SVGElement to a standalone .svg file and trigger a download.
  *
  * Inlines the page's `--bg-page` / `--text-muted` etc. computed colors so

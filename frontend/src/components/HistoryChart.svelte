@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { smoothPath, exportSvgAsFile } from "../lib/charts";
+  import { smoothPath, exportSvgAsFile, rollingBand } from "../lib/charts";
   import { i18n } from "../lib/i18n/index.svelte";
   import type { HistorySample, StoredEvent } from "../lib/api";
 
@@ -13,8 +13,10 @@
     /** Optional comparison series (rendered as dimmer overlay) — typically same range −24h */
     compareSamples?: HistorySample[];
     compareLabel?: string;
+    /** When true, render μ ± 2σ rolling band shaded behind the line (cycle 137). */
+    showAnomalyBand?: boolean;
   };
-  const { samples, metric, color, unit, events = [], compareSamples = [], compareLabel }: Props = $props();
+  const { samples, metric, color, unit, events = [], compareSamples = [], compareLabel, showAnomalyBand = false }: Props = $props();
 
   let svgEl: SVGSVGElement | undefined = $state();
   function downloadSvg() {
@@ -58,6 +60,25 @@
 
   const path = $derived(buildPath(samples));
   const comparePath = $derived(compareSamples.length >= 2 ? buildPath(compareSamples) : "");
+
+  // Anomaly band paths (cycle 137) — μ ± 2σ over a rolling window
+  const bandPaths = $derived.by(() => {
+    if (!showAnomalyBand || samples.length < 5) return null;
+    const values = samples.map(s => (s[metric] as number) ?? 0);
+    const w = Math.max(5, Math.floor(samples.length / 8));
+    const band = rollingBand(values, w, 2);
+    const x = (i: number) => PAD_L + (i / (samples.length - 1)) * innerW;
+    const y = (v: number) => PAD_T + (1 - (v - minV) / span) * innerH;
+    // Build a single filled polygon : upper forward, lower reversed
+    let d = `M ${x(0).toFixed(1)} ${y(band.upper[0]).toFixed(1)}`;
+    for (let i = 1; i < samples.length; i++) d += ` L ${x(i).toFixed(1)} ${y(band.upper[i]).toFixed(1)}`;
+    for (let i = samples.length - 1; i >= 0; i--) d += ` L ${x(i).toFixed(1)} ${y(band.lower[i]).toFixed(1)}`;
+    d += " Z";
+    // μ line
+    let meanD = `M ${x(0).toFixed(1)} ${y(band.mean[0]).toFixed(1)}`;
+    for (let i = 1; i < samples.length; i++) meanD += ` L ${x(i).toFixed(1)} ${y(band.mean[i]).toFixed(1)}`;
+    return { area: d, mean: meanD };
+  });
 
   const gridY = $derived.by(() => {
     const steps = 5;
@@ -130,6 +151,11 @@
       <line x1={t.x} x2={t.x} y1={PAD_T + innerH} y2={PAD_T + innerH + 4} stroke="#3a3f4d" stroke-width="0.7" />
       <text x={t.x} y={PAD_T + innerH + 18} fill="#7c8aa3" font-size="10" text-anchor="middle">{t.label}</text>
     {/each}
+    <!-- Anomaly band μ ± 2σ (rendered first so it sits behind everything) -->
+    {#if bandPaths}
+      <path d={bandPaths.area} fill={color} opacity="0.08" stroke="none" />
+      <path d={bandPaths.mean} fill="none" stroke={color} stroke-width="0.8" stroke-dasharray="2 3" opacity="0.45" />
+    {/if}
     <!-- Comparison series (dimmer, dashed) — rendered BEFORE the main path so the latter sits on top -->
     {#if comparePath}
       <path d={comparePath} fill="none" stroke="#7c8aa3" stroke-width="1.4" stroke-dasharray="6 3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="0.7">
