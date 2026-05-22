@@ -51,9 +51,9 @@ def test_escape_text_handles_specials():
 
 
 def test_fmt_utc_format():
-    # 2024-01-15 12:34:56 UTC → 20240115T123456Z
+    # 2024-01-15 12:33:16 UTC → 20240115T123316Z
     ts = 1705321996
-    assert ic._fmt_utc(ts) == "20240115T123456Z"
+    assert ic._fmt_utc(ts) == "20240115T123316Z"
 
 
 def test_event_uid_deterministic():
