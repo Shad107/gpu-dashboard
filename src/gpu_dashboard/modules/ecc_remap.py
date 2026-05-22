@@ -67,13 +67,18 @@ def _parse_int_or_na(s: str) -> Optional[int]:
 
 
 def probe() -> list:
-    """Run nvidia-smi --query-remapped-rows for every GPU. Returns list of
-    per-GPU dicts {uuid, name, correctable, uncorrectable, pending, failure,
-    histogram_*, available} or [] if nvidia-smi missing."""
+    """Run nvidia-smi --query-gpu for every GPU. Returns list of per-GPU
+    dicts {uuid, name, correctable, uncorrectable, pending, failure,
+    histogram_*, available} or [] if nvidia-smi missing.
+
+    Note : remapped_rows.* fields are queried via --query-gpu (NOT
+    --query-remapped-rows, which doesn't accept the uuid/name columns
+    on consumer drivers).
+    """
     try:
         r = subprocess.run(
             ["nvidia-smi",
-             "--query-remapped-rows=" + ",".join(_QUERY_FIELDS),
+             "--query-gpu=" + ",".join(_QUERY_FIELDS),
              "--format=csv,noheader"],
             capture_output=True, text=True, timeout=4,
         )
