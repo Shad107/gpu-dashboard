@@ -117,53 +117,120 @@
     return p >= 95 ? "#4ade80" : p >= 85 ? "#a3e635" : p >= 75 ? "#fbbf24" : "#fb923c";
   }
   const sign = (v: number) => (v >= 0 ? "+" : "") + v;
+
+  // Wheel-to-horizontal-scroll for strip rows (cycle 143).
+  // Converts vertical wheel events to horizontal scroll on the strip so
+  // desktop users can use mouse wheel naturally.
+  function wheelScroll(node: HTMLElement) {
+    function handle(e: WheelEvent) {
+      if (e.deltaY !== 0 && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        // Only intercept when the strip actually overflows
+        if (node.scrollWidth > node.clientWidth) {
+          e.preventDefault();
+          node.scrollLeft += e.deltaY;
+        }
+      }
+    }
+    node.addEventListener("wheel", handle, { passive: false });
+    return { destroy() { node.removeEventListener("wheel", handle); } };
+  }
 </script>
 
-<div class="row card-grid">
-  <!-- Group headers : full-width grid items at order=0/100/200/300 so they
-       sit before the cards of each group. -->
-  <h4 class="group-label" style="order:0">🖥️ {i18n.t("group.gpu") ?? "GPU live"}</h4>
-  <h4 class="group-label" style="order:100">🔧 {i18n.t("group.tuning") ?? "Tuning"}</h4>
-  <h4 class="group-label" style="order:200">🪙 {i18n.t("group.llm") ?? "LLM"}</h4>
-  <h4 class="group-label" style="order:300">💸 {i18n.t("group.cost") ?? "Coût & processus"}</h4>
-  {#if alive && g && g.alive}
-    {#if layout.visible("gpu")}
-    <div class="card" style:order={layout.groupedOrder("gpu")}>
-      <h2>{i18n.t("card.gpu")}</h2>
-      <div class="big" style:color={tempColor(g.temp)}>{g.temp}°C</div>
-      <div class="sub">{i18n.t("gpu.util")} {g.util_gpu}% · {i18n.t("gpu.draw")} {g.power.toFixed(0)} W</div>
-      {#if g.mem_temp !== null && g.mem_temp !== undefined}
-        <div class="sub" style="margin-top:.2em" style:color={tempColor(g.mem_temp + 15)}>
-          {i18n.t("gpu.mem_temp")} {g.mem_temp}°C
-        </div>
-      {/if}
-      {#if (g.util_enc != null && g.util_enc > 0) || (g.util_dec != null && g.util_dec > 0)}
-        <div class="sub" style="margin-top:.2em">
-          ENC <b>{g.util_enc ?? 0}%</b> · DEC <b>{g.util_dec ?? 0}%</b>
-        </div>
-      {/if}
-    </div>
-    {/if}
+<!-- 4 horizontal-strip sections (cycle 143, user proposal). Each strip has
+     its own overflow-x scroll so the dashboard's overall height stays
+     compact even when a group has many cards. Wheel-to-horizontal handler
+     makes desktop mouse-wheel feel natural. -->
 
-    {#if layout.visible("pcie") && g.pcie_gen != null && g.pcie_width != null}
-      {@const downgrade = (g.pcie_gen_max != null && g.pcie_gen < g.pcie_gen_max)
-                       || (g.pcie_width_max != null && g.pcie_width < g.pcie_width_max)}
-      <div class="card" style:order={layout.groupedOrder("pcie")}>
-        <h2>{i18n.t("card.pcie") ?? "PCIe"}</h2>
-        <div class="big" style:color={downgrade ? "var(--accent-warn)" : "var(--accent)"}>
-          Gen {g.pcie_gen} ×{g.pcie_width}
-        </div>
-        <div class="sub">
-          {#if g.pcie_gen_max != null && g.pcie_width_max != null}
-            max Gen {g.pcie_gen_max} ×{g.pcie_width_max}
-            {#if downgrade}<span style="color:var(--accent-warn);margin-left:.4em">⚠️ {i18n.t("pcie.downgrade") ?? "downgraded"}</span>{/if}
-          {/if}
+<!-- 🖥️ GPU LIVE -->
+<section class="strip-block">
+  <h4 class="group-label">🖥️ {i18n.t("group.gpu") ?? "GPU live"}</h4>
+  <div class="strip" use:wheelScroll>
+    {#if alive && g && g.alive}
+      {#if layout.visible("gpu")}
+      <div class="card">
+        <h2>{i18n.t("card.gpu")}</h2>
+        <div class="big" style:color={tempColor(g.temp)}>{g.temp}°C</div>
+        <div class="sub">{i18n.t("gpu.util")} {g.util_gpu}% · {i18n.t("gpu.draw")} {g.power.toFixed(0)} W</div>
+        {#if g.mem_temp !== null && g.mem_temp !== undefined}
+          <div class="sub" style="margin-top:.2em" style:color={tempColor(g.mem_temp + 15)}>
+            {i18n.t("gpu.mem_temp")} {g.mem_temp}°C
+          </div>
+        {/if}
+        {#if (g.util_enc != null && g.util_enc > 0) || (g.util_dec != null && g.util_dec > 0)}
+          <div class="sub" style="margin-top:.2em">
+            ENC <b>{g.util_enc ?? 0}%</b> · DEC <b>{g.util_dec ?? 0}%</b>
+          </div>
+        {/if}
+      </div>
+      {/if}
+
+      {#if layout.visible("vram")}
+      <div class="card">
+        <h2>{i18n.t("card.vram")}</h2>
+        <div class="big">
+          {(g.mem_used_mib / 1024).toFixed(1)}
+          <span class="sub" style="font-size:.55em">/ {(g.mem_total_mib / 1024).toFixed(1)} GiB</span>
         </div>
       </div>
-    {/if}
+      {/if}
 
-    {#if layout.visible("power_limit")}
-    <div class="card" style:order={layout.groupedOrder("power_limit")}>
+      {#if layout.visible("fans")}
+      <div class="card">
+        <h2>{i18n.t("card.fans")}</h2>
+        <div class="fan-visual">
+          {#each fans as f}
+            <div class="fan-cell">
+              <svg
+                class="fan-svg {(f.rpm ?? 0) > 0 ? 'spin' : 'off'}"
+                style="--fan-dur:{fanDur(f.rpm ?? 0)}s;color:{fanColor(f.pct ?? 0)}"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <title>Fan {f.idx} — {f.rpm ?? 0} RPM · {f.pct ?? 0}% (target {f.target ?? 0}%)</title>
+                <path d={MDI_FAN} />
+              </svg>
+              <div class="rpm">{f.rpm ?? 0} RPM</div>
+              <div class="pct">
+                <b>{f.pct ?? 0}%</b> <span style="color:#5a606c">/ {f.target ?? 0}%</span>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+      {/if}
+
+      {#if layout.visible("pcie") && g.pcie_gen != null && g.pcie_width != null}
+        {@const downgrade = (g.pcie_gen_max != null && g.pcie_gen < g.pcie_gen_max)
+                         || (g.pcie_width_max != null && g.pcie_width < g.pcie_width_max)}
+        <div class="card">
+          <h2>{i18n.t("card.pcie") ?? "PCIe"}</h2>
+          <div class="big" style:color={downgrade ? "var(--accent-warn)" : "var(--accent)"}>
+            Gen {g.pcie_gen} ×{g.pcie_width}
+          </div>
+          <div class="sub">
+            {#if g.pcie_gen_max != null && g.pcie_width_max != null}
+              max Gen {g.pcie_gen_max} ×{g.pcie_width_max}
+              {#if downgrade}<span style="color:var(--accent-warn);margin-left:.4em">⚠️ {i18n.t("pcie.downgrade") ?? "downgraded"}</span>{/if}
+            {/if}
+          </div>
+        </div>
+      {/if}
+    {:else}
+      <div class="card">
+        <h2>{i18n.t("card.gpu")}</h2>
+        <div class="big bad">{i18n.t("gpu.off_bus")}</div>
+        <div class="sub">{i18n.t("gpu.no_response")}</div>
+      </div>
+    {/if}
+  </div>
+</section>
+
+<!-- 🔧 TUNING -->
+<section class="strip-block">
+  <h4 class="group-label">🔧 {i18n.t("group.tuning") ?? "Tuning"}</h4>
+  <div class="strip" use:wheelScroll>
+    {#if alive && g && g.alive && layout.visible("power_limit")}
+    <div class="card">
       <h2>{i18n.t("card.power_limit")}</h2>
       <div class="big">
         {g.power_limit.toFixed(0)} <span class="sub" style="font-size:.55em">/ 350 W</span>
@@ -175,205 +242,8 @@
     </div>
     {/if}
 
-    {#if layout.visible("fans")}
-    <div class="card" style:order={layout.groupedOrder("fans")}>
-      <h2>{i18n.t("card.fans")}</h2>
-      <div class="fan-visual">
-        {#each fans as f}
-          <div class="fan-cell">
-            <svg
-              class="fan-svg {(f.rpm ?? 0) > 0 ? 'spin' : 'off'}"
-              style="--fan-dur:{fanDur(f.rpm ?? 0)}s;color:{fanColor(f.pct ?? 0)}"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <title>Fan {f.idx} — {f.rpm ?? 0} RPM · {f.pct ?? 0}% (target {f.target ?? 0}%)</title>
-              <path d={MDI_FAN} />
-            </svg>
-            <div class="rpm">{f.rpm ?? 0} RPM</div>
-            <div class="pct">
-              <b>{f.pct ?? 0}%</b> <span style="color:#5a606c">/ {f.target ?? 0}%</span>
-            </div>
-          </div>
-        {/each}
-      </div>
-    </div>
-    {/if}
-
-    {#if layout.visible("vram")}
-    <div class="card" style:order={layout.groupedOrder("vram")}>
-      <h2>{i18n.t("card.vram")}</h2>
-      <div class="big">
-        {(g.mem_used_mib / 1024).toFixed(1)}
-        <span class="sub" style="font-size:.55em">/ {(g.mem_total_mib / 1024).toFixed(1)} GiB</span>
-      </div>
-    </div>
-    {/if}
-  {:else}
-    <div class="card" style:order={layout.groupedOrder("gpu")}>
-      <h2>{i18n.t("card.gpu")}</h2>
-      <div class="big bad">{i18n.t("gpu.off_bus")}</div>
-      <div class="sub">{i18n.t("gpu.no_response")}</div>
-    </div>
-  {/if}
-
-  {#if d?.watchdog?.available && layout.visible("oculink")}
-    <div class="card" style:order={layout.groupedOrder("oculink")}>
-      <h2>{i18n.t("card.oculink")}</h2>
-      <div class="big" class:warn={d.watchdog.drops > 0} class:ok={d.watchdog.drops === 0}>
-        {d.watchdog.last_uptime}
-      </div>
-      <div class="sub">{d.watchdog.drops} {i18n.t("oculink.drops")}</div>
-    </div>
-  {/if}
-
-  {#if d?.llm_model && layout.visible("llm_model")}
-    <div class="card" style:order={layout.groupedOrder("llm_model")}>
-      <h2>{i18n.t("card.llm_model")}</h2>
-      <div class="big" style="font-size:1em;word-break:break-all">{d.llm_model}</div>
-    </div>
-  {/if}
-
-  {#if layout.visible("llm_throughput") && llm?.available && (llm.tokens_generated_total ?? 0) > 0}
-    <div class="card" style:order={layout.groupedOrder("llm_throughput")}>
-      <h2>🪙 {i18n.t("card.llm_throughput")}</h2>
-      {#if llmPerf?.available && (llmPerf.series_1h?.some(v => v > 0) ?? false)}
-        {@const headline = (llmPerf.avg_tps_1m ?? 0) > 0
-          ? (llmPerf.avg_tps_1m ?? 0)
-          : (llmPerf.avg_tps_5m ?? 0)}
-        <div class="big" style="color:#f472b6">
-          {headline.toFixed(1)}
-          <span class="sub" style="font-size:.45em">tok/s</span>
-        </div>
-        {#if llmPerf.series_1h && llmPerf.series_1h.length > 0}
-          <div style="margin-top:-.2em;margin-bottom:.3em">
-            <Sparkline values={llmPerf.series_1h} color="#f472b6" width={180} height={26} />
-          </div>
-        {/if}
-        <div class="sub" style="font-size:.75em">
-          5m <b>{(llmPerf.avg_tps_5m ?? 0).toFixed(1)}</b> ·
-          1h <b>{(llmPerf.avg_tps_1h ?? 0).toFixed(1)}</b>
-          {#if llm.tokens_per_watt}
-            · <b style="color:#a3e635">{llm.tokens_per_watt.toFixed(2)}</b> tok/W
-          {/if}
-        </div>
-      {:else}
-        <div class="big">
-          {(llm.tokens_generated_total ?? 0).toLocaleString()}
-          <span class="sub" style="font-size:.45em">{i18n.t("llm.tokens_generated")}</span>
-        </div>
-        {#if llm.tokens_per_watt}
-          <div class="sub" style="margin-top:.2em;color:#a3e635">
-            <b>{llm.tokens_per_watt.toFixed(2)}</b> {i18n.t("llm.tok_per_watt")}
-          </div>
-        {/if}
-      {/if}
-      {#if llmLifetime?.available && llmLifetime.total_tokens_generated > 0}
-        <div class="sub" style="margin-top:.35em;padding-top:.3em;border-top:1px solid #22262e;font-size:.78em">
-          {i18n.t("llm.lifetime")} <b style="color:#fbbf24">{fmtBig(llmLifetime.total_tokens_generated)}</b>
-          {#if llmLifetime.avg_tokens_per_watt}
-            · <b style="color:#a3e635">{llmLifetime.avg_tokens_per_watt.toFixed(2)}</b> {i18n.t("llm.tok_per_watt")}
-          {/if}
-        </div>
-      {/if}
-    </div>
-  {/if}
-
-  {#if elec && layout.visible("electricity")}
-    {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
-    {@const budgetUsedPct = elec.budget_kwh > 0 ? Math.min(100, (elec.kwh_month / elec.budget_kwh) * 100) : 0}
-    {@const budgetForecastPct = elec.budget_kwh > 0 ? Math.min(150, (elec.forecast_kwh / elec.budget_kwh) * 100) : 0}
-    <div class="card" style:order={layout.groupedOrder("electricity")}>
-      <h2>⚡ {i18n.t("card.electricity")}</h2>
-      <div class="big">
-        {elec.avg_power_watts.toFixed(0)} W
-        <span class="sub" style="font-size:.55em">{i18n.t("electricity.avg")}</span>
-      </div>
-      <div class="sub" style="margin-top:.2em">
-        {elec.daily_kwh.toFixed(2)} kWh{i18n.t("electricity.per_day")} ·
-        <span style="color:#a3e635">{elec.monthly_cost.toFixed(2)} {symbol}{i18n.t("electricity.per_month")}</span>
-      </div>
-      <div class="sub" style="font-size:.72em;margin-top:.15em;color:#7c8aa3">
-        {#if editingPrice}
-          <span style="display:inline-flex;gap:.3em;align-items:center">
-            <input type="number" step="0.001" min="0" max="5" bind:value={priceEdit}
-                   class="price-input" autofocus />
-            <span>{symbol}/kWh</span>
-            <button class="btn-mini" onclick={savePrice} disabled={priceSaving}>
-              {priceSaving ? "…" : "💾"}
-            </button>
-            <button class="btn-mini" onclick={() => { editingPrice = false; }}>✕</button>
-          </span>
-        {:else}
-          {i18n.t("electricity.at_rate", { price: elec.price_per_kwh.toFixed(3), sym: symbol })}
-          <button class="edit-rate" onclick={() => { priceEdit = elec.price_per_kwh; editingPrice = true; }}
-                  title={i18n.t("electricity.edit_rate") ?? "Edit price"}>✎</button>
-        {/if}
-      </div>
-      {#if elec.budget_kwh > 0}
-        <div class="budget-tracker" style="margin-top:.5em">
-          <div class="budget-line">
-            <span class="sub" style="font-size:.74em">{i18n.t("electricity.budget_label") ?? "Budget"}:</span>
-            <span style:color={elec.over_budget ? "var(--accent-warn)" : "var(--accent)"}>
-              <b>{elec.kwh_month.toFixed(1)}</b> / {elec.budget_kwh.toFixed(0)} kWh
-            </span>
-            <span class="sub" style="font-size:.7em;margin-left:.4em">({elec.month_progress_pct.toFixed(0)}% {i18n.t("electricity.month_done") ?? "of month"})</span>
-          </div>
-          <div class="budget-bar">
-            <div class="budget-fill" style:width="{budgetUsedPct}%" style:background={elec.over_budget ? "var(--accent-warn)" : "var(--accent)"}></div>
-            {#if budgetForecastPct > budgetUsedPct}
-              <div class="budget-forecast" style:left="{budgetUsedPct}%" style:width="{Math.max(0, budgetForecastPct - budgetUsedPct)}%"></div>
-            {/if}
-          </div>
-          <div class="sub" style="font-size:.7em;margin-top:.15em" style:color={elec.over_budget ? "var(--accent-warn)" : "var(--text-dim)"}>
-            {#if elec.over_budget}⚠️ {/if}{i18n.t("electricity.forecast") ?? "Forecast"}:
-            <b>{elec.forecast_kwh.toFixed(1)} kWh</b>
-          </div>
-        </div>
-      {/if}
-    </div>
-  {/if}
-
-  {#if layout.visible("processes") && (d?.processes?.length ?? 0) > 0}
-    {@const vramTotalMib = d?.gpu?.mem_total_mib ?? 24576}
-    <div class="card" style:order={layout.groupedOrder("processes")}>
-      <h2>{i18n.t("card.processes")}</h2>
-      <table class="proc-table">
-        <tbody>
-          {#each (d?.processes ?? []).slice(0, 5) as p}
-            {@const pct = Math.min(100, (p.vram_mib / vramTotalMib) * 100)}
-            {@const barColor = pct < 50 ? "#4ade80" : pct < 80 ? "#fbbf24" : "#f87171"}
-            <tr title={p.cmdline || `${p.name} (PID ${p.pid})`}>
-              <td class="proc-pid">{p.pid}</td>
-              <td class="proc-name">{p.name}</td>
-              <td class="proc-vram">
-                <span style="color:#a3e635">{(p.vram_mib / 1024).toFixed(1)} GiB</span>
-                <div class="proc-bar"><div style:width="{pct.toFixed(1)}%" style:background={barColor}></div></div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-
-  {#each layout.customCards as cc (cc.id)}
-    {#if layout.visible(cc.id)}
-      <div class="card custom-card" style:order={layout.groupedOrder(cc.id)}>
-        <h2>🧩 {cc.name}</h2>
-        <iframe
-          src={cc.url}
-          title={cc.name}
-          sandbox="allow-scripts allow-same-origin"
-          referrerpolicy="no-referrer"
-          loading="lazy"
-        ></iframe>
-      </div>
-    {/if}
-  {/each}
-
-  {#if showTuning && layout.visible("tuning")}
-    <div class="card" style:order={layout.groupedOrder("tuning")}>
+    {#if showTuning && layout.visible("tuning")}
+    <div class="card">
       <h2>{i18n.t("card.tuning")}</h2>
       <div class="tuning-row">
         <div class="tuning-lbl">{i18n.t("card.gpu")}</div>
@@ -409,5 +279,173 @@
         <div class="tuning-bar" style="opacity:0"></div>
       </div>
     </div>
-  {/if}
-</div>
+    {/if}
+
+    {#if d?.watchdog?.available && layout.visible("oculink")}
+      <div class="card">
+        <h2>{i18n.t("card.oculink")}</h2>
+        <div class="big" class:warn={d.watchdog.drops > 0} class:ok={d.watchdog.drops === 0}>
+          {d.watchdog.last_uptime}
+        </div>
+        <div class="sub">{d.watchdog.drops} {i18n.t("oculink.drops")}</div>
+      </div>
+    {/if}
+  </div>
+</section>
+
+<!-- 🪙 LLM -->
+<section class="strip-block">
+  <h4 class="group-label">🪙 {i18n.t("group.llm") ?? "LLM"}</h4>
+  <div class="strip" use:wheelScroll>
+    {#if d?.llm_model && layout.visible("llm_model")}
+      <div class="card">
+        <h2>{i18n.t("card.llm_model")}</h2>
+        <div class="big" style="font-size:1em;word-break:break-all">{d.llm_model}</div>
+      </div>
+    {/if}
+
+    {#if layout.visible("llm_throughput") && llm?.available && (llm.tokens_generated_total ?? 0) > 0}
+      <div class="card">
+        <h2>🪙 {i18n.t("card.llm_throughput")}</h2>
+        {#if llmPerf?.available && (llmPerf.series_1h?.some(v => v > 0) ?? false)}
+          {@const headline = (llmPerf.avg_tps_1m ?? 0) > 0
+            ? (llmPerf.avg_tps_1m ?? 0)
+            : (llmPerf.avg_tps_5m ?? 0)}
+          <div class="big" style="color:#f472b6">
+            {headline.toFixed(1)}
+            <span class="sub" style="font-size:.45em">tok/s</span>
+          </div>
+          {#if llmPerf.series_1h && llmPerf.series_1h.length > 0}
+            <div style="margin-top:-.2em;margin-bottom:.3em">
+              <Sparkline values={llmPerf.series_1h} color="#f472b6" width={180} height={26} />
+            </div>
+          {/if}
+          <div class="sub" style="font-size:.75em">
+            5m <b>{(llmPerf.avg_tps_5m ?? 0).toFixed(1)}</b> ·
+            1h <b>{(llmPerf.avg_tps_1h ?? 0).toFixed(1)}</b>
+            {#if llm.tokens_per_watt}
+              · <b style="color:#a3e635">{llm.tokens_per_watt.toFixed(2)}</b> tok/W
+            {/if}
+          </div>
+        {:else}
+          <div class="big">
+            {(llm.tokens_generated_total ?? 0).toLocaleString()}
+            <span class="sub" style="font-size:.45em">{i18n.t("llm.tokens_generated")}</span>
+          </div>
+          {#if llm.tokens_per_watt}
+            <div class="sub" style="margin-top:.2em;color:#a3e635">
+              <b>{llm.tokens_per_watt.toFixed(2)}</b> {i18n.t("llm.tok_per_watt")}
+            </div>
+          {/if}
+        {/if}
+        {#if llmLifetime?.available && llmLifetime.total_tokens_generated > 0}
+          <div class="sub" style="margin-top:.35em;padding-top:.3em;border-top:1px solid #22262e;font-size:.78em">
+            {i18n.t("llm.lifetime")} <b style="color:#fbbf24">{fmtBig(llmLifetime.total_tokens_generated)}</b>
+            {#if llmLifetime.avg_tokens_per_watt}
+              · <b style="color:#a3e635">{llmLifetime.avg_tokens_per_watt.toFixed(2)}</b> {i18n.t("llm.tok_per_watt")}
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {/if}
+  </div>
+</section>
+
+<!-- 💸 COÛT & PROCESSUS -->
+<section class="strip-block">
+  <h4 class="group-label">💸 {i18n.t("group.cost") ?? "Coût & processus"}</h4>
+  <div class="strip" use:wheelScroll>
+    {#if elec && layout.visible("electricity")}
+      {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
+      {@const budgetUsedPct = elec.budget_kwh > 0 ? Math.min(100, (elec.kwh_month / elec.budget_kwh) * 100) : 0}
+      {@const budgetForecastPct = elec.budget_kwh > 0 ? Math.min(150, (elec.forecast_kwh / elec.budget_kwh) * 100) : 0}
+      <div class="card">
+        <h2>⚡ {i18n.t("card.electricity")}</h2>
+        <div class="big">
+          {elec.avg_power_watts.toFixed(0)} W
+          <span class="sub" style="font-size:.55em">{i18n.t("electricity.avg")}</span>
+        </div>
+        <div class="sub" style="margin-top:.2em">
+          {elec.daily_kwh.toFixed(2)} kWh{i18n.t("electricity.per_day")} ·
+          <span style="color:#a3e635">{elec.monthly_cost.toFixed(2)} {symbol}{i18n.t("electricity.per_month")}</span>
+        </div>
+        <div class="sub" style="font-size:.72em;margin-top:.15em;color:#7c8aa3">
+          {#if editingPrice}
+            <span style="display:inline-flex;gap:.3em;align-items:center">
+              <input type="number" step="0.001" min="0" max="5" bind:value={priceEdit}
+                     class="price-input" autofocus />
+              <span>{symbol}/kWh</span>
+              <button class="btn-mini" onclick={savePrice} disabled={priceSaving}>
+                {priceSaving ? "…" : "💾"}
+              </button>
+              <button class="btn-mini" onclick={() => { editingPrice = false; }}>✕</button>
+            </span>
+          {:else}
+            {i18n.t("electricity.at_rate", { price: elec.price_per_kwh.toFixed(3), sym: symbol })}
+            <button class="edit-rate" onclick={() => { priceEdit = elec.price_per_kwh; editingPrice = true; }}
+                    title={i18n.t("electricity.edit_rate") ?? "Edit price"}>✎</button>
+          {/if}
+        </div>
+        {#if elec.budget_kwh > 0}
+          <div class="budget-tracker" style="margin-top:.5em">
+            <div class="budget-line">
+              <span class="sub" style="font-size:.74em">{i18n.t("electricity.budget_label") ?? "Budget"}:</span>
+              <span style:color={elec.over_budget ? "var(--accent-warn)" : "var(--accent)"}>
+                <b>{elec.kwh_month.toFixed(1)}</b> / {elec.budget_kwh.toFixed(0)} kWh
+              </span>
+              <span class="sub" style="font-size:.7em;margin-left:.4em">({elec.month_progress_pct.toFixed(0)}% {i18n.t("electricity.month_done") ?? "of month"})</span>
+            </div>
+            <div class="budget-bar">
+              <div class="budget-fill" style:width="{budgetUsedPct}%" style:background={elec.over_budget ? "var(--accent-warn)" : "var(--accent)"}></div>
+              {#if budgetForecastPct > budgetUsedPct}
+                <div class="budget-forecast" style:left="{budgetUsedPct}%" style:width="{Math.max(0, budgetForecastPct - budgetUsedPct)}%"></div>
+              {/if}
+            </div>
+            <div class="sub" style="font-size:.7em;margin-top:.15em" style:color={elec.over_budget ? "var(--accent-warn)" : "var(--text-dim)"}>
+              {#if elec.over_budget}⚠️ {/if}{i18n.t("electricity.forecast") ?? "Forecast"}:
+              <b>{elec.forecast_kwh.toFixed(1)} kWh</b>
+            </div>
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    {#if layout.visible("processes") && (d?.processes?.length ?? 0) > 0}
+      {@const vramTotalMib = d?.gpu?.mem_total_mib ?? 24576}
+      <div class="card">
+        <h2>{i18n.t("card.processes")}</h2>
+        <table class="proc-table">
+          <tbody>
+            {#each (d?.processes ?? []).slice(0, 5) as p}
+              {@const pct = Math.min(100, (p.vram_mib / vramTotalMib) * 100)}
+              {@const barColor = pct < 50 ? "#4ade80" : pct < 80 ? "#fbbf24" : "#f87171"}
+              <tr title={p.cmdline || `${p.name} (PID ${p.pid})`}>
+                <td class="proc-pid">{p.pid}</td>
+                <td class="proc-name">{p.name}</td>
+                <td class="proc-vram">
+                  <span style="color:#a3e635">{(p.vram_mib / 1024).toFixed(1)} GiB</span>
+                  <div class="proc-bar"><div style:width="{pct.toFixed(1)}%" style:background={barColor}></div></div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
+
+    {#each layout.customCards as cc (cc.id)}
+      {#if layout.visible(cc.id)}
+        <div class="card custom-card">
+          <h2>🧩 {cc.name}</h2>
+          <iframe
+            src={cc.url}
+            title={cc.name}
+            sandbox="allow-scripts allow-same-origin"
+            referrerpolicy="no-referrer"
+            loading="lazy"
+          ></iframe>
+        </div>
+      {/if}
+    {/each}
+  </div>
+</section>

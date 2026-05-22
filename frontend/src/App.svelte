@@ -111,10 +111,15 @@
   <TopNav />
   <IdleBanner />
   {#if view.current === "dashboard"}
+    <!-- Cycle 143 — horizontal strips per group + scoped Y-scroll below.
+         Tiles area is fixed height (auto from content). Charts/footer
+         live in their own vertical scroll zone. -->
     <Cards />
-    <CoolingChart />
-    <PowerChart />
-    <LatestAlertFooter />
+    <div class="dash-scroll-y">
+      <CoolingChart />
+      <PowerChart />
+      <LatestAlertFooter />
+    </div>
   {:else if view.current === "history"}
     <HistoryView />
   {:else if view.current === "stats"}
