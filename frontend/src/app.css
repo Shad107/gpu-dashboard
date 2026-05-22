@@ -89,9 +89,13 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .row {
   /* Grouped tiles : full-width section labels (.group-label) + responsive
    * card grid. Cycle 141 user feedback : 'tu peux faire des groupes de
-   * tuiles'. */
+   * tuiles'.
+   *
+   * auto-fill (not auto-fit) so cards keep their natural width even when
+   * fewer cards on a row — prevents Tuning's 2 cards stretching across
+   * the full viewport. */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 220px));
   grid-auto-rows: minmax(0, auto);
   gap: 0.5em;
   margin-bottom: 0.5em;
