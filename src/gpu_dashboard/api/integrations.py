@@ -18,8 +18,18 @@ from typing import Optional, Tuple
 from . import _monolith as _m
 
 
-def _gpus_available():
-    return _m._gpus_available()
+def _gpus_available(*args, **kw):
+    return _m._gpus_available(*args, **kw)
+
+
+def _gpu_card_snapshot(*args, **kw):
+    """Forward to _monolith — used by handle_tldr and handle_badge."""
+    return _m._gpu_card_snapshot(*args, **kw)
+
+
+def _gpus_available_helper():
+    """Legacy alias used by handle_badge — defers to _gpus_available."""
+    return _gpus_available()
 
 
 def handle_ecc_health(ctx):
@@ -283,3 +293,268 @@ def handle_vfio_status(ctx: dict) -> Response:
     """Return VFIO passthrough status for all NVIDIA GPUs."""
     from ..modules import vfio_sentinel
     return 200, vfio_sentinel.status()
+
+
+# ── Cycle 10b additions ────────────────────────────
+
+# ─── R&D #10.7 — Live README badge SVG generator ─────────────────────────────
+def _badge_svg(label: str, value: str, color: str = "#4c1") -> str:
+    """Return a shields.io-style SVG badge with the given label / value / color.
+    No deps : just a stdlib f-string. Width auto-computed from char count
+    (approximation : 7 px per char + paddings)."""
+    # Cheap width estimate — for monospaceish look. shields.io uses ~7px/char.
+    lw = len(label) * 6 + 10
+    vw = len(value) * 7 + 10
+    total = lw + vw
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="20" role="img" aria-label="{label}: {value}">'
+        f'<linearGradient id="s" x2="0" y2="100%">'
+        f'<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>'
+        f'<stop offset="1" stop-opacity=".1"/>'
+        f'</linearGradient>'
+        f'<clipPath id="r"><rect width="{total}" height="20" rx="3"/></clipPath>'
+        f'<g clip-path="url(#r)">'
+        f'<rect width="{lw}" height="20" fill="#555"/>'
+        f'<rect x="{lw}" width="{vw}" height="20" fill="{color}"/>'
+        f'<rect width="{total}" height="20" fill="url(#s)"/>'
+        f'</g>'
+        f'<g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">'
+        f'<text x="{lw // 2}" y="14">{label}</text>'
+        f'<text x="{lw + vw // 2}" y="14">{value}</text>'
+        f'</g>'
+        f'</svg>'
+    )
+
+_BADGE_TEMP_COLORS = {
+    "ok": "#4c1",      # green for <70°C
+    "warn": "#dfb317", # yellow 70-80°C
+    "crit": "#e05d44", # red >=80°C
+}
+
+def handle_badge(ctx: dict, metric: str) -> Tuple[int, str]:
+    """Generate a live SVG badge for the requested metric.
+
+    Supported metrics : gpu-temp, power-now, tok-per-wh, uptime, top-model, util.
+    Unknown metric → 404 with a fallback 'unknown' badge.
+    """
+    snap = _gpu_card_snapshot(gpu_index=0)
+    alive = bool(snap and snap.get("alive"))
+
+    if metric == "gpu-temp":
+        if not alive:
+            return 200, _badge_svg("temp", "offline", "#9f9f9f")
+        t = int(snap.get("temp") or 0)
+        color = (_BADGE_TEMP_COLORS["crit"] if t >= 80 else
+                 _BADGE_TEMP_COLORS["warn"] if t >= 70 else
+                 _BADGE_TEMP_COLORS["ok"])
+        return 200, _badge_svg("temp", f"{t}°C", color)
+
+    if metric == "power-now":
+        if not alive:
+            return 200, _badge_svg("power", "offline", "#9f9f9f")
+        p = snap.get("power") or 0
+        return 200, _badge_svg("power", f"{p:.0f} W", "#007ec6")
+
+    if metric == "util":
+        if not alive:
+            return 200, _badge_svg("util", "offline", "#9f9f9f")
+        u = int(snap.get("util_gpu") or 0)
+        color = "#4c1" if u < 50 else "#dfb317" if u < 90 else "#e05d44"
+        return 200, _badge_svg("util", f"{u}%", color)
+
+    if metric == "tok-per-wh":
+        # Try to read LLM perf from sampler / fallback to 0
+        try:
+            r = _gpus_available()  # noqa: re-uses nvidia probe
+        except Exception:
+            r = []
+        # Read from /api/llm if available — best-effort
+        try:
+            from ..modules import llm_stats as _llm  # may or may not exist
+            val = _llm.tokens_per_watt_hour()
+        except Exception:
+            val = None
+        if val is None:
+            return 200, _badge_svg("tok/Wh", "n/a", "#9f9f9f")
+        return 200, _badge_svg("tok/Wh", f"{val:.0f}", "#a83f9f")
+
+    if metric == "uptime":
+        started = ctx.get("started_at")
+        if started is None:
+            return 200, _badge_svg("uptime", "n/a", "#9f9f9f")
+        secs = int(time.time() - float(started))
+        if secs < 60:
+            txt = f"{secs}s"
+        elif secs < 3600:
+            txt = f"{secs // 60}m"
+        elif secs < 86400:
+            txt = f"{secs // 3600}h"
+        else:
+            txt = f"{secs // 86400}d"
+        return 200, _badge_svg("uptime", txt, "#4c1")
+
+    if metric == "top-model":
+        d = (ctx.get("sampler").snapshot() if ctx.get("sampler") else [])
+        # No direct top-model accessor — derive from llm_model in latest sample
+        if alive and snap.get("name"):
+            short = snap["name"].replace("NVIDIA ", "").replace("GeForce ", "")[:24]
+            return 200, _badge_svg("gpu", short, "#76A8DC")
+        return 200, _badge_svg("gpu", "offline", "#9f9f9f")
+
+    # Unknown metric → 404 with a 'unknown' badge so the README still renders
+    return 404, _badge_svg("badge", f"unknown:{metric}"[:24], "#9f9f9f")
+
+_ANSI = {
+    "reset": "\x1b[0m",
+    "bold": "\x1b[1m",
+    "dim": "\x1b[2m",
+    "red": "\x1b[31m",
+    "green": "\x1b[32m",
+    "yellow": "\x1b[33m",
+    "blue": "\x1b[34m",
+    "magenta": "\x1b[35m",
+    "cyan": "\x1b[36m",
+    "gray": "\x1b[90m",
+}
+
+def _color(text: str, c: str, enabled: bool = True) -> str:
+    if not enabled or c not in _ANSI:
+        return text
+    return f"{_ANSI[c]}{text}{_ANSI['reset']}"
+
+def _temp_color(t: float) -> str:
+    if t >= 80:
+        return "red"
+    if t >= 70:
+        return "yellow"
+    if t >= 50:
+        return "green"
+    return "cyan"
+
+def _spark(values: list, width: int = 12) -> str:
+    """Unicode block sparkline. values clipped to [0,100]."""
+    if not values:
+        return ""
+    blocks = " ▁▂▃▄▅▆▇█"
+    # Resample to `width`
+    if len(values) > width:
+        step = len(values) / width
+        sampled = [values[int(i * step)] for i in range(width)]
+    else:
+        sampled = values + [0] * (width - len(values))
+    out = []
+    for v in sampled:
+        idx = max(0, min(8, int((v or 0) / 100 * 8)))
+        out.append(blocks[idx])
+    return "".join(out)
+
+def handle_tldr(ctx: dict, params: Optional[dict] = None,
+                headers: Optional[dict] = None) -> Tuple[int, str]:
+    """ANSI-colored terminal-width-aware status card for CLI users.
+
+    Query params :
+      fmt    = tldr (default, multi-line) | oneline | full
+      cols   = terminal width override (default 80)
+    Headers :
+      NO_COLOR = if set (any value), suppress ANSI codes (per no-color.org)
+    """
+    params = params or {}
+    headers = headers or {}
+    fmt = params.get("fmt", "tldr")
+    try:
+        cols = max(40, min(200, int(params.get("cols", "80"))))
+    except (ValueError, TypeError):
+        cols = 80
+    color_on = "NO_COLOR" not in {k.upper() for k in headers}
+
+    # Live snapshot — main GPU only
+    snap = _gpu_card_snapshot(gpu_index=0)
+    if not snap or not snap.get("alive"):
+        return 200, "GPU offline\n"
+
+    t = snap.get("temp", 0)
+    util = snap.get("util_gpu", 0)
+    power = snap.get("power", 0)
+    plim = snap.get("power_limit", 0)
+    vram_used = (snap.get("mem_used_mib", 0) or 0) / 1024
+    vram_tot = (snap.get("mem_total_mib", 0) or 0) / 1024
+    name = snap.get("name", "GPU")
+    short_name = name.replace("NVIDIA GeForce ", "").replace("NVIDIA ", "")
+
+    # Sampler history → util sparkline
+    sampler = ctx.get("sampler")
+    util_history: list = []
+    if sampler:
+        snap_buf = sampler.snapshot()
+        util_history = [s.get("util_gpu", 0) or 0 for s in snap_buf[-30:]]
+    spark = _spark(util_history, width=20)
+
+    if fmt == "oneline":
+        # Tiny one-line for prompt / motd
+        line = (f"{_color(f'{t}°C', _temp_color(t), color_on)} "
+                f"{_color(f'{util}%', 'cyan', color_on)} "
+                f"{_color(f'{power:.0f}W', 'magenta', color_on)} "
+                f"{_color(short_name, 'gray', color_on)}")
+        return 200, line + "\n"
+
+    if fmt == "full":
+        # Multi-block layout
+        lines = []
+        lines.append(_color("─" * cols, "gray", color_on))
+        lines.append(f" {_color('GreenWatts', 'bold', color_on)}  "
+                     f"{_color(short_name, 'gray', color_on)}")
+        lines.append(_color("─" * cols, "gray", color_on))
+        lines.append(f" Temperature : {_color(f'{t}°C', _temp_color(t), color_on)}")
+        lines.append(f" Utilization : {_color(f'{util}%', 'cyan', color_on)}  {spark}")
+        lines.append(f" Power       : {_color(f'{power:.0f}W', 'magenta', color_on)} / {plim:.0f}W")
+        lines.append(f" VRAM        : {_color(f'{vram_used:.1f}', 'yellow', color_on)} / {vram_tot:.1f} GiB")
+        if snap.get("pcie_gen") is not None:
+            lines.append(f" PCIe        : Gen {snap['pcie_gen']} ×{snap.get('pcie_width', '?')}")
+        lines.append(_color("─" * cols, "gray", color_on))
+        return 200, "\n".join(lines) + "\n"
+
+    # default 'tldr' : compact 3-line block
+    lines = []
+    lines.append(f"{_color('GreenWatts', 'bold', color_on)}  "
+                 f"{_color(short_name, 'gray', color_on)}")
+    lines.append(f"  {_color(f'{t}°C', _temp_color(t), color_on)} · "
+                 f"{_color(f'{util}%', 'cyan', color_on)} util  "
+                 f"{spark}")
+    lines.append(f"  {_color(f'{power:.0f}W', 'magenta', color_on)}/{plim:.0f}W · "
+                 f"VRAM {_color(f'{vram_used:.1f}', 'yellow', color_on)}/{vram_tot:.1f}GiB")
+    return 200, "\n".join(lines) + "\n"
+
+# ─── R&D #7.5 — UPS/NUT awareness ────────────────────────────────────────────
+def handle_ups_status(ctx: dict) -> Response:
+    """Query the local NUT server and return the first UPS' state."""
+    from ..modules import ups_nut
+    cfg = ctx["config"]
+    host = cfg.get("NUT_HOST", "localhost")
+    try:
+        port = int(cfg.get("NUT_PORT", "3493"))
+    except (ValueError, TypeError):
+        port = 3493
+    ups_name = cfg.get("NUT_UPS") or None
+    result = ups_nut.query(host=host, port=port, ups=ups_name, timeout=2.0)
+    return 200, result
+
+# ─── R&D #7.4 — InfluxDB line protocol pusher status ─────────────────────────
+def handle_influxdb_status(ctx: dict) -> Response:
+    """Return the InfluxDB pusher's current status (last push ok/error)."""
+    pusher = ctx.get("influxdb_pusher")
+    cfg = ctx["config"]
+    url = cfg.get("INFLUXDB_URL", "")
+    if not url:
+        return 200, {"ok": True, "enabled": False}
+    if pusher is None:
+        return 200, {"ok": True, "enabled": True, "running": False}
+    s = pusher.status
+    return 200, {
+        "ok": True,
+        "enabled": True,
+        "running": True,
+        "url": url,
+        "bucket": cfg.get("INFLUXDB_BUCKET") or cfg.get("INFLUXDB_DATABASE", ""),
+        "interval_s": float(cfg.get("INFLUXDB_INTERVAL", "15") or "15"),
+        "last_push": s,
+    }

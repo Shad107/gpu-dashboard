@@ -94,6 +94,18 @@ from .state import (  # noqa: F401
     handle_export, handle_export_year,
     handle_lifetime_stats,
 )
+from .tuning import (  # noqa: F401
+    handle_benchmark_run,
+    handle_app_triggers_get, handle_app_triggers_post,
+    handle_profile_save,
+    handle_fan_curve_get, handle_fan_curve_post,
+    handle_push_vapid, handle_push_subscribe, handle_push_unsubscribe, handle_push_status,
+    handle_alerts_test,
+)
+from .integrations import (  # noqa: F401,F811
+    handle_badge, handle_tldr,
+    handle_ups_status, handle_influxdb_status,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
@@ -188,6 +200,23 @@ from .state import (  # noqa: F401,F811
     handle_export, handle_export_year,
     handle_lifetime_stats,
 )
+from .tuning import (  # noqa: F401,F811
+    handle_benchmark_run,
+    handle_app_triggers_get, handle_app_triggers_post,
+    handle_profile_save,
+    handle_fan_curve_get, handle_fan_curve_post,
+    handle_push_vapid, handle_push_subscribe, handle_push_unsubscribe, handle_push_status,
+    handle_alerts_test,
+)
+from .integrations import (  # noqa: F401,F811
+    handle_badge, handle_tldr,
+    handle_ups_status, handle_influxdb_status,
+)
+# Helpers moved to integrations.py with badge/tldr
+from .integrations import (  # noqa: F401,F811
+    _badge_svg, _BADGE_TEMP_COLORS,
+    _color, _temp_color, _spark, _ANSI,
+)
 # Helpers moved to submodules — re-export for tests
 from .llm import (  # noqa: F401,F811
     _parse_llamacpp_metrics,
@@ -218,13 +247,7 @@ from ._monolith import (  # noqa: F401
     # Heartbeats (deadman) — moved to api.alerts (above)
     # cgroup attribution — moved to api.diagnostics (above)
     # Alert escalation — moved to api.alerts (above)
-    # SVG badge generator (R&D #10.7)
-    _badge_svg,
-    _BADGE_TEMP_COLORS,
-    # ANSI/tldr endpoint (R&D #10.6)
-    _color,
-    _temp_color,
-    _spark,
-    _ANSI,
+    # SVG badge generator (R&D #10.7) — moved to api.integrations (above)
+    # ANSI/tldr endpoint (R&D #10.6) — moved to api.integrations (above)
     # Module-level CPU/vmstat caches — moved to api.diagnostics (above)
 )

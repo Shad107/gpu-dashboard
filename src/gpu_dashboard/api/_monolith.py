@@ -384,75 +384,8 @@ def _parse_gpu_index(params: dict) -> int:
 
 
 
-# ────────────────────────── /api/power-profiles ───────────────────────────
+# L387-L455 moved to api/tuning.py or integrations.py (cycle 10b)
 
-
-# Each profile bundles power-limit + GPU offset + memory offset.
-# Handlers from L1040-L1040 moved to api/power.py (cycle 5)
-
-
-
-# Handlers from L1043-L1057 moved to api/power.py (cycle 5)
-
-
-
-# Handlers from L1060-L1072 moved to api/power.py (cycle 5)
-
-
-
-def handle_benchmark_run(ctx: dict, payload) -> Response:
-    """Run an A/B profile comparison synchronously (R&D #4, cycle 123).
-
-    payload : {profile_a, profile_b, duration_s} — duration capped at 300s
-              to avoid wedging the server.
-
-    Returns {segment_a, segment_b, comparison} where comparison is the output
-    of benchmark.compare(seg_a, seg_b).
-    """
-    if not isinstance(payload, dict):
-        return 400, {"ok": False, "error": "payload must be an object"}
-    a = str(payload.get("profile_a") or "").lower()
-    b = str(payload.get("profile_b") or "").lower()
-    try:
-        duration = int(payload.get("duration_s") or 60)
-    except (ValueError, TypeError):
-        return 400, {"ok": False, "error": "duration_s must be an integer"}
-    if duration < 5 or duration > 300:
-        return 400, {"ok": False, "error": "duration_s must be in [5, 300]"}
-    valid = {"silent", "sweet", "boost"}
-    if a not in valid or b not in valid:
-        return 400, {"ok": False,
-                     "error": f"profiles must be in {sorted(valid)}"}
-    if a == b:
-        return 400, {"ok": False, "error": "profile_a and profile_b must differ"}
-
-    sampler = ctx.get("sampler")
-    if sampler is None:
-        return 503, {"ok": False, "error": "sampler not available"}
-
-    cfg = ctx.get("config")
-    price = 0.25
-    if cfg is not None:
-        try:
-            price = float(cfg.get("ELECTRICITY_PRICE_EUR_PER_KWH", default="0.25"))
-        except (ValueError, TypeError):
-            price = 0.25
-
-    def _apply(profile_name: str) -> None:
-        from .power import handle_power_profile_apply as _hppa  # cycle 5 late import
-        _hppa(ctx, profile_name)
-
-    from ..modules.benchmark import run_segment, compare
-    seg_a = run_segment(duration, a, _apply, sampler, price_per_kwh=price)
-    seg_b = run_segment(duration, b, _apply, sampler, price_per_kwh=price)
-    cmp = compare(seg_a, seg_b)
-
-    return 200, {
-        "ok": True,
-        "segment_a": seg_a,
-        "segment_b": seg_b,
-        "comparison": cmp,
-    }
 
 
 # Handlers from L1129-L1182 moved to api/power.py (cycle 5)
@@ -486,190 +419,24 @@ def _read_cmdline(pid: int) -> Optional[str]:
 
 
 
-# ────────────────────────── /api/app-triggers ─────────────────────────────
+# L489-L495 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def handle_app_triggers_get(ctx: dict) -> Response:
-    """Return the user-configured per-app profile triggers map."""
-    from ..modules import app_triggers as _at
-    return 200, {"ok": True, "triggers": _at.load_triggers()}
+
+# L498-L524 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def handle_app_triggers_post(ctx: dict, payload) -> Response:
-    """Persist {app: profile} mapping. Validates each profile name."""
-    from ..modules import app_triggers as _at
-    if not isinstance(payload, dict):
-        return 400, {"ok": False, "error": "payload must be an object"}
-    triggers = payload.get("triggers")
-    if not isinstance(triggers, dict):
-        return 400, {"ok": False, "error": "triggers must be an object"}
-    valid = {"silent", "sweet", "boost"}
-    cleaned: dict = {}
-    for k, v in triggers.items():
-        if not isinstance(k, str) or not isinstance(v, str):
-            continue
-        k = k.strip()
-        if not k:
-            continue
-        if v not in valid:
-            return 400, {
-                "ok": False,
-                "error": f"profile '{v}' invalid (must be one of {sorted(valid)})",
-            }
-        cleaned[k] = v
-    try:
-        _at.save_triggers(cleaned)
-    except OSError as e:
-        return 500, {"ok": False, "error": f"save failed: {e}"}
-    return 200, {"ok": True, "triggers": cleaned}
+
+# L527-L568 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-# ────────────────────────── /api/profile/save ─────────────────────────────
+
+# L571-L589 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def handle_profile_save(ctx: dict, payload: dict) -> Response:
-    """Save a user override for a GPU profile.
 
-    Validates the payload against profiles/schema.json then writes it to
-    `<overrides_dir>/<safe_model_name>.json`. The next reload picks it up
-    automatically (via `profile.get_profile_for_gpu`'s override-dir param).
-    """
-    import re as _re
-    from ..profile import load_schema, validate_profile
+# L592-L672 moved to api/tuning.py or integrations.py (cycle 10b)
 
-    if not isinstance(payload, dict):
-        return 400, {"ok": False, "error": "payload must be an object"}
-
-    profiles_dir = ctx.get("profiles_dir") or "profiles"
-    schema = load_schema(profiles_dir)
-    if schema is None:
-        return 500, {"ok": False, "error": "schema not found"}
-    try:
-        validate_profile(payload, schema)
-    except ValueError as e:
-        return 400, {"ok": False, "error": str(e)}
-
-    overrides_dir = ctx.get("overrides_dir") or os.path.expanduser(
-        "~/.config/gpu-dashboard/profile-overrides"
-    )
-    os.makedirs(overrides_dir, exist_ok=True)
-
-    # Safe filename : keep only letters/digits/dash/underscore, lowercase
-    model = str(payload.get("model", "override"))
-    safe = _re.sub(r"[^A-Za-z0-9_-]+", "-", model).strip("-").lower() or "override"
-    path = os.path.join(overrides_dir, f"{safe}.json")
-    try:
-        import json as _json
-        with open(path, "w", encoding="utf-8") as f:
-            _json.dump(payload, f, indent=2)
-    except OSError as e:
-        return 500, {"ok": False, "error": f"write failed: {e}"}
-
-    return 200, {"ok": True, "path": path, "model": model}
-
-
-# ────────────────────────── /api/fan-curve ────────────────────────────────
-
-
-def handle_fan_curve_get(ctx: dict) -> Response:
-    """Return the active fan curve + current target % + daemon status + hysteresis."""
-    from ..modules import fan_curve as _fc
-    profile = ctx.get("profile") or {}
-    curve = _fc.pick_curve(profile)
-    daemon = ctx.get("fan_curve_daemon")
-    cfg = ctx["config"]
-    return 200, {
-        "enabled": cfg.get_bool("MODULE_FAN_CURVE"),
-        "running": daemon is not None and getattr(daemon, "_thread", None) is not None,
-        "curve": curve,
-        "current_target_pct": getattr(daemon, "_last_pct", None) if daemon else None,
-        # R&D #4.4 — hysteresis settings (defaults match daemon defaults)
-        "hysteresis_c": float(cfg.get("FAN_CURVE_HYSTERESIS_C", "3") or "3"),
-        "hysteresis_s": float(cfg.get("FAN_CURVE_HYSTERESIS_S", "15") or "15"),
-    }
-
-
-def handle_fan_curve_post(ctx: dict, payload: dict) -> Response:
-    """Save a user-edited fan curve to ~/.config/gpu-dashboard/fan_curve.json.
-
-    Apply the new curve to the running daemon IMMEDIATELY (no waiting for
-    the next tick) — user feedback : 'sauvegarde doit-être appliqué tout
-    de suite'.
-    """
-    from ..modules import fan_curve as _fc
-    curve = payload.get("curve") if isinstance(payload, dict) else None
-    ok, err = _fc.validate_user_curve(curve)
-    if not ok:
-        return 400, {"ok": False, "error": err}
-
-    # R&D #4.4 — optional hysteresis params (bounded sanity check)
-    hys_c_raw = payload.get("hysteresis_c") if isinstance(payload, dict) else None
-    hys_s_raw = payload.get("hysteresis_s") if isinstance(payload, dict) else None
-    hysteresis_c = None
-    hysteresis_s = None
-    if hys_c_raw is not None:
-        try:
-            v = float(hys_c_raw)
-            if 0 <= v <= 20:
-                hysteresis_c = v
-            else:
-                return 400, {"ok": False, "error": "hysteresis_c out of range [0,20]"}
-        except (TypeError, ValueError):
-            return 400, {"ok": False, "error": "hysteresis_c must be a number"}
-    if hys_s_raw is not None:
-        try:
-            v = float(hys_s_raw)
-            if 0 <= v <= 600:
-                hysteresis_s = v
-            else:
-                return 400, {"ok": False, "error": "hysteresis_s out of range [0,600]"}
-        except (TypeError, ValueError):
-            return 400, {"ok": False, "error": "hysteresis_s must be a number"}
-
-    path = os.path.expanduser("~/.config/gpu-dashboard/fan_curve.json")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    payload_save: dict = {"curve": curve}
-    if hysteresis_c is not None:
-        payload_save["hysteresis_c"] = hysteresis_c
-    if hysteresis_s is not None:
-        payload_save["hysteresis_s"] = hysteresis_s
-    with open(path, "w") as f:
-        json.dump(payload_save, f, indent=2)
-
-    # Apply the new curve to the running daemon NOW + force an immediate
-    # tick so the fan speed updates within milliseconds of Save being clicked.
-    daemon = ctx.get("fan_curve_daemon")
-    applied_now = False
-    current_target_pct = None
-    if daemon is not None:
-        try:
-            daemon.update_curve(curve)
-            # R&D #4.4 — apply hysteresis settings live to the running daemon
-            if hysteresis_c is not None:
-                daemon._hysteresis_c = hysteresis_c
-            if hysteresis_s is not None:
-                daemon._hysteresis_s = hysteresis_s
-            # Force an immediate evaluation : read latest temp, interpolate,
-            # apply via nvidia-settings.
-            temp = daemon._read_temp() if hasattr(daemon, "_read_temp") else None
-            if temp is not None:
-                pct = _fc.interpolate(curve, temp)
-                _fc.apply_fan_speed(pct, daemon._display, daemon._xauth)
-                daemon._last_pct = pct
-                current_target_pct = pct
-                applied_now = True
-        except Exception as e:
-            return 200, {
-                "ok": True, "path": path, "curve": curve,
-                "applied_now": False,
-                "warning": f"saved, but immediate apply failed: {e}",
-            }
-
-    return 200, {
-        "ok": True, "path": path, "curve": curve,
-        "applied_now": applied_now,
-        "current_target_pct": current_target_pct,
-    }
 
 
 # L813-L903 moved to api/ops.py (cycle 9)
@@ -700,75 +467,24 @@ def handle_fan_curve_post(ctx: dict, payload: dict) -> Response:
 
 
 
-def handle_push_vapid(ctx: dict) -> Response:
-    """Return the VAPID public key for browser push subscription.
-
-    The frontend feeds this into PushManager.subscribe({applicationServerKey}).
-    Private key stays server-side, never exposed.
-    """
-    from ..modules import web_push
-    cfg_dir = os.path.expanduser("~/.config/gpu-dashboard")
-    try:
-        data = web_push.ensure_vapid_keys(cfg_dir)
-    except Exception as e:
-        return 500, {"ok": False, "error": f"VAPID generation failed: {e}"}
-    return 200, {"ok": True, "public_key": data["public_key"]}
+# L703-L715 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def handle_push_subscribe(ctx: dict, payload: dict) -> Response:
-    """Save a browser's push subscription to the DB.
 
-    Payload shape (from PushSubscription.toJSON()) :
-      {endpoint: "...", keys: {p256dh: "...", auth: "..."}}
-    """
-    storage = ctx.get("storage")
-    if storage is None:
-        return 503, {"ok": False, "error": "storage not available"}
-
-    endpoint = payload.get("endpoint")
-    keys = payload.get("keys") or {}
-    p256dh = keys.get("p256dh")
-    auth = keys.get("auth")
-    if not endpoint or not p256dh or not auth:
-        return 400, {"ok": False, "error": "endpoint + keys.p256dh + keys.auth required"}
-
-    storage.add_push_subscription(endpoint, p256dh, auth)
-    return 200, {"ok": True}
+# L718-L736 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def handle_push_unsubscribe(ctx: dict, payload: dict) -> Response:
-    """Remove a subscription by endpoint."""
-    storage = ctx.get("storage")
-    if storage is None:
-        return 503, {"ok": False, "error": "storage not available"}
-    endpoint = payload.get("endpoint")
-    if not endpoint:
-        return 400, {"ok": False, "error": "endpoint required"}
-    n = storage.remove_push_subscription(endpoint)
-    return 200, {"ok": True, "removed": n}
+
+# L739-L748 moved to api/tuning.py or integrations.py (cycle 10b)
+
 
 
 # L1301-L1316 moved to api/alerts.py (cycle 8)
 
 
 
-def handle_push_status(ctx: dict) -> Response:
-    """Return the count of active push subscriptions + the VAPID public key."""
-    storage = ctx.get("storage")
-    if storage is None:
-        return 503, {"ok": False, "error": "storage not available"}
-    from ..modules import web_push
-    cfg_dir = os.path.expanduser("~/.config/gpu-dashboard")
-    try:
-        data = web_push.ensure_vapid_keys(cfg_dir)
-        public_key = data["public_key"]
-    except Exception:
-        public_key = None
-    return 200, {
-        "ok": True,
-        "count": len(storage.list_push_subscriptions()),
-        "vapid_public_key": public_key,
-    }
+# L755-L771 moved to api/tuning.py or integrations.py (cycle 10b)
+
 
 
 # L1290-L1327 moved to api/ops.py (cycle 9)
@@ -783,64 +499,8 @@ def handle_push_status(ctx: dict) -> Response:
 
 
 
-# ────────────────────────── /api/update/* ─────────────────────────────────
+# L786-L843 moved to api/tuning.py or integrations.py (cycle 10b)
 
-
-# L957-L967 moved to api/ops.py (cycle 9)
-
-
-
-# L1378-L1425 moved to api/ops.py (cycle 9)
-
-
-
-# L1428-L1451 moved to api/ops.py (cycle 9)
-
-
-
-# L1454-L1493 moved to api/ops.py (cycle 9)
-
-
-
-# L1496-L1518 moved to api/ops.py (cycle 9)
-
-
-
-# L1521-L1568 moved to api/ops.py (cycle 9)
-
-
-
-# L1571-L1593 moved to api/ops.py (cycle 9)
-
-
-
-# L1596-L1630 moved to api/ops.py (cycle 9)
-
-
-
-# L1633-L1675 moved to api/ops.py (cycle 9)
-
-
-
-# L1678-L1718 moved to api/ops.py (cycle 9)
-
-
-
-def handle_alerts_test(ctx: dict) -> Response:
-    """Send a test Telegram message using current secrets.env values."""
-    cfg = ctx["config"]
-    token = cfg.get("TG_TOKEN", "")
-    chat_id = cfg.get("TG_CHAT", "")
-    if not token or not chat_id:
-        return 400, {"ok": False, "error": "token or chat_id missing"}
-
-    import datetime
-    ok, msg = tg.send_message(
-        token=token, chat_id=chat_id,
-        text=f"🧪 *Test alert* from gpu-dashboard at {datetime.datetime.now().strftime('%H:%M:%S')}",
-    )
-    code = 200 if ok else 502
-    return code, {"ok": ok, "msg": msg}
 
 
 # Handlers from L2775-L2790 moved to api/integrations.py (cycle 3)
@@ -883,240 +543,37 @@ def handle_alerts_test(ctx: dict) -> Response:
 
 
 
-# ─── R&D #10.7 — Live README badge SVG generator ─────────────────────────────
-def _badge_svg(label: str, value: str, color: str = "#4c1") -> str:
-    """Return a shields.io-style SVG badge with the given label / value / color.
-    No deps : just a stdlib f-string. Width auto-computed from char count
-    (approximation : 7 px per char + paddings)."""
-    # Cheap width estimate — for monospaceish look. shields.io uses ~7px/char.
-    lw = len(label) * 6 + 10
-    vw = len(value) * 7 + 10
-    total = lw + vw
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="20" role="img" aria-label="{label}: {value}">'
-        f'<linearGradient id="s" x2="0" y2="100%">'
-        f'<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>'
-        f'<stop offset="1" stop-opacity=".1"/>'
-        f'</linearGradient>'
-        f'<clipPath id="r"><rect width="{total}" height="20" rx="3"/></clipPath>'
-        f'<g clip-path="url(#r)">'
-        f'<rect width="{lw}" height="20" fill="#555"/>'
-        f'<rect x="{lw}" width="{vw}" height="20" fill="{color}"/>'
-        f'<rect width="{total}" height="20" fill="url(#s)"/>'
-        f'</g>'
-        f'<g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">'
-        f'<text x="{lw // 2}" y="14">{label}</text>'
-        f'<text x="{lw + vw // 2}" y="14">{value}</text>'
-        f'</g>'
-        f'</svg>'
-    )
+# L886-L912 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-_BADGE_TEMP_COLORS = {
-    "ok": "#4c1",      # green for <70°C
-    "warn": "#dfb317", # yellow 70-80°C
-    "crit": "#e05d44", # red >=80°C
-}
+
+# L915-L919 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def handle_badge(ctx: dict, metric: str) -> Tuple[int, str]:
-    """Generate a live SVG badge for the requested metric.
 
-    Supported metrics : gpu-temp, power-now, tok-per-wh, uptime, top-model, util.
-    Unknown metric → 404 with a fallback 'unknown' badge.
-    """
-    snap = _gpu_card_snapshot(gpu_index=0)
-    alive = bool(snap and snap.get("alive"))
+# L922-L993 moved to api/tuning.py or integrations.py (cycle 10b)
 
-    if metric == "gpu-temp":
-        if not alive:
-            return 200, _badge_svg("temp", "offline", "#9f9f9f")
-        t = int(snap.get("temp") or 0)
-        color = (_BADGE_TEMP_COLORS["crit"] if t >= 80 else
-                 _BADGE_TEMP_COLORS["warn"] if t >= 70 else
-                 _BADGE_TEMP_COLORS["ok"])
-        return 200, _badge_svg("temp", f"{t}°C", color)
-
-    if metric == "power-now":
-        if not alive:
-            return 200, _badge_svg("power", "offline", "#9f9f9f")
-        p = snap.get("power") or 0
-        return 200, _badge_svg("power", f"{p:.0f} W", "#007ec6")
-
-    if metric == "util":
-        if not alive:
-            return 200, _badge_svg("util", "offline", "#9f9f9f")
-        u = int(snap.get("util_gpu") or 0)
-        color = "#4c1" if u < 50 else "#dfb317" if u < 90 else "#e05d44"
-        return 200, _badge_svg("util", f"{u}%", color)
-
-    if metric == "tok-per-wh":
-        # Try to read LLM perf from sampler / fallback to 0
-        try:
-            r = _gpus_available()  # noqa: re-uses nvidia probe
-        except Exception:
-            r = []
-        # Read from /api/llm if available — best-effort
-        try:
-            from ..modules import llm_stats as _llm  # may or may not exist
-            val = _llm.tokens_per_watt_hour()
-        except Exception:
-            val = None
-        if val is None:
-            return 200, _badge_svg("tok/Wh", "n/a", "#9f9f9f")
-        return 200, _badge_svg("tok/Wh", f"{val:.0f}", "#a83f9f")
-
-    if metric == "uptime":
-        started = ctx.get("started_at")
-        if started is None:
-            return 200, _badge_svg("uptime", "n/a", "#9f9f9f")
-        secs = int(time.time() - float(started))
-        if secs < 60:
-            txt = f"{secs}s"
-        elif secs < 3600:
-            txt = f"{secs // 60}m"
-        elif secs < 86400:
-            txt = f"{secs // 3600}h"
-        else:
-            txt = f"{secs // 86400}d"
-        return 200, _badge_svg("uptime", txt, "#4c1")
-
-    if metric == "top-model":
-        d = (ctx.get("sampler").snapshot() if ctx.get("sampler") else [])
-        # No direct top-model accessor — derive from llm_model in latest sample
-        if alive and snap.get("name"):
-            short = snap["name"].replace("NVIDIA ", "").replace("GeForce ", "")[:24]
-            return 200, _badge_svg("gpu", short, "#76A8DC")
-        return 200, _badge_svg("gpu", "offline", "#9f9f9f")
-
-    # Unknown metric → 404 with a 'unknown' badge so the README still renders
-    return 404, _badge_svg("badge", f"unknown:{metric}"[:24], "#9f9f9f")
 
 
 # ─── R&D #10.6 — ANSI/tldr endpoint for CLI users ────────────────────────────
-_ANSI = {
-    "reset": "\x1b[0m",
-    "bold": "\x1b[1m",
-    "dim": "\x1b[2m",
-    "red": "\x1b[31m",
-    "green": "\x1b[32m",
-    "yellow": "\x1b[33m",
-    "blue": "\x1b[34m",
-    "magenta": "\x1b[35m",
-    "cyan": "\x1b[36m",
-    "gray": "\x1b[90m",
-}
+# L997-L1008 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def _color(text: str, c: str, enabled: bool = True) -> str:
-    if not enabled or c not in _ANSI:
-        return text
-    return f"{_ANSI[c]}{text}{_ANSI['reset']}"
+
+# L1011-L1014 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def _temp_color(t: float) -> str:
-    if t >= 80:
-        return "red"
-    if t >= 70:
-        return "yellow"
-    if t >= 50:
-        return "green"
-    return "cyan"
+
+# L1017-L1024 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def _spark(values: list, width: int = 12) -> str:
-    """Unicode block sparkline. values clipped to [0,100]."""
-    if not values:
-        return ""
-    blocks = " ▁▂▃▄▅▆▇█"
-    # Resample to `width`
-    if len(values) > width:
-        step = len(values) / width
-        sampled = [values[int(i * step)] for i in range(width)]
-    else:
-        sampled = values + [0] * (width - len(values))
-    out = []
-    for v in sampled:
-        idx = max(0, min(8, int((v or 0) / 100 * 8)))
-        out.append(blocks[idx])
-    return "".join(out)
+
+# L1027-L1042 moved to api/tuning.py or integrations.py (cycle 10b)
 
 
-def handle_tldr(ctx: dict, params: Optional[dict] = None,
-                headers: Optional[dict] = None) -> Tuple[int, str]:
-    """ANSI-colored terminal-width-aware status card for CLI users.
 
-    Query params :
-      fmt    = tldr (default, multi-line) | oneline | full
-      cols   = terminal width override (default 80)
-    Headers :
-      NO_COLOR = if set (any value), suppress ANSI codes (per no-color.org)
-    """
-    params = params or {}
-    headers = headers or {}
-    fmt = params.get("fmt", "tldr")
-    try:
-        cols = max(40, min(200, int(params.get("cols", "80"))))
-    except (ValueError, TypeError):
-        cols = 80
-    color_on = "NO_COLOR" not in {k.upper() for k in headers}
+# L1045-L1119 moved to api/tuning.py or integrations.py (cycle 10b)
 
-    # Live snapshot — main GPU only
-    snap = _gpu_card_snapshot(gpu_index=0)
-    if not snap or not snap.get("alive"):
-        return 200, "GPU offline\n"
-
-    t = snap.get("temp", 0)
-    util = snap.get("util_gpu", 0)
-    power = snap.get("power", 0)
-    plim = snap.get("power_limit", 0)
-    vram_used = (snap.get("mem_used_mib", 0) or 0) / 1024
-    vram_tot = (snap.get("mem_total_mib", 0) or 0) / 1024
-    name = snap.get("name", "GPU")
-    short_name = name.replace("NVIDIA GeForce ", "").replace("NVIDIA ", "")
-
-    # Sampler history → util sparkline
-    sampler = ctx.get("sampler")
-    util_history: list = []
-    if sampler:
-        snap_buf = sampler.snapshot()
-        util_history = [s.get("util_gpu", 0) or 0 for s in snap_buf[-30:]]
-    spark = _spark(util_history, width=20)
-
-    if fmt == "oneline":
-        # Tiny one-line for prompt / motd
-        line = (f"{_color(f'{t}°C', _temp_color(t), color_on)} "
-                f"{_color(f'{util}%', 'cyan', color_on)} "
-                f"{_color(f'{power:.0f}W', 'magenta', color_on)} "
-                f"{_color(short_name, 'gray', color_on)}")
-        return 200, line + "\n"
-
-    if fmt == "full":
-        # Multi-block layout
-        lines = []
-        lines.append(_color("─" * cols, "gray", color_on))
-        lines.append(f" {_color('GreenWatts', 'bold', color_on)}  "
-                     f"{_color(short_name, 'gray', color_on)}")
-        lines.append(_color("─" * cols, "gray", color_on))
-        lines.append(f" Temperature : {_color(f'{t}°C', _temp_color(t), color_on)}")
-        lines.append(f" Utilization : {_color(f'{util}%', 'cyan', color_on)}  {spark}")
-        lines.append(f" Power       : {_color(f'{power:.0f}W', 'magenta', color_on)} / {plim:.0f}W")
-        lines.append(f" VRAM        : {_color(f'{vram_used:.1f}', 'yellow', color_on)} / {vram_tot:.1f} GiB")
-        if snap.get("pcie_gen") is not None:
-            lines.append(f" PCIe        : Gen {snap['pcie_gen']} ×{snap.get('pcie_width', '?')}")
-        lines.append(_color("─" * cols, "gray", color_on))
-        return 200, "\n".join(lines) + "\n"
-
-    # default 'tldr' : compact 3-line block
-    lines = []
-    lines.append(f"{_color('GreenWatts', 'bold', color_on)}  "
-                 f"{_color(short_name, 'gray', color_on)}")
-    lines.append(f"  {_color(f'{t}°C', _temp_color(t), color_on)} · "
-                 f"{_color(f'{util}%', 'cyan', color_on)} util  "
-                 f"{spark}")
-    lines.append(f"  {_color(f'{power:.0f}W', 'magenta', color_on)}/{plim:.0f}W · "
-                 f"VRAM {_color(f'{vram_used:.1f}', 'yellow', color_on)}/{vram_tot:.1f}GiB")
-    return 200, "\n".join(lines) + "\n"
 
 
 # ─── R&D #9.3 + #9.6 handlers moved to api/auth.py (cycle 2) ──────────────
@@ -1142,19 +599,8 @@ def handle_tldr(ctx: dict, params: Optional[dict] = None,
 
 
 
-# ─── R&D #7.5 — UPS/NUT awareness ────────────────────────────────────────────
-def handle_ups_status(ctx: dict) -> Response:
-    """Query the local NUT server and return the first UPS' state."""
-    from ..modules import ups_nut
-    cfg = ctx["config"]
-    host = cfg.get("NUT_HOST", "localhost")
-    try:
-        port = int(cfg.get("NUT_PORT", "3493"))
-    except (ValueError, TypeError):
-        port = 3493
-    ups_name = cfg.get("NUT_UPS") or None
-    result = ups_nut.query(host=host, port=port, ups=ups_name, timeout=2.0)
-    return 200, result
+# L1145-L1157 moved to api/tuning.py or integrations.py (cycle 10b)
+
 
 
 # L2100-L2103 moved to api/alerts.py (cycle 8)
@@ -1169,26 +615,8 @@ def handle_ups_status(ctx: dict) -> Response:
 
 
 
-# ─── R&D #7.4 — InfluxDB line protocol pusher status ─────────────────────────
-def handle_influxdb_status(ctx: dict) -> Response:
-    """Return the InfluxDB pusher's current status (last push ok/error)."""
-    pusher = ctx.get("influxdb_pusher")
-    cfg = ctx["config"]
-    url = cfg.get("INFLUXDB_URL", "")
-    if not url:
-        return 200, {"ok": True, "enabled": False}
-    if pusher is None:
-        return 200, {"ok": True, "enabled": True, "running": False}
-    s = pusher.status
-    return 200, {
-        "ok": True,
-        "enabled": True,
-        "running": True,
-        "url": url,
-        "bucket": cfg.get("INFLUXDB_BUCKET") or cfg.get("INFLUXDB_DATABASE", ""),
-        "interval_s": float(cfg.get("INFLUXDB_INTERVAL", "15") or "15"),
-        "last_push": s,
-    }
+# L1172-L1191 moved to api/tuning.py or integrations.py (cycle 10b)
+
 
 
 # ─── R&D #6.8 — cgroup per-process GPU power accounting ──────────────────────
