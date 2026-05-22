@@ -1669,19 +1669,50 @@ def handle_fan_curve_get(ctx: dict) -> Response:
 def handle_fan_curve_post(ctx: dict, payload: dict) -> Response:
     """Save a user-edited fan curve to ~/.config/gpu-dashboard/fan_curve.json.
 
-    The file overrides the profile-baked curve until deleted manually.
-    The running daemon (if any) picks the new curve on next poll.
+    Apply the new curve to the running daemon IMMEDIATELY (no waiting for
+    the next tick) — user feedback : 'sauvegarde doit-être appliqué tout
+    de suite'.
     """
     from .modules import fan_curve as _fc
     curve = payload.get("curve") if isinstance(payload, dict) else None
     ok, err = _fc.validate_user_curve(curve)
     if not ok:
         return 400, {"ok": False, "error": err}
+
     path = os.path.expanduser("~/.config/gpu-dashboard/fan_curve.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump({"curve": curve}, f, indent=2)
-    return 200, {"ok": True, "path": path, "curve": curve}
+
+    # Apply the new curve to the running daemon NOW + force an immediate
+    # tick so the fan speed updates within milliseconds of Save being clicked.
+    daemon = ctx.get("fan_curve_daemon")
+    applied_now = False
+    current_target_pct = None
+    if daemon is not None:
+        try:
+            daemon.update_curve(curve)
+            # Force an immediate evaluation : read latest temp, interpolate,
+            # apply via nvidia-settings.
+            temp = daemon._read_temp() if hasattr(daemon, "_read_temp") else None
+            if temp is not None:
+                pct = _fc.interpolate(curve, temp)
+                _fc.apply_fan_speed(pct, daemon._display, daemon._xauth)
+                daemon._last_pct = pct
+                current_target_pct = pct
+                applied_now = True
+        except Exception as e:
+            return 200, {
+                "ok": True, "path": path, "curve": curve,
+                "applied_now": False,
+                "warning": f"saved, but immediate apply failed: {e}",
+            }
+
+    return 200, {
+        "ok": True, "path": path, "curve": curve,
+        "applied_now": applied_now,
+        "current_target_pct": current_target_pct,
+    }
 
 
 # ────────────────────────── GET /api/health ───────────────────────────────
