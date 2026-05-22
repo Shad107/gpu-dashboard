@@ -1305,6 +1305,60 @@ def handle_power_profiles_list(ctx: dict) -> Response:
     return 200, {"profiles": profiles}
 
 
+def handle_benchmark_run(ctx: dict, payload) -> Response:
+    """Run an A/B profile comparison synchronously (R&D #4, cycle 123).
+
+    payload : {profile_a, profile_b, duration_s} — duration capped at 300s
+              to avoid wedging the server.
+
+    Returns {segment_a, segment_b, comparison} where comparison is the output
+    of benchmark.compare(seg_a, seg_b).
+    """
+    if not isinstance(payload, dict):
+        return 400, {"ok": False, "error": "payload must be an object"}
+    a = str(payload.get("profile_a") or "").lower()
+    b = str(payload.get("profile_b") or "").lower()
+    try:
+        duration = int(payload.get("duration_s") or 60)
+    except (ValueError, TypeError):
+        return 400, {"ok": False, "error": "duration_s must be an integer"}
+    if duration < 5 or duration > 300:
+        return 400, {"ok": False, "error": "duration_s must be in [5, 300]"}
+    valid = {"silent", "sweet", "boost"}
+    if a not in valid or b not in valid:
+        return 400, {"ok": False,
+                     "error": f"profiles must be in {sorted(valid)}"}
+    if a == b:
+        return 400, {"ok": False, "error": "profile_a and profile_b must differ"}
+
+    sampler = ctx.get("sampler")
+    if sampler is None:
+        return 503, {"ok": False, "error": "sampler not available"}
+
+    cfg = ctx.get("config")
+    price = 0.25
+    if cfg is not None:
+        try:
+            price = float(cfg.get("ELECTRICITY_PRICE_EUR_PER_KWH", default="0.25"))
+        except (ValueError, TypeError):
+            price = 0.25
+
+    def _apply(profile_name: str) -> None:
+        handle_power_profile_apply(ctx, profile_name)
+
+    from .modules.benchmark import run_segment, compare
+    seg_a = run_segment(duration, a, _apply, sampler, price_per_kwh=price)
+    seg_b = run_segment(duration, b, _apply, sampler, price_per_kwh=price)
+    cmp = compare(seg_a, seg_b)
+
+    return 200, {
+        "ok": True,
+        "segment_a": seg_a,
+        "segment_b": seg_b,
+        "comparison": cmp,
+    }
+
+
 def handle_power_profile_apply(ctx: dict, name: str) -> Response:
     """Apply one of the named profiles : power-limit + offsets in a single call.
 

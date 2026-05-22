@@ -558,6 +558,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_app_triggers_post(ctx, payload)
                 self._send_json(code, body)
                 return
+            if self.path == "/api/benchmark/run":
+                code, body = api.handle_benchmark_run(ctx, payload)
+                self._send_json(code, body)
+                return
             if self.path.startswith("/api/power-profiles/apply/"):
                 name = self.path[len("/api/power-profiles/apply/"):]
                 code, body = api.handle_power_profile_apply(ctx, name)

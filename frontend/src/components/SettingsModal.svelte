@@ -483,6 +483,8 @@
       icon: "M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
     { id: "apptriggers", group: "advanced", labelKey: "modal.apptriggers" as const,
       icon: "M4 2h16a2 2 0 0 1 2 2v4H2V4a2 2 0 0 1 2-2zm0 8h6v10H4a2 2 0 0 1-2-2V10zm8 0h10v8a2 2 0 0 1-2 2h-8V10z" },
+    { id: "benchmark", group: "advanced", labelKey: "modal.benchmark" as const,
+      icon: "M9 11H7v6h2v-6m4 0h-2v6h2v-6m4 0h-2v6h2v-6M3 3v18h18V3H3m16 16H5V5h14v14z" },
     { id: "layout", group: "meta", labelKey: "modal.layout" as const,
       icon: "M3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2zm16 0v3H5V5zm-7 5v9H5v-9zm2 0h5v9h-5z" },
     { id: "language", group: "meta", labelKey: "modal.language" as const,
@@ -610,6 +612,26 @@
   $effect(() => {
     if (modal.open && modal.section === "apptriggers" && !triggersLoaded) loadAppTriggers();
   });
+
+  // ── Benchmark A/B state (R&D #4.2, cycle 123) ─────────────────────────
+  let benchA = $state("silent");
+  let benchB = $state("boost");
+  let benchDuration = $state(30);
+  let benchRunning = $state(false);
+  let benchResult = $state<Awaited<ReturnType<typeof api.runBenchmark>> | null>(null);
+  async function runBench() {
+    benchRunning = true;
+    benchResult = null;
+    try {
+      const r = await api.runBenchmark({ profileA: benchA, profileB: benchB, durationS: benchDuration });
+      if (r.ok) benchResult = r;
+      else toast.show(r.error || "benchmark failed", "error");
+    } catch (e: any) {
+      toast.show(e?.message || "benchmark failed", "error");
+    } finally {
+      benchRunning = false;
+    }
+  }
   function fmtUptime(s: number): string {
     const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
     const m = Math.floor((s % 3600) / 60), sec = s % 60;
@@ -1003,6 +1025,69 @@
           <p class="sub" style="margin-top:.8em;font-size:.78em;color:var(--text-dim)">
             💡 {i18n.t("apptriggers.examples")}
           </p>
+        {/if}
+      </div>
+
+      <!-- ─── Profile A/B Benchmark (R&D #4, cycle 123) ──────────────── -->
+      <div class="modal-section" class:active={modal.section === "benchmark"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("benchmark")} /></svg>
+          <span>{i18n.t("benchmark.title")}</span>
+        </h3>
+        <p class="sub" style="margin:0 0 .8em">{i18n.t("benchmark.hint")}</p>
+
+        <div class="bench-form">
+          <label class="bench-cell">
+            <span class="sub">{i18n.t("benchmark.profile_a")}</span>
+            <select bind:value={benchA}>
+              <option value="silent">🤫 silent</option>
+              <option value="sweet">⭐ sweet</option>
+              <option value="boost">🚀 boost</option>
+            </select>
+          </label>
+          <span class="bench-vs">vs</span>
+          <label class="bench-cell">
+            <span class="sub">{i18n.t("benchmark.profile_b")}</span>
+            <select bind:value={benchB}>
+              <option value="silent">🤫 silent</option>
+              <option value="sweet">⭐ sweet</option>
+              <option value="boost">🚀 boost</option>
+            </select>
+          </label>
+          <label class="bench-cell">
+            <span class="sub">{i18n.t("benchmark.duration_s")}</span>
+            <input type="number" min="5" max="300" step="5" bind:value={benchDuration} class="bench-dur" />
+          </label>
+          <button class="btn btn-primary" disabled={benchRunning} onclick={runBench}>
+            {benchRunning ? "⏳…" : "▶ " + i18n.t("benchmark.run")}
+          </button>
+        </div>
+        {#if benchRunning}
+          <p class="sub" style="margin-top:.6em">{i18n.t("benchmark.running", { d: benchDuration * 2 })}</p>
+        {/if}
+        {#if benchResult}
+          {@const a = benchResult.segment_a}
+          {@const b = benchResult.segment_b}
+          {@const w = benchResult.comparison.winners}
+          <div class="bench-result">
+            <table class="bench-table">
+              <thead>
+                <tr><th></th><th>{a.profile}</th><th>{b.profile}</th><th>Δ</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>{i18n.t("benchmark.col_temp")}</td><td>{a.avg_temp_c}°C</td><td>{b.avg_temp_c}°C</td>
+                  <td class:win-a={w.cooler === a.profile} class:win-b={w.cooler === b.profile}>🌡️ {w.cooler}</td></tr>
+                <tr><td>{i18n.t("benchmark.col_power")}</td><td>{a.avg_power_w} W</td><td>{b.avg_power_w} W</td>
+                  <td class:win-a={w.lower_power === a.profile} class:win-b={w.lower_power === b.profile}>⚡ {w.lower_power}</td></tr>
+                <tr><td>{i18n.t("benchmark.col_throughput")}</td><td>{a.tokens_per_s} tok/s</td><td>{b.tokens_per_s} tok/s</td>
+                  <td class:win-a={w.higher_throughput === a.profile} class:win-b={w.higher_throughput === b.profile}>🪙 {w.higher_throughput}</td></tr>
+                <tr><td>{i18n.t("benchmark.col_efficiency")}</td><td>{a.tokens_per_kwh.toFixed(0)} tok/kWh</td><td>{b.tokens_per_kwh.toFixed(0)} tok/kWh</td>
+                  <td class:win-a={w.more_efficient === a.profile} class:win-b={w.more_efficient === b.profile}>⚖️ {w.more_efficient}</td></tr>
+                <tr><td>{i18n.t("benchmark.col_cost")}</td><td>{a.cost.toFixed(4)}</td><td>{b.cost.toFixed(4)}</td>
+                  <td class:win-a={w.cheaper === a.profile} class:win-b={w.cheaper === b.profile}>💸 {w.cheaper}</td></tr>
+              </tbody>
+            </table>
+          </div>
         {/if}
       </div>
 

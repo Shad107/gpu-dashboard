@@ -717,6 +717,23 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
   border-left: 1px dashed rgba(251, 191, 36, 0.8);
 }
 
+/* A/B Benchmark UI */
+.bench-form { display: flex; align-items: flex-end; gap: 0.6em; flex-wrap: wrap; }
+.bench-cell { display: flex; flex-direction: column; gap: 0.2em; }
+.bench-vs { font-size: 1.1em; color: var(--text-muted); padding: 0 0.4em; }
+.bench-dur { width: 70px; }
+.bench-result { margin-top: 1em; }
+.bench-table { width: 100%; max-width: 600px; border-collapse: collapse; }
+.bench-table th, .bench-table td {
+  padding: 0.45em 0.7em;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  font-size: 0.88em;
+}
+.bench-table th { color: var(--text-muted); font-weight: 600; }
+.bench-table tr td:nth-child(4) { color: var(--text-dim); }
+.bench-table .win-a, .bench-table .win-b { color: var(--accent); font-weight: 600; }
+
 /* Profile activity log (About tab) */
 .profile-log {
   display: flex;

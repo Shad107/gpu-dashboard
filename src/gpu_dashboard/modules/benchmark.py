@@ -28,13 +28,19 @@ def run_segment(
     apply_callback: Callable[[str], object],
     sampler,
     price_per_kwh: float = 0.25,
-    sleep: Callable[[float], None] = _time.sleep,
-    now: Callable[[], float] = _time.time,
+    sleep: Optional[Callable[[float], None]] = None,
+    now: Optional[Callable[[], float]] = None,
 ) -> dict:
     """Apply ``profile_name``, sleep ``duration_s``, then return aggregated stats.
 
-    Sleep + now are injectable so tests can drive the clock without waiting.
+    Sleep + now are resolved lazily at call time so tests can monkeypatch
+    `_time.sleep` after import without losing the override to a default-arg
+    snapshot.
     """
+    if sleep is None:
+        sleep = _time.sleep
+    if now is None:
+        now = _time.time
     start_ts = int(now())
     try:
         apply_callback(profile_name)

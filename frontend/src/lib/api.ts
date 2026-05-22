@@ -429,6 +429,26 @@ export const api = {
       error?: string;
     }>),
 
+  runBenchmark: (opts: { profileA: string; profileB: string; durationS: number }) =>
+    fetch("/api/benchmark/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        profile_a: opts.profileA, profile_b: opts.profileB, duration_s: opts.durationS,
+      }),
+    }).then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      segment_a: any;
+      segment_b: any;
+      comparison: {
+        profile_a: string;
+        profile_b: string;
+        delta: Record<string, number>;
+        winners: Record<string, string>;
+      };
+    }>),
+
   powerHeatmap: (days = 7, gpu = 0) =>
     fetch(`/api/power-heatmap?days=${days}` + (gpu ? `&gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
