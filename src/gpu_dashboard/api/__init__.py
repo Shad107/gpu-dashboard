@@ -251,3 +251,5 @@ from ._core import (  # noqa: F401
     # ANSI/tldr endpoint (R&D #10.6) — moved to api.integrations (above)
     # Module-level CPU/vmstat caches — moved to api.diagnostics (above)
 )
+
+from .embed import handle_embed  # noqa: F401,F811

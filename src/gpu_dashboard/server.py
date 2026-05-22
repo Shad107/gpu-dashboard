@@ -610,6 +610,24 @@ def make_handler(ctx: dict):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if path == "/embed" or path.startswith("/embed/"):
+                # R&D #12.6 — iframe-friendly read-only HTML view
+                card = path[len("/embed/"):] if path.startswith("/embed/") else "summary"
+                if not card or "/" in card:
+                    card = "summary"
+                code, html_text = api.handle_embed(ctx, card, params)
+                data = html_text.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                if params and params.get("share"):
+                    self.send_header("X-Frame-Options", "ALLOWALL")
+                else:
+                    self.send_header("X-Frame-Options", "SAMEORIGIN")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path == "/api/ups":
                 code, body = api.handle_ups_status(ctx)
                 self._send_json(code, body)
