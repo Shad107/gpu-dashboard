@@ -65,7 +65,9 @@ def test_readyz_no_nvidia_returns_503(ctx):
 
 def test_readyz_storage_locked_returns_503(ctx):
     """If storage write probe fails → 503."""
-    ctx["storage"]._conn.execute = MagicMock(side_effect=RuntimeError("db locked"))
+    fake_conn = MagicMock()
+    fake_conn.execute.side_effect = RuntimeError("db locked")
+    ctx["storage"]._conn = fake_conn
     with patch.object(api, "_gpus_available", return_value=[{"index": 0}]):
         code, body = api.handle_readyz(ctx)
     assert code == 503
