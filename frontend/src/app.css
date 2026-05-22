@@ -190,6 +190,9 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
   letter-spacing: 0.06em;
   white-space: nowrap;
   margin-bottom: 0.4em;
+  text-align: center;  /* cycle 145 user fb : 'titre llm ou autre au dessus du groupe centré' */
+  align-self: center;
+  width: 100%;
 }
 /* Legacy compat */
 .row, .strip-block { display: contents; }
