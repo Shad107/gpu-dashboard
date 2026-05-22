@@ -66,11 +66,8 @@ body, .card, .modal-section, .stats-card, .top-nav-btn, .btn {
   transition: background-color 0.25s, color 0.25s, border-color 0.25s;
 }
 
-/* Global styles. Cycle 142 (user feedback 'ca fais x ligne de tuiles
- * donc 2 overflow y') : back to overflow:hidden + height:100vh on body
- * + dashboard-view uses flex so only ONE scrollbar appears (inside
- * .dash-scroll). History + Stats views use auto so the inner content
- * scrolls naturally on long pages. */
+/* Global styles. Cycle 142b (user 'ca fais x ligne de tuiles donc 2
+ * overflow y') : back to a SINGLE body-level scrollbar. Simpler. */
 body {
   font-family: system-ui, -apple-system, sans-serif;
   margin: 0;
@@ -78,25 +75,9 @@ body {
   background: var(--bg-page);
   color: var(--text);
   line-height: 1.3;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   box-sizing: border-box;
 }
-#app {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;   /* allow flex children to shrink below intrinsic size */
-}
-.dashboard-view {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-.dashboard-view .row { flex: 0 0 auto; }
 
 h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .ts { color: var(--text-faint); font-size: 0.78em; margin-bottom: 0.6em; }
@@ -128,23 +109,8 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 }
 .group-label:first-of-type { margin-top: 0; }
 
-/* Scoped scroll under the tiles (cycle 142 / 143).
- * Uses flex: 1 + min-height: 0 so it fills the remaining viewport space
- * after the tiles. Only ONE scrollbar appears system-wide. */
-.dash-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 0.2em;
-}
-/* History + Stats views can grow tall — keep them on body-level scroll
- * via overflow:auto on the #app container. */
-.view-history, .view-stats-wrap {
-  overflow-y: auto;
-  min-height: 0;
-  flex: 1;
-}
+/* (cycle 142b) Removed .dash-scroll + flex tricks — too brittle with
+ * variable tile counts. Body scroll is the single source of truth. */
 
 .card {
   background: var(--bg-card);

@@ -111,17 +111,10 @@
   <TopNav />
   <IdleBanner />
   {#if view.current === "dashboard"}
-    <!-- Dashboard view : single scroll zone under the tiles. Tiles are
-         flex:0 (natural height). dash-scroll is flex:1 + overflow-y so
-         only ONE scrollbar appears, only under the tiles. -->
-    <div class="dashboard-view">
-      <Cards />
-      <div class="dash-scroll">
-        <CoolingChart />
-        <PowerChart />
-        <LatestAlertFooter />
-      </div>
-    </div>
+    <Cards />
+    <CoolingChart />
+    <PowerChart />
+    <LatestAlertFooter />
   {:else if view.current === "history"}
     <HistoryView />
   {:else if view.current === "stats"}
