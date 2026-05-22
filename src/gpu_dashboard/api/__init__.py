@@ -64,6 +64,13 @@ from .diagnostics import (  # noqa: F401
     handle_ecc_health,
     handle_idle_audit,
     handle_clock_events,
+    handle_thermal_stats,
+    handle_thermal_coach,
+    handle_sys_context,
+    handle_cgroup_power,
+    handle_prom, handle_prometheus_metrics,
+    handle_alertmanager_rules, build_alertmanager_rules_yaml,
+    handle_logs,
 )
 
 # Public handlers + builders from the legacy monolith.
@@ -120,8 +127,19 @@ from .diagnostics import (  # noqa: F401,F811
     handle_ecc_health,
     handle_idle_audit,
     handle_clock_events,
+    handle_thermal_stats,
+    handle_thermal_coach,
+    handle_sys_context,
+    handle_cgroup_power,
+    handle_prom, handle_prometheus_metrics,
+    handle_alertmanager_rules, build_alertmanager_rules_yaml,
+    handle_logs,
 )
-from .diagnostics import _JOURNAL_FILTERS, _diff_snapshots  # noqa: F401,F811
+from .diagnostics import (  # noqa: F401,F811
+    _JOURNAL_FILTERS, _diff_snapshots,
+    _normalize_cgroup, _linear_fit, _r_squared,
+    _LAST_CPU_LINE, _LAST_CPU_TS, _LAST_VMSTAT, _LAST_VMSTAT_TS,
+)
 # Helpers moved to submodules — re-export for tests
 from .llm import (  # noqa: F401,F811
     _parse_llamacpp_metrics,
@@ -146,16 +164,14 @@ from ._monolith import (  # noqa: F401
     _parse_gpu_index,
     _read_cmdline,
     _redact_env_file,
-    # Linear regression + R² (thermal coach)
-    _linear_fit,
-    _r_squared,
+    # Linear regression + R² (thermal coach) — moved to api.diagnostics
+    # (kept for compat: import from there above)
     # Drift detector
 
     # Heartbeats (deadman)
     _load_heartbeats,
     _save_heartbeats,
-    # cgroup attribution
-    _normalize_cgroup,
+    # cgroup attribution — moved to api.diagnostics (above)
     # Alert escalation
     _alert_consecutive_to_for,
     # SVG badge generator (R&D #10.7)
@@ -166,9 +182,5 @@ from ._monolith import (  # noqa: F401
     _temp_color,
     _spark,
     _ANSI,
-    # Module-level CPU/vmstat caches (used by tests)
-    _LAST_CPU_LINE,
-    _LAST_CPU_TS,
-    _LAST_VMSTAT,
-    _LAST_VMSTAT_TS,
+    # Module-level CPU/vmstat caches — moved to api.diagnostics (above)
 )
