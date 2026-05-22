@@ -1,0 +1,24 @@
+[Unit]
+Description=Apply persisted gpu-dashboard boot profile (R&D #15.8)
+# Wait for the NVIDIA driver to come up. nvidia-persistenced is the most
+# reliable signal that the kernel module is loaded and ready.
+After=nvidia-persistenced.service systemd-modules-load.service
+Wants=nvidia-persistenced.service
+# This unit is best-effort — it shouldn't block boot if it fails.
+PartOf=
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+# The CLI entrypoint waits up to 30 s for nvidia-smi to respond, then
+# applies whichever profile is in ~/.config/gpu-dashboard/boot_profile.json.
+# If no profile is configured, the entrypoint returns 0 (no-op).
+ExecStart=/usr/bin/env PYTHONPATH=%h/gpu-dashboard-oss/src python3 -m gpu_dashboard.modules.boot_profile apply
+# Don't let a transient driver hiccup escalate.
+TimeoutStartSec=60
+# Send stdout + stderr to the journal so users can inspect via journalctl.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

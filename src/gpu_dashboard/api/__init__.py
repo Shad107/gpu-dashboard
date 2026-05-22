@@ -267,3 +267,4 @@ from .xid import handle_xid, handle_xid_decode  # noqa: F401,F811
 from .hot_swap import handle_hot_swap_status, handle_hot_swap_evaluate  # noqa: F401,F811
 from .inference_cost import handle_inference_cost  # noqa: F401,F811
 from .lab_usage import handle_lab_usage_live  # noqa: F401,F811
+from .boot_profile import handle_boot_profile_status, handle_boot_profile_save, handle_boot_profile_clear, handle_boot_profile_apply_now  # noqa: F401,F811

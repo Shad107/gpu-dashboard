@@ -11,6 +11,29 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #15 (2026-05-22 23:55) — AUTO-OPENED post #14 complete
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 15.1 | GPU bus-reset surgeon | M | 5 | FLR/SBR via sysfs, no reboot needed |
+| 15.2 | **Tariff-aware job scheduler** | S | 5 | Peak/off-peak CSV overlay + €/job estimator |
+| 15.3 | HF cache dedup + symlink farm | S | 4 | SHA-bucket dedup, reclaim TBs |
+| 15.4 | VRAM memcpy sentinel | M | 4 | Periodic bit-flip verifier |
+| 15.5 | Per-app fan curve profiles | M | 4 | Blender→aggressive, browser→silent |
+| 15.6 | BTRFS/ZFS config snapshot rollback | M | 4 | Snapshot /etc + GPU state before apply |
+| 15.7 | Discord rich-presence bridge | S | 4 | Local IPC, air-gap-safe |
+| 15.8 | **Boot-time profile applicator** | S | 5 | Apply persisted profile 5s after boot |
+
+Start order : 15.8 (S, daily-driver, screenshot-friendly) → 15.2 (S) → 15.3 (S) → 15.7 (S) → 15.1/15.5/15.6/15.4 (M).
+
+---
+
+## ✅ R&D iteration #14 complete (4/4 — 2026-05-22 23:51) + UI sprint 5
+Backend : 14.1 Xid · 14.2 lab accounting · 14.4 inference cost · 14.5 hot-swap.
+UI cycle 5 : 4 cards added (Settings → Integrations now has 17 cards total).
+
+---
+
 ## 💡 R&D iteration #14 (2026-05-22 23:35) — AUTO-OPENED post #13 complete
 
 8 NEW angles, none in the backlog :

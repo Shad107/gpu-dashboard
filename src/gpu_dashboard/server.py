@@ -710,6 +710,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_lab_usage_live(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/boot-profile":
+                # R&D #15.8 — boot-time profile status
+                code, body = api.handle_boot_profile_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/hot-swap/evaluate":
                 code, body = api.handle_hot_swap_evaluate(ctx, params)
                 self._send_json(code, body)
@@ -983,6 +988,19 @@ def make_handler(ctx: dict):
             if self.path == "/api/vram-quota":
                 # R&D #13.3 — save VRAM quota rules
                 code, body = api.handle_vram_quota_save(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/boot-profile":
+                # R&D #15.8 — save boot profile
+                code, body = api.handle_boot_profile_save(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/boot-profile/clear":
+                code, body = api.handle_boot_profile_clear(ctx)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/boot-profile/apply-now":
+                code, body = api.handle_boot_profile_apply_now(ctx)
                 self._send_json(code, body)
                 return
             if self.path == "/api/notif/test":
