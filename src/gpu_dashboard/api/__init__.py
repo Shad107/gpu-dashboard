@@ -51,6 +51,12 @@ from .power import (  # noqa: F401
     handle_power_profiles_list,
     handle_power_profile_apply,
 )
+from .cost import (  # noqa: F401
+    handle_power_stats,
+    handle_power_heatmap,
+    handle_electricity_config,
+    handle_electricity,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
@@ -92,6 +98,12 @@ from .power import (  # noqa: F401,F811
     handle_auto_profile_status,
     handle_power_profiles_list,
     handle_power_profile_apply,
+)
+from .cost import (  # noqa: F401,F811
+    handle_power_stats,
+    handle_power_heatmap,
+    handle_electricity_config,
+    handle_electricity,
 )
 # Helpers moved to submodules — re-export for tests
 from .llm import (  # noqa: F401,F811
