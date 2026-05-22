@@ -284,15 +284,21 @@
   {/if}
 
   {#if layout.visible("processes") && (d?.processes?.length ?? 0) > 0}
+    {@const vramTotalMib = d?.gpu?.mem_total_mib ?? 24576}
     <div class="card" style:order={layout.indexOf("processes")}>
       <h2>{i18n.t("card.processes")}</h2>
-      <table style="font-size:.78em;width:100%">
+      <table class="proc-table">
         <tbody>
           {#each (d?.processes ?? []).slice(0, 5) as p}
-            <tr>
-              <td style="color:#7c8aa3;width:55px">{p.pid}</td>
-              <td style="overflow:hidden;text-overflow:ellipsis;max-width:120px;white-space:nowrap">{p.name}</td>
-              <td style="text-align:right;color:#a3e635">{(p.vram_mib / 1024).toFixed(1)} GiB</td>
+            {@const pct = Math.min(100, (p.vram_mib / vramTotalMib) * 100)}
+            {@const barColor = pct < 50 ? "#4ade80" : pct < 80 ? "#fbbf24" : "#f87171"}
+            <tr title={p.cmdline || `${p.name} (PID ${p.pid})`}>
+              <td class="proc-pid">{p.pid}</td>
+              <td class="proc-name">{p.name}</td>
+              <td class="proc-vram">
+                <span style="color:#a3e635">{(p.vram_mib / 1024).toFixed(1)} GiB</span>
+                <div class="proc-bar"><div style:width="{pct.toFixed(1)}%" style:background={barColor}></div></div>
+              </td>
             </tr>
           {/each}
         </tbody>

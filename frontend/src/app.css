@@ -717,6 +717,21 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
   border-left: 1px dashed rgba(251, 191, 36, 0.8);
 }
 
+/* GPU process tree (cards.processes) */
+.proc-table { font-size: 0.78em; width: 100%; }
+.proc-table td { padding: 0.2em 0.3em; vertical-align: middle; }
+.proc-pid { color: var(--text-dim); width: 55px; font-variant-numeric: tabular-nums; }
+.proc-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 120px;
+}
+.proc-vram { text-align: right; min-width: 120px; }
+.proc-bar {
+  height: 3px; background: var(--bg-page); border-radius: 2px;
+  margin-top: 0.2em; overflow: hidden;
+}
+.proc-bar > div { height: 100%; transition: width .3s; }
+
 /* A/B Benchmark UI */
 .bench-form { display: flex; align-items: flex-end; gap: 0.6em; flex-wrap: wrap; }
 .bench-cell { display: flex; flex-direction: column; gap: 0.2em; }

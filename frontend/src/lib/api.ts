@@ -61,6 +61,7 @@ export type GpuProcess = {
   pid: number;
   name: string;
   vram_mib: number;
+  cmdline?: string | null;
 };
 
 export type State = {

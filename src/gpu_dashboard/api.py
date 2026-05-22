@@ -1418,11 +1418,27 @@ def handle_power_profile_apply(ctx: dict, name: str) -> Response:
 # ────────────────────────── GET /api/processes ────────────────────────────
 
 
+def _read_cmdline(pid: int) -> Optional[str]:
+    """Best-effort read of /proc/<pid>/cmdline, NUL-separated → space-separated.
+
+    Returns None on permission denied, pid disappeared, or non-Linux.
+    Truncated to 200 chars to keep the API payload bounded.
+    """
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            raw = f.read()
+        # cmdline is NUL-separated, trailing NUL
+        decoded = raw.replace(b"\x00", b" ").decode("utf-8", errors="replace").strip()
+        return decoded[:200] if decoded else None
+    except (OSError, IOError):
+        return None
+
+
 def handle_processes(ctx: dict) -> Response:
     """Per-process GPU usage via `nvidia-smi --query-compute-apps`.
 
-    Returns {available: bool, processes: [{pid, name, vram_mib}]} sorted by
-    vram desc. Useful to identify which LLM process owns the VRAM.
+    Returns {available: bool, processes: [{pid, name, vram_mib, cmdline}]}
+    sorted by vram desc. cmdline is best-effort from /proc/<pid>/cmdline.
     """
     cfg = ctx["config"]
     gpu_index = cfg.get_int("GPU_INDEX", default=0)
@@ -1448,10 +1464,12 @@ def handle_processes(ctx: dict) -> Response:
             vram = int(parts[2].split()[0]) if parts[2] else 0
         except (ValueError, IndexError):
             vram = 0
+        pid = int(parts[0])
         processes.append({
-            "pid": int(parts[0]),
+            "pid": pid,
             "name": parts[1],
             "vram_mib": vram,
+            "cmdline": _read_cmdline(pid),
         })
     processes.sort(key=lambda p: p["vram_mib"], reverse=True)
     return 200, {"available": True, "processes": processes}
