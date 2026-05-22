@@ -920,6 +920,38 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── UI sprint cycle 5 — R&D #14 features ────────────────────────────────
+  let xidData = $state<Awaited<ReturnType<typeof api.xidEvents>> | null>(null);
+  async function loadXid() {
+    try { xidData = await api.xidEvents("24h"); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let hotSwapData = $state<Awaited<ReturnType<typeof api.hotSwapStatus>> | null>(null);
+  async function loadHotSwap() {
+    try { hotSwapData = await api.hotSwapStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let costData = $state<Awaited<ReturnType<typeof api.inferenceCost>> | null>(null);
+  async function loadInferenceCost() {
+    try { costData = await api.inferenceCost(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let labUsageData = $state<Awaited<ReturnType<typeof api.labUsageLive>> | null>(null);
+  async function loadLabUsage() {
+    try { labUsageData = await api.labUsageLive(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  function _windowLabel(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${seconds / 60}m`;
+    if (seconds < 86400) return `${seconds / 3600}h`;
+    return `${seconds / 86400}d`;
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -935,6 +967,11 @@
       if (!vramQuotaData) loadVramQuota();
       if (!carbonData) loadCarbon();
       if (!bestGpuData) loadBestGpu();
+      // R&D #14 cards
+      if (!xidData) loadXid();
+      if (!hotSwapData) loadHotSwap();
+      if (!costData) loadInferenceCost();
+      if (!labUsageData) loadLabUsage();
     }
   });
 
@@ -2426,6 +2463,185 @@
           {/if}
         {:else if carbonData}
           <p class="muted">{carbonData.reason ?? i18n.t("integrations.carbon.not_configured")}</p>
+        {/if}
+      </div>
+
+      <!-- UI sprint cycle 5 — R&D #14 cards (rendered before best-GPU so they
+           appear higher in the Integrations stack ; visually grouped with #13) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.xid.title")}</h4>
+        <p class="muted">{i18n.t("integrations.xid.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadXid}>{i18n.t("integrations.xid.refresh")}</button>
+        </div>
+        {#if xidData}
+          {#if xidData.total_24h === 0}
+            <p class="muted" style="color: var(--ok);">{i18n.t("integrations.xid.none")}</p>
+          {:else}
+            <p style="margin: 8px 0;">
+              <b style:color={_verdictColor(xidData.worst_severity === "ok" ? "pass" : xidData.worst_severity === "fail" ? "fail" : "warn")}>
+                {xidData.total_24h} events
+              </b>
+              <span class="muted" style="margin-left: 10px;">
+                fail={xidData.counts_by_severity.fail} ·
+                warn={xidData.counts_by_severity.warn} ·
+                info={xidData.counts_by_severity.info}
+              </span>
+            </p>
+            <table style="width:100%; font-size:0.88em; border-collapse: collapse;">
+              <tbody>
+                {#each xidData.events.slice(0, 10) as e}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 5px; font-family: monospace;">Xid {e.code}</td>
+                    <td style="padding: 5px;">
+                      <span style:color={e.severity === "fail" ? "var(--err)" : e.severity === "warn" ? "var(--warn)" : "var(--text-dim)"}>
+                        {e.severity}
+                      </span>
+                    </td>
+                    <td style="padding: 5px;"><b>{e.name}</b></td>
+                    <td style="padding: 5px; color: var(--text-dim); font-size: 0.85em;">
+                      {e.remediation ?? ""}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.hotswap.title")}</h4>
+        <p class="muted">{i18n.t("integrations.hotswap.desc")}</p>
+        {#if hotSwapData && hotSwapData.current && hotSwapData.current.pci}
+          {#each Object.entries(hotSwapData.current.pci) as [bdf, p]}
+            <div class="form-row" style="flex-wrap: wrap; gap: 14px; margin-top: 6px;">
+              <span class="kv" style="font-family: monospace;">{bdf}</span>
+              <span class="kv">{i18n.t("integrations.hotswap.current_link")} :
+                <b>{p.current_link_speed} ×{p.current_link_width}</b>
+                {#if p.current_link_speed !== p.max_link_speed || p.current_link_width !== p.max_link_width}
+                  <span class="muted" style="margin-left: 6px;">
+                    (max {p.max_link_speed} ×{p.max_link_width})
+                  </span>
+                {/if}
+              </span>
+              <span class="kv">{i18n.t("integrations.hotswap.power_state")} :
+                <b style:color={p.power_state === "D0" ? "var(--ok)" : "var(--text-dim)"}>
+                  {p.power_state}
+                </b>
+              </span>
+            </div>
+          {/each}
+          {#if hotSwapData.events.length > 0}
+            <h5 style="margin: 12px 0 4px 0;">Recent events ({hotSwapData.events.length}) :</h5>
+            <table style="width:100%; font-size:0.85em; border-collapse: collapse;">
+              <tbody>
+                {#each hotSwapData.events.slice(0, 8) as e}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px; color: var(--text-dim); font-size: 0.85em;">
+                      {e.ts ? new Date(e.ts * 1000).toLocaleTimeString() : "—"}
+                    </td>
+                    <td style="padding: 4px;">
+                      <span style:color={e.kind.includes("disconnect") || e.kind.includes("downgrade") ? "var(--warn)" : "var(--text-dim)"}>
+                        {e.kind}
+                      </span>
+                    </td>
+                    <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">
+                      {e.gpu ?? e.target ?? ""}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {:else}
+            <p class="muted" style="margin-top: 8px;">{i18n.t("integrations.hotswap.no_events")}</p>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cost.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cost.desc")}</p>
+        {#if costData && costData.available}
+          {#if costData.headline_tok_per_wh != null}
+            <p style="margin: 8px 0; font-size: 1.05em;">
+              <b style="color: var(--ok); font-size: 1.4em;">
+                {costData.headline_tok_per_wh}
+              </b>
+              <span class="muted" style="margin-left: 8px;">
+                {i18n.t("integrations.cost.headline")} · @ {costData.price_eur_per_kwh} €/kWh
+              </span>
+            </p>
+          {/if}
+          <table style="width:100%; font-size:0.9em; border-collapse: collapse;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">{i18n.t("integrations.cost.window")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.cost.tokens")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.cost.kwh")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.cost.cost_eur")}</th>
+                <th style="padding: 4px;">tok/Wh</th>
+                <th style="padding: 4px;">{i18n.t("integrations.cost.per_1k")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each Object.entries(costData.windows) as [secStr, w]}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 5px;"><b>{_windowLabel(parseInt(secStr))}</b></td>
+                  <td style="padding: 5px;">{w.tokens_delta.toLocaleString()}</td>
+                  <td style="padding: 5px;">{w.kwh.toFixed(4)}</td>
+                  <td style="padding: 5px;">{w.cost_gpu_eur.toFixed(4)} €</td>
+                  <td style="padding: 5px;">
+                    {#if w.tok_per_wh_gpu != null}
+                      <b>{w.tok_per_wh_gpu}</b>
+                    {:else}<span class="muted">—</span>{/if}
+                  </td>
+                  <td style="padding: 5px;">
+                    {#if w.cost_per_1k_tokens_eur != null}
+                      {w.cost_per_1k_tokens_eur.toFixed(6)}
+                    {:else}<span class="muted">—</span>{/if}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.usage.title")}</h4>
+        <p class="muted">{i18n.t("integrations.usage.desc")}</p>
+        {#if labUsageData}
+          {#if labUsageData.users.length === 0}
+            <p class="muted">{i18n.t("integrations.usage.no_users")}</p>
+          {:else}
+            <table style="width:100%; font-size:0.9em; border-collapse: collapse;">
+              <thead>
+                <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                  <th style="padding: 4px;">user</th>
+                  <th style="padding: 4px;">PIDs</th>
+                  <th style="padding: 4px;">VRAM</th>
+                  <th style="padding: 4px;">~ Watts</th>
+                  <th style="padding: 4px;">processes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each labUsageData.users as u}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 5px;"><b>{u.name}</b>
+                      <span class="muted" style="margin-left: 4px; font-size: 0.85em;">(uid {u.uid})</span>
+                    </td>
+                    <td style="padding: 5px;">{u.pid_count}</td>
+                    <td style="padding: 5px;">{(u.vram_used_mib / 1024).toFixed(1)} GiB</td>
+                    <td style="padding: 5px;">{u.watts_share ?? '—'} W</td>
+                    <td style="padding: 5px; font-family: monospace; font-size: 0.85em;">
+                      {u.processes.slice(0, 3).map(p => p.name).join(", ")}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
         {/if}
       </div>
 

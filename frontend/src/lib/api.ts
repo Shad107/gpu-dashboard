@@ -563,6 +563,57 @@ export const api = {
       }[];
     }>),
 
+  // ── R&D #14 features (UI sprint cycle 5) ───────────────────────────────
+  xidEvents: (since = "24h") =>
+    fetch(`/api/xid?since=${encodeURIComponent(since)}`).then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      total_24h: number;
+      counts_by_severity: { info: number; warn: number; fail: number };
+      worst_severity: "ok" | "info" | "warn" | "fail";
+      events: Array<{
+        code: number; name: string; cause?: string;
+        severity: "info" | "warn" | "fail"; remediation?: string;
+        known: boolean; gpu?: string; summary?: string; ts_iso?: string;
+      }>;
+    }>),
+
+  hotSwapStatus: () =>
+    fetch("/api/hot-swap").then(jsonOf<{
+      ok: boolean;
+      current: { ts: number; pci: Record<string, any>; drm: Record<string, string> };
+      events: Array<{ kind: string; gpu?: string; target?: string;
+                       before?: any; after?: any; ts?: number;
+                       current?: any; max?: any }>;
+      buffer_max: number;
+    }>),
+
+  inferenceCost: () =>
+    fetch("/api/inference-cost").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      price_eur_per_kwh: number;
+      headline_tok_per_wh: number | null;
+      windows: Record<string, {
+        window_s: number; tokens_delta: number; kwh: number; avg_watts: number;
+        cost_gpu_eur: number; tok_per_wh_gpu: number | null;
+        cost_per_1k_tokens_eur: number | null; restart_count: number;
+        sample_count: number;
+      }>;
+    }>),
+
+  labUsageLive: () =>
+    fetch("/api/usage/users").then(jsonOf<{
+      ts: number;
+      total_vram_used_mib: number;
+      watts_total: number | null;
+      users: Array<{
+        uid: number; name: string; pid_count: number;
+        vram_used_mib: number; watts_share: number | null;
+        processes: Array<{ pid: number; name: string; used_mib: number }>;
+      }>;
+    }>),
+
   // ── R&D #13 features (UI sprint cycle 4) ───────────────────────────────
   hotGpuWizard: () =>
     fetch("/api/hot-gpu-wizard").then(jsonOf<{
