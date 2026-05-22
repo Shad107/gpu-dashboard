@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { live } from "../lib/stores.svelte";
+  import { live, toast } from "../lib/stores.svelte";
   import { layout } from "../lib/layout.svelte";
   import { i18n } from "../lib/i18n/index.svelte";
   import { tempColor, perfEstimate } from "../lib/charts";
@@ -15,6 +15,37 @@
   let llmPerf = $state<Awaited<ReturnType<typeof api.llmPerf>> | null>(null);
   async function loadElec() {
     try { elec = await api.electricity(3600, gpu.selected); } catch { /* keep last */ }
+  }
+
+  // Inline price edit (cycle 139, user feedback)
+  let editingPrice = $state(false);
+  let priceEdit = $state(0);
+  let priceSaving = $state(false);
+  async function savePrice() {
+    if (!elec) return;
+    priceSaving = true;
+    try {
+      const r = await fetch("/api/electricity/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          price_per_kwh: priceEdit,
+          currency: elec.currency,
+        }),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        toast.show(i18n.t("electricity.rate_saved") ?? "Rate saved", "success");
+        await loadElec();
+        editingPrice = false;
+      } else {
+        toast.show(j.error || "save failed", "error");
+      }
+    } catch (e: any) {
+      toast.show(e?.message || "save failed", "error");
+    } finally {
+      priceSaving = false;
+    }
   }
   async function loadLlm() {
     try { llm = await api.llmStats(gpu.selected); } catch { /* keep last */ }
@@ -257,7 +288,21 @@
         <span style="color:#a3e635">{elec.monthly_cost.toFixed(2)} {symbol}{i18n.t("electricity.per_month")}</span>
       </div>
       <div class="sub" style="font-size:.72em;margin-top:.15em;color:#7c8aa3">
-        {i18n.t("electricity.at_rate", { price: elec.price_per_kwh.toFixed(3), sym: symbol })}
+        {#if editingPrice}
+          <span style="display:inline-flex;gap:.3em;align-items:center">
+            <input type="number" step="0.001" min="0" max="5" bind:value={priceEdit}
+                   class="price-input" autofocus />
+            <span>{symbol}/kWh</span>
+            <button class="btn-mini" onclick={savePrice} disabled={priceSaving}>
+              {priceSaving ? "…" : "💾"}
+            </button>
+            <button class="btn-mini" onclick={() => { editingPrice = false; }}>✕</button>
+          </span>
+        {:else}
+          {i18n.t("electricity.at_rate", { price: elec.price_per_kwh.toFixed(3), sym: symbol })}
+          <button class="edit-rate" onclick={() => { priceEdit = elec.price_per_kwh; editingPrice = true; }}
+                  title={i18n.t("electricity.edit_rate") ?? "Edit price"}>✎</button>
+        {/if}
       </div>
       {#if elec.budget_kwh > 0}
         <div class="budget-tracker" style="margin-top:.5em">

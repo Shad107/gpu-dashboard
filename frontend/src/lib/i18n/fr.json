@@ -308,6 +308,8 @@
   "card.pcie": "PCIe",
   "pcie.downgrade": "bridé",
   "electricity.budget_label": "Budget",
+  "electricity.edit_rate": "Modifier le prix kWh",
+  "electricity.rate_saved": "Prix sauvegardé",
   "electricity.month_done": "du mois écoulé",
   "electricity.forecast": "Prévision (fin de mois)",
   "alertfooter.last": "Dernière alerte",
