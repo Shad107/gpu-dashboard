@@ -404,6 +404,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sysreport(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/lifetime-stats":
+                code, body = api.handle_lifetime_stats(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/app-triggers":
                 code, body = api.handle_app_triggers_get(ctx)
                 self._send_json(code, body)

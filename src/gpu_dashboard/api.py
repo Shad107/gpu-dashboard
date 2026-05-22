@@ -1747,6 +1747,57 @@ def handle_health(ctx: dict) -> Response:
 # ────────────────────────── GET /api/about ────────────────────────────────
 
 
+def handle_lifetime_stats(ctx: dict, params: Optional[dict] = None) -> Response:
+    """Lifetime extrema per GPU : peak temp/power/fan + lowest idle power.
+
+    All computed on-the-fly with SQL aggregates — no schema bump, no
+    background job. Cheap enough that we can re-run on every poll.
+
+    Idle = util_gpu < 5%. Returns None for any field when no samples match.
+    """
+    storage = ctx.get("storage")
+    if storage is None:
+        return 503, {"ok": False, "error": "storage not available"}
+    gpu = _parse_gpu_index(params or {})
+
+    try:
+        # Peak extrema (single query) + first/last sample timestamps
+        cur = storage._conn.execute(
+            "SELECT MAX(temp) AS peak_temp, MAX(power) AS peak_power, "
+            "MAX(fan_pct) AS peak_fan_pct, MAX(fan0_rpm) AS peak_fan_rpm, "
+            "MIN(ts) AS first_ts, MAX(ts) AS last_ts, COUNT(*) AS n "
+            "FROM samples WHERE gpu_index = ?",
+            (gpu,),
+        )
+        peaks = cur.fetchone()
+
+        # Lowest idle power (util < 5% AND power > 0)
+        cur = storage._conn.execute(
+            "SELECT MIN(power) AS lowest_idle_w "
+            "FROM samples WHERE gpu_index = ? AND util_gpu < 5 AND power > 0",
+            (gpu,),
+        )
+        idle = cur.fetchone()
+    except Exception as e:
+        return 500, {"ok": False, "error": f"query failed: {e}"}
+
+    def _val(row, key):
+        return row[key] if row is not None and row[key] is not None else None
+
+    return 200, {
+        "ok": True,
+        "gpu_index": gpu,
+        "samples_count": _val(peaks, "n") or 0,
+        "first_ts": _val(peaks, "first_ts"),
+        "last_ts": _val(peaks, "last_ts"),
+        "peak_temp_c": _val(peaks, "peak_temp"),
+        "peak_power_w": _val(peaks, "peak_power"),
+        "peak_fan_pct": _val(peaks, "peak_fan_pct"),
+        "peak_fan_rpm": _val(peaks, "peak_fan_rpm"),
+        "lowest_idle_power_w": _val(idle, "lowest_idle_w"),
+    }
+
+
 def handle_sysreport(ctx: dict) -> Response:
     """One-shot system info dump for support tickets / bug reports.
 
