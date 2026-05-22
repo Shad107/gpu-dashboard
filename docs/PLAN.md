@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:15 (cycle 125 done — R&D #6 LAST — 6/6 COMPLETE)
-**Latest commit** : `dddb38f` — per-process VRAM bar + cmdline tooltip
+**Last updated** : 2026-05-22 08:19 (cycle 126 done — R&D consolidation)
+**Latest commit** : `85b2528` — CHANGELOG + refresh dashboard/stats.png
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
