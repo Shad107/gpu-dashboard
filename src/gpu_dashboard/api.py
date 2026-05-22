@@ -2771,6 +2771,66 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #5.4 — Bar JSON for Waybar/polybar/i3blocks/tmux ────────────────────
+def handle_bar(ctx: dict, params: Optional[dict] = None) -> Tuple[int, Any]:
+    """One-line GPU status formatted for desktop bars.
+
+    Query params :
+      fmt = waybar (default) | polybar | i3blocks | tmux | plain
+
+    Returns shape depends on fmt :
+      waybar  → JSON {"text", "tooltip", "class", "percentage"}
+      polybar → text "..."  (color tags %{Fxxx})
+      i3blocks → text "...\n...\nCOLOR"  (3 lines)
+      tmux    → text "..."  (uses #[fg=...] tags)
+      plain   → text "..."
+    """
+    fmt = (params or {}).get("fmt", "waybar")
+    snap = _gpu_card_snapshot(gpu_index=0)
+    if not snap or not snap.get("alive"):
+        if fmt == "waybar":
+            return 200, {"text": "GPU N/A", "tooltip": "GPU offline", "class": "off", "percentage": 0}
+        return 200, "GPU N/A"
+
+    temp = snap.get("temp", 0)
+    util = snap.get("util_gpu", 0)
+    power = snap.get("power", 0)
+    mem_used_g = (snap.get("mem_used_mib", 0) or 0) / 1024
+    mem_total_g = (snap.get("mem_total_mib", 0) or 0) / 1024
+
+    # Classify status
+    if temp >= 85:
+        klass = "critical"; color = "#f87171"; polycolor = "F87171"; tmuxcolor = "red"
+    elif temp >= 75:
+        klass = "warning"; color = "#fbbf24"; polycolor = "FBBF24"; tmuxcolor = "yellow"
+    else:
+        klass = "ok"; color = "#4ade80"; polycolor = "4ADE80"; tmuxcolor = "green"
+
+    text = f"{temp}°C {util}% {power:.0f}W"
+    tooltip = (
+        f"GPU : {snap.get('name', 'GPU')}\n"
+        f"Temp : {temp}°C · Util : {util}% · Power : {power:.0f} W\n"
+        f"VRAM : {mem_used_g:.1f} / {mem_total_g:.1f} GiB"
+    )
+
+    if fmt == "waybar":
+        return 200, {
+            "text": text,
+            "tooltip": tooltip,
+            "class": klass,
+            "percentage": int(util),
+        }
+    elif fmt == "polybar":
+        return 200, f"%{{F#{polycolor}}}{text}%{{F-}}"
+    elif fmt == "i3blocks":
+        # full text \n short text \n color
+        return 200, f"{text}\n{temp}°\n{color}"
+    elif fmt == "tmux":
+        return 200, f"#[fg={tmuxcolor}]{text}#[default]"
+    else:  # plain
+        return 200, text
+
+
 # ─── R&D #4.3 — ECC + memory health audit ────────────────────────────────────
 def _na(s: str) -> bool:
     """nvidia-smi uses '[N/A]' or 'N/A' for unsupported fields."""

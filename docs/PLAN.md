@@ -11,6 +11,23 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #5 (2026-05-22 13:38) — AUTO-OPENED post #4 completion
+
+Per the standing **auto-rebound R&D rule** (user 'fais vivre le plan'), surveyed fresh tools (lm-sensors / sysstat / perf / btop / intel_gpu_top / k6 / fio / supervisord / WaybarBatteryNvidia / smartmontools / gpu-burn / NVML bindings) and identified 8 candidates :
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 5.1 | **Thermal headroom coach** | M | 5 | 'You have 17°C headroom · fan can be 8% gentler' — surfaces a DECISION |
+| 5.2 | **Driver/kernel drift detector** | S | 5 | Snapshot driver+kernel+ECC+MIG → diff on each boot. LLM rigs break silently after apt upgrade |
+| 5.3 | Stress-test runner in-process | L | 5 | cuBLAS sgemm 60s/5m/30m + live throttle reasons. Validates undervolts |
+| 5.4 | **Waybar / polybar / i3blocks / tmux JSON output** | XS | 5 | `/api/bar?fmt=waybar` → one-line GPU status for desktop bars |
+| 5.5 | eBPF-style GPU wakeup tracer | M | 5 | When GPU wakes from idle, log WHICH process did it. 'Sleep-stealers' top-N |
+| 5.6 | fio-style VRAM bandwidth self-test | S | 4 | Weekly cron benchmark → trend chart, catches silent VRAM degradation |
+| 5.7 | NVENC/NVDEC session inspector | S | 4 | Encoder util now anonymous — map to PIDs (OBS, ffmpeg, etc.) |
+| 5.8 | Supervisor mode for ML daemons | L | 5 | Start/stop/restart vllm/ollama from dashboard + GPU-health gate |
+
+**Start order** : 5.4 (XS, quick-win, immediate value) → 5.2 (S, high user value LLM rig context) → 5.1 (M, flagship decision-surfacing).
+
 ## ✅ R&D #3 complete (5/5)
 3.1 sysreport tar.gz · 3.2 header status chip · 3.3 uptime % · 3.4 anomaly bands · 3.5 keyboard cheat-sheet.
 

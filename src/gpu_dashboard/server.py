@@ -478,6 +478,21 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ecc_health(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/bar":
+                # R&D #5.4 — waybar/polybar/i3blocks/tmux/plain
+                code, body = api.handle_bar(ctx, params)
+                fmt = (params or {}).get("fmt", "waybar")
+                if fmt == "waybar":
+                    self._send_json(code, body)
+                else:
+                    data = str(body).encode("utf-8")
+                    self.send_response(code)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Cache-Control", "no-cache, no-store")
+                    self.end_headers()
+                    self.wfile.write(data)
+                return
             if path == "/metrics":
                 # Prometheus / OpenMetrics scrape endpoint (R&D #4.1)
                 code, text_body = api.handle_prometheus_metrics(ctx)
