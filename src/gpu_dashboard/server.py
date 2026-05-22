@@ -623,6 +623,15 @@ def make_handler(ctx: dict):
                 code, body = api.handle_tdp_auto_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/llm-swap":
+                # R&D #17.5 — LLM hot-swap orchestrator
+                code, body = api.handle_llm_swap_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/llm-swap/suggest":
+                code, body = api.handle_llm_swap_suggest(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
@@ -1122,6 +1131,11 @@ def make_handler(ctx: dict):
             if self.path == "/api/tdp-auto":
                 # R&D #17.3 — save TDP auto config
                 code, body = api.handle_tdp_auto_save(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/llm-swap/pin":
+                # R&D #17.5 — pin/unpin a model from LRU eviction
+                code, body = api.handle_llm_swap_pin(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/boot-profile/clear":
