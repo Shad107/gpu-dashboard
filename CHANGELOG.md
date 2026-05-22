@@ -4,7 +4,13 @@ All notable changes to gpu-dashboard. Format inspired by [Keep a Changelog](http
 
 ## [Unreleased]
 
-_Nothing yet — small polish work continues on the autonomous loop ; see `docs/PLAN.md` for cycle-level detail._
+### Added — Per-application profile triggers (cycles 116-119, R&D feature #1)
+- New module `modules/app_triggers.py` : `scan_running_apps()` reads `/proc/*/comm`, `load_triggers()` / `save_triggers()` persist to `~/.config/gpu-dashboard/app_triggers.json`, `match_trigger()` does case-insensitive substring matching with profile-priority resolution (boost > sweet > silent).
+- `AutoProfileDaemon` now consults triggers each tick and forces the matching profile immediately (no stability gate — the user explicitly opted-in). When no trigger matches, falls through to the existing load-classification.
+- `GET / POST /api/app-triggers` with validation (profile ∈ {silent, sweet, boost}).
+- UI : new tab **Déclencheurs apps** under Settings → AVANCÉ. Row editor with app text input, profile select, remove button. + Add / Save buttons.
+- `status()` of auto_profile now reports `trigger_match` for introspection.
+- Tests : 537 → 575 (38 new). Bundle +0.4 KB gzip.
 
 ## [0.3.0] — 2026-05-22
 

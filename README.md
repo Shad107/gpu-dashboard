@@ -75,7 +75,26 @@ Visual cues : live GPU temp shown as vertical cyan line on the curve, current
 fan target shown as horizontal dashed line, selected point shows coordinate
 label (e.g. "78°C · 65%") in amber.
 
-### Settings — 10 tabs, all 1 click away
+### 🎯 Per-application profile triggers
+
+The `auto_profile_daemon` normally classifies load (silent/sweet/boost) from GPU
+utilization + power. With **app triggers**, you can override that : when a
+specific process is running, force a chosen profile regardless of load.
+
+Use cases :
+- `blender` running → force **boost** (rendering needs full clocks even at low % util)
+- `llama-server` running → force **boost** (token throughput scales with clocks)
+- `steam-runtime` running → force **sweet** (gaming doesn't need full TDP)
+
+**Match** : case-insensitive substring against `/proc/<pid>/comm`. A trigger key
+`blender` catches `Blender`, `blender-cycles`, `blender.bin`, etc.
+**Priority** : when multiple triggers fire, boost wins over sweet wins over silent.
+**Config** : edit in Settings → Avancé → **Déclencheurs apps**, or directly in
+`~/.config/gpu-dashboard/app_triggers.json` (format `{"app": "profile", ...}`).
+
+When no trigger matches, the daemon falls back to load-based classification.
+
+### Settings — 11 tabs, all 1 click away
 
 Bookmarkable via `?modal=<tab>` (e.g. `http://localhost:9999/?modal=fancurve`).
 History and Stats are now top-level views (not modal tabs) — see the section above.
@@ -98,8 +117,12 @@ History and Stats are now top-level views (not modal tabs) — see the section a
 <td><img src="docs/modal/layout.png" alt="Layout : drag-and-drop card reorder + visibility + theme toggle + custom URL embeds" /><br/><sub><b>Layout</b> — hide/show cards · drag-reorder · custom URL embeds · 🎨 theme picker</sub></td>
 </tr>
 <tr>
+<td><img src="docs/modal/apptriggers.png" alt="Per-application profile triggers" /><br/><sub><b>App triggers</b> — when blender / llama-server runs, force a specific profile</sub></td>
 <td><img src="docs/modal/language.png" alt="Language picker EN/FR" /><br/><sub><b>Language</b> — EN / FR full coverage</sub></td>
-<td><img src="docs/modal/about.png" alt="About — version, paths, vBIOS, profile time breakdown" /><br/><sub><b>About</b> — version · vBIOS · profile time breakdown (24h)</sub></td>
+</tr>
+<tr>
+<td><img src="docs/modal/about.png" alt="About — version, paths, vBIOS, license" /><br/><sub><b>About</b> — version · paths · vBIOS · license</sub></td>
+<td></td>
 </tr>
 </table>
 
