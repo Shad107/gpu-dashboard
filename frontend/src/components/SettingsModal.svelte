@@ -1126,6 +1126,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #18 (UI sprint 9) ──────────────────────────────────────────────
+  let cudaAdvisorData = $state<Awaited<ReturnType<typeof api.cudaAdvisorStatus>> | null>(null);
+  let nvmeSwapData    = $state<Awaited<ReturnType<typeof api.nvmeSwapStatus>>    | null>(null);
+  let cudaMatrixData  = $state<Awaited<ReturnType<typeof api.cudaMatrixStatus>>  | null>(null);
+  let pcieHistData    = $state<Awaited<ReturnType<typeof api.pcieHistogramStatus>> | null>(null);
+  async function loadCudaAdvisor() {
+    try { cudaAdvisorData = await api.cudaAdvisorStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNvmeSwap() {
+    try { nvmeSwapData = await api.nvmeSwapStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCudaMatrix() {
+    try { cudaMatrixData = await api.cudaMatrixStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPcieHist() {
+    try { pcieHistData = await api.pcieHistogramStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -1156,6 +1178,11 @@
       if (!driverVaultData) loadDriverVault();
       // R&D #17 cards
       if (!llmSwapData) loadLlmSwap();
+      // R&D #18 cards
+      if (!cudaAdvisorData) loadCudaAdvisor();
+      if (!nvmeSwapData)    loadNvmeSwap();
+      if (!cudaMatrixData)  loadCudaMatrix();
+      if (!pcieHistData)    loadPcieHist();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -3321,6 +3348,214 @@
           </table>
         {:else if llmSwapData}
           <p class="muted" style="margin-top: 8px;">{i18n.t("integrations.llmswap.no_events")}</p>
+        {/if}
+      </div>
+
+      <!-- R&D #18.3 CUDA_VISIBLE_DEVICES advisor (UI sprint 9) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cudaadvisor.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cudaadvisor.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCudaAdvisor}>{i18n.t("integrations.cudaadvisor.refresh")}</button>
+          {#if cudaAdvisorData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.cudaadvisor.gpus_visible")} :
+              <b>{cudaAdvisorData.gpu_count}</b>
+            </span>
+            <span class="kv">
+              {i18n.t("integrations.cudaadvisor.proc_count")} :
+              <b>{cudaAdvisorData.process_count}</b>
+            </span>
+            <span class="kv"
+                  style:color={cudaAdvisorData.drift_count > 0 ? "var(--warn)" : "var(--text-dim)"}>
+              {i18n.t("integrations.cudaadvisor.drift_count")} :
+              <b>{cudaAdvisorData.drift_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cudaAdvisorData}
+          <p class="muted" style="margin-top: 6px;">{cudaAdvisorData.recommendation}</p>
+          {#if cudaAdvisorData.processes.length > 0}
+            <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+              <thead>
+                <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                  <th style="padding: 4px;">{i18n.t("integrations.cudaadvisor.process")}</th>
+                  <th style="padding: 4px;">{i18n.t("integrations.cudaadvisor.pinned_to")}</th>
+                  <th style="padding: 4px;">{i18n.t("integrations.cudaadvisor.resolved")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each cudaAdvisorData.processes as p}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px;">{p.comm} <span class="muted">(pid {p.pid})</span></td>
+                    <td style="padding: 4px; font-family: monospace;">{p.raw}</td>
+                    <td style="padding: 4px;"
+                        style:color={p.has_drift ? "var(--warn)" : "var(--ok)"}>
+                      {p.has_drift
+                        ? i18n.t("integrations.cudaadvisor.drift_flag")
+                        : i18n.t("integrations.cudaadvisor.ok")}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        {/if}
+      </div>
+
+      <!-- R&D #18.1 NVMe-as-VRAM-swap monitor (UI sprint 9) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nvmeswap.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nvmeswap.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvmeSwap}>{i18n.t("integrations.nvmeswap.refresh")}</button>
+          {#if nvmeSwapData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.nvmeswap.total_swap")} :
+              <b>{nvmeSwapData.llm_total_swap_gib} GiB</b>
+            </span>
+          {/if}
+        </div>
+        {#if nvmeSwapData && nvmeSwapData.warning}
+          <p style="color: var(--warn); margin-top: 6px;">⚠ {nvmeSwapData.warning}</p>
+        {/if}
+        {#if nvmeSwapData && nvmeSwapData.llm_processes.length === 0}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.nvmeswap.no_procs")}</p>
+        {/if}
+        {#if nvmeSwapData && nvmeSwapData.llm_processes.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <tbody>
+              {#each nvmeSwapData.llm_processes as p}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{p.comm} <span class="muted">(pid {p.pid})</span></td>
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">
+                    {(p.rss_bytes / 1024 ** 3).toFixed(2)} GiB RSS
+                  </td>
+                  <td style="padding: 4px;"
+                      style:color={p.swap_bytes > 1024 ** 3 ? "var(--warn)" : "var(--text-dim)"}>
+                    {(p.swap_bytes / 1024 ** 2).toFixed(1)} MiB swap
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+        {#if nvmeSwapData && nvmeSwapData.nvme_devices.length === 0}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.nvmeswap.no_nvme")}</p>
+        {/if}
+        {#if nvmeSwapData && nvmeSwapData.nvme_devices.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">device</th>
+                <th style="padding: 4px;">{i18n.t("integrations.nvmeswap.write_rate")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.nvmeswap.endurance")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.nvmeswap.days_remaining")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each nvmeSwapData.nvme_devices as d}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace;">/dev/{d.device}</td>
+                  <td style="padding: 4px;">
+                    {d.write_rate_mibps !== null ? `${d.write_rate_mibps} MiB/s` : "—"}
+                  </td>
+                  <td style="padding: 4px;">
+                    {d.endurance.used_tb} / {d.endurance.rated_tb} TB
+                    <span class="muted">({d.endurance.pct_used}%)</span>
+                  </td>
+                  <td style="padding: 4px;">
+                    {d.endurance.days_remaining !== null
+                      ? `${d.endurance.days_remaining} d`
+                      : "—"}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #18.2 CUDA / cuDNN / driver matrix (UI sprint 9) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cudamatrix.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cudamatrix.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCudaMatrix}>{i18n.t("integrations.cudamatrix.refresh")}</button>
+        </div>
+        {#if cudaMatrixData}
+          <div class="form-row" style="gap: 18px; margin-top: 8px; flex-wrap: wrap;">
+            <span class="kv">{i18n.t("integrations.cudamatrix.driver")} :
+              <b>{cudaMatrixData.driver_version ?? "—"}</b>
+            </span>
+            <span class="kv">{i18n.t("integrations.cudamatrix.cuda_toolkit")} :
+              <b>{cudaMatrixData.cuda_toolkit?.version ?? "—"}</b>
+            </span>
+            <span class="kv">{i18n.t("integrations.cudamatrix.cudnn")} :
+              <b>{cudaMatrixData.cudnn_version ?? "—"}</b>
+            </span>
+          </div>
+          <p style="margin-top: 8px;"
+             style:color={cudaMatrixData.compat.ok === true ? "var(--ok)"
+                        : cudaMatrixData.compat.ok === false ? "var(--warn)"
+                        : "var(--text-dim)"}>
+            <b>
+              {cudaMatrixData.compat.ok === true
+                ? i18n.t("integrations.cudamatrix.verdict_ok")
+                : cudaMatrixData.compat.ok === false
+                ? i18n.t("integrations.cudamatrix.verdict_fail")
+                : i18n.t("integrations.cudamatrix.verdict_unknown")}
+            </b>
+            — {cudaMatrixData.compat.reason}
+          </p>
+        {/if}
+      </div>
+
+      <!-- R&D #18.6 PCIe link-state thrasher histogram (UI sprint 9) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pciehist.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pciehist.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieHist}>{i18n.t("integrations.pciehist.refresh")}</button>
+        </div>
+        {#if pcieHistData}
+          <div class="form-row" style="gap: 18px; margin-top: 8px; flex-wrap: wrap;">
+            <span class="kv">{i18n.t("integrations.pciehist.transitions_1h")} :
+              <b>{pcieHistData.histogram_1h.transition_count}</b>
+              <span class="muted">({pcieHistData.histogram_1h.transitions_per_min} / min)</span>
+            </span>
+            <span class="kv">{i18n.t("integrations.pciehist.transitions_24h")} :
+              <b>{pcieHistData.histogram_24h.transition_count}</b>
+            </span>
+            <span class="kv"
+                  style:color={pcieHistData.histogram_1h.verdict === "stable" ? "var(--ok)"
+                             : pcieHistData.histogram_1h.verdict === "thrashing" ? "var(--warn)"
+                             : "var(--text-dim)"}>
+              {i18n.t("integrations.pciehist.verdict")} :
+              <b>
+                {pcieHistData.histogram_1h.verdict === "stable"
+                  ? i18n.t("integrations.pciehist.verdict_stable")
+                  : pcieHistData.histogram_1h.verdict === "intermittent"
+                  ? i18n.t("integrations.pciehist.verdict_intermittent")
+                  : i18n.t("integrations.pciehist.verdict_thrashing")}
+              </b>
+            </span>
+          </div>
+          {#if Object.keys(pcieHistData.histogram_24h.buckets).length > 0}
+            <h5 style="margin: 12px 0 4px 0;">{i18n.t("integrations.pciehist.buckets")} (24h)</h5>
+            <table style="width:100%; font-size:0.85em; border-collapse: collapse;">
+              <tbody>
+                {#each Object.entries(pcieHistData.histogram_24h.buckets) as [b, n]}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px; font-family: monospace;">{b}</td>
+                    <td style="padding: 4px;">{n}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {:else}
+            <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.pciehist.no_events")}</p>
+          {/if}
         {/if}
       </div>
 

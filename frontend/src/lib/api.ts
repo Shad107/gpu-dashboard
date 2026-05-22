@@ -1093,4 +1093,73 @@ export const api = {
         needed_bytes: number;
         reason: string;
       }>),
+
+  // ── R&D #18 (UI sprint 9) ──────────────────────────────────────────────
+  cudaAdvisorStatus: () =>
+    fetch("/api/cuda-advisor").then(jsonOf<{
+      ok: boolean;
+      gpus: Array<{ index: number; uuid: string; name: string }>;
+      gpu_count: number;
+      process_count: number;
+      drift_count: number;
+      processes: Array<{
+        pid: number; comm: string; raw: string; entries: string[];
+        resolved: Array<{ entry: string; gpu: { index: number; uuid: string;
+                                                  name: string } | null;
+                          drift: boolean; reason: string }>;
+        has_drift: boolean;
+      }>;
+      recommendation: string;
+    }>),
+
+  nvmeSwapStatus: () =>
+    fetch("/api/nvme-swap").then(jsonOf<{
+      ok: boolean;
+      llm_processes: Array<{ pid: number; comm: string;
+                              cmdline_short: string;
+                              swap_bytes: number; rss_bytes: number }>;
+      llm_total_swap_bytes: number;
+      llm_total_swap_gib: number;
+      nvme_devices: Array<{
+        device: string;
+        write_rate_mibps: number | null;
+        data_units_written: number | null;
+        endurance: {
+          used_tb: number; rated_tb: number; remaining_tb: number;
+          pct_used: number; days_remaining: number | null;
+        };
+      }>;
+      warning: string | null;
+    }>),
+
+  cudaMatrixStatus: () =>
+    fetch("/api/cuda-matrix").then(jsonOf<{
+      ok: boolean;
+      driver_version: string | null;
+      cuda_toolkit: { version: string; name: string } | null;
+      cudnn_version: string | null;
+      compat: { ok: boolean | null; reason: string;
+                 required_driver: number | null };
+      cuda_min_driver_table: Record<string, number>;
+    }>),
+
+  pcieHistogramStatus: () =>
+    fetch("/api/pcie-histogram").then(jsonOf<{
+      ok: boolean;
+      histogram_1h: {
+        window_s: number; transition_count: number;
+        transitions_per_min: number;
+        buckets: Record<string, number>;
+        verdict: "stable" | "intermittent" | "thrashing";
+        first_event_ts: number | null; last_event_ts: number | null;
+      };
+      histogram_24h: {
+        window_s: number; transition_count: number;
+        transitions_per_min: number;
+        buckets: Record<string, number>;
+        verdict: "stable" | "intermittent" | "thrashing";
+        first_event_ts: number | null; last_event_ts: number | null;
+      };
+      total_events_seen: number;
+    }>),
 };
