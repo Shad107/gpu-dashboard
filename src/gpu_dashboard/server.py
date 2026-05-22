@@ -553,6 +553,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_readyz(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/watchdog/status":
+                code, body = api.handle_watchdog_status(ctx)
+                self._send_json(code, body)
+                return
             if path.startswith("/badge/") and path.endswith(".svg"):
                 # R&D #10.7 — live README SVG badge
                 metric = path[len("/badge/"):-len(".svg")]
@@ -831,6 +835,14 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/auth/share":
                 code, body = api.handle_auth_share_create(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/watchdog/enable":
+                code, body = api.handle_watchdog_enable(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/watchdog/disable":
+                code, body = api.handle_watchdog_disable(ctx)
                 self._send_json(code, body)
                 return
 

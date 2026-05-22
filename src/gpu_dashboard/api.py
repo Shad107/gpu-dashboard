@@ -2772,6 +2772,35 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #11.1b — Watchdog setup (install systemd units from UI) ──────────
+def handle_watchdog_status(ctx: dict) -> Response:
+    from .modules import watchdog_setup
+    return 200, {"ok": True, **watchdog_setup.status()}
+
+
+def handle_watchdog_enable(ctx: dict, payload: dict) -> Response:
+    from .modules import watchdog_setup
+    cfg = ctx["config"]
+    try:
+        port = int(cfg.get("DASHBOARD_PORT", "9999"))
+    except (ValueError, TypeError):
+        port = 9999
+    strict = bool(payload.get("strict") if isinstance(payload, dict) else False)
+    try:
+        interval = int(payload.get("interval_s", 60)) if isinstance(payload, dict) else 60
+    except (ValueError, TypeError):
+        interval = 60
+    interval = max(30, min(3600, interval))
+    ok, msg = watchdog_setup.install(port=port, strict=strict, interval_s=interval)
+    return (200 if ok else 502), {"ok": ok, "msg": msg, **watchdog_setup.status()}
+
+
+def handle_watchdog_disable(ctx: dict) -> Response:
+    from .modules import watchdog_setup
+    ok, msg = watchdog_setup.uninstall()
+    return (200 if ok else 502), {"ok": ok, "msg": msg, **watchdog_setup.status()}
+
+
 # ─── R&D #11.1 — k8s-style /healthz + /readyz probes ────────────────────────
 def handle_healthz(ctx: dict) -> Tuple[int, dict]:
     """Liveness probe. Returns 200 if process alive — no GPU/SQLite calls.
