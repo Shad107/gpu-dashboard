@@ -1403,7 +1403,31 @@
         {:else if logsData.lines && logsData.lines.length === 0}
           <p class="sub">{i18n.t("diagnostics.no_log")}</p>
         {:else}
-          <pre class="logs-pre">{(logsData.lines || []).join("")}</pre>
+          <!-- Cycle 150 user fb : 'log viewer pas clean' — parse each line,
+               extract short HH:MM:SS + level keyword + message, color-coded. -->
+          {@const parsedLines = (logsData.lines || []).map((raw) => {
+            const s = raw.replace(/\n$/, "");
+            // Match : 2026-05-22T14:24:25+02:00 desktop python3[12345]: msg
+            const m = s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})[^ ]*\s+\S+\s+(\S+):\s*(.*)$/);
+            const hms = m ? m[2] : "";
+            const proc = m ? m[3].replace(/\[\d+\]$/, "") : "";
+            const msg = m ? m[4] : s;
+            // Severity detection
+            const lower = msg.toLowerCase();
+            let level = "info";
+            if (/error|exception|traceback|failed|fatal/.test(lower)) level = "err";
+            else if (/warn|deprecat/.test(lower)) level = "warn";
+            else if (/^\s+File "|^\s+~+/.test(s)) level = "trace";
+            return { hms, proc, msg, level };
+          })}
+          <div class="logs-viewer">
+            {#each parsedLines as l}
+              <div class="log-row log-{l.level}">
+                <span class="log-time">{l.hms}</span>
+                <span class="log-msg">{l.msg}</span>
+              </div>
+            {/each}
+          </div>
         {/if}
       </div>
 

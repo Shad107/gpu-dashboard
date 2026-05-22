@@ -1069,3 +1069,32 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+/* Cycle 150 — cleaner log viewer : HH:MM:SS column + colored msg by level */
+.logs-viewer {
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5em 0;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.76em;
+  line-height: 1.4;
+  max-height: 440px;
+  overflow-y: auto;
+}
+.log-row {
+  display: grid;
+  grid-template-columns: 5.5em 1fr;
+  column-gap: 0.7em;
+  padding: 0.1em 0.9em;
+  align-items: baseline;
+}
+.log-row:hover { background: rgba(255,255,255,0.025); }
+.log-time { color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 0.92em; }
+.log-msg  { color: var(--text-muted); white-space: pre-wrap; word-break: break-word; }
+.log-err  { background: rgba(248, 113, 113, 0.06); }
+.log-err  .log-msg  { color: #f87171; }
+.log-err  .log-time { color: #f87171; }
+.log-warn .log-msg  { color: #fbbf24; }
+.log-warn .log-time { color: #fbbf24; }
+.log-trace .log-msg { color: var(--text-dim); font-size: 0.92em; }
