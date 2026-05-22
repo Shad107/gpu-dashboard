@@ -19,6 +19,34 @@
   let detect = $state<SetupDetect | null>(null);
   let loading = $state(true);
   let saving = $state(false);
+  let restarting = $state(false);
+
+  // Click "Redémarrer et ouvrir le dashboard" on step 5 — POSTs /api/restart,
+  // then polls /api/state until it comes back, then reloads.
+  async function restartAndOpen() {
+    restarting = true;
+    try {
+      await api.restart();
+    } catch {
+      // ignore — the connection drop is expected when systemd kills the process
+    }
+    // Poll every 1s for up to 30s
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 1000));
+      try {
+        const r = await fetch("/api/version", { cache: "no-store" });
+        if (r.ok) {
+          location.replace("/");
+          return;
+        }
+      } catch {
+        // still down, keep polling
+      }
+    }
+    // Give up after 30s — force a reload anyway
+    location.replace("/");
+  }
 
   // Selected modules (initialized from detect recommendations)
   let selected = $state<Record<string, boolean>>({});
@@ -303,20 +331,32 @@
 
         <!-- Step 5: Done -->
         {#if step === 5}
+          {@const restartingNow = restarting}
           <h2 style="color:#4ade80">✓ {i18n.t("setup.done_title")}</h2>
-          <p>{i18n.t("setup.done_intro")}</p>
-          <code style="display:block;margin-top:.8em;padding:.8em;background:#0e1014;border-radius:6px">
-            {i18n.t("setup.done_restart_hint")}
-          </code>
-          {#if dismissable}
-            <div class="btn-row" style="margin-top:1.2em">
-              <button class="btn btn-primary" onclick={async () => {
-                try { await api.restart(); } catch {}
-                setTimeout(() => location.reload(), 2500);
-              }}>🔄 {i18n.t("services.restart_btn")}</button>
+          <p>{i18n.t("setup.done_intro_short") ?? "Configuration sauvée dans ~/.config/gpu-dashboard/config.env."}</p>
+
+          <div class="btn-row" style="margin-top:1.2em;gap:.8em">
+            <button class="btn btn-primary" disabled={restartingNow} onclick={restartAndOpen}>
+              {restartingNow
+                ? "⏳ " + (i18n.t("setup.restarting") ?? "Redémarrage…")
+                : "🔄 " + (i18n.t("setup.restart_and_open") ?? "Redémarrer et ouvrir le dashboard")}
+            </button>
+            {#if dismissable}
               <button class="btn" onclick={() => wizard.dismiss()}>{i18n.t("modal.close")}</button>
-            </div>
-          {/if}
+            {/if}
+          </div>
+
+          <details style="margin-top:1.4em">
+            <summary class="sub" style="cursor:pointer;font-size:.85em">
+              {i18n.t("setup.manual_restart_hint") ?? "Sinon, en ligne de commande :"}
+            </summary>
+            <code style="display:block;margin-top:.6em;padding:.7em;background:#0e1014;border-radius:6px;font-size:.85em">
+              systemctl --user restart gpu-dashboard.service
+            </code>
+            <p class="sub" style="margin-top:.4em;font-size:.78em">
+              {i18n.t("setup.manual_restart_hint_2") ?? "(ou Ctrl+C puis relancer si tu tournes en foreground)"}
+            </p>
+          </details>
         {/if}
       {/if}
     </div>
