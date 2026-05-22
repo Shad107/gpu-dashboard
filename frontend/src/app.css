@@ -79,8 +79,8 @@ body {
   box-sizing: border-box;
 }
 
-h1 { margin: 0 0 0.15em; font-size: 1.2em; }
-.ts { color: var(--text-faint); font-size: 0.78em; margin-bottom: 0.6em; }
+h1 { margin: 0 0 0.1em; font-size: 0.95em; }
+.ts { color: var(--text-faint); font-size: 0.72em; margin-bottom: 0.3em; }
 
 /* Cycle 144c — single strip + ‹ › arrow controls (replace scrollbar) */
 .strip-container {
@@ -215,9 +215,17 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
   z-index: 5;
   background: var(--bg-page);
 }
+/* Sticky stack order (cycle 148) : Header(0) → Cards(2.5em) → TopNav(stuck under cards).
+ * Cards strip varies in height ; .top-nav sticks underneath via its own
+ * sticky context. Each element has its own `top:` so the browser cascades
+ * them correctly when scrolling. */
 .header { top: 0; }
-.top-nav { top: 3em; }
-.strip-container { top: 5.5em; padding-bottom: 0.3em; }
+.strip-container { top: 2.5em; padding-bottom: 0.2em; }
+.top-nav {
+  /* Stick AFTER the strip — top value must be > strip's bottom edge.
+   * Strip is ~12em tall (label + cards 200px + paddings). */
+  top: 14em;
+}
 .version-footer {
   position: sticky;
   bottom: 0;

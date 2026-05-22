@@ -65,6 +65,8 @@
 
 <div class="version-footer" class:has-update={updateAvailable}>
   <span class="vf-left">
+    <!-- cycle 148 user fb : 'mettre le refresh devant mise à jour' -->
+    <span class="vf-refresh">{i18n.t("footer.refresh")}</span>
     <span class="vf-pill" title={info?.current_sha ?? ""}>
       v<b>{version}</b>
       {#if info?.current_sha}<span class="vf-sha">({info.current_sha.slice(0, 7)})</span>{/if}
@@ -84,7 +86,6 @@
     {/if}
   </span>
   <span class="vf-right">
-    {i18n.t("footer.refresh")} ·
     <a href="https://github.com/Shad107/gpu-dashboard" target="_blank" rel="noopener">github</a>
   </span>
 </div>
