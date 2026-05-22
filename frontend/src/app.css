@@ -173,7 +173,8 @@ h1 { margin: 0 0 0.1em; font-size: 0.95em; }
 .strip-cards > .card,
 .strip-merged > .card {
   flex: 0 0 200px;
-  min-height: 7em;        /* cycle 147 user fb 'hauteur des carte doit être identique' */
+  min-height: 9em;        /* cycle 147 + 152 : tallest card (fans 2x2) sets the floor */
+  align-self: stretch;    /* force ALL cards to match the tallest sibling */
   scroll-snap-align: start;
 }
 /* Group separators between card groups in the merged strip.
