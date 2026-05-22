@@ -632,6 +632,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_llm_swap_suggest(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/cuda-advisor":
+                # R&D #18.3 — CUDA_VISIBLE_DEVICES UUID drift detector
+                code, body = api.handle_cuda_advisor_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
