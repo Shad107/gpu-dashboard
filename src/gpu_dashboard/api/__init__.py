@@ -277,3 +277,4 @@ from .lm_studio import handle_lm_studio_inventory  # noqa: F401,F811
 from .driver_vault import handle_driver_vault_status, handle_driver_vault_stash, handle_driver_vault_rollback_script  # noqa: F401,F811
 from .idle_probe import handle_idle_txt, handle_idle_json  # noqa: F401,F811
 from .ecc_remap import handle_ecc_remap_status, handle_ecc_remap_record, handle_ecc_remap_rma_csv  # noqa: F401,F811
+from .tdp_auto import handle_tdp_auto_status, handle_tdp_auto_save, handle_tdp_auto_evaluate, handle_tdp_auto_preview  # noqa: F401,F811

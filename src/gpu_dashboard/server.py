@@ -618,6 +618,19 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ecc_remap_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/tdp-auto":
+                # R&D #17.3 — TDP profile auto-switch status
+                code, body = api.handle_tdp_auto_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/tdp-auto/evaluate":
+                code, body = api.handle_tdp_auto_evaluate(ctx, params)
+                self._send_json(code, body)
+                return
+            if path == "/api/tdp-auto/preview":
+                code, body = api.handle_tdp_auto_preview(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/ecc-remap/record":
                 code, body = api.handle_ecc_remap_record(ctx, params)
                 self._send_json(code, body)
@@ -1104,6 +1117,11 @@ def make_handler(ctx: dict):
             if self.path == "/api/driver-vault/stash":
                 # R&D #16.4 — capture the currently-installed driver .deb
                 code, body = api.handle_driver_vault_stash(ctx)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/tdp-auto":
+                # R&D #17.3 — save TDP auto config
+                code, body = api.handle_tdp_auto_save(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/boot-profile/clear":
