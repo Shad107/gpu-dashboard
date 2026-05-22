@@ -82,10 +82,11 @@ body {
 h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .ts { color: var(--text-faint); font-size: 0.78em; margin-bottom: 0.6em; }
 
-/* Cycle 144b — ONE merged horizontal strip with all cards. User :
- * 'les tab ne sont pas sur une ligne' — wants a single horizontal
- * scroll, not 4 separate strips. Inline .group-divider markers
- * provide the visual category separation. */
+/* Cycle 144c — single strip + ‹ › arrow controls (replace scrollbar) */
+.strip-container {
+  position: relative;
+  margin-bottom: 0.4em;
+}
 .strip {
   display: flex;
   flex-direction: row;
@@ -93,13 +94,43 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
   overflow-x: auto;
   overflow-y: hidden;
   gap: 0.5em;
-  padding: 0.4em 0 0.8em;
-  scrollbar-width: thin;
+  padding: 0.4em 0 0.4em;
   scroll-snap-type: x proximity;
-  /* Fade-out gradient hint on the right edge → there's more to scroll */
-  mask-image: linear-gradient(to right, black 95%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black 95%, transparent 100%);
+  scroll-behavior: smooth;
 }
+/* Hide native scrollbar — we use ‹ › arrows instead */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+/* Arrow buttons floating over the strip edges */
+.strip-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 32px;
+  height: 56px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(15, 19, 28, 0.92);
+  color: var(--text-muted);
+  font-size: 1.6em;
+  font-weight: 300;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, color 0.15s, background 0.15s;
+  padding: 0;
+}
+.strip-arrow.visible {
+  opacity: 0.85;
+  pointer-events: auto;
+}
+.strip-arrow:hover { color: var(--accent); background: var(--bg-card); opacity: 1; }
+.strip-arrow-left { left: -8px; }
+.strip-arrow-right { right: -8px; }
 .strip-merged > .card {
   flex: 0 0 200px;
   scroll-snap-align: start;

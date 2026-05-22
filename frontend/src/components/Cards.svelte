@@ -118,30 +118,68 @@
   }
   const sign = (v: number) => (v >= 0 ? "+" : "") + v;
 
-  // Wheel-to-horizontal-scroll for strip rows (cycle 143).
-  // Converts vertical wheel events to horizontal scroll on the strip so
-  // desktop users can use mouse wheel naturally.
+  // Strip scrolling : wheel-to-X + canScroll left/right state for arrows
+  // (cycle 144c, user fb : 'fleche a gauche et a droite quand nécessaire
+  // plutot que la scrollbar horizontal').
+  let stripEl = $state<HTMLElement | undefined>();
+  let canScrollLeft = $state(false);
+  let canScrollRight = $state(false);
+
+  function updateScrollState() {
+    if (!stripEl) return;
+    canScrollLeft = stripEl.scrollLeft > 4;
+    canScrollRight = stripEl.scrollLeft < stripEl.scrollWidth - stripEl.clientWidth - 4;
+  }
+
+  function scrollByCards(dir: -1 | 1) {
+    if (!stripEl) return;
+    // Scroll ~3 cards worth (3 × (200 + 8 gap) ≈ 624)
+    stripEl.scrollBy({ left: dir * 624, behavior: "smooth" });
+  }
+
   function wheelScroll(node: HTMLElement) {
+    stripEl = node;
     function handle(e: WheelEvent) {
       if (e.deltaY !== 0 && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        // Only intercept when the strip actually overflows
         if (node.scrollWidth > node.clientWidth) {
           e.preventDefault();
           node.scrollLeft += e.deltaY;
         }
       }
     }
+    function onScroll() { updateScrollState(); }
     node.addEventListener("wheel", handle, { passive: false });
-    return { destroy() { node.removeEventListener("wheel", handle); } };
+    node.addEventListener("scroll", onScroll, { passive: true });
+    // Update on resize too
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(node);
+    // Initial state after layout
+    setTimeout(updateScrollState, 50);
+    return {
+      destroy() {
+        node.removeEventListener("wheel", handle);
+        node.removeEventListener("scroll", onScroll);
+        ro.disconnect();
+      }
+    };
   }
 </script>
 
-<!-- Cycle 144b — ONE horizontal strip with ALL cards (user :
-     'les tab ne sont pas sur une ligne'). Cards from all groups
-     packed in a single overflow-x row, with subtle vertical
-     dividers between groups instead of 4 separate strips. -->
+<!-- Cycle 144c — ONE horizontal strip + ‹ › arrows replacing scrollbar
+     (user : 'fleche a gauche et a droite quand nécessaire plutot que
+     la scrollbar horizontal'). -->
 
-<div class="strip strip-merged" use:wheelScroll>
+<div class="strip-container">
+  <button class="strip-arrow strip-arrow-left"
+    class:visible={canScrollLeft}
+    onclick={() => scrollByCards(-1)}
+    aria-label="Scroll left">‹</button>
+  <button class="strip-arrow strip-arrow-right"
+    class:visible={canScrollRight}
+    onclick={() => scrollByCards(1)}
+    aria-label="Scroll right">›</button>
+
+<div class="strip strip-merged no-scrollbar" use:wheelScroll>
   <span class="group-divider"><span class="group-divider-label">🖥️ {i18n.t("group.gpu") ?? "GPU"}</span></span>
     {#if alive && g && g.alive}
       {#if layout.visible("gpu")}
@@ -430,4 +468,5 @@
         </div>
       {/if}
     {/each}
+</div>
 </div>
