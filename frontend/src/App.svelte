@@ -111,11 +111,11 @@
   <Header />
   <TopNav />
   <IdleBanner />
+  <!-- Cycle 146 — Cards strip is now ALWAYS visible (outside tab switch).
+       User : 'mettre ces cartes en dehors des tab pour les avoir toujours
+       visible'. Tabs switch only the lower content area. -->
+  <Cards />
   {#if view.current === "dashboard"}
-    <!-- Cycle 143 — horizontal strips per group + scoped Y-scroll below.
-         Tiles area is fixed height (auto from content). Charts/footer
-         live in their own vertical scroll zone. -->
-    <Cards />
     <div class="dash-scroll-y">
       <CoolingChart />
       <PowerChart />
