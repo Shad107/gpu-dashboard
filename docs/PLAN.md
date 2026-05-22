@@ -3,9 +3,9 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:43 (cycle 113 done — screenshots refresh)
-**Latest commit** : `c85748d` — refresh About + Stats screenshots
-**Tests** : 534 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 02:48 (cycle 114 done — v0.3.0 RELEASED)
+**Latest commit** : `b206025` — release v0.3.0
+**Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
@@ -59,6 +59,13 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 114 — v0.3.0 RELEASE — closes 113-cycle iteration (1 commit)
+- `b206025` Promote v0.3.0-dev → [0.3.0] — 2026-05-22 release block
+  - __version__ bumped from "0.2.0-dev" to "0.3.0"
+  - [Unreleased] section reset to empty (room for future work)
+  - 3 new TDD tests : version string format + CHANGELOG sync
+  - Tests : 534 → 537
 
 ### Cycle 113 — Refresh About + Stats screenshots (1 commit)
 - `c85748d` docs/modal/about.png + docs/stats.png updated with v0.3 features
@@ -525,11 +532,11 @@ Rules :
 
 | Metric | Value |
 |---|---|
-| Tests | 534 passing on Py 3.9-3.13 |
+| Tests | 537 passing on Py 3.9-3.13 |
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~124 |
+| Commits since v0.1.0 | ~125 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
