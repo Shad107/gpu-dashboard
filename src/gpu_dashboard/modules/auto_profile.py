@@ -67,6 +67,7 @@ class AutoProfileDaemon:
         min_stable_seconds: int = 90,
         idle_threshold: float = 5.0,
         boost_threshold: float = 80.0,
+        app_triggers_path: Optional[str] = None,
     ):
         self._sampler = sampler
         self._apply = api_apply_callback
@@ -75,12 +76,14 @@ class AutoProfileDaemon:
         self._min_stable_s = min_stable_seconds
         self._idle = idle_threshold
         self._boost = boost_threshold
+        self._app_triggers_path = app_triggers_path
 
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._current_classification: Optional[str] = None
         self._classification_since: float = 0.0
         self._last_applied: Optional[str] = None
+        self._last_trigger_match: Optional[str] = None  # last app name that triggered
 
     def start(self) -> None:
         if self._thread is not None:
@@ -102,7 +105,35 @@ class AutoProfileDaemon:
                 int(_time.time() - self._classification_since)
                 if self._classification_since else 0
             ),
+            "trigger_match": self._last_trigger_match,
         }
+
+    def _check_app_triggers(self) -> Optional[str]:
+        """Return a profile to force based on running apps, or None.
+
+        Reads triggers from disk on every tick (cheap I/O ; the file is tiny).
+        Re-scans /proc/*/comm — also cheap, microseconds on a typical box.
+        """
+        from . import app_triggers as _at
+        triggers = _at.load_triggers(self._app_triggers_path)
+        if not triggers:
+            self._last_trigger_match = None
+            return None
+        running = _at.scan_running_apps()
+        profile = _at.match_trigger(running, triggers)
+        if profile is None:
+            self._last_trigger_match = None
+            return None
+        # Remember the matching key for status() / debug
+        for key in triggers:
+            for app in running:
+                if key.lower() in app.lower():
+                    self._last_trigger_match = key
+                    break
+            else:
+                continue
+            break
+        return profile
 
     def _loop(self) -> None:
         while not self._stop.is_set():
@@ -113,9 +144,22 @@ class AutoProfileDaemon:
             self._stop.wait(self._interval)
 
     def _tick(self) -> None:
-        # Take the last `window_s` seconds worth of samples.
-        # The sampler keeps timestamps in "HH:MM:SS" format — we approximate
-        # by counting from the end: window_s / sampler.interval.
+        # ── 1) App triggers — highest priority, no stability gate.
+        #    A running blender/llama-server overrides load classification immediately
+        #    because the user explicitly told us this app needs a specific profile.
+        forced = self._check_app_triggers()
+        if forced is not None:
+            self._current_classification = forced
+            self._classification_since = _time.time()  # reset stability
+            if forced != self._last_applied:
+                try:
+                    self._apply(forced)
+                    self._last_applied = forced
+                except Exception:
+                    pass
+            return
+
+        # ── 2) Load-based classification — falls through when no trigger fires.
         buf = self._sampler.snapshot()
         if not buf:
             return
@@ -132,15 +176,12 @@ class AutoProfileDaemon:
 
         now = _time.time()
         if new_class != self._current_classification:
-            # Classification changed → reset stability timer
             self._current_classification = new_class
             self._classification_since = now
             return
 
-        # Same classification — check stability
         stable_s = now - self._classification_since
         if stable_s >= self._min_stable_s and new_class != self._last_applied:
-            # Stable & different from what's currently applied → switch
             try:
                 self._apply(new_class)
                 self._last_applied = new_class
