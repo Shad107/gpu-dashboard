@@ -841,6 +841,47 @@
     );
   }
 
+  // ── UI sprint cycle 3 — R&D #12 cards ────────────────────────────────────
+  let diskLoading = $state(false);
+  let diskStats = $state<Awaited<ReturnType<typeof api.diskHealth>> | null>(null);
+  async function loadDiskHealth() {
+    diskLoading = true;
+    try {
+      diskStats = await api.diskHealth();
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { diskLoading = false; }
+  }
+
+  let airgapStat = $state<Awaited<ReturnType<typeof api.airgapStatus>> | null>(null);
+  let airgapAudit = $state<Array<{ts: number; url: string; reason: string}> | null>(null);
+  async function loadAirgapStatus() {
+    try { airgapStat = await api.airgapStatus(); } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAirgapAudit() {
+    try {
+      const r = await api.airgapAudit(50);
+      airgapAudit = r.blocked;
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let wallMeter = $state<Awaited<ReturnType<typeof api.wallMeter>> | null>(null);
+  async function loadWallMeter() {
+    try { wallMeter = await api.wallMeter(); } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let peersData = $state<Awaited<ReturnType<typeof api.peers>> | null>(null);
+  async function loadPeers() {
+    try { peersData = await api.peers(); } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  function _verdictColor(kind?: string): string {
+    if (kind === "ok") return "var(--ok)";
+    if (kind === "warn") return "var(--warn)";
+    if (kind === "fail") return "var(--err)";
+    return "var(--text-dim)";
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -848,6 +889,10 @@
       if (services.length === 0 && !svcLoading) loadServices();
       if (notifChannels.length === 0 && !notifLoading) loadNotifChannels();
       if (authTokens.length === 0 && !authLoading) loadAuthTokens();
+      if (!diskStats && !diskLoading) loadDiskHealth();
+      if (!airgapStat) loadAirgapStatus();
+      if (!wallMeter) loadWallMeter();
+      if (!peersData) loadPeers();
     }
   });
 
@@ -2066,6 +2111,141 @@
             <button class="btn btn-small" style="margin-left: 6px;"
                     onclick={() => copyToClipboard("?share=" + shareGeneratedToken)}>📋</button>
           </div>
+        {/if}
+      </div>
+
+      <!-- UI sprint cycle 3 — R&D #12 features (inline cards within Integrations) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.disk.title")}</h4>
+        <p class="muted">{i18n.t("integrations.disk.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDiskHealth}>{i18n.t("integrations.disk.refresh")}</button>
+        </div>
+        {#if diskLoading}
+          <p class="muted">⏳…</p>
+        {:else if diskStats && diskStats.available}
+          <p class="muted" style="margin: 6px 0; font-size: 0.88em;">
+            {diskStats.device_count} {diskStats.device_count === 1 ? "disk" : "disks"} ·
+            worst : <b style:color={_verdictColor(diskStats.worst_verdict)}>{diskStats.worst_verdict}</b>
+          </p>
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse;">
+            <tbody>
+              {#each (diskStats.disks ?? []) as d}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 5px; font-family: monospace; font-size: 0.9em;">{d.device}</td>
+                  <td style="padding: 5px;">{d.model ?? '?'}</td>
+                  <td style="padding: 5px;">{d.is_nvme ? "NVMe" : "SATA"}</td>
+                  <td style="padding: 5px;">{d.temp_c ?? '—'}°C</td>
+                  <td style="padding: 5px;">{d.wearout_pct != null ? `${d.wearout_pct}%` : '—'}</td>
+                  <td style="padding: 5px;">
+                    <span style:color={_verdictColor(d.verdict?.kind)}>
+                      {d.verdict?.kind ?? '?'}
+                    </span>
+                    {#if d.verdict && d.verdict.reasons && d.verdict.reasons.length > 0}
+                      <span class="muted" style="font-size: 0.85em; margin-left: 4px;">
+                        ({d.verdict.reasons[0]})
+                      </span>
+                    {/if}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {:else if diskStats}
+          <p class="muted">— {diskStats.reason ?? i18n.t("integrations.disk.none")}</p>
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.airgap.title")}</h4>
+        <p class="muted">{i18n.t("integrations.airgap.desc")}</p>
+        {#if airgapStat}
+          <div class="form-row" style="flex-wrap: wrap; gap: 12px;">
+            <span class="kv" style:color={airgapStat.enabled ? "var(--warn)" : "var(--text-dim)"}>
+              {airgapStat.enabled ? i18n.t("integrations.airgap.status_on") : i18n.t("integrations.airgap.status_off")}
+            </span>
+            {#if airgapStat.lan_allowed}
+              <span class="kv muted">· {i18n.t("integrations.airgap.lan_allowed")}</span>
+            {/if}
+            <span class="kv muted">· {i18n.t("integrations.airgap.blocked_24h")} :
+              <b>{airgapStat.blocked_count_24h}</b>
+            </span>
+          </div>
+          {#if airgapStat.enabled}
+            <div class="form-row" style="margin-top: 8px;">
+              <button class="btn" onclick={loadAirgapAudit}>
+                {i18n.t("integrations.airgap.audit_view")}
+              </button>
+            </div>
+            {#if airgapAudit && airgapAudit.length > 0}
+              <table style="width:100%; font-size:0.85em; margin-top: 8px; border-collapse: collapse;">
+                <tbody>
+                  {#each airgapAudit.slice(0, 10) as e}
+                    <tr style="border-bottom: 1px solid var(--border);">
+                      <td style="padding: 4px; color: var(--text-dim); font-size: 0.85em;">
+                        {new Date(e.ts * 1000).toLocaleTimeString()}
+                      </td>
+                      <td style="padding: 4px; font-family: monospace; font-size: 0.85em; max-width: 280px; overflow: hidden; text-overflow: ellipsis;">
+                        {e.url}
+                      </td>
+                      <td style="padding: 4px; color: var(--warn);">{e.reason}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            {:else if airgapAudit}
+              <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.airgap.audit_empty")}</p>
+            {/if}
+          {/if}
+        {/if}
+        <p class="muted" style="font-size: 0.82em; margin-top: 10px;">
+          {i18n.t("integrations.airgap.note")}
+        </p>
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wall.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wall.desc")}</p>
+        {#if wallMeter && wallMeter.available}
+          <div class="form-row" style="flex-wrap: wrap; gap: 14px; margin-top: 8px;">
+            <span class="kv">{i18n.t("integrations.wall.wall_w")} : <b>{wallMeter.wall_w} W</b></span>
+            <span class="kv">{i18n.t("integrations.wall.gpu_w")} : <b>{wallMeter.gpu_w ?? '—'} W</b></span>
+            <span class="kv">{i18n.t("integrations.wall.headroom")} : <b>{wallMeter.headroom_w} W</b></span>
+            {#if wallMeter.psu_efficiency_pct != null}
+              <span class="kv">{i18n.t("integrations.wall.efficiency")} :
+                <b style:color={wallMeter.psu_efficiency_pct > 90 ? 'var(--ok)' : 'var(--warn)'}>
+                  {wallMeter.psu_efficiency_pct}%
+                </b>
+              </span>
+            {/if}
+          </div>
+        {:else if wallMeter}
+          <p class="muted">{wallMeter.reason ?? i18n.t("integrations.wall.not_configured")}</p>
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.peers.title")}</h4>
+        <p class="muted">{i18n.t("integrations.peers.desc")}</p>
+        {#if peersData && peersData.peers && peersData.peers.length > 0}
+          <table style="width:100%; font-size:0.9em; border-collapse: collapse; margin-top: 6px;">
+            <tbody>
+              {#each peersData.peers as p}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 5px;"><b>{p.host}</b></td>
+                  <td style="padding: 5px; font-family: monospace; color: var(--text-dim);">
+                    {p.ip}:{p.port}
+                  </td>
+                  <td style="padding: 5px;">{p.gpu_count}× {p.gpu_model}</td>
+                  <td style="padding: 5px; color: var(--text-dim);">
+                    v{p.version}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {:else}
+          <p class="muted">{i18n.t("integrations.peers.none")}</p>
         {/if}
       </div>
 

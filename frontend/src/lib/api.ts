@@ -563,6 +563,80 @@ export const api = {
       }[];
     }>),
 
+  // ── R&D #12.2 — disk health (UI sprint cycle 3) ────────────────────────
+  diskHealth: () =>
+    fetch("/api/disk-health").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reason?: string;
+      device_count?: number;
+      worst_verdict?: "ok" | "warn" | "fail";
+      disks?: Array<{
+        device: string;
+        available?: boolean;
+        reason?: string;
+        model?: string;
+        is_nvme?: boolean;
+        temp_c?: number | null;
+        power_on_hours?: number | null;
+        reallocated_sectors?: number | null;
+        pending_sectors?: number | null;
+        wearout_pct?: number | null;
+        data_units_written_tb?: number | null;
+        critical_warning_flags?: number | null;
+        verdict?: { kind: "ok" | "warn" | "fail"; reasons: string[] };
+      }>;
+    }>),
+
+  // ── R&D #12.7 — air-gap mode (UI sprint cycle 3) ───────────────────────
+  airgapStatus: () =>
+    fetch("/api/airgap/status").then(jsonOf<{
+      ok: boolean;
+      enabled: boolean;
+      lan_allowed: boolean;
+      blocked_count_24h: number;
+      blocked_count_total: number;
+    }>),
+
+  airgapAudit: (limit = 50) =>
+    fetch(`/api/airgap/audit?limit=${limit}`).then(jsonOf<{
+      ok: boolean;
+      count: number;
+      blocked: Array<{ ts: number; url: string; reason: string }>;
+    }>),
+
+  // ── R&D #12.1 — wall-meter (UI sprint cycle 3) ─────────────────────────
+  wallMeter: () =>
+    fetch("/api/wall-meter").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reason?: string;
+      kind?: string;
+      url?: string;
+      wall_w?: number;
+      baseline_w?: number;
+      headroom_w?: number;
+      gpu_w?: number | null;
+      psu_efficiency_pct?: number | null;
+    }>),
+
+  // ── R&D #12.3 — LAN peers (UI sprint cycle 3) ──────────────────────────
+  peers: () =>
+    fetch("/api/peers").then(jsonOf<{
+      ok: boolean;
+      count: number;
+      ttl_s: number;
+      peers: Array<{
+        host: string;
+        ip: string;
+        port: number;
+        gpu_count: number;
+        gpu_model: string;
+        version: string;
+        last_seen_ts: number;
+      }>;
+    }>),
+
   // ── R&D #6.1 — Notif Hub channels (UI sprint cycle 2) ──────────────────
   notifChannelsList: () =>
     fetch("/api/notif/channels").then(jsonOf<{
