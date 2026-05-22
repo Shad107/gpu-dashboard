@@ -249,6 +249,8 @@
   "about.lowest_idle": "Lowest idle power",
   "about.tracking_since": "Tracking since",
   "stats.section_year": "Year-to-date totals",
+  "stats.per_gpu_split": "per GPU",
+  "stats.total": "Total",
   "modal.apptriggers": "App triggers",
   "apptriggers.title": "Per-application profile triggers",
   "apptriggers.hint": "When a listed process is running, auto-profile forces the chosen profile (overrides load-based classification).",

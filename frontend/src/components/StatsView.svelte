@@ -18,6 +18,7 @@
   let heatmapDays  = $state(7);
   let alerts = $state<Array<{ ts: number; payload: any }>>([]);
   let llmLifetime = $state<Awaited<ReturnType<typeof api.llmLifetime>> | null>(null);
+  let perGpuStats = $state<Array<{ index: number; name: string; kwh_year: number; cost_year: number }>>([]);
   let timer: ReturnType<typeof setInterval> | null = null;
 
   async function loadAll() {
@@ -33,6 +34,22 @@
       const j = await r.json();
       alerts = (j.recent_alerts ?? []) as Array<{ ts: number; payload: any }>;
     } catch {}
+    // Multi-GPU per-card YTD cost split (cycle 131, R&D #2.3b)
+    const gpus = live.data?.gpus_available ?? [];
+    if (gpus.length > 1) {
+      const stats: Array<{ index: number; name: string; kwh_year: number; cost_year: number }> = [];
+      for (const g of gpus) {
+        try {
+          const ps = await api.powerStats(g.index);
+          stats.push({ index: g.index, name: g.name, kwh_year: ps.kwh_year, cost_year: ps.cost_year });
+        } catch {
+          // skip GPUs that fail
+        }
+      }
+      perGpuStats = stats;
+    } else {
+      perGpuStats = [];
+    }
   }
 
   function fmtAlertAgo(ts: number): string {
@@ -208,10 +225,29 @@
         <h3>📊 {i18n.t("stats.section_year") ?? "Year-to-date totals"}</h3>
         <span class="sub" style="font-size:.78em">{i18n.t("about.year_since", { date: yearDate })}</span>
       </div>
-      <div class="ytd-row">
-        <span class="ytd-label">⚡ {i18n.t("about.year_electricity")}</span>
-        <span><b>{powerStats.kwh_year.toFixed(1)}</b> kWh · <b style="color:#fb923c">{powerStats.cost_year.toFixed(2)} {sym}</b></span>
-      </div>
+      {#if perGpuStats.length > 1}
+        <div class="ytd-row" style="font-weight:600">
+          <span class="ytd-label">⚡ {i18n.t("about.year_electricity")}</span>
+          <span class="sub" style="font-weight:400">{i18n.t("stats.per_gpu_split") ?? "per GPU"}</span>
+        </div>
+        {#each perGpuStats as g}
+          <div class="ytd-row" style="padding-left:1.2em;font-size:.92em">
+            <span class="ytd-label">GPU {g.index} — {g.name}</span>
+            <span><b>{g.kwh_year.toFixed(1)}</b> kWh · <b style="color:#fb923c">{g.cost_year.toFixed(2)} {sym}</b></span>
+          </div>
+        {/each}
+        {@const total_kwh = perGpuStats.reduce((a, g) => a + g.kwh_year, 0)}
+        {@const total_cost = perGpuStats.reduce((a, g) => a + g.cost_year, 0)}
+        <div class="ytd-row" style="border-top:1px solid var(--border-subtle);padding-top:.5em;margin-top:.2em">
+          <span class="ytd-label" style="font-weight:600">∑ {i18n.t("stats.total") ?? "Total"}</span>
+          <span><b>{total_kwh.toFixed(1)}</b> kWh · <b style="color:#fb923c">{total_cost.toFixed(2)} {sym}</b></span>
+        </div>
+      {:else}
+        <div class="ytd-row">
+          <span class="ytd-label">⚡ {i18n.t("about.year_electricity")}</span>
+          <span><b>{powerStats.kwh_year.toFixed(1)}</b> kWh · <b style="color:#fb923c">{powerStats.cost_year.toFixed(2)} {sym}</b></span>
+        </div>
+      {/if}
       {#if llmLifetime?.available && llmLifetime.total_tokens_this_year > 0}
         <div class="ytd-row">
           <span class="ytd-label">🪙 {i18n.t("about.year_tokens")}</span>

@@ -249,6 +249,8 @@
   "about.lowest_idle": "Conso idle min",
   "about.tracking_since": "Suivi depuis",
   "stats.section_year": "Totaux depuis le 1er janvier",
+  "stats.per_gpu_split": "par GPU",
+  "stats.total": "Total",
   "modal.apptriggers": "Déclencheurs apps",
   "apptriggers.title": "Déclencheurs de profil par application",
   "apptriggers.hint": "Quand un processus listé tourne, auto-profil force le profil choisi (override la classification par charge).",
