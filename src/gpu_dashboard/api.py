@@ -2816,19 +2816,25 @@ def handle_thermal_coach(ctx: dict) -> Response:
 
     # Last 5 minutes : assume 5s sampling → 60 samples max
     recent = snap[-60:] if len(snap) > 60 else snap
+    # The in-memory ring buffer uses "ts" as a 'HH:MM:SS' string (not epoch).
+    # Use sample INDEX as the x-axis. Sampling interval defaults to 5s.
+    # slope is then °C per sample ; multiply by (60/interval) for °C/min,
+    # and time-to-throttle is in samples → seconds.
+    sample_interval_s = float(ctx.get("config", None).get_int("DASHBOARD_REFRESH_INTERVAL", default=5)
+                              if ctx.get("config") else 5)
     xs = []
     ys = []
-    for s in recent:
-        t = s.get("ts")
+    for i, s in enumerate(recent):
         temp = s.get("temp")
-        if t is None or temp is None:
+        if temp is None:
             continue
-        xs.append(float(t))
+        xs.append(float(i))
         ys.append(float(temp))
     if len(xs) < 3:
         return 200, {"ok": True, "available": False, "reason": "need 3+ valid temp samples"}
 
-    slope, intercept = _linear_fit(xs, ys)
+    slope_per_sample, intercept = _linear_fit(xs, ys)
+    slope = slope_per_sample / sample_interval_s  # °C per second
     current_temp = ys[-1]
     slowdown_temp = 83.0  # default for consumer Ampere/Ada
     headroom_c = round(slowdown_temp - current_temp, 1)
