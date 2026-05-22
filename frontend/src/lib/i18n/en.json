@@ -274,6 +274,7 @@
   "benchmark.col_efficiency": "Efficiency",
   "benchmark.col_cost": "Cost",
   "chart.download_svg": "Download chart as SVG",
+  "header.chip_click_to_open": "Click for details",
   "card.pcie": "PCIe",
   "pcie.downgrade": "downgraded",
   "electricity.budget_label": "Budget",

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import { live } from "../lib/stores.svelte";
   import { modal } from "../lib/stores.svelte";
   import { gpu } from "../lib/gpu.svelte";
@@ -17,6 +18,58 @@
         ? `${i18n.t("ts.updated")} ${new Date().toLocaleTimeString()}`
         : i18n.t("ts.loading")
   );
+
+  // ── Status chip (R&D #3.2, cycle 135) ────────────────────────────────
+  // Polls /api/health for recent_alerts + /api/profile-stats for recent
+  // switches every 60s. Shows whichever is the most recent operational
+  // event as a clickable pill in the header.
+  type ChipState = {
+    kind: "alert" | "profile_switch" | "none";
+    label: string;
+    ts: number;
+  };
+  let chip = $state<ChipState>({ kind: "none", label: "", ts: 0 });
+  let chipTimer: ReturnType<typeof setInterval> | null = null;
+
+  function fmtAgo(ts: number): string {
+    const dt = Math.floor(Date.now() / 1000) - ts;
+    if (dt < 60) return `${dt}s`;
+    if (dt < 3600) return `${Math.floor(dt / 60)}m`;
+    if (dt < 86400) return `${Math.floor(dt / 3600)}h`;
+    return `${Math.floor(dt / 86400)}d`;
+  }
+
+  async function refreshChip() {
+    try {
+      const r = await fetch("/api/health", { cache: "no-store" });
+      const j = await r.json();
+      const a = (j.recent_alerts ?? [])[0];
+      if (a && a.ts) {
+        chip = { kind: "alert", label: `🚨 ${a.payload?.kind || "alert"}`, ts: a.ts };
+        return;
+      }
+      const ps = await fetch("/api/profile-stats?since=3600", { cache: "no-store" });
+      const pj = await ps.json();
+      const ev = (pj.recent_events ?? [])[0];
+      if (ev && ev.ts && (Date.now() / 1000 - ev.ts) < 3600) {
+        const emoji = ev.to === "boost" ? "🚀" : ev.to === "sweet" ? "⭐" : ev.to === "silent" ? "🤫" : "·";
+        chip = { kind: "profile_switch", label: `${emoji} ${ev.to}`, ts: ev.ts };
+        return;
+      }
+      chip = { kind: "none", label: "", ts: 0 };
+    } catch {
+      // keep last state
+    }
+  }
+  function openChipTarget() {
+    if (chip.kind === "alert") modal.show("alerts");
+    else if (chip.kind === "profile_switch") modal.show("about");
+  }
+  onMount(() => {
+    refreshChip();
+    chipTimer = setInterval(refreshChip, 60_000);
+  });
+  onDestroy(() => { if (chipTimer) clearInterval(chipTimer); });
 </script>
 
 <div class="header">
@@ -36,6 +89,18 @@
       <div class="ts">{singleGpuName} · {tsText}</div>
     {/if}
   </div>
+  {#if chip.kind !== "none"}
+    <button
+      class="status-chip"
+      class:chip-alert={chip.kind === "alert"}
+      class:chip-profile={chip.kind === "profile_switch"}
+      onclick={openChipTarget}
+      title={i18n.t("header.chip_click_to_open") ?? "Click for details"}
+    >
+      {chip.label}
+      <span class="chip-ago">{fmtAgo(chip.ts)}</span>
+    </button>
+  {/if}
   <button
     class="gear-btn"
     class:active={modal.open}
@@ -48,3 +113,28 @@
     </svg>
   </button>
 </div>
+
+<style>
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.3em 0.7em;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 0.85em;
+    cursor: pointer;
+    margin-right: 0.6em;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .status-chip:hover { background: var(--bg-page); color: var(--accent); }
+  .chip-alert {
+    color: var(--accent-warn);
+    border-color: rgba(251, 191, 36, 0.4);
+    background: rgba(251, 191, 36, 0.08);
+  }
+  .chip-profile { color: var(--accent); }
+  .chip-ago { color: var(--text-dim); font-size: 0.85em; font-variant-numeric: tabular-nums; }
+</style>

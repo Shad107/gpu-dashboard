@@ -274,6 +274,7 @@
   "benchmark.col_efficiency": "Efficacité",
   "benchmark.col_cost": "Coût",
   "chart.download_svg": "Télécharger en SVG",
+  "header.chip_click_to_open": "Clic pour ouvrir le détail",
   "card.pcie": "PCIe",
   "pcie.downgrade": "bridé",
   "electricity.budget_label": "Budget",
