@@ -1148,6 +1148,45 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #19 (UI sprint 10) ────────────────────────────────────────────
+  let throttleCauseData = $state<Awaited<ReturnType<typeof api.throttleCauseStatus>> | null>(null);
+  let mpsHealthData     = $state<Awaited<ReturnType<typeof api.mpsHealthStatus>>     | null>(null);
+  let processNiceData   = $state<Awaited<ReturnType<typeof api.processNiceStatus>>   | null>(null);
+  let warmupData        = $state<Awaited<ReturnType<typeof api.warmupProfileStatus>> | null>(null);
+  let warmupProbing     = $state<boolean>(false);
+  async function loadThrottleCause() {
+    try { throttleCauseData = await api.throttleCauseStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadMpsHealth() {
+    try { mpsHealthData = await api.mpsHealthStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcessNice() {
+    try { processNiceData = await api.processNiceStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadWarmup() {
+    try { warmupData = await api.warmupProfileStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function fireWarmupProbe() {
+    warmupProbing = true;
+    try {
+      const r = await api.warmupProfileProbe({
+        model: "Qwen3.5-35B", source: "llamacpp",
+        host: "localhost", port: 8080, prompt: "Hi",
+      });
+      if (r.ok) {
+        toast.emit(`✓ TTFT ${r.ttft_ms?.toFixed(0)} ms`, "ok");
+        await loadWarmup();
+      } else {
+        toast.emit("✗ " + (r.error || "probe failed"), "err");
+      }
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { warmupProbing = false; }
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -1183,6 +1222,11 @@
       if (!nvmeSwapData)    loadNvmeSwap();
       if (!cudaMatrixData)  loadCudaMatrix();
       if (!pcieHistData)    loadPcieHist();
+      // R&D #19 cards
+      if (!throttleCauseData) loadThrottleCause();
+      if (!mpsHealthData)     loadMpsHealth();
+      if (!processNiceData)   loadProcessNice();
+      if (!warmupData)        loadWarmup();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -3556,6 +3600,177 @@
           {:else}
             <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.pciehist.no_events")}</p>
           {/if}
+        {/if}
+      </div>
+
+      <!-- R&D #19.2 Throttle classifier (UI sprint 10) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.throttle.title")}</h4>
+        <p class="muted">{i18n.t("integrations.throttle.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadThrottleCause}>{i18n.t("integrations.throttle.refresh")}</button>
+        </div>
+        {#if throttleCauseData && !throttleCauseData.ok}
+          <p class="muted" style="margin-top: 8px;">{i18n.t("integrations.throttle.unreachable")}</p>
+        {/if}
+        {#if throttleCauseData && throttleCauseData.gpus.length > 0}
+          {#each throttleCauseData.gpus as g}
+            <div style="margin-top: 10px; padding: 8px; border-left: 3px solid {
+              g.verdict.severity === 'critical' ? 'var(--warn)' :
+              g.verdict.severity === 'warn' ? 'var(--accent)' : 'var(--ok)'
+            };">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b>GPU{g.index} — {g.name}</b>
+                <span class="kv">{g.temp_c ?? '—'}°C</span>
+                <span class="kv">{g.clock_mhz ?? '—'} MHz</span>
+                <span class="kv">{g.power_w ?? '—'} / {g.power_limit_w ?? '—'} W</span>
+              </div>
+              <p style="margin: 4px 0;"
+                 style:color={g.verdict.severity === 'critical' ? 'var(--warn)' :
+                            g.verdict.severity === 'warn' ? 'var(--accent)' : 'var(--text-dim)'}>
+                <b>{g.verdict.reason}</b>
+              </p>
+              {#if g.verdict.recommendation}
+                <p class="muted" style="margin: 4px 0;">{g.verdict.recommendation}</p>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #19.6 MPS daemon health (UI sprint 10) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.mps.title")}</h4>
+        <p class="muted">{i18n.t("integrations.mps.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMpsHealth}>{i18n.t("integrations.mps.refresh")}</button>
+          {#if mpsHealthData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={mpsHealthData.state === 'running' ? 'var(--ok)' :
+                             mpsHealthData.state === 'stalled' ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.mps.state")} : <b>{mpsHealthData.state}</b>
+            </span>
+            {#if mpsHealthData.default_sm_share_pct !== null}
+              <span class="kv">
+                {i18n.t("integrations.mps.sm_share")} : <b>{mpsHealthData.default_sm_share_pct}%</b>
+              </span>
+            {/if}
+          {/if}
+        </div>
+        {#if mpsHealthData}
+          <p class="muted" style="margin-top: 6px;">{mpsHealthData.advice}</p>
+          {#if mpsHealthData.clients.length > 0}
+            <h5 style="margin: 8px 0 4px 0;">{i18n.t("integrations.mps.clients")} ({mpsHealthData.clients.length})</h5>
+            <table style="width:100%; font-size:0.88em; border-collapse: collapse;">
+              <tbody>
+                {#each mpsHealthData.clients as c}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px;">pid {c.pid}</td>
+                    <td style="padding: 4px; color: var(--text-dim);">uid {c.uid ?? '—'}</td>
+                    <td style="padding: 4px; font-family: monospace;">{c.name ?? '—'}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        {/if}
+      </div>
+
+      <!-- R&D #19.1 GPU process nice advisor (UI sprint 10) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nice.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nice.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcessNice}>{i18n.t("integrations.nice.refresh")}</button>
+          {#if processNiceData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={processNiceData.needs_action_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.nice.needs_action")} :
+              <b>{processNiceData.needs_action_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if processNiceData?.reason}
+          <p class="muted" style="margin-top: 6px;">{processNiceData.reason}</p>
+        {/if}
+        {#if processNiceData?.processes && processNiceData.processes.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">{i18n.t("integrations.nice.process")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.nice.class")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.nice.current")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.nice.suggested")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.nice.command")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each processNiceData.processes as p}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{p.comm} <span class="muted">(pid {p.pid})</span></td>
+                  <td style="padding: 4px;">{p.class}</td>
+                  <td style="padding: 4px;">{p.current_nice ?? '—'}</td>
+                  <td style="padding: 4px;"
+                      style:color={p.needs_change ? 'var(--warn)' : 'var(--ok)'}>
+                    {p.suggested_nice ?? '—'}
+                  </td>
+                  <td style="padding: 4px;">
+                    {#if p.shell_command}
+                      <code style="font-family: monospace; font-size: 0.85em;">{p.shell_command}</code>
+                      <button class="btn btn-small" onclick={() => copyToClipboard(p.shell_command ?? "")}>
+                        {i18n.t("integrations.nice.copy")}
+                      </button>
+                    {/if}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #19.4 Warmup profile (UI sprint 10) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.warmup.title")}</h4>
+        <p class="muted">{i18n.t("integrations.warmup.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadWarmup}>{i18n.t("integrations.warmup.refresh")}</button>
+          <button class="btn" onclick={fireWarmupProbe} disabled={warmupProbing}>
+            {warmupProbing ? "…" : i18n.t("integrations.warmup.probe_btn")}
+          </button>
+        </div>
+        {#if warmupData && warmupData.models.length === 0}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.warmup.none")}</p>
+        {/if}
+        {#if warmupData && warmupData.models.length > 0}
+          {#each warmupData.models as m}
+            <div style="margin-top: 10px; padding: 8px; border-left: 3px solid var(--border);">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{m.model}</b>
+                <span class="kv" style="color: var(--text-dim);">{m.source}</span>
+                <span class="kv">{m.stats.count} {i18n.t("integrations.warmup.samples")}</span>
+                {#if m.stats.cold_ttft_ms !== undefined}
+                  <span class="kv">{i18n.t("integrations.warmup.cold_ttft")} :
+                    <b>{(m.stats.cold_ttft_ms / 1000).toFixed(2)} s</b>
+                  </span>
+                {/if}
+                {#if m.stats.hot_median_ttft_ms}
+                  <span class="kv">{i18n.t("integrations.warmup.hot_median")} :
+                    <b>{(m.stats.hot_median_ttft_ms / 1000).toFixed(2)} s</b>
+                  </span>
+                {/if}
+                {#if m.stats.cold_minus_hot_ms}
+                  <span class="kv"
+                        style:color={m.stats.cold_minus_hot_ms > 1000 ? 'var(--warn)' : 'var(--text-dim)'}>
+                    {i18n.t("integrations.warmup.cold_gap")} :
+                    <b>+{(m.stats.cold_minus_hot_ms / 1000).toFixed(2)} s</b>
+                  </span>
+                {/if}
+              </div>
+              <p class="muted" style="margin: 4px 0;">{m.recommendation}</p>
+            </div>
+          {/each}
         {/if}
       </div>
 

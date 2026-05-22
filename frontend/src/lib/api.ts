@@ -1162,4 +1162,76 @@ export const api = {
       };
       total_events_seen: number;
     }>),
+
+  // ── R&D #19 (UI sprint 10) ────────────────────────────────────────────
+  throttleCauseStatus: () =>
+    fetch("/api/throttle-cause").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      any_throttling?: boolean;
+      gpus: Array<{
+        index: number; name: string;
+        temp_c: number | null; clock_mhz: number | null;
+        clock_max_mhz: number | null;
+        power_w: number | null; power_limit_w: number | null;
+        verdict: {
+          severity: "info" | "warn" | "critical";
+          reason: string; recommendation: string;
+          active_flags: string[];
+        };
+      }>;
+    }>),
+
+  mpsHealthStatus: () =>
+    fetch("/api/mps-health").then(jsonOf<{
+      ok: boolean;
+      state: "not_configured" | "not_running" | "stalled" | "running";
+      pipe_dir: string;
+      control_socket_present: boolean;
+      control_binary_available: boolean;
+      server_pids: number[];
+      clients: Array<{ pid: number; uid?: number; name?: string }>;
+      default_sm_share_pct: number | null;
+      advice: string;
+    }>),
+
+  processNiceStatus: () =>
+    fetch("/api/process-nice").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      needs_action_count: number;
+      processes?: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        class: string;
+        current_nice: number | null;
+        suggested_nice: number | null;
+        needs_change: boolean;
+        shell_command: string | null;
+      }>;
+    }>),
+
+  warmupProfileStatus: () =>
+    fetch("/api/warmup-profile").then(jsonOf<{
+      ok: boolean;
+      tracked_count: number;
+      models: Array<{
+        model: string; source: string;
+        samples: Array<{ ts: number; ttft_ms: number; trigger: string }>;
+        stats: {
+          count: number; ttft_min?: number; ttft_max?: number;
+          ttft_median?: number; cold_ttft_ms?: number;
+          hot_median_ttft_ms?: number | null;
+          cold_minus_hot_ms?: number | null;
+        };
+        recommendation: string;
+      }>;
+    }>),
+
+  warmupProfileProbe: (body: { model: string; source: "llamacpp" | "ollama";
+                                 host?: string; port?: number; prompt?: string }) =>
+    fetch("/api/warmup-profile/probe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(jsonOf<{ ok: boolean; ttft_ms?: number; error?: string }>),
 };
