@@ -3,7 +3,7 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 09:30 (cycle 135 done — R&D #3.2 header chip)
+**Last updated** : 2026-05-22 09:33 (cycle 136 done — R&D #3.3 uptime %)
 **Latest commit** : `fe2d2a9` — benchmark scheduler helpers
 **Tests** : 637 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
@@ -165,7 +165,10 @@ Inspired by LibreHardwareMonitor, hardinfo/inxi, HWMonitor, systemd timers
    - Amber pill 🚨 for alerts → opens Alerts modal
    - Green pill 🚀/⭐/🤫 for profile switches → opens About modal
    - 1 new i18n key × 2 langs · pure frontend (no tests)
-3. **Uptime % in /api/health** (cycle 136) — add `up_seconds`, `restart_count`, `uptime_pct_24h` for Uptime Kuma badges.
+3. **Uptime % in /api/health** (cycle 136) ✅ DONE
+   - /api/health adds up_minutes_24h, uptime_pct_24h, restart_count_24h, sampler_alive
+   - SQL : COUNT(DISTINCT ts/60) for minute uniqueness + gap detection (>5min)
+   - 6 new TDD tests · 643 → 649
 4. **Anomaly bands on history charts** (cycle 137) — compute μ ± 2σ rolling band, render dimmed area. Marks visual outliers.
 5. **Keyboard shortcuts cheat-sheet** (cycle 138) — modal triggered by `?` key showing all hotkeys (already have a few : `Esc`, arrow keys in fan curve).
 
