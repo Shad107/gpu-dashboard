@@ -720,6 +720,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_tariff_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hf-dedup/plan":
+                # R&D #15.3 — HF cache dedup planner (read-only)
+                code, body = api.handle_hf_dedup_plan(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/tariff/estimate":
                 code, body = api.handle_tariff_estimate(ctx, params)
                 self._send_json(code, body)
@@ -1006,6 +1011,11 @@ def make_handler(ctx: dict):
             if self.path == "/api/boot-profile":
                 # R&D #15.8 — save boot profile
                 code, body = api.handle_boot_profile_save(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/hf-dedup/execute":
+                # R&D #15.3 — execute a dedup plan (dry-run default)
+                code, body = api.handle_hf_dedup_execute(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/boot-profile/clear":

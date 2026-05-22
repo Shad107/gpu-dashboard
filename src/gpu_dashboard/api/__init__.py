@@ -269,3 +269,4 @@ from .inference_cost import handle_inference_cost  # noqa: F401,F811
 from .lab_usage import handle_lab_usage_live  # noqa: F401,F811
 from .boot_profile import handle_boot_profile_status, handle_boot_profile_save, handle_boot_profile_clear, handle_boot_profile_apply_now  # noqa: F401,F811
 from .tariff import handle_tariff_status, handle_tariff_estimate, handle_tariff_cheapest  # noqa: F401,F811
+from .hf_dedup import handle_hf_dedup_plan, handle_hf_dedup_execute  # noqa: F401,F811
