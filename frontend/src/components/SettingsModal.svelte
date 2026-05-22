@@ -564,13 +564,25 @@
 
   // ── About state ───────────────────────────────────────────────────────────
   // About is now lean — perf totals moved to Stats page in cycle 115.
+  // Lifetime records added back in cycle 130 (small + meta-info, fits About).
   let aboutData = $state<Awaited<ReturnType<typeof api.about>> | null>(null);
+  let lifetimeStats = $state<Awaited<ReturnType<typeof api.lifetimeStats>> | null>(null);
   async function loadAbout() {
     try { aboutData = await api.about(); } catch { aboutData = null; }
+    try { lifetimeStats = await api.lifetimeStats(); } catch { lifetimeStats = null; }
   }
   $effect(() => {
     if (modal.open && modal.section === "about" && !aboutData) loadAbout();
   });
+
+  function fmtTrackingSince(ts: number | null): string {
+    if (!ts) return "";
+    const days = Math.floor((Date.now() / 1000 - ts) / 86400);
+    if (days < 1) return "today";
+    if (days < 31) return `${days}d`;
+    if (days < 365) return `${Math.floor(days / 30)} mo`;
+    return `${(days / 365).toFixed(1)} y`;
+  }
 
   // ── App triggers state (R&D #1, cycle 118) ────────────────────────────
   type TrigEntry = { app: string; profile: string };
@@ -954,6 +966,49 @@
               </tr>
             </tbody>
           </table>
+
+          {#if lifetimeStats && lifetimeStats.samples_count > 0}
+            <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
+              🏆 {i18n.t("about.lifetime_records") ?? "Lifetime records"}
+            </h3>
+            <table class="about-table" style="margin-top:.4em;max-width:380px">
+              <tbody>
+                {#if lifetimeStats.peak_temp_c != null}
+                  <tr>
+                    <td>🌡️ {i18n.t("about.peak_temp")}</td>
+                    <td><b style="color:var(--accent-warn)">{lifetimeStats.peak_temp_c}°C</b></td>
+                  </tr>
+                {/if}
+                {#if lifetimeStats.peak_power_w != null}
+                  <tr>
+                    <td>⚡ {i18n.t("about.peak_power")}</td>
+                    <td><b style="color:var(--accent-cool)">{lifetimeStats.peak_power_w.toFixed(0)} W</b></td>
+                  </tr>
+                {/if}
+                {#if lifetimeStats.peak_fan_pct != null}
+                  <tr>
+                    <td>🌀 {i18n.t("about.peak_fan")}</td>
+                    <td><b>{lifetimeStats.peak_fan_pct}%</b>
+                      {#if lifetimeStats.peak_fan_rpm}<span class="sub" style="margin-left:.4em">({lifetimeStats.peak_fan_rpm} RPM)</span>{/if}
+                    </td>
+                  </tr>
+                {/if}
+                {#if lifetimeStats.lowest_idle_power_w != null}
+                  <tr>
+                    <td>💤 {i18n.t("about.lowest_idle")}</td>
+                    <td><b style="color:var(--accent)">{lifetimeStats.lowest_idle_power_w.toFixed(1)} W</b></td>
+                  </tr>
+                {/if}
+                <tr>
+                  <td>📅 {i18n.t("about.tracking_since")}</td>
+                  <td>
+                    {fmtTrackingSince(lifetimeStats.first_ts)}
+                    <span class="sub" style="margin-left:.4em">({lifetimeStats.samples_count.toLocaleString()} samples)</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          {/if}
 
           <p class="sub" style="margin-top:1.4em;font-size:.78em">
             💡 {i18n.t("about.stats_moved_hint")}

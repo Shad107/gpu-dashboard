@@ -430,6 +430,20 @@ export const api = {
       error?: string;
     }>),
 
+  lifetimeStats: (gpu = 0) =>
+    fetch("/api/lifetime-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
+      ok: boolean;
+      gpu_index: number;
+      samples_count: number;
+      first_ts: number | null;
+      last_ts: number | null;
+      peak_temp_c: number | null;
+      peak_power_w: number | null;
+      peak_fan_pct: number | null;
+      peak_fan_rpm: number | null;
+      lowest_idle_power_w: number | null;
+    }>),
+
   runBenchmark: (opts: { profileA: string; profileB: string; durationS: number }) =>
     fetch("/api/benchmark/run", {
       method: "POST",
