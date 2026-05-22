@@ -768,7 +768,7 @@ def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
         avg = (prev_s["power"] + cur["power"]) / 2
         year_wh += avg * dt / 3600
     kwh_year = year_wh / 1000
-    cost_year = round(kwh_year * price, 2)
+    cost_year = round(kwh_year * price, 4)  # match kwh_today precision
 
     series = []
     for h in range(24):
@@ -785,7 +785,7 @@ def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
         "peak_ts": peak_ts,
         "kwh_today": round(kwh_today, 4),
         "cost_today": cost_today,
-        "kwh_year": round(kwh_year, 2),
+        "kwh_year": round(kwh_year, 4),  # 4-decimal precision matches kwh_today
         "cost_year": cost_year,
         "year_start_ts": year_start,
         "currency": currency,
