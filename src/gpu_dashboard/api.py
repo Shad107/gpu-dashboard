@@ -2733,6 +2733,52 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #4.2 — Clocks-event-reasons decoder ────────────────────────────────
+_CLOCK_EVENT_REASONS = [
+    # field name in nvidia-smi → (key, label_short, mitigation_hint)
+    ("clocks_event_reasons.gpu_idle",                ("gpu_idle",       "Idle",          "Normal — GPU is idle.")),
+    ("clocks_event_reasons.applications_clocks_setting", ("apps_clocks", "Apps clocks",   "User-set application clocks limit.")),
+    ("clocks_event_reasons.sw_power_cap",            ("sw_power_cap",   "Power cap",     "Power limit hit — raise --power-limit or reduce workload.")),
+    ("clocks_event_reasons.hw_slowdown",             ("hw_slowdown",    "HW slowdown",   "Hardware throttle. Check temp + PSU + cables (over_temp / power_brake).")),
+    ("clocks_event_reasons.sync_boost",              ("sync_boost",     "Sync boost",    "Boost is sync'd with another GPU in the same group.")),
+    ("clocks_event_reasons.sw_thermal_slowdown",     ("sw_thermal",     "SW thermal",    "Driver-side thermal throttle. Improve cooling / lower clocks.")),
+    ("clocks_event_reasons.hw_thermal_slowdown",     ("hw_thermal",     "HW thermal",    "Hardware thermal limit reached. Critical — clean fans, repaste, lower PL.")),
+    ("clocks_event_reasons.hw_power_brake_slowdown", ("hw_power_brake", "Power brake",   "External PSU brake signal — bad cable / underspec'd PSU.")),
+    # display_clock_setting removed — not exposed by driver 560+. Keep
+    # the list to widely-supported fields to avoid 'invalid field' rc=2.
+]
+
+
+def handle_clock_events(ctx: dict) -> Response:
+    """Decode current throttle reasons from nvidia-smi clocks_event_reasons.
+
+    Returns a list of reasons currently 'Active' with a plain-language label
+    + mitigation hint. Empty list means no throttle.
+
+    Response :
+      {ok: bool, available: bool, reasons: [{key, label, hint}], raw: {...}}
+    """
+    fields = [f for f, _ in _CLOCK_EVENT_REASONS]
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", f"--query-gpu={','.join(fields)}", "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=2,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return 200, {"ok": True, "available": False, "reasons": [], "raw": {}}
+    if r.returncode != 0 or not r.stdout.strip():
+        return 200, {"ok": True, "available": False, "reasons": [], "raw": {}}
+    parts = [p.strip() for p in r.stdout.strip().splitlines()[0].split(",")]
+    raw: dict = {}
+    reasons: list = []
+    for (field, (key, label, hint)), value in zip(_CLOCK_EVENT_REASONS, parts):
+        active = value.lower() == "active"
+        raw[key] = active
+        if active:
+            reasons.append({"key": key, "label": label, "hint": hint})
+    return 200, {"ok": True, "available": True, "reasons": reasons, "raw": raw}
+
+
 # ─── R&D #4.1 — Prometheus /metrics endpoint ───────────────────────────────
 def handle_prometheus_metrics(ctx: dict) -> Tuple[int, str]:
     """OpenMetrics-formatted live snapshot for every detected GPU.

@@ -13,6 +13,10 @@
   let llm = $state<Awaited<ReturnType<typeof api.llmStats>> | null>(null);
   let llmLifetime = $state<Awaited<ReturnType<typeof api.llmLifetime>> | null>(null);
   let llmPerf = $state<Awaited<ReturnType<typeof api.llmPerf>> | null>(null);
+  let clockEvts = $state<Awaited<ReturnType<typeof api.clockEvents>> | null>(null);
+  async function loadClockEvts() {
+    try { clockEvts = await api.clockEvents(); } catch {}
+  }
   async function loadElec() {
     try { elec = await api.electricity(3600, gpu.selected); } catch { /* keep last */ }
   }
@@ -66,20 +70,24 @@
   let llmTimer: ReturnType<typeof setInterval> | null = null;
   let llmLifeTimer: ReturnType<typeof setInterval> | null = null;
   let llmPerfTimer: ReturnType<typeof setInterval> | null = null;
+  let clockEvtsTimer: ReturnType<typeof setInterval> | null = null;
   onMount(() => {
     loadElec();
     loadLlm();
     loadLlmLifetime();
     loadLlmPerf();
+    loadClockEvts();
     elecTimer = setInterval(loadElec, 60_000);
     llmTimer = setInterval(loadLlm, 30_000);
     llmLifeTimer = setInterval(loadLlmLifetime, 120_000);
     llmPerfTimer = setInterval(loadLlmPerf, 30_000);
+    clockEvtsTimer = setInterval(loadClockEvts, 15_000);
     return () => {
       if (elecTimer) clearInterval(elecTimer);
       if (llmTimer) clearInterval(llmTimer);
       if (llmLifeTimer) clearInterval(llmLifeTimer);
       if (llmPerfTimer) clearInterval(llmPerfTimer);
+      if (clockEvtsTimer) clearInterval(clockEvtsTimer);
     };
   });
 
@@ -210,6 +218,13 @@
           <div class="sub" style="margin-top:.2em">
             PCIe <b style:color={pcieDowngrade ? "var(--accent-warn)" : "var(--text-muted)"}>Gen {g.pcie_gen} ×{g.pcie_width}</b>
             {#if pcieDowngrade}<span style="color:var(--accent-warn);margin-left:.3em">⚠️</span>{/if}
+          </div>
+        {/if}
+        <!-- Throttle reason (R&D #4.2) — non-idle only -->
+        {#if clockEvts?.available && clockEvts.reasons.some(r => r.key !== "gpu_idle")}
+          {@const tr = clockEvts.reasons.filter(r => r.key !== "gpu_idle")[0]}
+          <div class="sub" style="margin-top:.3em;color:var(--accent-warn);font-size:.78em" title={tr.hint}>
+            ⚠️ {tr.label}
           </div>
         {/if}
       </div>

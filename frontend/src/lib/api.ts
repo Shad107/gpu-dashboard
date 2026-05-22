@@ -448,6 +448,14 @@ export const api = {
       modules_enabled: string[];
     }>),
 
+  clockEvents: () =>
+    fetch("/api/clock-events").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reasons: Array<{ key: string; label: string; hint: string }>;
+      raw: Record<string, boolean>;
+    }>),
+
   lifetimeStats: (gpu = 0) =>
     fetch("/api/lifetime-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
