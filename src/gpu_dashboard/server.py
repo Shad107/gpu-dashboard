@@ -502,6 +502,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_heartbeat_list(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/journal/tail":
+                code, body = api.handle_journal_tail(ctx, params)
+                self._send_json(code, body)
+                return
             # /api/heartbeat/<token> — inbound ping from training scripts
             if path.startswith("/api/heartbeat/"):
                 token = path[len("/api/heartbeat/"):].strip("/")

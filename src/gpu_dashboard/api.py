@@ -2772,6 +2772,98 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #6.7 — journalctl bridge with saved filters ─────────────────────────
+# Pre-canned filters for GPU-relevant log noise. Each maps to a regex applied
+# to journalctl messages.
+_JOURNAL_FILTERS = {
+    "nvidia":   r"nvidia|NVRM",
+    "nvrm":     r"NVRM",
+    "xid":      r"NVRM:.*Xid|\bXid\s*\(",
+    "oom":      r"oom-killer|out of memory|OOM",
+    "thermal":  r"thermal|throttle|over[- ]?temp",
+    "pcieport": r"pcieport|PCIe|aer",
+    "xorg":     r"\bXorg\b|nvidia-modeset",
+    "all":      r".",
+}
+
+
+def handle_journal_tail(ctx: dict, params: Optional[dict] = None) -> Response:
+    """Return recent journalctl entries matching a pre-canned filter.
+
+    Query params :
+      filter = nvidia (default) | nvrm | xid | oom | thermal | pcieport | xorg | all
+      since  = '1h' (default), '15m', '24h', etc. (passed to --since)
+      limit  = 100 (default), max 500
+    """
+    import re as _re
+    params = params or {}
+    fkey = params.get("filter", "nvidia")
+    if fkey not in _JOURNAL_FILTERS:
+        return 400, {"ok": False, "error": f"unknown filter '{fkey}'"}
+    since = params.get("since", "1h")
+    if not _re.match(r"^\d{1,4}(m|h|d|s)$", since):
+        return 400, {"ok": False, "error": "since must be like '1h', '30m', '24h'"}
+    try:
+        limit = max(1, min(500, int(params.get("limit", 100))))
+    except (ValueError, TypeError):
+        limit = 100
+
+    pattern = _JOURNAL_FILTERS[fkey]
+    # Convert 'XX{m,h,d,s}' to journalctl-accepted 'X minute/hour/day/second ago'
+    unit_map = {"m": "minutes", "h": "hours", "d": "days", "s": "seconds"}
+    since_human = f"{since[:-1]} {unit_map[since[-1]]} ago"
+    try:
+        # Try kernel ring buffer first, fall back to all-journal on permission errors
+        r = subprocess.run(
+            ["journalctl", "-k", "--since", since_human, "-o", "short-iso", "--no-pager"],
+            capture_output=True, text=True, timeout=4,
+        )
+        # If -k failed or returned nothing useful, retry without -k
+        if r.returncode != 0 or "-- No entries --" in r.stdout:
+            r = subprocess.run(
+                ["journalctl", "--since", since_human, "-o", "short-iso", "--no-pager"],
+                capture_output=True, text=True, timeout=4,
+            )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError) as e:
+        return 200, {"ok": True, "available": False, "reason": f"journalctl unavailable: {e}"}
+    if r.returncode != 0:
+        return 200, {"ok": True, "available": False, "reason": "journalctl returned non-zero"}
+
+    rx = _re.compile(pattern, _re.IGNORECASE)
+    entries: list = []
+    for line in r.stdout.splitlines():
+        if not rx.search(line):
+            continue
+        # Parse 'YYYY-MM-DDTHH:MM:SS+0200 host kernel: msg' shape
+        parts = line.split(" ", 3)
+        if len(parts) < 4:
+            entries.append({"ts": "", "host": "", "source": "", "msg": line})
+            continue
+        ts, host, source, msg = parts
+        entries.append({"ts": ts, "host": host, "source": source.rstrip(":"), "msg": msg})
+    # Keep the most recent `limit`
+    entries = entries[-limit:]
+
+    # Detect Xid errors specifically — useful for chart markers
+    xids: list = []
+    rx_xid = _re.compile(r"\bXid\s*\([^)]*\):\s*(\d+),?\s*(.*)$")
+    for e in entries:
+        m = rx_xid.search(e["msg"])
+        if m:
+            xids.append({"ts": e["ts"], "xid_code": int(m.group(1)), "summary": m.group(2)})
+
+    return 200, {
+        "ok": True,
+        "available": True,
+        "filter": fkey,
+        "since": since,
+        "count": len(entries),
+        "entries": entries,
+        "xid_events": xids,
+        "filters_available": list(_JOURNAL_FILTERS.keys()),
+    }
+
+
 # ─── R&D #6.2 — Deadman heartbeat (inbound + outbound) ───────────────────────
 def _heartbeats_path() -> str:
     return os.path.expanduser("~/.config/gpu-dashboard/heartbeats.json")
