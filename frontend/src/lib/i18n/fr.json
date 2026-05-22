@@ -252,6 +252,8 @@
   "apptriggers.saved": "Déclencheurs sauvegardés",
   "apptriggers.app_placeholder": "ex. blender",
   "apptriggers.examples": "Exemples : blender·llama-server·cyberpunk·steam-runtime. Match insensible à la casse, sous-chaîne dans /proc/<pid>/comm.",
+  "card.pcie": "PCIe",
+  "pcie.downgrade": "bridé",
   "alertfooter.last": "Dernière alerte",
   "alertfooter.ago": "",
   "alertfooter.no_alerts_7d": "Aucune alerte depuis 7 jours",

@@ -12,6 +12,7 @@ export const CARD_NAMES = [
   "fans",
   "vram",
   "oculink",
+  "pcie",
   "llm_model",
   "llm_throughput",
   "electricity",

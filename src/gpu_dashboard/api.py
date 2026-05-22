@@ -38,7 +38,10 @@ def _gpu_card_snapshot(gpu_index: int = 0) -> dict:
             ["nvidia-smi",
              "-i", str(int(gpu_index)),
              "--query-gpu=name,temperature.gpu,fan.speed,power.draw,power.limit,"
-             "utilization.gpu,memory.used,memory.total,temperature.memory,vbios_version",
+             "utilization.gpu,memory.used,memory.total,temperature.memory,vbios_version,"
+             "utilization.encoder,utilization.decoder,"
+             "pcie.link.gen.current,pcie.link.gen.max,"
+             "pcie.link.width.current,pcie.link.width.max",
              "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=3,
         )
@@ -58,6 +61,12 @@ def _gpu_card_snapshot(gpu_index: int = 0) -> dict:
 
     mem_temp = _intish(parts[8]) if len(parts) > 8 else None
     vbios = parts[9] if len(parts) > 9 else None
+    util_enc = _intish(parts[10]) if len(parts) > 10 else None
+    util_dec = _intish(parts[11]) if len(parts) > 11 else None
+    pcie_gen     = _intish(parts[12]) if len(parts) > 12 else None
+    pcie_gen_max = _intish(parts[13]) if len(parts) > 13 else None
+    pcie_width     = _intish(parts[14]) if len(parts) > 14 else None
+    pcie_width_max = _intish(parts[15]) if len(parts) > 15 else None
 
     return {
         "alive": True,
@@ -70,8 +79,14 @@ def _gpu_card_snapshot(gpu_index: int = 0) -> dict:
         "util_gpu": int(parts[5]),
         "mem_used_mib": int(parts[6]),
         "mem_total_mib": int(parts[7]),
-        "mem_temp": mem_temp,         # GDDR junction temp, °C (None if unsupported)
-        "vbios_version": vbios,       # str (None if unsupported)
+        "mem_temp": mem_temp,
+        "vbios_version": vbios,
+        "util_enc": util_enc,            # NVENC %, None if unsupported
+        "util_dec": util_dec,            # NVDEC %, None if unsupported
+        "pcie_gen": pcie_gen,            # 1-5
+        "pcie_gen_max": pcie_gen_max,
+        "pcie_width": pcie_width,        # ×1, ×4, ×8, ×16
+        "pcie_width_max": pcie_width_max,
     }
 
 

@@ -100,6 +100,28 @@
           {i18n.t("gpu.mem_temp")} {g.mem_temp}°C
         </div>
       {/if}
+      {#if (g.util_enc != null && g.util_enc > 0) || (g.util_dec != null && g.util_dec > 0)}
+        <div class="sub" style="margin-top:.2em">
+          ENC <b>{g.util_enc ?? 0}%</b> · DEC <b>{g.util_dec ?? 0}%</b>
+        </div>
+      {/if}
+    </div>
+    {/if}
+
+    {#if layout.visible("pcie") && g.pcie_gen != null && g.pcie_width != null}
+    <div class="card" style:order={layout.indexOf("pcie")}>
+      <h2>{i18n.t("card.pcie") ?? "PCIe"}</h2>
+      {@const downgrade = (g.pcie_gen_max != null && g.pcie_gen < g.pcie_gen_max)
+                       || (g.pcie_width_max != null && g.pcie_width < g.pcie_width_max)}
+      <div class="big" style:color={downgrade ? "var(--accent-warn)" : "var(--accent)"}>
+        Gen {g.pcie_gen} ×{g.pcie_width}
+      </div>
+      <div class="sub">
+        {#if g.pcie_gen_max != null && g.pcie_width_max != null}
+          max Gen {g.pcie_gen_max} ×{g.pcie_width_max}
+          {#if downgrade}<span style="color:var(--accent-warn);margin-left:.4em">⚠️ {i18n.t("pcie.downgrade") ?? "downgraded"}</span>{/if}
+        {/if}
+      </div>
     </div>
     {/if}
 

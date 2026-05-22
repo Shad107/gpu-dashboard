@@ -18,7 +18,10 @@ from typing import List, Optional
 
 _NVIDIA_SMI_QUERY = (
     "temperature.gpu,fan.speed,clocks.current.graphics,clocks.current.memory,"
-    "power.draw,power.limit,utilization.gpu,memory.used"
+    "power.draw,power.limit,utilization.gpu,memory.used,"
+    "utilization.encoder,utilization.decoder,"
+    "pcie.link.gen.current,pcie.link.gen.max,"
+    "pcie.link.width.current,pcie.link.width.max"
 )
 
 
@@ -197,6 +200,12 @@ class MetricsSampler:
             if len(parts) > 5: sample["power_limit"] = _float(parts[5])
             if len(parts) > 6: sample["util_gpu"]    = _int(parts[6])
             if len(parts) > 7: sample["mem_used_mib"] = _int(parts[7])
+            if len(parts) > 8: sample["util_enc"]    = _int(parts[8])
+            if len(parts) > 9: sample["util_dec"]    = _int(parts[9])
+            if len(parts) > 10: sample["pcie_gen"]       = _int(parts[10])
+            if len(parts) > 11: sample["pcie_gen_max"]   = _int(parts[11])
+            if len(parts) > 12: sample["pcie_width"]     = _int(parts[12])
+            if len(parts) > 13: sample["pcie_width_max"] = _int(parts[13])
             # Per-fan RPM via nvidia-settings (GPU 0 only — multi-GPU per-fan
             # extraction would need its own loop with /Fan[N] selectors per GPU)
             if gpu_index == 0 and self._display:

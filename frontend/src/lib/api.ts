@@ -26,6 +26,12 @@ export type Gpu =
       mem_total_mib: number;
       mem_temp?: number | null;
       vbios_version?: string | null;
+      util_enc?: number | null;
+      util_dec?: number | null;
+      pcie_gen?: number | null;
+      pcie_gen_max?: number | null;
+      pcie_width?: number | null;
+      pcie_width_max?: number | null;
     };
 
 export type Fan = { idx: number; rpm?: number; pct?: number; target?: number };

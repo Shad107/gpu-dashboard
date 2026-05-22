@@ -252,6 +252,8 @@
   "apptriggers.saved": "Triggers saved",
   "apptriggers.app_placeholder": "e.g. blender",
   "apptriggers.examples": "Examples : blender·llama-server·cyberpunk·steam-runtime. Match is case-insensitive substring against /proc/<pid>/comm.",
+  "card.pcie": "PCIe",
+  "pcie.downgrade": "downgraded",
   "alertfooter.last": "Last alert",
   "alertfooter.ago": "ago",
   "alertfooter.no_alerts_7d": "No alerts in the last 7 days",
