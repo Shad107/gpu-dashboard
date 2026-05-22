@@ -79,7 +79,7 @@
   function openChipTarget() {
     if (chip.kind === "alert") modal.show("alerts");
     else if (chip.kind === "profile_switch") modal.show("about");
-    else if (chip.kind === "update") modal.show("services");
+    else if (chip.kind === "update") modal.show("about");
   }
   onMount(() => {
     refreshChip();

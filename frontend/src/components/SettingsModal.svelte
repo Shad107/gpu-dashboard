@@ -925,33 +925,9 @@
           </button>
         </div>
 
-        <h3 style="margin-top:1.8em;color:#cdd2da;font-size:.95em;font-weight:600">
-          {i18n.t("services.update_label")}
-        </h3>
-        <p class="sub">{i18n.t("services.update_description")}</p>
-        <div class="btn-row" style="margin-top:.8em">
-          <button class="btn" disabled={updateChecking} onclick={checkUpdate}>
-            🔍 {updateChecking ? "…" : i18n.t("services.update_check_btn")}
-          </button>
-          {#if updateStatus}
-            {#if updateStatus.behind === null}
-              <span class="sub">{i18n.t("services.update_unknown")}</span>
-            {:else if updateStatus.behind === 0}
-              <span class="ok">{i18n.t("services.update_up_to_date")}</span>
-              <span class="sub">@{updateStatus.current_sha}</span>
-            {:else}
-              <span class="warn">{i18n.t("services.update_behind", { n: updateStatus.behind, s: (updateStatus.behind || 0) > 1 ? "s" : "" })}</span>
-              <button class="btn btn-primary" disabled={pulling} onclick={pullAndRestart}>
-                ⬇️ {pulling ? "…" : i18n.t("services.update_pull_btn")}
-              </button>
-            {/if}
-          {/if}
-        </div>
-        {#if updateStatus?.last_remote_msg}
-          <p class="sub" style="margin-top:.4em;font-size:.78em;font-style:italic">
-            Latest: "{updateStatus.last_remote_msg}"
-          </p>
-        {/if}
+        <p class="sub" style="margin-top:1.4em;font-size:.78em">
+          💡 {i18n.t("services.update_moved_hint") ?? "Mise à jour : voir l'onglet À propos."}
+        </p>
       </div>
 
       <!-- Alerts -->
@@ -1091,6 +1067,37 @@
                 </tr>
               </tbody>
             </table>
+          {/if}
+
+          <!-- ─── Update check + 1-click pull (cycle 144 — moved from Services per user fb) ─── -->
+          <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
+            ⬇️ {i18n.t("about.update_section") ?? "Mise à jour"}
+          </h3>
+          <p class="sub" style="margin:0 0 .6em;font-size:.82em">
+            {i18n.t("about.update_description") ?? "Vérifie la version distante sur GitHub. Si une nouvelle est dispo, applique avec git pull + restart automatique."}
+          </p>
+          <div class="btn-row">
+            <button class="btn" disabled={updateChecking} onclick={checkUpdate}>
+              🔍 {updateChecking ? "…" : i18n.t("services.update_check_btn")}
+            </button>
+            {#if updateStatus}
+              {#if updateStatus.behind === null}
+                <span class="sub">{i18n.t("services.update_unknown")}</span>
+              {:else if updateStatus.behind === 0}
+                <span class="ok">✓ {i18n.t("services.update_up_to_date")}</span>
+                <span class="sub">@{updateStatus.current_sha}</span>
+              {:else}
+                <span class="warn">🔔 {i18n.t("services.update_behind", { n: updateStatus.behind, s: (updateStatus.behind || 0) > 1 ? "s" : "" })}</span>
+                <button class="btn btn-primary" disabled={pulling} onclick={pullAndRestart}>
+                  ⬇️ {pulling ? "…" : i18n.t("services.update_pull_btn")}
+                </button>
+              {/if}
+            {/if}
+          </div>
+          {#if updateStatus?.last_remote_msg}
+            <p class="sub" style="margin-top:.4em;font-size:.78em;font-style:italic">
+              Latest commit : "{updateStatus.last_remote_msg}"
+            </p>
           {/if}
 
           <p class="sub" style="margin-top:1.4em;font-size:.78em">
