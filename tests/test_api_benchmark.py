@@ -18,7 +18,7 @@ class FakeSampler:
 
 def _ctx(monkeypatch):
     # Avoid hitting actual nvidia-smi
-    monkeypatch.setattr(api._monolith, "handle_power_profile_apply",
+    monkeypatch.setattr(api.power, "handle_power_profile_apply",
                         lambda ctx, name: (200, {"ok": True, "name": name}))
     # Avoid real sleeping — replace _time.sleep at module level
     import gpu_dashboard.modules.benchmark as bm
@@ -67,7 +67,7 @@ def test_run_rejects_long_duration(monkeypatch):
 
 
 def test_run_no_sampler_returns_503(monkeypatch):
-    monkeypatch.setattr(api._monolith, "handle_power_profile_apply",
+    monkeypatch.setattr(api.power, "handle_power_profile_apply",
                         lambda ctx, name: (200, {"ok": True}))
     code, body = api.handle_benchmark_run({"sampler": None}, {
         "profile_a": "silent", "profile_b": "boost", "duration_s": 30,

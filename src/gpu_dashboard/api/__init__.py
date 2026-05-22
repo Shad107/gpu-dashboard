@@ -43,6 +43,14 @@ from .llm import (  # noqa: F401
     handle_jupyter_kernels,
     handle_snapshot_at,
 )
+from .power import (  # noqa: F401
+    handle_set_power_limit,
+    handle_set_offsets,
+    handle_profile_stats,
+    handle_auto_profile_status,
+    handle_power_profiles_list,
+    handle_power_profile_apply,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
@@ -77,12 +85,21 @@ from .llm import (  # noqa: F401,F811
     handle_jupyter_kernels,
     handle_snapshot_at,
 )
-# Helpers moved to llm.py — re-export for tests
+from .power import (  # noqa: F401,F811
+    handle_set_power_limit,
+    handle_set_offsets,
+    handle_profile_stats,
+    handle_auto_profile_status,
+    handle_power_profiles_list,
+    handle_power_profile_apply,
+)
+# Helpers moved to submodules — re-export for tests
 from .llm import (  # noqa: F401,F811
     _parse_llamacpp_metrics,
     _tokens_per_watt,
     _llm_model_served,
 )
+from .power import _POWER_PROFILES, _read_power_profile  # noqa: F401,F811
 
 # Private helpers used by tests (and by future submodules during migration).
 # `from X import *` skips underscore-prefixed names, so we list these explicitly.
