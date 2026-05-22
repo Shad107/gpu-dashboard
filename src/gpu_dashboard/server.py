@@ -680,6 +680,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_vram_quota_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hot-gpu-wizard":
+                # R&D #13.6 — diagnostic decision tree
+                code, body = api.handle_hot_gpu_wizard(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/vram-quota/evaluate":
                 code, body = api.handle_vram_quota_evaluate(ctx, params)
                 self._send_json(code, body)
