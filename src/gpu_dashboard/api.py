@@ -2772,6 +2772,24 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #11.6 — iCal feed of GPU events ─────────────────────────────────
+def handle_ical_feed(ctx: dict, params: Optional[dict] = None) -> Tuple[int, str]:
+    """Emit an RFC 5545 iCalendar feed of recent GPU events.
+
+    Query params :
+      days = lookback period (default 30, max 365)
+    """
+    from .modules import ical_feed
+    params = params or {}
+    try:
+        days = max(1, min(365, int(params.get("days", "30"))))
+    except (ValueError, TypeError):
+        days = 30
+    events = ical_feed.collect_events(ctx.get("storage"), days=days)
+    text = ical_feed.render_calendar(events)
+    return 200, text
+
+
 # ─── R&D #11.5 — Weekly HTML + plain-text report ─────────────────────────
 def handle_weekly_report(ctx: dict, params: Optional[dict] = None) -> Tuple[int, str]:
     """Generate the weekly summary report.

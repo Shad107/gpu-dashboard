@@ -561,6 +561,17 @@ def make_handler(ctx: dict):
                 code, body = api.handle_service_discovery(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/calendar/events.ics":
+                code, ics_body = api.handle_ical_feed(ctx, params)
+                data = ics_body.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "text/calendar; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Content-Disposition", 'inline; filename="gpu-events.ics"')
+                self.send_header("Cache-Control", "public, max-age=300")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path == "/api/report/weekly":
                 code, body_text = api.handle_weekly_report(ctx, params)
                 fmt = (params or {}).get("fmt", "html")
