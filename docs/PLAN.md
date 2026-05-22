@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:26 (cycle 109 done — /api/version)
-**Latest commit** : `8ee8bcf` — /api/version minimal
+**Last updated** : 2026-05-22 02:30 (cycle 110 done — alerts list in Stats)
+**Latest commit** : `c0e7c04` — alerts list in StatsView
 **Tests** : 534 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -59,6 +59,13 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 110 — Recent alerts section in StatsView (1 commit)
+- `c0e7c04` New section after the heatmap : 🚨 Recent alerts (7 days)
+  - Sources from /api/health.recent_alerts
+  - 3-column table : relative time · kind · detail
+  - Empty state reuses alertfooter.no_alerts_7d key
+  - 1 new i18n key × 2 langs
 
 ### Cycle 109 — /api/version minimal endpoint (1 commit)
 - `8ee8bcf` Tiny payload : {version, schema_version, modules_enabled}
@@ -502,7 +509,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~118 |
+| Commits since v0.1.0 | ~119 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
