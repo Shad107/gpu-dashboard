@@ -11,6 +11,25 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #6 (2026-05-22 13:50) — AUTO-OPENED post #5
+
+Per the standing **auto-rebound rule**, surveyed fresh tools (Apprise, Healthchecks, journalctl, cgroup/systemd-cgtop, glances iowait, restic/borg, kernel sysrq, Tailscale/Caddy reverse-proxy) — identified 8 candidates :
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 6.1 | **Unified Notification Hub (Apprise-style)** | M | 5 | Discord/Slack/Matrix/Gotify/ntfy/Pushover/SMTP via urllib. Per-channel filters, retry queue |
+| 6.2 | **Deadman heartbeat + inbound pings** | S | 5 | Outbound healthcheck ping + `/api/heartbeat/<token>` for training scripts |
+| 6.3 | **System-context sidecar (iowait/swap/load)** | M | 5 | /proc samples on same cadence → 'Probable IO stall' band annotation |
+| 6.4 | Reverse-proxy / remote-access wizard | M | 4 | Generated Caddy/Nginx/Tailscale Serve snippets + probe |
+| 6.5 | Hung-GPU auto-recovery ladder | L | 4 | sysrq + nvidia-smi --gpu-reset → kill train → modprobe |
+| 6.6 | Snapshot backup rotation | M | 4 | Hourly/daily/weekly tarball with content-hash dedup |
+| 6.7 | **journalctl bridge with saved filters** | S | 5 | Filtered tail of nvidia/xid/oom/thermal + chart marker on XID |
+| 6.8 | **cgroup per-process power accounting** | M | 5 | Watts-per-PID via SM-share split, grouped by systemd.slice |
+
+**Start order** : 6.2 (S, quick-win) → 6.7 (S, immediate utility) → 6.1 (M, unlocks future channels) → 6.3 (M) → 6.8 (M).
+
+---
+
 ## ✅ R&D iteration #5 complete (3/3 priority shipped — 2026-05-22 13:46)
 
 Per the standing **auto-rebound R&D rule** (user 'fais vivre le plan'), surveyed fresh tools (lm-sensors / sysstat / perf / btop / intel_gpu_top / k6 / fio / supervisord / WaybarBatteryNvidia / smartmontools / gpu-burn / NVML bindings) and identified 8 candidates :
