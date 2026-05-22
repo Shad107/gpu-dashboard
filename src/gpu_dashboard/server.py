@@ -645,6 +645,11 @@ def make_handler(ctx: dict):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if path == "/api/wall-meter":
+                # R&D #12.1 — smart-plug PSU reading + efficiency
+                code, body = api.handle_wall_meter(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/snapshot":
                 code, body = api.handle_snapshot_at(ctx, params)
                 self._send_json(code, body)
