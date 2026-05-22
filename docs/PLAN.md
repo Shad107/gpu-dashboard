@@ -3,22 +3,54 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 07:25 (cycle 115 done — About → Stats reorg per user feedback)
-**Latest commit** : `1c6a333` — About slim + Stats consolidated
+**Last updated** : 2026-05-22 07:38 (R&D section opened — user redirect to autonomous feature discovery)
+**Latest commit** : `bdb3d02` — refreshed docs/ screenshots
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-User redirected 2026-05-22 07:23 : "le about complèté a les totaux consolider
-peut être a mettre ailleurs ... faut réorganise". Loop back to 270s active.
+**User redirect 2026-05-22 07:35** : "à toi de trouver de nouvelles features
+... sur des logiciels équivalent ou pas ... en gros r&d". Loop now in
+autonomous R&D mode — survey equivalent tools, document findings in the
+R&D section below, implement what fits the project's spirit (Linux/NVIDIA,
+no SaaS, no paid tier).
 
-### Cycle 115 — About → Stats reorg (2 commits)
+### Cycle 115 — About → Stats reorg (3 commits)
 - `86886fa` SettingsModal About stripped to version/vBIOS/paths/license/repo + hint
-  StatsView gains 📊 Year-to-date totals card + recent switches log
-- `1c6a333` i18n keys companion (the previous Edit batch missed the JSON files)
-- User confirmed fan curve stays in Settings → Tuning.
+- `1c6a333` i18n keys companion
+- `bdb3d02` Refreshed docs/modal/about.png + docs/stats.png
+
+---
+
+## 💡 R&D — Feature discovery from equivalent tools (2026-05-22)
+
+### Scan : what equivalent tools do that we don't
+
+| Tool | Notable feature | Worth porting ? |
+|---|---|---|
+| **MSI Afterburner** | OC Scanner — auto-find max stable clocks | ❌ risky on Linux + needs hours of stress |
+| **MSI Afterburner / RTSS** | On-screen display overlay in games | ⚠️ complex (Vulkan layer / MangoHud territory) |
+| **CoreCtrl / LACT** | **Per-application profiles** — auto-switch on app launch | ✅ **HIGH** — extends auto_profile_daemon |
+| **GreenWithEnvy** | Fan curve hysteresis tunable per-curve | already ±2°C global |
+| **nvtop / nvitop** | Per-process VRAM + util tree real-time | ✅ Cards.svelte has it static — can be expanded |
+| **HWiNFO** | NVENC/NVDEC/OpticalFlow utilization | ✅ **HIGH** — nvidia-smi exposes these |
+| **HWiNFO** | PCIe link state (gen + width + state) | ✅ low effort, big info value |
+| **GPU-Z** | vBIOS download + sensors snapshot CSV | partial (we have CSV export) |
+| **Mission Center** | Monthly GPU energy budget | ✅ extends our €/month with **budget alert** |
+| **CoreCtrl** | Performance state lock (P0/P2/P8) | ✅ via nvidia-smi -lgc, niche |
+| **Custom** | **Compare-A-vs-B benchmark** | ✅ **HIGH** — leverages samples + profiles |
+| **Custom** | **Plot SVG export** | ✅ low-effort report polish |
+
+### Picked for upcoming cycles (ranked by value/effort)
+
+1. **Per-app profile triggers** (cycle 116-119) — watch `/proc/*/comm` for `blender`, `llama-server`, etc., each mapped to a profile.
+2. **NVENC/NVDEC + PCIe metrics** (cycle 120) — nvidia-smi exposes encoder/decoder util + pcie.link.gen/width.
+3. **Monthly power budget tracker** (cycle 121) — kWh budget config + dashboard progress bar + forecast alert.
+4. **Compare-A-vs-B benchmark** (cycle 122-123) — modal to run workload on 2 profiles + compare.
+5. **Plot SVG export** (cycle 124) — ⬇️ button on each chart → download SVG.
+6. **GPU process tree expansion** (cycle 125) — Cards processes : PID + cmdline tooltip + %VRAM bar.
 
 ---
 
