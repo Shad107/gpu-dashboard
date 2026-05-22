@@ -131,34 +131,44 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .strip-arrow:hover { color: var(--accent); background: var(--bg-card); opacity: 1; }
 .strip-arrow-left { left: -8px; }
 .strip-arrow-right { right: -8px; }
-.strip-merged > .card {
-  flex: 0 0 200px;
-  scroll-snap-align: start;
-}
-/* Inline vertical-pill dividers between groups */
-.group-divider {
-  flex: 0 0 auto;
+/* Strip groups : label above + cards row below.
+ * Multiple groups flow horizontally inside .strip. (Cycle 144d). */
+.strip-group {
   display: flex;
-  align-items: center;
-  border-left: 2px solid var(--border-subtle);
-  padding-left: 0.5em;
-  margin-left: 0.2em;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 0.25em;
+  padding-right: 0.6em;
+  margin-right: 0.4em;
+  border-right: 1px dashed var(--border-subtle);
 }
-.group-divider:first-child { border-left: none; padding-left: 0; margin-left: 0; }
-.group-divider-label {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+.strip-group:last-of-type {
+  border-right: none;
+  padding-right: 0;
+  margin-right: 0;
+}
+.strip-group-label {
+  margin: 0 0 0.2em;
   color: var(--text-muted);
   font-size: 0.72em;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
-  padding: 0.3em 0;
 }
-/* Legacy .row + .strip-block kept for back-compat (no tiles render them now) */
+.strip-cards {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0.5em;
+}
+.strip-cards > .card {
+  flex: 0 0 200px;
+  scroll-snap-align: start;
+}
+/* Legacy .row + .strip-block kept for back-compat */
 .row, .strip-block { display: contents; }
-.group-label { display: none; }
+.group-label, .group-divider { display: none; }
 
 /* (cycle 142b) Removed .dash-scroll + flex tricks — too brittle with
  * variable tile counts. Body scroll is the single source of truth. */

@@ -321,8 +321,12 @@
         <div class="sub">{d.watchdog.drops} {i18n.t("oculink.drops")}</div>
       </div>
     {/if}
+    </div>
+  </div>
 
-  <span class="group-divider"><span class="group-divider-label">🪙 {i18n.t("group.llm") ?? "LLM"}</span></span>
+  <div class="strip-group">
+    <h4 class="strip-group-label">🪙 {i18n.t("group.llm") ?? "LLM"}</h4>
+    <div class="strip-cards">
     {#if d?.llm_model && layout.visible("llm_model")}
       <div class="card">
         <h2>{i18n.t("card.llm_model")}</h2>
@@ -374,8 +378,12 @@
         {/if}
       </div>
     {/if}
+    </div>
+  </div>
 
-  <span class="group-divider"><span class="group-divider-label">💸 {i18n.t("group.cost") ?? "Coût"}</span></span>
+  <div class="strip-group">
+    <h4 class="strip-group-label">💸 {i18n.t("group.cost") ?? "Coût"}</h4>
+    <div class="strip-cards">
     {#if elec && layout.visible("electricity")}
       {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
       {@const budgetUsedPct = elec.budget_kwh > 0 ? Math.min(100, (elec.kwh_month / elec.budget_kwh) * 100) : 0}
@@ -468,5 +476,7 @@
         </div>
       {/if}
     {/each}
+    </div>
+  </div>
 </div>
 </div>
