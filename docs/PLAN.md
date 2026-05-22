@@ -11,6 +11,29 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #16 (2026-05-23 00:30) — AUTO-OPENED post #15 complete
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 16.1 | PCIe lane negotiation auditor | S | 5 | Extends 14.5 with timeline + RMA CSV export |
+| 16.2 | NVRAM / VBIOS drift watchdog | XS | 4 | Hash check on each boot |
+| 16.3 | Coil-whine spectrogram (mic FFT) | M | 5 | Stdlib FFT, 2-20kHz band |
+| 16.4 | Driver rollback vault | S | 5 | Cache last 3 .deb, side-by-side diff |
+| 16.5 | Per-card aging curve | M | 5 | Clock@TDP vs hours-on vs spec |
+| 16.6 | **NOC board** | S | 5 | /noc route, 10vw fonts, kiosk mode |
+| 16.7 | **LM-Studio model bridge** | S | 5 | Scan LM-Studio models dir + dedup cross-ref |
+| 16.8 | **1-click DR bundle** | S | 5 | VACUUM INTO + tar.zst + restore.sh |
+
+Start order : 16.6 (S, big screenshot demo) → 16.8 (S, useful) → 16.4 (S) → 16.7 (S) → 16.1/16.2/16.3/16.5 (mid effort).
+
+---
+
+## ✅ R&D iteration #15 complete (4/4 — 2026-05-23 00:14) + UI sprint 6
+Backend : 15.2 tariff · 15.3 dedup · 15.7 Discord · 15.8 boot profile.
+UI cycle 6 : 4 cards added (Settings → Integrations now has 21 cards total).
+
+---
+
 ## 💡 R&D iteration #15 (2026-05-22 23:55) — AUTO-OPENED post #14 complete
 
 | # | Feature | Effort | Fit | Notes |
