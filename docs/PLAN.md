@@ -3,7 +3,7 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 09:20 (cycle 134 done — R&D #3.1 sysreport bundle)
+**Last updated** : 2026-05-22 09:30 (cycle 135 done — R&D #3.2 header chip)
 **Latest commit** : `fe2d2a9` — benchmark scheduler helpers
 **Tests** : 637 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
@@ -160,7 +160,11 @@ Inspired by LibreHardwareMonitor, hardinfo/inxi, HWMonitor, systemd timers
    - Includes sysreport.json + events.json + REDACTED config.env + recent.log (500 lines)
    - _redact_env_file strips TELEGRAM_BOT_TOKEN, WEBHOOK_URL, VAPID keys
    - 6 new TDD tests · 637 → 643
-2. **Header status chip** (cycle 135) — small pill in header showing 'just switched: boost' or 'last alert: 30m ago — temp_high', clickable to open the relevant modal tab.
+2. **Header status chip** (cycle 135) ✅ DONE
+   - Header polls /api/health + /api/profile-stats every 60s
+   - Amber pill 🚨 for alerts → opens Alerts modal
+   - Green pill 🚀/⭐/🤫 for profile switches → opens About modal
+   - 1 new i18n key × 2 langs · pure frontend (no tests)
 3. **Uptime % in /api/health** (cycle 136) — add `up_seconds`, `restart_count`, `uptime_pct_24h` for Uptime Kuma badges.
 4. **Anomaly bands on history charts** (cycle 137) — compute μ ± 2σ rolling band, render dimmed area. Marks visual outliers.
 5. **Keyboard shortcuts cheat-sheet** (cycle 138) — modal triggered by `?` key showing all hotkeys (already have a few : `Esc`, arrow keys in fan curve).
