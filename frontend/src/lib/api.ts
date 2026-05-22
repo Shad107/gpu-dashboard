@@ -563,6 +563,69 @@ export const api = {
       }[];
     }>),
 
+  // ── R&D #6.1 — Notif Hub channels (UI sprint cycle 2) ──────────────────
+  notifChannelsList: () =>
+    fetch("/api/notif/channels").then(jsonOf<{
+      ok: boolean;
+      channels: Array<Record<string, any>>;
+      types_supported: string[];
+    }>),
+
+  notifChannelSave: (payload: Record<string, any>) =>
+    fetch("/api/notif/channels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(jsonOf<{ ok: boolean; id?: string; deleted?: string; error?: string }>),
+
+  notifChannelDelete: (id: string) =>
+    fetch("/api/notif/channels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ delete: id }),
+    }).then(jsonOf<{ ok: boolean; deleted?: string }>),
+
+  notifChannelTest: (channel: Record<string, any>) =>
+    fetch("/api/notif/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(channel),
+    }).then(jsonOf<{ ok: boolean; msg: string }>),
+
+  // ── R&D #9.3 — Auth tokens (UI sprint cycle 2) ─────────────────────────
+  authTokensList: () =>
+    fetch("/api/auth/tokens").then(jsonOf<{
+      ok: boolean;
+      tokens: Array<{ id: string; name: string; scope: string;
+                      created_ts: number; expires_ts: number | null }>;
+      scopes_supported: string[];
+    }>),
+
+  authTokenCreate: (payload: { name: string; scope: string; ttl_s?: number | null }) =>
+    fetch("/api/auth/tokens", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(jsonOf<{
+      ok: boolean; id?: string; secret?: string; scope?: string;
+      warning?: string; error?: string;
+    }>),
+
+  authTokenDelete: (id: string) =>
+    fetch(`/api/auth/tokens/${encodeURIComponent(id)}/delete`, {
+      method: "POST",
+    }).then(jsonOf<{ ok: boolean; deleted?: string; error?: string }>),
+
+  authShareCreate: (payload: { scope: string; ttl_s: number; sub?: string }) =>
+    fetch("/api/auth/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(jsonOf<{
+      ok: boolean; share_token?: string; scope?: string;
+      ttl_s?: number; sub?: string; error?: string;
+    }>),
+
   // ── R&D #11.1b — Watchdog setup (UI sprint) ────────────────────────────
   watchdogStatus: () =>
     fetch("/api/watchdog/status").then(jsonOf<{

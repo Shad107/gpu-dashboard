@@ -693,11 +693,161 @@
     } finally { hfLoading = false; }
   }
 
+  // Notif Hub (R&D #6.1)
+  let notifLoading = $state(false);
+  let notifChannels = $state<Record<string, any>[]>([]);
+  let notifTypes = $state<string[]>([]);
+  let notifEditing = $state<Record<string, any> | null>(null);
+  let notifBusy = $state(false);
+  async function loadNotifChannels() {
+    notifLoading = true;
+    try {
+      const r = await api.notifChannelsList();
+      notifChannels = r.channels ?? [];
+      notifTypes = r.types_supported ?? [];
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { notifLoading = false; }
+  }
+  function notifStartNew() {
+    notifEditing = {
+      id: "channel-" + Math.random().toString(36).slice(2, 8),
+      type: notifTypes[0] || "discord",
+      name: "",
+      enabled: true,
+      min_level: "warn",
+      url: "",
+      token: "",
+    };
+  }
+  async function notifSave() {
+    if (!notifEditing) return;
+    notifBusy = true;
+    try {
+      const r = await api.notifChannelSave(notifEditing);
+      if (r.ok) {
+        toast.emit("✓ Channel saved", "ok");
+        notifEditing = null;
+        await loadNotifChannels();
+      } else {
+        toast.emit("✗ " + (r.error || "save failed"), "err");
+      }
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { notifBusy = false; }
+  }
+  async function notifTest() {
+    if (!notifEditing) return;
+    notifBusy = true;
+    try {
+      const r = await api.notifChannelTest(notifEditing);
+      toast.emit((r.ok ? "✓ " : "✗ ") + (r.msg || ""), r.ok ? "ok" : "err");
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { notifBusy = false; }
+  }
+  async function notifDelete(id: string) {
+    if (!confirm(`Delete channel ${id}?`)) return;
+    try {
+      await api.notifChannelDelete(id);
+      toast.emit("✓ Channel deleted", "ok");
+      await loadNotifChannels();
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    }
+  }
+
+  // Auth tokens (R&D #9.3)
+  let authLoading = $state(false);
+  let authTokens = $state<Array<{ id: string; name: string; scope: string;
+                                    created_ts: number; expires_ts: number | null }>>([]);
+  let authNewName = $state("");
+  let authNewScope = $state<"read"|"write"|"admin">("read");
+  let authNewTtlDays = $state<number | "">("");
+  let authJustCreatedSecret = $state<string | null>(null);
+  let authBusy = $state(false);
+
+  // Share-link generator
+  let shareScope = $state<"read"|"write"|"admin">("read");
+  let shareTtlHours = $state(24);
+  let shareSub = $state("shared");
+  let shareGeneratedToken = $state<string | null>(null);
+
+  async function loadAuthTokens() {
+    authLoading = true;
+    try {
+      const r = await api.authTokensList();
+      authTokens = r.tokens ?? [];
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { authLoading = false; }
+  }
+  async function authCreate() {
+    if (!authNewName.trim()) {
+      toast.emit("✗ name required", "err");
+      return;
+    }
+    authBusy = true;
+    try {
+      const ttl = authNewTtlDays === "" ? null : Math.max(1, Number(authNewTtlDays)) * 86400;
+      const r = await api.authTokenCreate({
+        name: authNewName.trim(),
+        scope: authNewScope,
+        ttl_s: ttl,
+      });
+      if (r.ok && r.secret) {
+        authJustCreatedSecret = r.secret;
+        toast.emit("✓ Token created", "ok");
+        authNewName = "";
+        await loadAuthTokens();
+      } else {
+        toast.emit("✗ " + (r.error || "create failed"), "err");
+      }
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { authBusy = false; }
+  }
+  async function authDelete(id: string) {
+    if (!confirm(`Revoke token ${id}?`)) return;
+    try {
+      await api.authTokenDelete(id);
+      toast.emit("✓ Token revoked", "ok");
+      await loadAuthTokens();
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    }
+  }
+  async function shareMake() {
+    try {
+      const r = await api.authShareCreate({
+        scope: shareScope,
+        ttl_s: shareTtlHours * 3600,
+        sub: shareSub,
+      });
+      if (r.ok && r.share_token) {
+        shareGeneratedToken = r.share_token;
+        toast.emit("✓ Share-link generated", "ok");
+      } else {
+        toast.emit("✗ " + (r.error || "failed"), "err");
+      }
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    }
+  }
+  function copyToClipboard(text: string) {
+    navigator.clipboard?.writeText(text).then(
+      () => toast.emit("✓ Copied", "ok"),
+      () => toast.emit("✗ Clipboard error", "err"),
+    );
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
       if (!wdLoading) loadWatchdog();
       if (services.length === 0 && !svcLoading) loadServices();
+      if (notifChannels.length === 0 && !notifLoading) loadNotifChannels();
+      if (authTokens.length === 0 && !authLoading) loadAuthTokens();
     }
   });
 
@@ -1670,6 +1820,253 @@
             {/if}
           {/if}
         </div>
+      </div>
+
+      <!-- Card 4 — 🔔 Notification channels (lives inside Integrations) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.notif.title")}</h4>
+        <p class="muted">{i18n.t("integrations.notif.desc")}</p>
+        {#if notifLoading}
+          <p class="muted">⏳…</p>
+        {:else}
+          {#if notifChannels.length === 0}
+            <p class="muted">{i18n.t("integrations.notif.none")}</p>
+          {:else}
+            <table style="width:100%; font-size:0.92em; border-collapse: collapse; margin-top: 6px;">
+              <thead>
+                <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                  <th style="padding: 4px;">ID</th>
+                  <th style="padding: 4px;">Type</th>
+                  <th style="padding: 4px;">Name</th>
+                  <th style="padding: 4px;">Level</th>
+                  <th style="padding: 4px;">On</th>
+                  <th style="padding: 4px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each notifChannels as c (c.id)}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">{c.id}</td>
+                    <td style="padding: 4px;">{c.type}</td>
+                    <td style="padding: 4px;">{c.name ?? ""}</td>
+                    <td style="padding: 4px;">{c.min_level ?? "—"}</td>
+                    <td style="padding: 4px;">{c.enabled ? "✓" : "—"}</td>
+                    <td style="padding: 4px;">
+                      <button class="btn btn-small btn-danger" onclick={() => notifDelete(c.id)}>×</button>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+          {#if notifEditing}
+            <div class="form-row" style="flex-direction: column; align-items: stretch; gap: 8px;
+                                          background: var(--bg-2); border: 1px solid var(--border);
+                                          padding: 10px; margin-top: 10px; border-radius: 6px;">
+              <div style="display:flex; gap: 8px; align-items: center;">
+                <label class="kv" style="flex: 1;">
+                  {i18n.t("integrations.notif.id")}
+                  <input type="text" bind:value={notifEditing.id} style="width: 100%;" />
+                </label>
+                <label class="kv">
+                  {i18n.t("integrations.notif.type")}
+                  <select bind:value={notifEditing.type}>
+                    {#each notifTypes as t}
+                      <option value={t}>{t}</option>
+                    {/each}
+                  </select>
+                </label>
+              </div>
+              <label class="kv">
+                {i18n.t("integrations.notif.name")}
+                <input type="text" bind:value={notifEditing.name} style="width: 100%;" />
+              </label>
+              <div style="display:flex; gap: 12px;">
+                <label class="kv">
+                  <input type="checkbox" bind:checked={notifEditing.enabled} />
+                  {i18n.t("integrations.notif.enabled")}
+                </label>
+                <label class="kv">
+                  {i18n.t("integrations.notif.min_level")}
+                  <select bind:value={notifEditing.min_level}>
+                    <option value="info">info</option>
+                    <option value="warn">warn</option>
+                    <option value="crit">crit</option>
+                  </select>
+                </label>
+              </div>
+              {#if ["discord","slack","ntfy","gotify","generic"].includes(notifEditing.type)}
+                <label class="kv">
+                  {i18n.t("integrations.notif.url")}
+                  <input type="text" bind:value={notifEditing.url} style="width: 100%;"
+                         placeholder="https://..." />
+                </label>
+              {/if}
+              {#if notifEditing.type === "pushover"}
+                <label class="kv">
+                  App token
+                  <input type="text" bind:value={notifEditing.token} style="width: 100%;" />
+                </label>
+                <label class="kv">
+                  {i18n.t("integrations.notif.user")} key
+                  <input type="text" bind:value={notifEditing.user} style="width: 100%;" />
+                </label>
+              {/if}
+              {#if notifEditing.type === "gotify"}
+                <label class="kv">
+                  {i18n.t("integrations.notif.token")}
+                  <input type="text" bind:value={notifEditing.token} style="width: 100%;" />
+                </label>
+              {/if}
+              {#if notifEditing.type === "smtp"}
+                <label class="kv">Host
+                  <input type="text" bind:value={notifEditing.host} style="width: 100%;" /></label>
+                <label class="kv">Port
+                  <input type="number" bind:value={notifEditing.port} /></label>
+                <label class="kv">From
+                  <input type="text" bind:value={notifEditing.from_addr} style="width: 100%;" /></label>
+                <label class="kv">To
+                  <input type="text" bind:value={notifEditing.to_addr} style="width: 100%;" /></label>
+              {/if}
+              <div class="form-row" style="gap: 6px;">
+                <button class="btn btn-primary" onclick={notifSave} disabled={notifBusy}>
+                  {i18n.t("integrations.notif.save")}
+                </button>
+                <button class="btn" onclick={notifTest} disabled={notifBusy}>
+                  {i18n.t("integrations.notif.test")}
+                </button>
+                <button class="btn" onclick={() => (notifEditing = null)}>
+                  {i18n.t("integrations.notif.cancel")}
+                </button>
+              </div>
+            </div>
+          {:else}
+            <div class="form-row" style="margin-top: 8px;">
+              <button class="btn btn-primary" onclick={notifStartNew}>
+                {i18n.t("integrations.notif.add")}
+              </button>
+            </div>
+          {/if}
+        {/if}
+      </div>
+
+      <!-- Card 5 — 🔐 Auth tokens & share-links -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.auth.title")}</h4>
+        <p class="muted">{i18n.t("integrations.auth.desc")}</p>
+
+        <!-- Token list -->
+        {#if authLoading}
+          <p class="muted">⏳…</p>
+        {:else if authTokens.length === 0}
+          <p class="muted">{i18n.t("integrations.auth.none")}</p>
+        {:else}
+          <table style="width:100%; font-size:0.9em; border-collapse: collapse; margin-top: 8px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">{i18n.t("integrations.auth.name")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.auth.scope")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.auth.created")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.auth.expires")}</th>
+                <th style="padding: 4px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each authTokens as t (t.id)}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 5px;">{t.name}</td>
+                  <td style="padding: 5px;">
+                    <span style="padding: 1px 6px; border-radius: 3px; background: var(--bg-2); font-size: 0.85em;">
+                      {t.scope}
+                    </span>
+                  </td>
+                  <td style="padding: 5px; color: var(--text-dim); font-size: 0.85em;">
+                    {new Date(t.created_ts * 1000).toISOString().slice(0, 10)}
+                  </td>
+                  <td style="padding: 5px; color: var(--text-dim); font-size: 0.85em;">
+                    {t.expires_ts ? new Date(t.expires_ts * 1000).toISOString().slice(0, 10) : i18n.t("integrations.auth.never")}
+                  </td>
+                  <td style="padding: 5px;">
+                    <button class="btn btn-small btn-danger" onclick={() => authDelete(t.id)}>×</button>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+
+        <!-- Just-created secret callout -->
+        {#if authJustCreatedSecret}
+          <div style="margin-top: 12px; padding: 10px; background: rgba(252, 211, 77, 0.1);
+                      border: 1px solid #fbbf24; border-radius: 6px;">
+            <p style="margin: 0 0 6px 0; color: #fbbf24;">
+              {i18n.t("integrations.auth.secret_shown_once")}
+            </p>
+            <div style="display:flex; gap: 6px; align-items: center;">
+              <code style="flex: 1; padding: 4px 8px; background: var(--bg-1); font-family: monospace;
+                            font-size: 0.85em; word-break: break-all;">{authJustCreatedSecret}</code>
+              <button class="btn btn-small" onclick={() => copyToClipboard(authJustCreatedSecret!)}>📋</button>
+              <button class="btn btn-small" onclick={() => (authJustCreatedSecret = null)}>×</button>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Create-token form -->
+        <div class="form-row" style="margin-top: 12px; flex-wrap: wrap; gap: 8px; align-items: end;">
+          <label class="kv">
+            {i18n.t("integrations.auth.name")}
+            <input type="text" bind:value={authNewName} placeholder="my-laptop" style="width: 140px;" />
+          </label>
+          <label class="kv">
+            {i18n.t("integrations.auth.scope")}
+            <select bind:value={authNewScope}>
+              <option value="read">read</option>
+              <option value="write">write</option>
+              <option value="admin">admin</option>
+            </select>
+          </label>
+          <label class="kv">
+            {i18n.t("integrations.auth.ttl_days")}
+            <input type="number" min="1" max="3650" bind:value={authNewTtlDays}
+                   placeholder="∞" style="width: 70px;" />
+          </label>
+          <button class="btn btn-primary" onclick={authCreate} disabled={authBusy}>
+            {i18n.t("integrations.auth.create")}
+          </button>
+        </div>
+
+        <!-- Share-link generator -->
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 18px 0 12px 0;" />
+        <h5 style="margin: 0 0 6px 0;">{i18n.t("integrations.auth.share_title")}</h5>
+        <div class="form-row" style="flex-wrap: wrap; gap: 10px; align-items: end;">
+          <label class="kv">
+            {i18n.t("integrations.auth.share_scope")}
+            <select bind:value={shareScope}>
+              <option value="read">read</option>
+              <option value="write">write</option>
+            </select>
+          </label>
+          <label class="kv">
+            {i18n.t("integrations.auth.share_ttl_hours")}
+            <input type="number" min="1" max="720" bind:value={shareTtlHours} style="width: 70px;" />
+          </label>
+          <label class="kv">
+            {i18n.t("integrations.auth.share_sub")}
+            <input type="text" bind:value={shareSub} style="width: 120px;" />
+          </label>
+          <button class="btn" onclick={shareMake}>
+            {i18n.t("integrations.auth.share_make")}
+          </button>
+        </div>
+        {#if shareGeneratedToken}
+          <div style="margin-top: 10px; padding: 8px; background: var(--bg-2); border-radius: 4px;">
+            <code style="font-family: monospace; font-size: 0.8em; word-break: break-all;">
+              ?share={shareGeneratedToken}
+            </code>
+            <button class="btn btn-small" style="margin-left: 6px;"
+                    onclick={() => copyToClipboard("?share=" + shareGeneratedToken)}>📋</button>
+          </div>
+        {/if}
       </div>
 
       <!-- Layout : card hide/show + drag-and-drop reorder -->
