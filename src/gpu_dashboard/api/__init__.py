@@ -78,6 +78,17 @@ from .alerts import (  # noqa: F401
     handle_notif_channels_list, handle_notif_channel_save, handle_notif_channel_test,
     handle_heartbeat_list, handle_heartbeat_ping, handle_heartbeat_config,
 )
+from .ops import (  # noqa: F401
+    handle_processes,
+    handle_health,
+    handle_sysreport, handle_sysreport_bundle,
+    handle_version, handle_about,
+    handle_stop, handle_restart,
+    handle_update_check, handle_update_pull,
+    handle_snapshot,
+    handle_modules_list, handle_modules_toggle,
+    handle_setup_detect, handle_setup_recheck, handle_setup_save,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
@@ -155,6 +166,18 @@ from .alerts import (  # noqa: F401,F811
 from .alerts import (  # noqa: F401,F811
     _alert_consecutive_to_for, _load_heartbeats, _save_heartbeats,
 )
+from .ops import (  # noqa: F401,F811
+    handle_processes,
+    handle_health,
+    handle_sysreport, handle_sysreport_bundle,
+    handle_version, handle_about,
+    handle_stop, handle_restart,
+    handle_update_check, handle_update_pull,
+    handle_snapshot,
+    handle_modules_list, handle_modules_toggle,
+    handle_setup_detect, handle_setup_recheck, handle_setup_save,
+)
+from .ops import _git, _redact_env_file, _REDACT_KEYS  # noqa: F401,F811
 # Helpers moved to submodules — re-export for tests
 from .llm import (  # noqa: F401,F811
     _parse_llamacpp_metrics,
@@ -178,7 +201,6 @@ from ._monolith import (  # noqa: F401
     _fan_distribution,
     _parse_gpu_index,
     _read_cmdline,
-    _redact_env_file,
     # Linear regression + R² (thermal coach) — moved to api.diagnostics
     # (kept for compat: import from there above)
     # Drift detector
