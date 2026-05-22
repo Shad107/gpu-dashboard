@@ -3,9 +3,9 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:44 (cycle 132 done — R&D #2.4 sticky peak alerts)
-**Latest commit** : `9aa49bc` — sticky peak alerts module
-**Tests** : 621 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 08:50 (cycle 133 done — R&D #2 COMPLETE 5/5)
+**Latest commit** : `fe2d2a9` — benchmark scheduler helpers
+**Tests** : 637 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
@@ -113,7 +113,23 @@ no SaaS, no paid tier).
    - Lifetime MAX query + idempotent storage events
    - 9 new TDD tests · 612 → 621
    - Daemon wiring deferred to a future cycle (alert_monitor integration)
-5. **Scheduled benchmarks** (cycle 131) — POST /api/benchmark/schedule with cron-like spec ; runs in background thread.
+5. **Scheduled benchmarks** (cycle 133) ✅ DONE
+   - modules/benchmark_scheduler.py — daily/weekly/interval grammars
+   - load_schedule + save_schedule + due_entries
+   - 16 new TDD tests · 621 → 637
+   - Daemon wiring deferred to future cycle
+
+---
+
+## 🎊 R&D iteration #2 COMPLETE — 5/5 features shipped (cycles 127-133)
+- ✅ #2.1 /api/sysreport (cycle 128, 8 tests)
+- ✅ #2.2 Lifetime extrema backend (cycle 129, 6 tests)
+- ✅ #2.3a Lifetime UI in About + #2.3b Per-GPU cost split (cycles 130-131, 0 backend tests)
+- ✅ #2.4 Sticky peak alerts (cycle 132, 9 tests)
+- ✅ #2.5 Benchmark scheduler helpers (cycle 133, 16 tests)
+
+Tests : 598 (start R&D #2) → 637 (+39 new TDD tests)
+Inspired by LibreHardwareMonitor, hardinfo/inxi, HWMonitor, systemd timers
 
 ---
 
