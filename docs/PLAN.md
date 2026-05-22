@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:10 (cycle 124 done — R&D #5 SVG export)
-**Latest commit** : `4923d54` — chart SVG download button
+**Last updated** : 2026-05-22 08:15 (cycle 125 done — R&D #6 LAST — 6/6 COMPLETE)
+**Latest commit** : `dddb38f` — per-process VRAM bar + cmdline tooltip
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -67,7 +67,23 @@ no SaaS, no paid tier).
    - charts.ts exportSvgAsFile() helper (clone + xmlns + bg rect + blob download)
    - HistoryChart.svelte ⬇️ button top-right with timestamped filename
    - 1 new i18n key × 2 langs · bundle +0.2 KB
-6. **GPU process tree expansion** (cycle 125) — Cards processes : PID + cmdline tooltip + %VRAM bar.
+6. **GPU process tree expansion** (cycle 125) ✅ DONE
+   - /api/processes attaches cmdline from /proc/<pid>/cmdline
+   - Cards.svelte processes table : 3px VRAM bar per row (green/amber/red) + cmdline tooltip
+   - 4 new TDD tests · 594 → 598
+
+---
+
+## 🎊 R&D iteration COMPLETE — 6/6 features shipped (cycles 115-125)
+- ✅ #1 Per-app profile triggers (4 cycles, 38 tests)
+- ✅ #2 NVENC/NVDEC/PCIe metrics (1 cycle, 5 tests)
+- ✅ #3 Monthly power budget tracker (1 cycle, 8 tests)
+- ✅ #4 A/B Profile benchmark (2 cycles, 14 tests)
+- ✅ #5 Plot SVG export (1 cycle, no test — pure DOM)
+- ✅ #6 GPU process tree expansion (1 cycle, 4 tests)
+
+Tests : 537 (start of R&D) → 598 (+ 61 new TDD tests)
+All inspired by CoreCtrl, LACT, HWiNFO, Mission Center, nvtop, nvitop
 
 ---
 
