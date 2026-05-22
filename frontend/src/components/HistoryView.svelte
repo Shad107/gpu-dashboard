@@ -2,7 +2,7 @@
   // Top-level History view — extracted from SettingsModal at cycle 70.
   // User feedback 2026-05-21 23:14 : viewing pages belong at top-level,
   // not inside the Settings modal.
-  import { onDestroy } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { view } from "../lib/view.svelte";
   import { gpu } from "../lib/gpu.svelte";
   import { toast } from "../lib/stores.svelte";
@@ -117,14 +117,23 @@
 
   const isActive = $derived(view.current === "history");
 
-  // Initial load when this view becomes active
+  // Initial load when this view becomes active.
+  // CRITICAL : use untrack() inside the body — otherwise reading
+  // historySamples.length is tracked as a dep, and since loadHistory
+  // assigns a new array on each call, this effect re-fires in a tight
+  // loop and historyLoading never settles. (Cycle 139 — user feedback :
+  // 'l'historique reste bloqué sur chargement'.)
   $effect(() => {
-    if (isActive && historySamples.length === 0) loadHistory();
+    if (isActive) untrack(() => {
+      if (historySamples.length === 0) loadHistory();
+    });
   });
-  // Reload on range/offset change while active
+  // Reload on range/offset change while active. Same untrack pattern.
   $effect(() => {
-    historyRange; historyCompareOffset;
-    if (isActive && historySamples.length > 0) loadHistory();
+    historyRange; historyCompareOffset;  // explicit deps
+    if (isActive) untrack(() => {
+      if (historySamples.length > 0) loadHistory();
+    });
   });
   // Auto-refresh timer
   $effect(() => {
