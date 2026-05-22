@@ -1733,6 +1733,35 @@ def handle_health(ctx: dict) -> Response:
         except Exception:
             recent_alerts = []
 
+    # Uptime metrics for Uptime Kuma badges (cycle 136, R&D #3.3)
+    up_minutes_24h = 0
+    uptime_pct_24h = 0.0
+    sample_restart_count = 0
+    if storage is not None:
+        try:
+            cur = storage._conn.execute(
+                "SELECT COUNT(DISTINCT ts/60) AS n FROM samples WHERE ts >= ?",
+                (int(_time.time()) - 86400,),
+            )
+            row = cur.fetchone()
+            up_minutes_24h = (row["n"] if row else 0) or 0
+            uptime_pct_24h = round(up_minutes_24h / 1440 * 100, 1)
+
+            # Restart count : ts gaps > 5 min in the last 24h indicate process
+            # restarts (assuming the sampler runs continuously at <60s interval).
+            cur = storage._conn.execute(
+                "SELECT ts FROM samples WHERE ts >= ? "
+                "AND gpu_index = 0 ORDER BY ts ASC",
+                (int(_time.time()) - 86400,),
+            )
+            prev_ts = None
+            for r in cur.fetchall():
+                if prev_ts is not None and r["ts"] - prev_ts > 300:
+                    sample_restart_count += 1
+                prev_ts = r["ts"]
+        except Exception:
+            pass
+
     all_ok = all(components.values())
     code = 200 if all_ok else 503
     return code, {
@@ -1741,6 +1770,10 @@ def handle_health(ctx: dict) -> Response:
         "uptime_seconds": max(0, int(_time.time() - (ctx.get("started_at") or _time.time()))),
         "version": _ver,
         "recent_alerts": recent_alerts,
+        "up_minutes_24h": up_minutes_24h,
+        "uptime_pct_24h": uptime_pct_24h,
+        "restart_count_24h": sample_restart_count,
+        "sampler_alive": components.get("sampler", False),
     }
 
 
