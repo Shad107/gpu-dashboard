@@ -113,6 +113,21 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 }
 .group-label:first-of-type { margin-top: 0; }
 
+/* Scroll-scoped area in dashboard view (cycle 142, user feedback :
+ * 'pour la partie overflow ne la mettre que sous les tuiles').
+ * Tiles stay fixed at top, the charts + alert footer area scrolls. */
+.dash-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Reserve space below the header / top-nav / tiles. The viewport-height
+   * minus an estimate of the static-area height. Conservative cap. */
+  max-height: calc(100vh - 18em);
+  padding-right: 0.2em;
+}
+@media (max-width: 768px) {
+  .dash-scroll { max-height: none; }   /* on mobile, let body scroll */
+}
+
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);

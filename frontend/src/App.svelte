@@ -112,9 +112,13 @@
   <IdleBanner />
   {#if view.current === "dashboard"}
     <Cards />
-    <CoolingChart />
-    <PowerChart />
-    <LatestAlertFooter />
+    <!-- Scroll-scoped area : only the charts + alert footer can scroll
+         (user feedback cycle 142 : 'overflow ne la mettre que sous les tuiles') -->
+    <div class="dash-scroll">
+      <CoolingChart />
+      <PowerChart />
+      <LatestAlertFooter />
+    </div>
   {:else if view.current === "history"}
     <HistoryView />
   {:else if view.current === "stats"}
