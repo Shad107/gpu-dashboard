@@ -3,7 +3,7 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:50 (cycle 133 done — R&D #2 COMPLETE 5/5)
+**Last updated** : 2026-05-22 09:57 (R&D iteration #3 opened — 5 features picked)
 **Latest commit** : `fe2d2a9` — benchmark scheduler helpers
 **Tests** : 637 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
@@ -130,6 +130,36 @@ no SaaS, no paid tier).
 
 Tests : 598 (start R&D #2) → 637 (+39 new TDD tests)
 Inspired by LibreHardwareMonitor, hardinfo/inxi, HWMonitor, systemd timers
+
+---
+
+## 💡 R&D iteration #3 — adjacent-tool inspirations (2026-05-22, cycle 134+)
+
+### New scan : web dashboards / DevOps tools / terminal monitors
+
+| Tool | Notable feature | Worth porting ? |
+|---|---|---|
+| **btop / glances** | One-line top-N processes everywhere | partial — Cards has top-5 |
+| **glances** | Network throughput card (per-iface RX/TX) | ❌ scope creep (we're GPU-focused) |
+| **Cockpit** | Inline shell command output panel | ⚠️ security risk — needs careful sandboxing |
+| **Cockpit** | "Get diagnostic report" 1-click bundle | ✅ extends /api/sysreport — generate a tar.gz |
+| **Plausible** | Public read-only dashboard link (signed token) | ✅ small — `/api/share/<token>` for read-only sharing |
+| **Pi-hole** | Top-bar live counter + last-event chip | ✅ small — show 'last switch' or 'last alert' chip in Header |
+| **Grafana** | Variable-driven panels (template variables) | not applicable — we have GPU picker already |
+| **InfluxDB OSS** | Tasks page with retention policies UI | ⚠️ we have retention.py daemon but no UI |
+| **Tailscale** | Activity timeline with hovering tooltips | ✅ extend History view with event markers (drop, alert, profile_switch) |
+| **Uptime Kuma** | Status page with uptime % over 24h | ✅ small — already have /api/health, add up_seconds + uptime_pct_24h |
+| **Datadog** | Anomaly bands (μ ± 2σ shaded on chart) | ✅ statistical insight on history charts |
+| **htop** | F-key bar for keyboard shortcuts cheat-sheet | ✅ tiny — keyboard shortcut modal `?` |
+| **Custom** | Idle GPU sleep recommendation | ⚠️ risky |
+
+### Picked for upcoming cycles (smallest first)
+
+1. **Diagnostic bundle** (cycle 134) — `/api/sysreport/bundle` returns a tar.gz of sysreport + last 100 events + config.env redacted + recent logs. One-click for support handoffs.
+2. **Header status chip** (cycle 135) — small pill in header showing 'just switched: boost' or 'last alert: 30m ago — temp_high', clickable to open the relevant modal tab.
+3. **Uptime % in /api/health** (cycle 136) — add `up_seconds`, `restart_count`, `uptime_pct_24h` for Uptime Kuma badges.
+4. **Anomaly bands on history charts** (cycle 137) — compute μ ± 2σ rolling band, render dimmed area. Marks visual outliers.
+5. **Keyboard shortcuts cheat-sheet** (cycle 138) — modal triggered by `?` key showing all hotkeys (already have a few : `Esc`, arrow keys in fan curve).
 
 ---
 
