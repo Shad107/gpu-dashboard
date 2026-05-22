@@ -3,15 +3,15 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 13:35 (R&D #4 COMPLETE — 5/5 priority shipped)
-**Latest commit** : `3c84640` — R&D #4.3 ECC health
-**Tests** : 682 passing · **CI** : ✅ green
+**Last updated** : 2026-05-22 13:46 (R&D #5 COMPLETE — 3/3 priority shipped)
+**Latest commit** : `<head>`
+**Tests** : 704+ passing · **CI** : ✅ green
 
 ## ✅ R&D iteration #4 complete (5/5 priority)
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
-## 💡 R&D iteration #5 (2026-05-22 13:38) — AUTO-OPENED post #4 completion
+## ✅ R&D iteration #5 complete (3/3 priority shipped — 2026-05-22 13:46)
 
 Per the standing **auto-rebound R&D rule** (user 'fais vivre le plan'), surveyed fresh tools (lm-sensors / sysstat / perf / btop / intel_gpu_top / k6 / fio / supervisord / WaybarBatteryNvidia / smartmontools / gpu-burn / NVML bindings) and identified 8 candidates :
 

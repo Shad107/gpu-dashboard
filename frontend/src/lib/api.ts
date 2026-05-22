@@ -472,6 +472,21 @@ export const api = {
       checklist?: Array<{ key: string; label: string; hint: string }>;
     }>),
 
+  thermalCoach: () =>
+    fetch("/api/thermal/coach").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reason?: string;
+      current_temp_c?: number;
+      slowdown_temp_c?: number;
+      headroom_c?: number;
+      slope_c_per_min?: number;
+      projected_throttle_s?: number | null;
+      suggested_fan_delta_pct?: number;
+      suggested_msg_key?: "stable" | "fan_can_be_gentler" | "fan_slight_gentler" | "fan_needs_help" | "warming_up";
+      sample_count?: number;
+    }>),
+
   drift: () =>
     fetch("/api/drift").then(jsonOf<{
       ok: boolean;

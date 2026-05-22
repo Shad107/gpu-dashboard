@@ -17,6 +17,10 @@
   async function loadClockEvts() {
     try { clockEvts = await api.clockEvents(); } catch {}
   }
+  let thermal = $state<Awaited<ReturnType<typeof api.thermalCoach>> | null>(null);
+  async function loadThermal() {
+    try { thermal = await api.thermalCoach(); } catch {}
+  }
   async function loadElec() {
     try { elec = await api.electricity(3600, gpu.selected); } catch { /* keep last */ }
   }
@@ -71,6 +75,7 @@
   let llmLifeTimer: ReturnType<typeof setInterval> | null = null;
   let llmPerfTimer: ReturnType<typeof setInterval> | null = null;
   let clockEvtsTimer: ReturnType<typeof setInterval> | null = null;
+  let thermalTimer: ReturnType<typeof setInterval> | null = null;
   onMount(() => {
     loadElec();
     loadLlm();
@@ -88,6 +93,7 @@
       if (llmLifeTimer) clearInterval(llmLifeTimer);
       if (llmPerfTimer) clearInterval(llmPerfTimer);
       if (clockEvtsTimer) clearInterval(clockEvtsTimer);
+      if (thermalTimer) clearInterval(thermalTimer);
     };
   });
 
@@ -225,6 +231,24 @@
           {@const tr = clockEvts.reasons.filter(r => r.key !== "gpu_idle")[0]}
           <div class="sub" style="margin-top:.3em;color:var(--accent-warn);font-size:.78em" title={tr.hint}>
             ⚠️ {tr.label}
+          </div>
+        {/if}
+        <!-- R&D #5.1 Thermal headroom coach — only show actionable verdicts -->
+        {#if thermal?.available && thermal.suggested_msg_key !== "stable"}
+          {@const ttt = thermal.projected_throttle_s}
+          {@const headroomColor = (thermal.headroom_c ?? 100) < 10
+            ? "var(--accent-warn)"
+            : (thermal.headroom_c ?? 100) > 25
+              ? "var(--accent)"
+              : "var(--text-muted)"}
+          <div class="sub" style="margin-top:.3em;font-size:.74em"
+               title={`Slope : ${thermal.slope_c_per_min?.toFixed(2)}°C/min · ${thermal.sample_count} samples`}>
+            🌡️ <b style:color={headroomColor}>{thermal.headroom_c}°C</b> {i18n.t("thermal.headroom") ?? "headroom"}
+            {#if ttt !== null && ttt !== undefined && ttt < 1800}
+              <span style="color:var(--accent-warn);margin-left:.3em">
+                · {i18n.t("thermal.throttle_in") ?? "throttle in"} ~{Math.round(ttt / 60)}min
+              </span>
+            {/if}
           </div>
         {/if}
       </div>

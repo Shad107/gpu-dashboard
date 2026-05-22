@@ -494,6 +494,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_drift_check(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/thermal/coach":
+                code, body = api.handle_thermal_coach(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/bar":
                 # R&D #5.4 — waybar/polybar/i3blocks/tmux/plain
                 code, body = api.handle_bar(ctx, params)

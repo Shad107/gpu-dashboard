@@ -305,6 +305,8 @@
   "about.drift_changed": "changement(s) depuis le dernier démarrage",
   "about.drift_history_count": "drift(s) enregistré(s) au total",
   "about.drift_none": "Aucun changement depuis la baseline initiale.",
+  "thermal.headroom": "marge",
+  "thermal.throttle_in": "throttle dans",
   "services.update_moved_hint": "Mise à jour : voir l'onglet À propos.",
   "header.update_chip_title": "Nouvelle version dispo — clic pour ouvrir Services et mettre à jour",
   "history.anomaly_band": "Bande d'anomalie (μ±2σ)",

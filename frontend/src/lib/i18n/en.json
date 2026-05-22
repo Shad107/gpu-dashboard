@@ -300,6 +300,8 @@
   "about.drift_changed": "change(s) since last start",
   "about.drift_history_count": "total drift event(s) recorded",
   "about.drift_none": "No change since the initial baseline.",
+  "thermal.headroom": "headroom",
+  "thermal.throttle_in": "throttle in",
   "services.update_moved_hint": "Update : see the About tab.",
   "header.update_chip_title": "A newer version is available — click to open Services and update",
   "history.anomaly_band": "Anomaly band (μ±2σ)",

@@ -2772,6 +2772,103 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #5.1 — Thermal headroom coach ───────────────────────────────────────
+def _linear_fit(xs: list, ys: list) -> tuple:
+    """Plain least-squares linear regression. Returns (slope, intercept).
+    Returns (0, mean(ys)) for degenerate input (constant x or too few points)."""
+    n = len(xs)
+    if n < 2:
+        return 0.0, (ys[0] if ys else 0.0)
+    mean_x = sum(xs) / n
+    mean_y = sum(ys) / n
+    var_x = sum((x - mean_x) ** 2 for x in xs)
+    if var_x == 0:
+        return 0.0, mean_y
+    cov_xy = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys))
+    slope = cov_xy / var_x
+    intercept = mean_y - slope * mean_x
+    return slope, intercept
+
+
+def handle_thermal_coach(ctx: dict) -> Response:
+    """Surfaces a decision : headroom + projected time-to-throttle from the
+    last 5min of samples.
+
+    Logic :
+      - Pull last 60 samples (~5 min at 5s interval) from the sampler
+      - Linear regression on temp(t)
+      - Slowdown temp default 83°C (RTX 3090/4090 typical) — could be read
+        from NVML in a future iteration
+      - Headroom = slowdown_temp - current_temp
+      - Time-to-throttle = (slowdown_temp - last_temp) / slope_per_sec
+        (clamped : ∞ if slope <= 0, < 0 if already over)
+      - Suggested fan delta : if headroom > 15°C and trend is flat/falling,
+        fans can be 5-10% gentler (acoustic win)
+    """
+    sampler = ctx.get("sampler")
+    if not sampler:
+        return 200, {"ok": True, "available": False, "reason": "no sampler"}
+
+    snap = sampler.snapshot()
+    if not snap or len(snap) < 5:
+        return 200, {"ok": True, "available": False,
+                     "reason": "not enough samples yet (need 5+)"}
+
+    # Last 5 minutes : assume 5s sampling → 60 samples max
+    recent = snap[-60:] if len(snap) > 60 else snap
+    xs = []
+    ys = []
+    for s in recent:
+        t = s.get("ts")
+        temp = s.get("temp")
+        if t is None or temp is None:
+            continue
+        xs.append(float(t))
+        ys.append(float(temp))
+    if len(xs) < 3:
+        return 200, {"ok": True, "available": False, "reason": "need 3+ valid temp samples"}
+
+    slope, intercept = _linear_fit(xs, ys)
+    current_temp = ys[-1]
+    slowdown_temp = 83.0  # default for consumer Ampere/Ada
+    headroom_c = round(slowdown_temp - current_temp, 1)
+
+    # Time-to-throttle projection
+    if slope <= 0 or current_temp >= slowdown_temp:
+        projected_throttle_s = None  # not heating (or already over)
+    else:
+        projected_throttle_s = int((slowdown_temp - current_temp) / slope)
+
+    # Decision : suggest fan delta
+    suggested_fan_delta_pct = 0
+    suggested_msg_key = "stable"
+    if headroom_c > 25 and slope <= 0.005:
+        suggested_fan_delta_pct = -10
+        suggested_msg_key = "fan_can_be_gentler"
+    elif headroom_c > 15 and slope <= 0.01:
+        suggested_fan_delta_pct = -5
+        suggested_msg_key = "fan_slight_gentler"
+    elif headroom_c < 5 or (projected_throttle_s is not None and projected_throttle_s < 120):
+        suggested_fan_delta_pct = +10
+        suggested_msg_key = "fan_needs_help"
+    elif projected_throttle_s is not None and projected_throttle_s < 600:
+        suggested_fan_delta_pct = +5
+        suggested_msg_key = "warming_up"
+
+    return 200, {
+        "ok": True,
+        "available": True,
+        "current_temp_c": round(current_temp, 1),
+        "slowdown_temp_c": slowdown_temp,
+        "headroom_c": headroom_c,
+        "slope_c_per_min": round(slope * 60, 3),
+        "projected_throttle_s": projected_throttle_s,
+        "suggested_fan_delta_pct": suggested_fan_delta_pct,
+        "suggested_msg_key": suggested_msg_key,
+        "sample_count": len(xs),
+    }
+
+
 # ─── R&D #5.2 — Driver/kernel drift detector ─────────────────────────────────
 _DRIFT_FIELDS_CMD = ["driver_version", "vbios_version", "name",
                      "persistence_mode", "ecc.mode.current", "mig.mode.current"]
