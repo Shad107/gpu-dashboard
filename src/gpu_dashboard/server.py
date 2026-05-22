@@ -537,6 +537,18 @@ def make_handler(ctx: dict):
                 code, body = api.handle_influxdb_status(ctx)
                 self._send_json(code, body)
                 return
+            if path.startswith("/badge/") and path.endswith(".svg"):
+                # R&D #10.7 — live README SVG badge
+                metric = path[len("/badge/"):-len(".svg")]
+                code, svg = api.handle_badge(ctx, metric)
+                data = svg.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "image/svg+xml; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "public, max-age=60")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path == "/tldr":
                 # R&D #10.6 — ANSI/tldr endpoint for CLI users
                 req_headers = {k: v for k, v in self.headers.items()}

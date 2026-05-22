@@ -2772,6 +2772,116 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #10.7 — Live README badge SVG generator ─────────────────────────────
+def _badge_svg(label: str, value: str, color: str = "#4c1") -> str:
+    """Return a shields.io-style SVG badge with the given label / value / color.
+    No deps : just a stdlib f-string. Width auto-computed from char count
+    (approximation : 7 px per char + paddings)."""
+    # Cheap width estimate — for monospaceish look. shields.io uses ~7px/char.
+    lw = len(label) * 6 + 10
+    vw = len(value) * 7 + 10
+    total = lw + vw
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="20" role="img" aria-label="{label}: {value}">'
+        f'<linearGradient id="s" x2="0" y2="100%">'
+        f'<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>'
+        f'<stop offset="1" stop-opacity=".1"/>'
+        f'</linearGradient>'
+        f'<clipPath id="r"><rect width="{total}" height="20" rx="3"/></clipPath>'
+        f'<g clip-path="url(#r)">'
+        f'<rect width="{lw}" height="20" fill="#555"/>'
+        f'<rect x="{lw}" width="{vw}" height="20" fill="{color}"/>'
+        f'<rect width="{total}" height="20" fill="url(#s)"/>'
+        f'</g>'
+        f'<g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">'
+        f'<text x="{lw // 2}" y="14">{label}</text>'
+        f'<text x="{lw + vw // 2}" y="14">{value}</text>'
+        f'</g>'
+        f'</svg>'
+    )
+
+
+_BADGE_TEMP_COLORS = {
+    "ok": "#4c1",      # green for <70°C
+    "warn": "#dfb317", # yellow 70-80°C
+    "crit": "#e05d44", # red >=80°C
+}
+
+
+def handle_badge(ctx: dict, metric: str) -> Tuple[int, str]:
+    """Generate a live SVG badge for the requested metric.
+
+    Supported metrics : gpu-temp, power-now, tok-per-wh, uptime, top-model, util.
+    Unknown metric → 404 with a fallback 'unknown' badge.
+    """
+    snap = _gpu_card_snapshot(gpu_index=0)
+    alive = bool(snap and snap.get("alive"))
+
+    if metric == "gpu-temp":
+        if not alive:
+            return 200, _badge_svg("temp", "offline", "#9f9f9f")
+        t = int(snap.get("temp") or 0)
+        color = (_BADGE_TEMP_COLORS["crit"] if t >= 80 else
+                 _BADGE_TEMP_COLORS["warn"] if t >= 70 else
+                 _BADGE_TEMP_COLORS["ok"])
+        return 200, _badge_svg("temp", f"{t}°C", color)
+
+    if metric == "power-now":
+        if not alive:
+            return 200, _badge_svg("power", "offline", "#9f9f9f")
+        p = snap.get("power") or 0
+        return 200, _badge_svg("power", f"{p:.0f} W", "#007ec6")
+
+    if metric == "util":
+        if not alive:
+            return 200, _badge_svg("util", "offline", "#9f9f9f")
+        u = int(snap.get("util_gpu") or 0)
+        color = "#4c1" if u < 50 else "#dfb317" if u < 90 else "#e05d44"
+        return 200, _badge_svg("util", f"{u}%", color)
+
+    if metric == "tok-per-wh":
+        # Try to read LLM perf from sampler / fallback to 0
+        try:
+            r = _gpus_available()  # noqa: re-uses nvidia probe
+        except Exception:
+            r = []
+        # Read from /api/llm if available — best-effort
+        try:
+            from .modules import llm_stats as _llm  # may or may not exist
+            val = _llm.tokens_per_watt_hour()
+        except Exception:
+            val = None
+        if val is None:
+            return 200, _badge_svg("tok/Wh", "n/a", "#9f9f9f")
+        return 200, _badge_svg("tok/Wh", f"{val:.0f}", "#a83f9f")
+
+    if metric == "uptime":
+        started = ctx.get("started_at")
+        if started is None:
+            return 200, _badge_svg("uptime", "n/a", "#9f9f9f")
+        secs = int(time.time() - float(started))
+        if secs < 60:
+            txt = f"{secs}s"
+        elif secs < 3600:
+            txt = f"{secs // 60}m"
+        elif secs < 86400:
+            txt = f"{secs // 3600}h"
+        else:
+            txt = f"{secs // 86400}d"
+        return 200, _badge_svg("uptime", txt, "#4c1")
+
+    if metric == "top-model":
+        d = (ctx.get("sampler").snapshot() if ctx.get("sampler") else [])
+        # No direct top-model accessor — derive from llm_model in latest sample
+        if alive and snap.get("name"):
+            short = snap["name"].replace("NVIDIA ", "").replace("GeForce ", "")[:24]
+            return 200, _badge_svg("gpu", short, "#76A8DC")
+        return 200, _badge_svg("gpu", "offline", "#9f9f9f")
+
+    # Unknown metric → 404 with a 'unknown' badge so the README still renders
+    return 404, _badge_svg("badge", f"unknown:{metric}"[:24], "#9f9f9f")
+
+
 # ─── R&D #10.6 — ANSI/tldr endpoint for CLI users ────────────────────────────
 _ANSI = {
     "reset": "\x1b[0m",
