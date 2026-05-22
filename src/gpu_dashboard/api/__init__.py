@@ -35,6 +35,14 @@ from .integrations import (  # noqa: F401
     handle_hf_janitor,
     handle_vfio_status,
 )
+from .llm import (  # noqa: F401
+    handle_llm_lifetime,
+    handle_llm_perf,
+    handle_llm_stats,
+    handle_llamabench_status,
+    handle_jupyter_kernels,
+    handle_snapshot_at,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
@@ -61,6 +69,20 @@ from .integrations import (  # noqa: F401,F811
     handle_hf_janitor,
     handle_vfio_status,
 )
+from .llm import (  # noqa: F401,F811
+    handle_llm_lifetime,
+    handle_llm_perf,
+    handle_llm_stats,
+    handle_llamabench_status,
+    handle_jupyter_kernels,
+    handle_snapshot_at,
+)
+# Helpers moved to llm.py — re-export for tests
+from .llm import (  # noqa: F401,F811
+    _parse_llamacpp_metrics,
+    _tokens_per_watt,
+    _llm_model_served,
+)
 
 # Private helpers used by tests (and by future submodules during migration).
 # `from X import *` skips underscore-prefixed names, so we list these explicitly.
@@ -75,10 +97,7 @@ from ._monolith import (  # noqa: F401
     _watchdog_state,
     _services_state,
     _fan_distribution,
-    _llm_model_served,
     _parse_gpu_index,
-    _parse_llamacpp_metrics,
-    _tokens_per_watt,
     _read_cmdline,
     _redact_env_file,
     # Linear regression + R² (thermal coach)
