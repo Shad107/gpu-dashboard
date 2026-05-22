@@ -12,8 +12,28 @@ External callers (server.py, tests, modules) continue to do
 the names are re-exported here.
 """
 
+# Migrated submodules — names here take precedence over _monolith re-exports
+# below (they're defined after, so they win the second pass).
+from .auth import (  # noqa: F401
+    handle_auth_tokens_list,
+    handle_auth_token_create,
+    handle_auth_token_delete,
+    handle_auth_share_create,
+    handle_audit_log,
+)
+
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
+
+# Re-import migrated symbols AFTER the wildcard so they're not shadowed
+# by stale references in _monolith.py.
+from .auth import (  # noqa: F401,F811
+    handle_auth_tokens_list,
+    handle_auth_token_create,
+    handle_auth_token_delete,
+    handle_auth_share_create,
+    handle_audit_log,
+)
 
 # Private helpers used by tests (and by future submodules during migration).
 # `from X import *` skips underscore-prefixed names, so we list these explicitly.
