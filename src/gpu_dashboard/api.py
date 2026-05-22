@@ -1747,6 +1747,127 @@ def handle_health(ctx: dict) -> Response:
 # ────────────────────────── GET /api/about ────────────────────────────────
 
 
+def handle_sysreport(ctx: dict) -> Response:
+    """One-shot system info dump for support tickets / bug reports.
+
+    Aggregates kernel, distro, NVIDIA driver, GPU list, disk free for the
+    DB dir, RAM total. All sub-fields tolerate missing tools (returns None).
+    """
+    from . import __version__ as _ver
+    import datetime as _dt
+    import sys as _sys
+    import platform as _plat
+
+    cfg = ctx.get("config")
+    schema_version = None
+    storage = ctx.get("storage")
+    if storage is not None:
+        try:
+            schema_version = storage.schema_version()
+        except Exception:
+            pass
+
+    # modules_enabled (mirrors /api/version logic)
+    module_keys = [
+        "MODULE_POWER_LIMIT", "MODULE_CLOCK_OFFSETS",
+        "MODULE_TELEGRAM_ALERTS", "MODULE_OCULINK_WATCHDOG",
+        "MODULE_FAN_CURVE", "MODULE_AUTO_PROFILE", "MODULE_ALERT_MONITOR",
+    ]
+    modules_enabled = []
+    if cfg is not None:
+        for k in module_keys:
+            if cfg.get_bool(k):
+                modules_enabled.append(k.replace("MODULE_", "").lower())
+
+    # distro from /etc/os-release
+    distro = None
+    try:
+        with open("/etc/os-release", "r") as f:
+            kv = {}
+            for line in f:
+                if "=" in line:
+                    k, v = line.strip().split("=", 1)
+                    kv[k] = v.strip('"')
+        if "PRETTY_NAME" in kv:
+            distro = kv["PRETTY_NAME"]
+        elif "NAME" in kv:
+            distro = kv["NAME"] + " " + kv.get("VERSION_ID", "")
+    except OSError:
+        pass
+
+    # NVIDIA driver + CUDA
+    nv_driver = None
+    nv_cuda = None
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=3,
+        )
+        if r.returncode == 0:
+            nv_driver = r.stdout.strip().split("\n")[0].strip() or None
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        pass
+    try:
+        r = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=3)
+        if r.returncode == 0:
+            # Parse CUDA Version: 12.4 from the header
+            import re as _re
+            m = _re.search(r"CUDA Version:\s*([\d.]+)", r.stdout)
+            if m:
+                nv_cuda = m.group(1)
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        pass
+
+    # GPU list (uses existing helper)
+    gpus = _gpus_available()
+
+    # Disk free for the DB dir
+    disk_free_gb = None
+    try:
+        import shutil
+        db_path = (cfg.get("DASHBOARD_DB_PATH", default="") if cfg else "") or \
+                   os.path.expanduser("~/.local/share/gpu-dashboard/metrics.db")
+        db_dir = os.path.dirname(db_path) or "/"
+        if os.path.exists(db_dir):
+            free_bytes = shutil.disk_usage(db_dir).free
+            disk_free_gb = round(free_bytes / (1024**3), 2)
+    except Exception:
+        pass
+
+    # RAM total
+    ram_total_gb = None
+    try:
+        with open("/proc/meminfo", "r") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    kb = int(line.split()[1])
+                    ram_total_gb = round(kb / (1024**2), 2)
+                    break
+    except (OSError, IOError, ValueError, IndexError):
+        pass
+
+    return 200, {
+        "ok": True,
+        "timestamp_iso": _dt.datetime.now().isoformat(timespec="seconds"),
+        "dashboard_version": _ver,
+        "schema_version": schema_version,
+        "modules_enabled": modules_enabled,
+        "system": {
+            "kernel": _plat.release(),
+            "distro": distro,
+            "python": _sys.version.split()[0],
+            "arch": _plat.machine(),
+        },
+        "nvidia": {
+            "driver": nv_driver,
+            "cuda": nv_cuda,
+            "gpus": gpus,
+        },
+        "disk_free_gb_dashboard_data": disk_free_gb,
+        "ram_total_gb": ram_total_gb,
+    }
+
+
 def handle_version(ctx: dict) -> Response:
     """Tiny endpoint for headless monitoring / CLI scripts.
 
