@@ -705,6 +705,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_inference_cost(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/usage/users":
+                # R&D #14.2 — per-user lab accounting (single sample)
+                code, body = api.handle_lab_usage_live(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/hot-swap/evaluate":
                 code, body = api.handle_hot_swap_evaluate(ctx, params)
                 self._send_json(code, body)
