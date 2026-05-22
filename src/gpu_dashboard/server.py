@@ -675,6 +675,15 @@ def make_handler(ctx: dict):
                 code, body = api.handle_best_gpu(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/vram-quota":
+                # R&D #13.3 — VRAM quota enforcer status + rules
+                code, body = api.handle_vram_quota_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/vram-quota/evaluate":
+                code, body = api.handle_vram_quota_evaluate(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/best-gpu/env":
                 # R&D #13.7 — shell-friendly variant
                 code, text = api.handle_best_gpu_env(ctx, params)
@@ -931,6 +940,11 @@ def make_handler(ctx: dict):
             if self.path == "/api/rules":
                 # R&D #12.4 — save the whole rules list
                 code, body = api.handle_rules_save(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/vram-quota":
+                # R&D #13.3 — save VRAM quota rules
+                code, body = api.handle_vram_quota_save(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/notif/test":

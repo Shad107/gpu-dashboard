@@ -260,3 +260,4 @@ from .peers import handle_peers  # noqa: F401,F811
 from .airgap import handle_airgap_status, handle_airgap_audit  # noqa: F401,F811
 from .disk_health import handle_disk_health  # noqa: F401,F811
 from .best_gpu import handle_best_gpu, handle_best_gpu_env  # noqa: F401,F811
+from .vram_quota import handle_vram_quota_status, handle_vram_quota_save, handle_vram_quota_evaluate  # noqa: F401,F811
