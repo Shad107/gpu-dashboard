@@ -3,9 +3,13 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 13:15 (R&D #4 opened — 11 ideas surveyed)
-**Latest commit** : `577f249` — center group labels
-**Tests** : 650 passing · **CI** : ✅ green · **Bundle** : ~95 KB gzip · CSS ~7.4 KB
+**Last updated** : 2026-05-22 13:35 (R&D #4 COMPLETE — 5/5 priority shipped)
+**Latest commit** : `3c84640` — R&D #4.3 ECC health
+**Tests** : 682 passing · **CI** : ✅ green
+
+## ✅ R&D iteration #4 complete (5/5 priority)
+4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
+Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
 ## ✅ R&D #3 complete (5/5)
 3.1 sysreport tar.gz · 3.2 header status chip · 3.3 uptime % · 3.4 anomaly bands · 3.5 keyboard cheat-sheet.
