@@ -466,6 +466,17 @@ def make_handler(ctx: dict):
                 code, body = api.handle_health(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/metrics":
+                # Prometheus / OpenMetrics scrape endpoint (R&D #4.1)
+                code, text_body = api.handle_prometheus_metrics(ctx)
+                data = text_body.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-cache, no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path == "/api/update/check":
                 code, body = api.handle_update_check(ctx)
                 self._send_json(code, body)

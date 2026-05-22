@@ -2731,3 +2731,97 @@ def handle_alerts_test(ctx: dict) -> Response:
     )
     code = 200 if ok else 502
     return code, {"ok": ok, "msg": msg}
+
+
+# ─── R&D #4.1 — Prometheus /metrics endpoint ───────────────────────────────
+def handle_prometheus_metrics(ctx: dict) -> Tuple[int, str]:
+    """OpenMetrics-formatted live snapshot for every detected GPU.
+
+    Returns plain text (not JSON). Designed to be scrape-target for Prometheus,
+    Grafana Agent, VictoriaMetrics or any OpenMetrics-compatible collector.
+
+    Series exposed (one sample per GPU) :
+      - gpu_temp_celsius{gpu="0",name="…",uuid="…"}
+      - gpu_util_ratio{gpu="0",...}                # 0..1
+      - gpu_power_watts{gpu="0",...}
+      - gpu_power_limit_watts{gpu="0",...}
+      - gpu_memory_used_bytes{gpu="0",...}
+      - gpu_memory_total_bytes{gpu="0",...}
+      - gpu_fan_speed_ratio{gpu="0",fan="0",...}   # 0..1
+      - gpu_fan_rpm{gpu="0",fan="0",...}
+      - gpu_pcie_link_gen{gpu="0",...}
+      - gpu_pcie_link_width{gpu="0",...}
+      - gpu_dashboard_info{version="0.3.0"}        # gauge=1, info via labels
+
+    Permissive : missing fields are silently skipped (don't break the scrape).
+    """
+    from . import __version__ as VERSION
+
+    lines: list[str] = []
+
+    def add(name: str, help_text: str, type_: str = "gauge") -> None:
+        lines.append(f"# HELP {name} {help_text}")
+        lines.append(f"# TYPE {name} {type_}")
+
+    def fmt_labels(d: dict) -> str:
+        # Escape backslashes and double-quotes per OpenMetrics
+        parts = []
+        for k, v in d.items():
+            sv = str(v).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+            parts.append(f'{k}="{sv}"')
+        return "{" + ",".join(parts) + "}"
+
+    # Per-GPU live snapshot
+    gpus = _gpus_available()
+    add("gpu_temp_celsius", "GPU core temperature in °C")
+    add("gpu_util_ratio", "GPU utilization (0..1)")
+    add("gpu_power_watts", "Current power draw in Watts")
+    add("gpu_power_limit_watts", "Current power limit in Watts")
+    add("gpu_memory_used_bytes", "VRAM used in bytes")
+    add("gpu_memory_total_bytes", "VRAM total in bytes")
+    add("gpu_pcie_link_gen", "Current PCIe link generation")
+    add("gpu_pcie_link_width", "Current PCIe link width")
+    add("gpu_fan_speed_ratio", "Fan speed (0..1)")
+    add("gpu_fan_rpm", "Fan speed in RPM")
+    add("gpu_dashboard_info", "Build info (labels carry version)", "gauge")
+
+    for gpu in gpus:
+        idx = gpu.get("index", 0)
+        snap = _gpu_card_snapshot(gpu_index=idx)
+        if not snap or not snap.get("alive"):
+            continue
+        labels = {
+            "gpu": str(idx),
+            "name": snap.get("name", "unknown"),
+            "uuid": snap.get("uuid", ""),
+        }
+        L = fmt_labels(labels)
+        if snap.get("temp") is not None:
+            lines.append(f"gpu_temp_celsius{L} {snap['temp']}")
+        if snap.get("util_gpu") is not None:
+            lines.append(f"gpu_util_ratio{L} {snap['util_gpu'] / 100.0:.4f}")
+        if snap.get("power") is not None:
+            lines.append(f"gpu_power_watts{L} {snap['power']:.2f}")
+        if snap.get("power_limit") is not None:
+            lines.append(f"gpu_power_limit_watts{L} {snap['power_limit']:.2f}")
+        if snap.get("mem_used_mib") is not None:
+            lines.append(f"gpu_memory_used_bytes{L} {int(snap['mem_used_mib']) * 1024 * 1024}")
+        if snap.get("mem_total_mib") is not None:
+            lines.append(f"gpu_memory_total_bytes{L} {int(snap['mem_total_mib']) * 1024 * 1024}")
+        if snap.get("pcie_gen") is not None:
+            lines.append(f"gpu_pcie_link_gen{L} {snap['pcie_gen']}")
+        if snap.get("pcie_width") is not None:
+            lines.append(f"gpu_pcie_link_width{L} {snap['pcie_width']}")
+        # Per-fan series — only the GPU at gpu_index has fan detail
+        for f in (_per_fan_state(ctx["config"]) if idx == 0 else []):
+            fan_labels = {**labels, "fan": str(f.get("idx", 0))}
+            FL = fmt_labels(fan_labels)
+            if f.get("pct") is not None:
+                lines.append(f"gpu_fan_speed_ratio{FL} {f['pct'] / 100.0:.4f}")
+            if f.get("rpm") is not None:
+                lines.append(f"gpu_fan_rpm{FL} {f['rpm']}")
+
+    info_labels = fmt_labels({"version": VERSION})
+    lines.append(f"gpu_dashboard_info{info_labels} 1")
+    lines.append("")  # trailing newline per OpenMetrics
+    return 200, "\n".join(lines)

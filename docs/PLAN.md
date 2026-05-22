@@ -3,9 +3,37 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 09:38 (cycle 137 done — R&D #3.4 anomaly bands)
-**Latest commit** : `fe2d2a9` — benchmark scheduler helpers
-**Tests** : 637 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 13:15 (R&D #4 opened — 11 ideas surveyed)
+**Latest commit** : `577f249` — center group labels
+**Tests** : 650 passing · **CI** : ✅ green · **Bundle** : ~95 KB gzip · CSS ~7.4 KB
+
+## ✅ R&D #3 complete (5/5)
+3.1 sysreport tar.gz · 3.2 header status chip · 3.3 uptime % · 3.4 anomaly bands · 3.5 keyboard cheat-sheet.
+
+## ✅ UX polish session (cycles 139-145, ~22 commits)
+Migration v0.3.0 + systemd · sw.js root + Cache-Control · Wizard restart button · Auto-detect log source · Inline price edit · Modules toggle auto-restart · Fan curve immediate apply · History infinite-loop fix · A/B benchmark UI · Reorder cards · Strips → single merged strip with ‹ › arrows · Merge VRAM+PCIe into GPU card · Horizontal centered group labels · Sticky top+bottom · VersionFooter pull-update · Update check moved to About · scripts/test-update-flow.sh.
+
+## 💡 R&D iteration #4 (2026-05-22 13:15)
+
+Survey of nvtop/MangoHud/LACT/CoreCtrl/GPU-Z/DCGM/Netdata/Pi-hole inspired 11 candidate features. Priority list :
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 4.1 | **Prometheus `/metrics` endpoint** | XS | 5 | OpenMetrics text · gpu_index labels · zero deps |
+| 4.2 | **Clocks-event-reasons decoder** | S | 5 | WHY GPU throttles (power/thermal/HW) · strip under chart |
+| 4.3 | ECC + memory health panel | S | 4 | Corrected/uncorrected counters · remapped rows · Telegram alert |
+| 4.4 | **Fan curve hysteresis** | S | 5 | Ramp-down delay + hotspot input · stop osc on bursty LLM |
+| 4.5 | Idle-state audit | S | 4 | 'You pull 25W idle (expected 8-15W)' + checklist |
+| 4.6 | Per-process accounting tab | M | 5 | Kill button · sparkline per PID · session log |
+| 4.7 | MangoHud OSD bridge | S | 4 | Write /tmp/gpu-dashboard.mango in MangoHud format |
+| 4.8 | Workload tagger + replay | M | 5 | Drag-select chart → tag range "llama-70b Q4" · sessions table |
+| 4.9 | PCIe link quality probe | M | 5 | Active bandwidth burn + replay-counter delta · OcuLink |
+| 4.10 | Allow/block list for triggers | S | 4 | Pi-hole style · 'never let Steam touch GPU' · kill action |
+| 4.11 | Undervolt auto-tuner | L | 5 | Sweep PL × offsets under user workload → Pareto front |
+
+**Start order** : 4.1 (XS) → 4.2 (S) → 4.4 (S) → 4.5 (S) → 4.3 (S).
+
+Then re-evaluate based on user feedback.
 
 ---
 
