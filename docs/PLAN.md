@@ -11,6 +11,31 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #14 (2026-05-22 23:35) — AUTO-OPENED post #13 complete
+
+8 NEW angles, none in the backlog :
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 14.1 | **Xid fault-code dictionary** | S | 5 | Parse dmesg NVRM:Xid → JSON dict → human cause + remediation |
+| 14.2 | Per-user lab time accounting | M | 5 | UID → GPU-seconds + VRAM-hours + Wh, CSV export |
+| 14.3 | Crypto-miner signature library | S | 4 | xmrig/t-rex/lolMiner detection on shared boxes |
+| 14.4 | **Inference cost calculator** | M | 5 | Per-prompt €/token via wall-meter + LLM logs |
+| 14.5 | **Hot-swap / cable drift detector** | S | 5 | PCIe link-renegotiate / DRM disconnect events |
+| 14.6 | Steam/Heroic game library scan | M | 4 | Tag GPU sessions by detected game |
+| 14.7 | Wayland vs Xorg session probe | XS | 4 | Compositor + ExplicitSync support detection |
+| 14.8 | ZRAM/swap pressure correlator | S | 4 | PSI memory + ZRAM stats vs GPU stutters |
+
+Start order : 14.1 (XS-S, high fit, screenshot) → 14.5 → 14.4 → 14.2.
+
+---
+
+## ✅ R&D iteration #13 complete (4/4 — 2026-05-22 23:31) + UI sprint 4
+Backend : 13.3 VRAM quota · 13.4 carbon · 13.6 hot-GPU wizard · 13.7 best-GPU.
+UI cycle 4 : 4 cards added (Settings → Integrations now has 13 cards total).
+
+---
+
 ## 💡 R&D iteration #13 (2026-05-22 23:20) — AUTO-OPENED post #12 complete
 
 8 NEW angles :

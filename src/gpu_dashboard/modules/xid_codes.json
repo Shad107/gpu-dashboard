@@ -1,0 +1,108 @@
+{
+  "_source": "NVIDIA Error Code Reference for Xid Messages (public docs)",
+  "_notes": "Curated subset of the most common Xid codes encountered on consumer + datacenter NVIDIA GPUs. Severity : info | warn | fail. Maintained MIT, redistribution OK.",
+  "codes": {
+    "13": {
+      "name": "Graphics Engine Exception",
+      "cause": "Driver mismatch, application bug, or hardware fault — most often a driver/library version skew",
+      "severity": "warn",
+      "remediation": "Verify driver + CUDA toolkit versions match. Reinstall driver if recent. If recurring on one app, file an upstream bug."
+    },
+    "31": {
+      "name": "GPU memory page fault",
+      "cause": "Application read/write outside allocated VRAM — could be OOM-adjacent or a CUDA kernel bug",
+      "severity": "warn",
+      "remediation": "Check if VRAM was nearly full at the time. Reduce batch size. If app-specific, report to its maintainers."
+    },
+    "32": {
+      "name": "Invalid or corrupted push buffer stream",
+      "cause": "PCIe transmission errors or driver state corruption",
+      "severity": "warn",
+      "remediation": "Reseat the GPU. Check PCIe slot + power connectors. Try a different PCIe slot."
+    },
+    "43": {
+      "name": "GPU stopped processing",
+      "cause": "Application explicitly aborted a CUDA stream or kernel hit a guard",
+      "severity": "info",
+      "remediation": "Usually benign — application caught a runtime error and bailed. Look at the app's stderr."
+    },
+    "45": {
+      "name": "Preemptive cleanup, due to previous errors -- Most likely to see when running multiple cuda applications",
+      "cause": "Cascade after a previous Xid (e.g. OOM, kernel timeout)",
+      "severity": "info",
+      "remediation": "Treat as a follow-up to the actual root cause Xid that preceded it."
+    },
+    "61": {
+      "name": "GPU Compute Engine timeout (hang)",
+      "cause": "A CUDA kernel ran past its watchdog deadline (often : infinite loop, deadlock, or huge unsegmented batch)",
+      "severity": "fail",
+      "remediation": "Reduce batch size. Check for kernel deadlocks. Disable TDR if you really need long-running kernels (server-class)."
+    },
+    "62": {
+      "name": "GPU Internal Micro-controller Halt",
+      "cause": "GSP / falcon micro-controller error — usually transient, driver attempts to reset",
+      "severity": "warn",
+      "remediation": "If happens once : ignore. Recurring : try disabling GSP firmware via nvidia.NVreg_EnableGpuFirmware=0 module param."
+    },
+    "63": {
+      "name": "ECC page retirement / row remapping",
+      "cause": "A VRAM cell was retired automatically (datacenter cards : A100, H100, etc.)",
+      "severity": "warn",
+      "remediation": "Normal on aging datacenter cards. Check /api/ecc-health for remapped row count. If >100 → schedule replacement."
+    },
+    "64": {
+      "name": "ECC page retirement recording failure",
+      "cause": "Driver failed to persist the retirement metadata",
+      "severity": "fail",
+      "remediation": "Memory hardware is degrading. Schedule replacement."
+    },
+    "68": {
+      "name": "Video processor exception",
+      "cause": "NVENC/NVDEC engine error — common with corrupted video files",
+      "severity": "info",
+      "remediation": "Usually app-specific. Check stderr of the encode/decode app."
+    },
+    "74": {
+      "name": "NVLINK error",
+      "cause": "NVLink fabric / cable / slot fault (datacenter only)",
+      "severity": "fail",
+      "remediation": "Reseat NVLink bridge. Check link status via nvidia-smi nvlink -s."
+    },
+    "79": {
+      "name": "GPU has fallen off the bus",
+      "cause": "PSU power dropout, PCIe reset, or fatal hardware failure",
+      "severity": "fail",
+      "remediation": "Reseat power cables. Check PSU rail voltages. If recurring : test card in another rig before RMA."
+    },
+    "92": {
+      "name": "High single-bit ECC error rate",
+      "cause": "Memory cells accumulating soft errors",
+      "severity": "warn",
+      "remediation": "Monitor /api/ecc-health uncorrected counter. If it climbs, schedule replacement."
+    },
+    "94": {
+      "name": "Contained ECC error",
+      "cause": "Double-bit ECC error in VRAM, contained by the driver (no data loss to the kernel)",
+      "severity": "warn",
+      "remediation": "Datacenter cards : check /api/ecc-health. Consumer cards : reduce overclock / GPU voltage."
+    },
+    "95": {
+      "name": "Uncontained ECC error",
+      "cause": "Memory error the driver couldn't recover from — process killed",
+      "severity": "fail",
+      "remediation": "If recurring : memory is failing. Reduce mem-clock offset. Consider replacement."
+    },
+    "109": {
+      "name": "GPU monitoring contended access",
+      "cause": "Two tools polling NVML aggressively at the same time (nvidia-smi vs DCGM vs your dashboard)",
+      "severity": "info",
+      "remediation": "Increase sampler interval. Disable redundant monitoring tools."
+    },
+    "119": {
+      "name": "GSP RPC Timeout",
+      "cause": "GPU System Processor (GSP) firmware became unresponsive — typical on driver 535+ with consumer cards",
+      "severity": "warn",
+      "remediation": "Disable GSP via nvidia.NVreg_EnableGpuFirmware=0 in kernel module options. Reload driver."
+    }
+  }
+}

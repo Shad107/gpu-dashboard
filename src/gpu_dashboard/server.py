@@ -690,6 +690,15 @@ def make_handler(ctx: dict):
                 code, body = api.handle_carbon(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/xid":
+                # R&D #14.1 — Xid kernel-error decoder
+                code, body = api.handle_xid(ctx, params)
+                self._send_json(code, body)
+                return
+            if path == "/api/xid/decode":
+                code, body = api.handle_xid_decode(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/vram-quota/evaluate":
                 code, body = api.handle_vram_quota_evaluate(ctx, params)
                 self._send_json(code, body)
