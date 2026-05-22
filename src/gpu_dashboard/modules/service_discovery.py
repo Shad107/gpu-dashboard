@@ -198,7 +198,11 @@ def probe_health(port: int, path: str, host: str = "127.0.0.1",
 
 
 def discover(probe: bool = True) -> dict:
-    """Run full discovery. Returns aggregated dict + per-service cards."""
+    """Run full discovery. Returns aggregated dict + per-service cards.
+
+    Services with the same PID (e.g. Qdrant listens on HTTP 6333 + gRPC 6334)
+    are grouped into ONE card with `ports: [...]`, `primary_port` and `health`
+    probed only on the signature's canonical port (the first match)."""
     try:
         r = subprocess.run(["ss", "-tlnp"], capture_output=True, text=True, timeout=2)
     except (FileNotFoundError, subprocess.SubprocessError, OSError):
@@ -207,34 +211,51 @@ def discover(probe: bool = True) -> dict:
         return {"ok": True, "available": False, "reason": "ss failed"}
 
     listeners = parse_ss_output(r.stdout)
-    services: list = []
+    by_pid: dict = {}    # pid → {service info, ports: [...]}
     unknown: list = []
     for L in listeners:
         port = L["port"]
-        cmdline = read_cmdline(L["pid"])
-        # Skip well-known system services we don't care about
+        pid = L["pid"]
+        cmdline = read_cmdline(pid)
         if L.get("name") in ("sshd", "systemd-resolve", "cups-browsed", "cupsd"):
             continue
         sig = match_signature(port, cmdline)
         if sig is None:
-            # Track unknown services on non-trivial ports (skip very common ones)
             if port not in (22, 53, 631, 5353, 1716):
                 unknown.append({
                     "port": port,
-                    "pid": L["pid"],
+                    "pid": pid,
                     "proc_name": L.get("name") or "unknown",
                     "cmdline_preview": cmdline[:80] if cmdline else "",
                 })
             continue
-        card = {
-            "service": sig["name"],
-            "category": sig["category"],
-            "port": port,
-            "pid": L["pid"],
-            "proc_name": L.get("name") or "unknown",
-        }
-        if probe and sig.get("health_path"):
-            card["health"] = probe_health(port, sig["health_path"])
+        # Group by PID — same process, multiple ports → one card
+        key = pid if pid is not None else f"port-{port}"
+        if key not in by_pid:
+            by_pid[key] = {
+                "service": sig["name"],
+                "category": sig["category"],
+                "pid": pid,
+                "proc_name": L.get("name") or "unknown",
+                "ports": [],
+                "primary_port": None,
+            }
+        by_pid[key]["ports"].append(port)
+        # Primary port = first port that matches the signature's port_hints
+        if by_pid[key]["primary_port"] is None and port in sig.get("ports", []):
+            by_pid[key]["primary_port"] = port
+
+    # Probe health on each card's primary_port (or first port if no primary)
+    services: list = []
+    for card in by_pid.values():
+        card["ports"].sort()
+        if card["primary_port"] is None and card["ports"]:
+            card["primary_port"] = card["ports"][0]
+        if probe and card["primary_port"]:
+            # Lookup signature again for health_path
+            sig = match_signature(card["primary_port"], read_cmdline(card["pid"]))
+            if sig and sig.get("health_path"):
+                card["health"] = probe_health(card["primary_port"], sig["health_path"])
         services.append(card)
     return {
         "ok": True,
@@ -242,5 +263,5 @@ def discover(probe: bool = True) -> dict:
         "services_count": len(services),
         "services": services,
         "unknown_count": len(unknown),
-        "unknown_listeners": unknown[:20],  # cap
+        "unknown_listeners": unknown[:20],
     }
