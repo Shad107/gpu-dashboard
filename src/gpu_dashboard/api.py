@@ -2772,6 +2772,132 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #10.6 — ANSI/tldr endpoint for CLI users ────────────────────────────
+_ANSI = {
+    "reset": "\x1b[0m",
+    "bold": "\x1b[1m",
+    "dim": "\x1b[2m",
+    "red": "\x1b[31m",
+    "green": "\x1b[32m",
+    "yellow": "\x1b[33m",
+    "blue": "\x1b[34m",
+    "magenta": "\x1b[35m",
+    "cyan": "\x1b[36m",
+    "gray": "\x1b[90m",
+}
+
+
+def _color(text: str, c: str, enabled: bool = True) -> str:
+    if not enabled or c not in _ANSI:
+        return text
+    return f"{_ANSI[c]}{text}{_ANSI['reset']}"
+
+
+def _temp_color(t: float) -> str:
+    if t >= 80:
+        return "red"
+    if t >= 70:
+        return "yellow"
+    if t >= 50:
+        return "green"
+    return "cyan"
+
+
+def _spark(values: list, width: int = 12) -> str:
+    """Unicode block sparkline. values clipped to [0,100]."""
+    if not values:
+        return ""
+    blocks = " ▁▂▃▄▅▆▇█"
+    # Resample to `width`
+    if len(values) > width:
+        step = len(values) / width
+        sampled = [values[int(i * step)] for i in range(width)]
+    else:
+        sampled = values + [0] * (width - len(values))
+    out = []
+    for v in sampled:
+        idx = max(0, min(8, int((v or 0) / 100 * 8)))
+        out.append(blocks[idx])
+    return "".join(out)
+
+
+def handle_tldr(ctx: dict, params: Optional[dict] = None,
+                headers: Optional[dict] = None) -> Tuple[int, str]:
+    """ANSI-colored terminal-width-aware status card for CLI users.
+
+    Query params :
+      fmt    = tldr (default, multi-line) | oneline | full
+      cols   = terminal width override (default 80)
+    Headers :
+      NO_COLOR = if set (any value), suppress ANSI codes (per no-color.org)
+    """
+    params = params or {}
+    headers = headers or {}
+    fmt = params.get("fmt", "tldr")
+    try:
+        cols = max(40, min(200, int(params.get("cols", "80"))))
+    except (ValueError, TypeError):
+        cols = 80
+    color_on = "NO_COLOR" not in {k.upper() for k in headers}
+
+    # Live snapshot — main GPU only
+    snap = _gpu_card_snapshot(gpu_index=0)
+    if not snap or not snap.get("alive"):
+        return 200, "GPU offline\n"
+
+    t = snap.get("temp", 0)
+    util = snap.get("util_gpu", 0)
+    power = snap.get("power", 0)
+    plim = snap.get("power_limit", 0)
+    vram_used = (snap.get("mem_used_mib", 0) or 0) / 1024
+    vram_tot = (snap.get("mem_total_mib", 0) or 0) / 1024
+    name = snap.get("name", "GPU")
+    short_name = name.replace("NVIDIA GeForce ", "").replace("NVIDIA ", "")
+
+    # Sampler history → util sparkline
+    sampler = ctx.get("sampler")
+    util_history: list = []
+    if sampler:
+        snap_buf = sampler.snapshot()
+        util_history = [s.get("util_gpu", 0) or 0 for s in snap_buf[-30:]]
+    spark = _spark(util_history, width=20)
+
+    if fmt == "oneline":
+        # Tiny one-line for prompt / motd
+        line = (f"{_color(f'{t}°C', _temp_color(t), color_on)} "
+                f"{_color(f'{util}%', 'cyan', color_on)} "
+                f"{_color(f'{power:.0f}W', 'magenta', color_on)} "
+                f"{_color(short_name, 'gray', color_on)}")
+        return 200, line + "\n"
+
+    if fmt == "full":
+        # Multi-block layout
+        lines = []
+        lines.append(_color("─" * cols, "gray", color_on))
+        lines.append(f" {_color('GreenWatts', 'bold', color_on)}  "
+                     f"{_color(short_name, 'gray', color_on)}")
+        lines.append(_color("─" * cols, "gray", color_on))
+        lines.append(f" Temperature : {_color(f'{t}°C', _temp_color(t), color_on)}")
+        lines.append(f" Utilization : {_color(f'{util}%', 'cyan', color_on)}  {spark}")
+        lines.append(f" Power       : {_color(f'{power:.0f}W', 'magenta', color_on)} / {plim:.0f}W")
+        lines.append(f" VRAM        : {_color(f'{vram_used:.1f}', 'yellow', color_on)} / {vram_tot:.1f} GiB")
+        if snap.get("pcie_gen") is not None:
+            lines.append(f" PCIe        : Gen {snap['pcie_gen']} ×{snap.get('pcie_width', '?')}")
+        lines.append(_color("─" * cols, "gray", color_on))
+        return 200, "\n".join(lines) + "\n"
+
+    # default 'tldr' : compact 3-line block
+    lines = []
+    lines.append(f"{_color('GreenWatts', 'bold', color_on)}  "
+                 f"{_color(short_name, 'gray', color_on)}")
+    lines.append(f"  {_color(f'{t}°C', _temp_color(t), color_on)} · "
+                 f"{_color(f'{util}%', 'cyan', color_on)} util  "
+                 f"{spark}")
+    lines.append(f"  {_color(f'{power:.0f}W', 'magenta', color_on)}/{plim:.0f}W · "
+                 f"VRAM {_color(f'{vram_used:.1f}', 'yellow', color_on)}/{vram_tot:.1f}GiB")
+    return 200, "\n".join(lines) + "\n"
+
+
 # ─── R&D #9.3 — Auth tokens + share links ────────────────────────────────────
 def handle_auth_tokens_list(ctx: dict) -> Response:
     """List tokens (secrets are NEVER returned, only hash prefixes for ID)."""
