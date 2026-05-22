@@ -194,7 +194,7 @@
     aria-label="Scroll right">›</button>
 
 <div class="strip strip-merged no-scrollbar" use:wheelScroll>
-  <span class="group-divider"><span class="group-divider-label">🖥️ {i18n.t("group.gpu") ?? "GPU"}</span></span>
+  <div class="strip-group"><h4 class="strip-group-label">🖥️ {i18n.t("group.gpu") ?? "GPU"}</h4><div class="strip-cards">
     {#if alive && g && g.alive}
       {#if layout.visible("gpu")}
       <div class="card">
@@ -287,7 +287,8 @@
       </div>
     {/if}
 
-  <span class="group-divider"><span class="group-divider-label">🔧 {i18n.t("group.tuning") ?? "Tuning"}</span></span>
+  </div></div>
+  <div class="strip-group"><h4 class="strip-group-label">🔧 {i18n.t("group.tuning") ?? "Tuning"}</h4><div class="strip-cards">
     {#if alive && g && g.alive && layout.visible("power_limit")}
     <div class="card">
       <h2>{i18n.t("card.power_limit")}</h2>
@@ -350,7 +351,8 @@
       </div>
     {/if}
 
-  <span class="group-divider"><span class="group-divider-label">🪙 {i18n.t("group.llm") ?? "LLM"}</span></span>
+  </div></div>
+  <div class="strip-group"><h4 class="strip-group-label">🪙 {i18n.t("group.llm") ?? "LLM"}</h4><div class="strip-cards">
     {#if d?.llm_model && layout.visible("llm_model")}
       <div class="card">
         <h2>{i18n.t("card.llm_model")}</h2>
@@ -403,7 +405,8 @@
       </div>
     {/if}
 
-  <span class="group-divider"><span class="group-divider-label">💸 {i18n.t("group.cost") ?? "Coût"}</span></span>
+  </div></div>
+  <div class="strip-group"><h4 class="strip-group-label">💸 {i18n.t("group.cost") ?? "Coût"}</h4><div class="strip-cards">
     {#if elec && layout.visible("electricity")}
       {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
       {@const budgetUsedPct = elec.budget_kwh > 0 ? Math.min(100, (elec.kwh_month / elec.budget_kwh) * 100) : 0}
@@ -496,5 +499,6 @@
         </div>
       {/if}
     {/each}
-</div>
-</div>
+  </div></div>  <!-- /.strip-cards /.strip-group COST -->
+</div>  <!-- /.strip-merged -->
+</div>  <!-- /.strip-container -->

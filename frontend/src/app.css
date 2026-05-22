@@ -131,8 +131,10 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .strip-arrow:hover { color: var(--accent); background: var(--bg-card); opacity: 1; }
 .strip-arrow-left { left: -8px; }
 .strip-arrow-right { right: -8px; }
-/* Strip groups : label above + cards row below.
- * Multiple groups flow horizontally inside .strip. (Cycle 144d). */
+/* Strip groups (cycle 146) : 4 inline-flex columns, each :
+ *   row 1 = h4 label ABOVE its cards (user fb 'au dessus des cartes')
+ *   row 2 = horizontal flex of cards
+ * Groups separated by dashed left border. */
 .strip-group {
   display: flex;
   flex-direction: column;
@@ -150,11 +152,14 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .strip-group-label {
   margin: 0 0 0.2em;
   color: var(--text-muted);
-  font-size: 0.72em;
+  font-size: 0.78em;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
+  text-align: center;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.3em;
 }
 .strip-cards {
   display: flex;
