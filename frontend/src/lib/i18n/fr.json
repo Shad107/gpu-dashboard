@@ -275,6 +275,8 @@
   "benchmark.col_cost": "Coût",
   "chart.download_svg": "Télécharger en SVG",
   "header.chip_click_to_open": "Clic pour ouvrir le détail",
+  "header.commits_behind": "commits de retard",
+  "header.update_chip_title": "Nouvelle version dispo — clic pour ouvrir Services et mettre à jour",
   "history.anomaly_band": "Bande d'anomalie (μ±2σ)",
   "card.pcie": "PCIe",
   "pcie.downgrade": "bridé",

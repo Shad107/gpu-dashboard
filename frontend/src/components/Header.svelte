@@ -24,12 +24,18 @@
   // switches every 60s. Shows whichever is the most recent operational
   // event as a clickable pill in the header.
   type ChipState = {
-    kind: "alert" | "profile_switch" | "none";
+    kind: "alert" | "profile_switch" | "update" | "none";
     label: string;
     ts: number;
   };
   let chip = $state<ChipState>({ kind: "none", label: "", ts: 0 });
   let chipTimer: ReturnType<typeof setInterval> | null = null;
+  // Update check (cycle 138 — user request) — hourly poll, sticky chip
+  let updateInfo = $state<Awaited<ReturnType<typeof api.updateCheck>> | null>(null);
+  let updateTimer: ReturnType<typeof setInterval> | null = null;
+  async function refreshUpdate() {
+    try { updateInfo = await api.updateCheck(); } catch {}
+  }
 
   function fmtAgo(ts: number): string {
     const dt = Math.floor(Date.now() / 1000) - ts;
@@ -41,6 +47,15 @@
 
   async function refreshChip() {
     try {
+      // Update available trumps everything else
+      if (updateInfo?.update_available && updateInfo.behind_count) {
+        chip = {
+          kind: "update",
+          label: `🔔 ${updateInfo.behind_count} ${i18n.t("header.commits_behind") ?? "commits behind"}`,
+          ts: updateInfo.last_checked_ts || 0,
+        };
+        return;
+      }
       const r = await fetch("/api/health", { cache: "no-store" });
       const j = await r.json();
       const a = (j.recent_alerts ?? [])[0];
@@ -64,12 +79,18 @@
   function openChipTarget() {
     if (chip.kind === "alert") modal.show("alerts");
     else if (chip.kind === "profile_switch") modal.show("about");
+    else if (chip.kind === "update") modal.show("services");
   }
   onMount(() => {
     refreshChip();
+    refreshUpdate();
     chipTimer = setInterval(refreshChip, 60_000);
+    updateTimer = setInterval(async () => { await refreshUpdate(); refreshChip(); }, 3600_000);
   });
-  onDestroy(() => { if (chipTimer) clearInterval(chipTimer); });
+  onDestroy(() => {
+    if (chipTimer) clearInterval(chipTimer);
+    if (updateTimer) clearInterval(updateTimer);
+  });
 </script>
 
 <div class="header">
@@ -94,11 +115,14 @@
       class="status-chip"
       class:chip-alert={chip.kind === "alert"}
       class:chip-profile={chip.kind === "profile_switch"}
+      class:chip-update={chip.kind === "update"}
       onclick={openChipTarget}
-      title={i18n.t("header.chip_click_to_open") ?? "Click for details"}
+      title={chip.kind === "update" ? (i18n.t("header.update_chip_title") ?? "Click to update") : (i18n.t("header.chip_click_to_open") ?? "Click for details")}
     >
       {chip.label}
-      <span class="chip-ago">{fmtAgo(chip.ts)}</span>
+      {#if chip.kind !== "update"}
+        <span class="chip-ago">{fmtAgo(chip.ts)}</span>
+      {/if}
     </button>
   {/if}
   <button
@@ -136,5 +160,15 @@
     background: rgba(251, 191, 36, 0.08);
   }
   .chip-profile { color: var(--accent); }
+  .chip-update {
+    color: var(--accent-cool);
+    border-color: rgba(96, 165, 250, 0.4);
+    background: rgba(96, 165, 250, 0.10);
+    animation: chip-pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes chip-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.15); }
+  }
   .chip-ago { color: var(--text-dim); font-size: 0.85em; font-variant-numeric: tabular-nums; }
 </style>

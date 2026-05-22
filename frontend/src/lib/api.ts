@@ -430,6 +430,19 @@ export const api = {
       error?: string;
     }>),
 
+  updateCheck: () =>
+    fetch("/api/update/check").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      local_sha?: string;
+      local_short?: string;
+      remote_sha?: string;
+      remote_short?: string;
+      behind_count?: number;
+      update_available?: boolean;
+      last_checked_ts?: number;
+    }>),
+
   lifetimeStats: (gpu = 0) =>
     fetch("/api/lifetime-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;

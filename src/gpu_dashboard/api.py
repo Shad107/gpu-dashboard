@@ -1856,6 +1856,77 @@ def _redact_env_file(content: str) -> str:
     return "\n".join(out_lines) + "\n"
 
 
+_UPDATE_CHECK_CACHE: dict = {"ts": 0, "data": None}
+
+
+def handle_update_check(ctx: dict) -> Response:
+    """Check if a newer version is available on the remote.
+
+    Runs `git fetch origin --quiet` then compares local HEAD with @{upstream}.
+    Cached 1h to avoid spamming the remote. Returns :
+      {ok, local_sha, local_short, remote_sha, behind_count, update_available,
+       last_checked_ts}
+    """
+    import time as _t
+    import shutil as _sh
+
+    now = int(_t.time())
+    cache = _UPDATE_CHECK_CACHE
+    if cache["data"] is not None and now - cache["ts"] < 3600:
+        return 200, cache["data"]
+
+    repo = ctx.get("repo_root") or os.environ.get("DASHBOARD_REPO_ROOT") or os.getcwd()
+    # Find a parent that has a .git directory
+    for _ in range(4):
+        if os.path.isdir(os.path.join(repo, ".git")):
+            break
+        parent = os.path.dirname(repo)
+        if parent == repo:
+            break
+        repo = parent
+
+    if not os.path.isdir(os.path.join(repo, ".git")):
+        data = {"ok": False, "error": "not a git repo", "repo": repo}
+        cache.update({"ts": now, "data": data})
+        return 200, data
+    if _sh.which("git") is None:
+        data = {"ok": False, "error": "git not available"}
+        cache.update({"ts": now, "data": data})
+        return 200, data
+
+    def _git(*args, timeout=10):
+        try:
+            r = subprocess.run(
+                ["git", "-C", repo] + list(args),
+                capture_output=True, text=True, timeout=timeout,
+            )
+            return r.stdout.strip() if r.returncode == 0 else ""
+        except (subprocess.SubprocessError, OSError):
+            return ""
+
+    # fetch (best effort — offline returns empty)
+    subprocess.run(["git", "-C", repo, "fetch", "origin", "--quiet"],
+                   capture_output=True, timeout=15)
+
+    local_sha = _git("rev-parse", "HEAD")
+    remote_sha = _git("rev-parse", "@{upstream}")
+    behind_str = _git("rev-list", "--count", "HEAD..@{upstream}")
+    behind = int(behind_str) if behind_str.isdigit() else 0
+
+    data = {
+        "ok": True,
+        "local_sha": local_sha,
+        "local_short": local_sha[:7],
+        "remote_sha": remote_sha,
+        "remote_short": remote_sha[:7] if remote_sha else "",
+        "behind_count": behind,
+        "update_available": behind > 0,
+        "last_checked_ts": now,
+    }
+    cache.update({"ts": now, "data": data})
+    return 200, data
+
+
 def handle_sysreport_bundle(ctx: dict) -> tuple:
     """Bundle sysreport + events + redacted config + recent logs into tar.gz.
 
