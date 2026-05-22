@@ -400,6 +400,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_version(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/app-triggers":
+                code, body = api.handle_app_triggers_get(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/push/vapid":
                 code, body = api.handle_push_vapid(ctx)
                 self._send_json(code, body)
