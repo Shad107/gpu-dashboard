@@ -498,6 +498,16 @@ def make_handler(ctx: dict):
                 code, body = api.handle_thermal_coach(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/heartbeat":
+                code, body = api.handle_heartbeat_list(ctx)
+                self._send_json(code, body)
+                return
+            # /api/heartbeat/<token> — inbound ping from training scripts
+            if path.startswith("/api/heartbeat/"):
+                token = path[len("/api/heartbeat/"):].strip("/")
+                code, body = api.handle_heartbeat_ping(ctx, token)
+                self._send_json(code, body)
+                return
             if path == "/api/bar":
                 # R&D #5.4 — waybar/polybar/i3blocks/tmux/plain
                 code, body = api.handle_bar(ctx, params)
@@ -677,6 +687,10 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/electricity/config":
                 code, body = api.handle_electricity_config(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/heartbeat/config":
+                code, body = api.handle_heartbeat_config(ctx, payload)
                 self._send_json(code, body)
                 return
 

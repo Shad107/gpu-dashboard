@@ -2772,6 +2772,116 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #6.2 — Deadman heartbeat (inbound + outbound) ───────────────────────
+def _heartbeats_path() -> str:
+    return os.path.expanduser("~/.config/gpu-dashboard/heartbeats.json")
+
+
+def _load_heartbeats() -> dict:
+    """Persist shape : {tokens: {<token>: {name, interval_s, grace_s, last_seen_ts}}}.
+    Returns {tokens: {}} if missing."""
+    path = _heartbeats_path()
+    if not os.path.exists(path):
+        return {"tokens": {}}
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or "tokens" not in data:
+            return {"tokens": {}}
+        return data
+    except (OSError, json.JSONDecodeError):
+        return {"tokens": {}}
+
+
+def _save_heartbeats(data: dict) -> None:
+    path = _heartbeats_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def handle_heartbeat_list(ctx: dict) -> Response:
+    """List all heartbeat tokens + their current status (ok/late/never)."""
+    data = _load_heartbeats()
+    now = int(time.time())
+    items: list = []
+    for token, hb in (data.get("tokens") or {}).items():
+        last_seen = hb.get("last_seen_ts")
+        interval = int(hb.get("interval_s", 3600))
+        grace = int(hb.get("grace_s", 300))
+        if last_seen is None:
+            status = "never"
+            age_s = None
+        else:
+            age_s = now - int(last_seen)
+            status = "ok" if age_s <= interval + grace else "late"
+        items.append({
+            "token": token,
+            "name": hb.get("name", token),
+            "interval_s": interval,
+            "grace_s": grace,
+            "last_seen_ts": last_seen,
+            "age_s": age_s,
+            "status": status,
+        })
+    items.sort(key=lambda x: x.get("age_s") if x.get("age_s") is not None else -1, reverse=True)
+    return 200, {"ok": True, "heartbeats": items}
+
+
+def handle_heartbeat_ping(ctx: dict, token: str) -> Response:
+    """Inbound : record a ping from a training script.
+
+    Usage : `curl -fsS http://host/api/heartbeat/<token>`
+    Token must already exist (created via POST /api/heartbeat/config).
+    """
+    data = _load_heartbeats()
+    if token not in (data.get("tokens") or {}):
+        return 404, {"ok": False, "error": "unknown heartbeat token"}
+    data["tokens"][token]["last_seen_ts"] = int(time.time())
+    _save_heartbeats(data)
+    return 200, {"ok": True, "token": token, "ts": data["tokens"][token]["last_seen_ts"]}
+
+
+def handle_heartbeat_config(ctx: dict, payload: dict) -> Response:
+    """Create or update a heartbeat token.
+
+    Payload :
+      {token: str, name: str, interval_s: int, grace_s: int}
+      OR {delete: token}
+    """
+    if not isinstance(payload, dict):
+        return 400, {"ok": False, "error": "payload must be a dict"}
+    data = _load_heartbeats()
+    if "delete" in payload:
+        token = str(payload["delete"])
+        if token in data.get("tokens", {}):
+            del data["tokens"][token]
+            _save_heartbeats(data)
+        return 200, {"ok": True, "deleted": token}
+    token = str(payload.get("token", "")).strip()
+    if not token or not all(c.isalnum() or c in "-_" for c in token):
+        return 400, {"ok": False, "error": "token must be alphanumeric + - _"}
+    name = str(payload.get("name", token)).strip()
+    try:
+        interval_s = int(payload.get("interval_s", 3600))
+        grace_s = int(payload.get("grace_s", 300))
+    except (TypeError, ValueError):
+        return 400, {"ok": False, "error": "interval_s and grace_s must be integers"}
+    if interval_s < 30 or interval_s > 7 * 86400:
+        return 400, {"ok": False, "error": "interval_s out of range [30, 604800]"}
+    if grace_s < 0 or grace_s > interval_s:
+        return 400, {"ok": False, "error": "grace_s must be in [0, interval_s]"}
+    existing = data.get("tokens", {}).get(token, {})
+    data.setdefault("tokens", {})[token] = {
+        "name": name,
+        "interval_s": interval_s,
+        "grace_s": grace_s,
+        "last_seen_ts": existing.get("last_seen_ts"),  # preserve on edit
+    }
+    _save_heartbeats(data)
+    return 200, {"ok": True, "token": token}
+
+
 # ─── R&D #5.1 — Thermal headroom coach ───────────────────────────────────────
 def _linear_fit(xs: list, ys: list) -> tuple:
     """Plain least-squares linear regression. Returns (slope, intercept).
