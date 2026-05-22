@@ -3520,6 +3520,20 @@ def _linear_fit(xs: list, ys: list) -> tuple:
     return slope, intercept
 
 
+def _r_squared(xs: list, ys: list, slope: float, intercept: float) -> float:
+    """Coefficient of determination R² for the linear fit (0=no fit, 1=perfect).
+    Used as the prediction confidence indicator for R&D #8.2."""
+    n = len(ys)
+    if n < 2:
+        return 0.0
+    mean_y = sum(ys) / n
+    ss_tot = sum((y - mean_y) ** 2 for y in ys)
+    if ss_tot == 0:
+        return 1.0  # constant y → perfect fit by convention (no variance to explain)
+    ss_res = sum((y - (slope * x + intercept)) ** 2 for x, y in zip(xs, ys))
+    return max(0.0, 1.0 - ss_res / ss_tot)
+
+
 def handle_thermal_coach(ctx: dict) -> Response:
     """Surfaces a decision : headroom + projected time-to-throttle from the
     last 5min of samples.
@@ -3565,6 +3579,7 @@ def handle_thermal_coach(ctx: dict) -> Response:
 
     slope_per_sample, intercept = _linear_fit(xs, ys)
     slope = slope_per_sample / sample_interval_s  # °C per second
+    confidence = round(_r_squared(xs, ys, slope_per_sample, intercept), 3)
     current_temp = ys[-1]
     slowdown_temp = 83.0  # default for consumer Ampere/Ada
     headroom_c = round(slowdown_temp - current_temp, 1)
@@ -3591,6 +3606,21 @@ def handle_thermal_coach(ctx: dict) -> Response:
         suggested_fan_delta_pct = +5
         suggested_msg_key = "warming_up"
 
+    # R&D #8.2 — fire notification hub if imminent throttle + high confidence
+    if (projected_throttle_s is not None and projected_throttle_s < 120
+            and confidence > 0.5):
+        try:
+            from .modules import notif_hub as _nh
+            _nh.send(
+                level="warning",
+                title="⚠️ GPU throttle imminent",
+                body=(f"Projected throttle in {projected_throttle_s}s "
+                      f"(slope {round(slope * 60, 2)}°C/min, R²={confidence}). "
+                      f"Current {round(current_temp, 1)}°C, headroom {headroom_c}°C."),
+            )
+        except Exception:
+            pass  # don't fail the API call on notification errors
+
     return 200, {
         "ok": True,
         "available": True,
@@ -3599,6 +3629,7 @@ def handle_thermal_coach(ctx: dict) -> Response:
         "headroom_c": headroom_c,
         "slope_c_per_min": round(slope * 60, 3),
         "projected_throttle_s": projected_throttle_s,
+        "confidence": confidence,
         "suggested_fan_delta_pct": suggested_fan_delta_pct,
         "suggested_msg_key": suggested_msg_key,
         "sample_count": len(xs),

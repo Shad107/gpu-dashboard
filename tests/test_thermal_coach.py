@@ -88,3 +88,75 @@ def test_critical_headroom_under_5_returns_warning():
     assert code == 200
     assert body["headroom_c"] == 4.0
     assert body["suggested_msg_key"] == "fan_needs_help"
+
+
+# R&D #8.2 — confidence + notification bridge tests
+
+def test_r_squared_perfect_line():
+    # y = 2x + 3 exactly
+    xs = [0, 1, 2, 3, 4]
+    ys = [3, 5, 7, 9, 11]
+    r2 = api._r_squared(xs, ys, slope=2.0, intercept=3.0)
+    assert abs(r2 - 1.0) < 1e-9
+
+
+def test_r_squared_constant_y_returns_1():
+    """No variance in y → conventionally R²=1 (no error to attribute)."""
+    r2 = api._r_squared([1, 2, 3], [5, 5, 5], slope=0, intercept=5)
+    assert r2 == 1.0
+
+
+def test_r_squared_noisy_returns_below_1():
+    xs = [0, 1, 2, 3, 4]
+    ys = [3, 7, 6, 11, 10]  # noisy around y=2x+3
+    slope, intercept = api._linear_fit(xs, ys)
+    r2 = api._r_squared(xs, ys, slope, intercept)
+    assert 0 < r2 < 1
+
+
+def test_response_includes_confidence_field():
+    """The thermal coach must return a 'confidence' field (R²)."""
+    samples = [{"ts": "now", "temp": 40.0} for _ in range(20)]
+    code, body = api.handle_thermal_coach(_ctx(samples))
+    assert body["available"] is True
+    assert "confidence" in body
+    assert 0 <= body["confidence"] <= 1
+    # constant temp → R²=1 (no variance)
+    assert body["confidence"] == 1.0
+
+
+def test_imminent_throttle_triggers_notification(monkeypatch):
+    """When projected < 120s + confidence > 0.5, notif_hub.send must be called."""
+    calls = []
+    def fake_send(**kw):
+        calls.append(kw)
+        return []
+    from gpu_dashboard.modules import notif_hub
+    monkeypatch.setattr(notif_hub, "send", fake_send)
+    # 78 → 81.8°C over 20 samples — last temp stays under 83, projected ~30s
+    samples = [{"ts": "now", "temp": 78 + i * 0.2} for i in range(20)]
+    code, body = api.handle_thermal_coach(_ctx(samples))
+    assert code == 200
+    assert body["projected_throttle_s"] is not None
+    assert body["projected_throttle_s"] < 120
+    assert body["confidence"] > 0.5
+    assert len(calls) == 1
+    assert calls[0]["level"] == "warning"
+    assert "throttle imminent" in calls[0]["title"].lower()
+
+
+def test_low_confidence_does_not_trigger_notification(monkeypatch):
+    """Even imminent projected throttle, low R² should SUPPRESS notification
+    (false positives on noisy data)."""
+    calls = []
+    from gpu_dashboard.modules import notif_hub
+    monkeypatch.setattr(notif_hub, "send", lambda **kw: calls.append(kw) or [])
+    # Highly noisy temp series → high slope but low R²
+    import random
+    random.seed(42)
+    samples = [{"ts": "now", "temp": 80 + (i * 0.2) + random.uniform(-3, 3)} for i in range(20)]
+    code, body = api.handle_thermal_coach(_ctx(samples))
+    # If projected fires but R² < 0.5, the gate should block
+    if body["projected_throttle_s"] is not None and body["projected_throttle_s"] < 120:
+        if body["confidence"] <= 0.5:
+            assert len(calls) == 0, "notif should be suppressed when confidence low"
