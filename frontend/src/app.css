@@ -66,7 +66,10 @@ body, .card, .modal-section, .stats-card, .top-nav-btn, .btn {
   transition: background-color 0.25s, color 0.25s, border-color 0.25s;
 }
 
-/* Global styles — kept close to the v0.1 vanilla version for visual parity. */
+/* Global styles — kept close to the v0.1 vanilla version for visual parity.
+ * Cycle 141 (user feedback) : 'je ne peux pas descendre pas d'overflow' —
+ * removed overflow:hidden + fixed height so the page scrolls when content
+ * exceeds the viewport. */
 body {
   font-family: system-ui, -apple-system, sans-serif;
   margin: 0;
@@ -76,8 +79,7 @@ body {
   line-height: 1.3;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   box-sizing: border-box;
 }
 
