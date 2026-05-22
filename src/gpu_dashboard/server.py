@@ -660,6 +660,15 @@ def make_handler(ctx: dict):
                 code, body = api.handle_peers(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/airgap/status":
+                # R&D #12.7 — air-gap mode status
+                code, body = api.handle_airgap_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/airgap/audit":
+                code, body = api.handle_airgap_audit(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/rules/evaluate":
                 code, body = api.handle_rules_evaluate(ctx, params)
                 self._send_json(code, body)
