@@ -284,3 +284,4 @@ from .nvme_swap import handle_nvme_swap_status  # noqa: F401,F811
 from .cuda_matrix import handle_cuda_matrix_status  # noqa: F401,F811
 from .pcie_histogram import handle_pcie_histogram_status  # noqa: F401,F811
 from .throttle_cause import handle_throttle_cause_status  # noqa: F401,F811
+from .mps_health import handle_mps_health_status  # noqa: F401,F811

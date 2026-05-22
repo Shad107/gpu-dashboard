@@ -657,6 +657,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_throttle_cause_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/mps-health":
+                # R&D #19.6 — CUDA MPS daemon health probe
+                code, body = api.handle_mps_health_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
