@@ -2772,6 +2772,139 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #6.3 — System-context sidecar (CPU/iowait/swap/load) ────────────────
+# Cached previous readings to compute deltas between calls.
+_LAST_CPU_LINE: Optional[list] = None
+_LAST_CPU_TS: float = 0.0
+_LAST_VMSTAT: dict = {}
+_LAST_VMSTAT_TS: float = 0.0
+
+
+def _read_proc_stat_cpu() -> Optional[list]:
+    """Return /proc/stat's aggregate cpu line as list of 10 ints, or None."""
+    try:
+        with open("/proc/stat") as f:
+            line = f.readline()
+        if not line.startswith("cpu "):
+            return None
+        parts = line.split()[1:]
+        return [int(p) for p in parts[:10]]  # user nice system idle iowait irq softirq steal guest guest_nice
+    except (OSError, ValueError):
+        return None
+
+
+def _read_proc_loadavg() -> Optional[tuple]:
+    """Return (load1, load5, load15) or None."""
+    try:
+        with open("/proc/loadavg") as f:
+            parts = f.read().split()
+        return float(parts[0]), float(parts[1]), float(parts[2])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _read_proc_vmstat() -> dict:
+    """Parse /proc/vmstat — pswpin / pswpout / pgmajfault are interesting."""
+    out = {}
+    try:
+        with open("/proc/vmstat") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) >= 2:
+                    out[parts[0]] = int(parts[1])
+    except (OSError, ValueError):
+        pass
+    return out
+
+
+def _read_proc_meminfo() -> dict:
+    """Return current memory + swap usage in KB."""
+    out = {}
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) >= 2 and parts[0].endswith(":"):
+                    try:
+                        out[parts[0].rstrip(":")] = int(parts[1])
+                    except ValueError:
+                        pass
+    except OSError:
+        pass
+    return out
+
+
+def handle_sys_context(ctx: dict) -> Response:
+    """Snapshot system metrics that correlate with GPU stalls.
+
+    Returns CPU usage (incl iowait%), load avg, swap activity, RAM used.
+
+    CPU% / iowait% computed as delta vs last call's /proc/stat snapshot.
+    First call returns CPU%=null (no baseline yet) but everything else
+    is fine.
+
+    pswp_in_per_sec / pgmajfault_per_sec computed similarly from
+    /proc/vmstat deltas.
+    """
+    global _LAST_CPU_LINE, _LAST_CPU_TS, _LAST_VMSTAT, _LAST_VMSTAT_TS
+
+    now = time.time()
+    cur_cpu = _read_proc_stat_cpu()
+    cpu_pct = None
+    iowait_pct = None
+    if cur_cpu is not None and _LAST_CPU_LINE is not None:
+        diffs = [cur - prev for cur, prev in zip(cur_cpu, _LAST_CPU_LINE)]
+        total = sum(diffs)
+        if total > 0:
+            idle = diffs[3] if len(diffs) > 3 else 0
+            iowait = diffs[4] if len(diffs) > 4 else 0
+            cpu_pct = round(100.0 * (total - idle) / total, 1)
+            iowait_pct = round(100.0 * iowait / total, 1)
+    _LAST_CPU_LINE = cur_cpu
+    _LAST_CPU_TS = now
+
+    cur_vm = _read_proc_vmstat()
+    pswpin_ps = None
+    pgmajfault_ps = None
+    if _LAST_VMSTAT and _LAST_VMSTAT_TS:
+        elapsed = max(0.001, now - _LAST_VMSTAT_TS)
+        if "pswpin" in cur_vm and "pswpin" in _LAST_VMSTAT:
+            pswpin_ps = max(0, round((cur_vm["pswpin"] - _LAST_VMSTAT["pswpin"]) / elapsed, 2))
+        if "pgmajfault" in cur_vm and "pgmajfault" in _LAST_VMSTAT:
+            pgmajfault_ps = max(0, round((cur_vm["pgmajfault"] - _LAST_VMSTAT["pgmajfault"]) / elapsed, 2))
+    _LAST_VMSTAT = {k: cur_vm.get(k, 0) for k in ("pswpin", "pswpout", "pgmajfault")}
+    _LAST_VMSTAT_TS = now
+
+    loadavg = _read_proc_loadavg()
+    mem = _read_proc_meminfo()
+    mem_total_kb = mem.get("MemTotal", 0)
+    mem_free_kb = mem.get("MemAvailable", mem.get("MemFree", 0))
+    mem_used_pct = None
+    if mem_total_kb > 0:
+        mem_used_pct = round(100.0 * (mem_total_kb - mem_free_kb) / mem_total_kb, 1)
+    swap_total_kb = mem.get("SwapTotal", 0)
+    swap_free_kb = mem.get("SwapFree", 0)
+    swap_used_pct = None
+    if swap_total_kb > 0:
+        swap_used_pct = round(100.0 * (swap_total_kb - swap_free_kb) / swap_total_kb, 1)
+
+    return 200, {
+        "ok": True,
+        "available": True,
+        "cpu_pct": cpu_pct,
+        "iowait_pct": iowait_pct,
+        "loadavg_1": loadavg[0] if loadavg else None,
+        "loadavg_5": loadavg[1] if loadavg else None,
+        "loadavg_15": loadavg[2] if loadavg else None,
+        "mem_used_pct": mem_used_pct,
+        "mem_total_kb": mem_total_kb,
+        "swap_used_pct": swap_used_pct,
+        "swap_total_kb": swap_total_kb,
+        "pswpin_per_sec": pswpin_ps,
+        "pgmajfault_per_sec": pgmajfault_ps,
+    }
+
+
 # ─── R&D #6.1 — Unified notification hub (Apprise-style fanout) ──────────────
 def handle_notif_channels_list(ctx: dict) -> Response:
     """Return all configured channels (with secrets masked)."""

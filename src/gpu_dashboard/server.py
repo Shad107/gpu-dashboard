@@ -510,6 +510,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_notif_channels_list(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sys-context":
+                code, body = api.handle_sys_context(ctx)
+                self._send_json(code, body)
+                return
             # /api/heartbeat/<token> — inbound ping from training scripts
             if path.startswith("/api/heartbeat/"):
                 token = path[len("/api/heartbeat/"):].strip("/")
