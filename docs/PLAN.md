@@ -3,9 +3,9 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:40 (cycle 131 done — R&D #2.3b per-GPU cost)
-**Latest commit** : `8c5e31d` — per-GPU YTD cost split
-**Tests** : 612 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 08:44 (cycle 132 done — R&D #2.4 sticky peak alerts)
+**Latest commit** : `9aa49bc` — sticky peak alerts module
+**Tests** : 621 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
@@ -108,7 +108,11 @@ no SaaS, no paid tier).
 3b. **Per-GPU cost split** (cycle 131) ✅ DONE
    - StatsView yearly card : per-GPU breakdown + ∑ Total row when multi-GPU
    - 2 new i18n keys × 2 langs · pure UI (no tests, no backend change)
-4. **Sticky peak alerts** (cycle 130) — alert if recorded temp/power ever exceeds a configured threshold ; remembered across restarts via storage.
+4. **Sticky peak alerts** (cycle 132) ✅ DONE
+   - modules/sticky_peak.py + check_and_alert helper
+   - Lifetime MAX query + idempotent storage events
+   - 9 new TDD tests · 612 → 621
+   - Daemon wiring deferred to a future cycle (alert_monitor integration)
 5. **Scheduled benchmarks** (cycle 131) — POST /api/benchmark/schedule with cron-like spec ; runs in background thread.
 
 ---
