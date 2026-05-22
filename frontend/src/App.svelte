@@ -12,6 +12,7 @@
   import IdleBanner from "./components/IdleBanner.svelte";
   import LatestAlertFooter from "./components/LatestAlertFooter.svelte";
   import Toast from "./components/Toast.svelte";
+  import VersionFooter from "./components/VersionFooter.svelte";
   import { live, wizard, modal, toast } from "./lib/stores.svelte";
   import { view } from "./lib/view.svelte";
   import { theme } from "./lib/theme.svelte";  // applies theme class on boot
@@ -128,7 +129,5 @@
   <SettingsModal />
   <Toast />
 
-  <div class="footer">
-    {i18n.t("footer.refresh")} · <a href="https://github.com/Shad107/gpu-dashboard">github</a>
-  </div>
+  <VersionFooter />
 {/if}

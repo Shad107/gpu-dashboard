@@ -440,6 +440,14 @@ export const api = {
       last_remote_msg?: string | null;
     }>),
 
+  versionInfo: () =>
+    fetch("/api/version").then(jsonOf<{
+      ok: boolean;
+      version: string;
+      schema_version: number | null;
+      modules_enabled: string[];
+    }>),
+
   lifetimeStats: (gpu = 0) =>
     fetch("/api/lifetime-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
