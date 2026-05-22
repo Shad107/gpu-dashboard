@@ -3,19 +3,22 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 06:18 (heartbeat #7 — cadence extended to 4h)
-**Latest commit** : `b206025` — release v0.3.0
+**Last updated** : 2026-05-22 07:25 (cycle 115 done — About → Stats reorg per user feedback)
+**Latest commit** : `1c6a333` — About slim + Stats consolidated
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
 ## 🔄 In progress
 
-**v0.3.0 released.** Loop idle on 1h heartbeats until user redirects.
+User redirected 2026-05-22 07:23 : "le about complèté a les totaux consolider
+peut être a mettre ailleurs ... faut réorganise". Loop back to 270s active.
 
-Heartbeats (6 × 1h elapsed, all clean — bumping cadence to 4h to reduce commit noise):
-- 02:53 → 05:20 : 6 heartbeats, no commits, no direction, CI stayed green.
-- 06:18 : 7th heartbeat — switching to 4h cadence.
+### Cycle 115 — About → Stats reorg (2 commits)
+- `86886fa` SettingsModal About stripped to version/vBIOS/paths/license/repo + hint
+  StatsView gains 📊 Year-to-date totals card + recent switches log
+- `1c6a333` i18n keys companion (the previous Edit batch missed the JSON files)
+- User confirmed fan curve stays in Settings → Tuning.
 
 ---
 
