@@ -563,6 +563,78 @@ export const api = {
       }[];
     }>),
 
+  // ── R&D #13 features (UI sprint cycle 4) ───────────────────────────────
+  hotGpuWizard: () =>
+    fetch("/api/hot-gpu-wizard").then(jsonOf<{
+      ok: boolean;
+      verdict: "pass" | "warn" | "fail" | "skip";
+      steps: Array<{
+        step: string;
+        kind: "pass" | "warn" | "fail" | "skip";
+        detail: string;
+        fix?: string;
+        [k: string]: any;
+      }>;
+      actions: string[];
+      ts: number;
+    }>),
+
+  vramQuotaStatus: () =>
+    fetch("/api/vram-quota").then(jsonOf<{
+      ok: boolean;
+      rules: Array<{ id: string; process_regex: string; max_vram_mib: number;
+                     grace_s?: number; action: string }>;
+      audit: Array<{ ts: number; pid: number; name: string;
+                     used_mib: number; max_mib: number;
+                     action: string; escalation: string;
+                     breached_for_s: number; dry_run: boolean; rule_id: string }>;
+      actions_supported: string[];
+    }>),
+
+  vramQuotaSave: (rules: any[]) =>
+    fetch("/api/vram-quota", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rules }),
+    }).then(jsonOf<{ ok: boolean; count?: number; errors?: string[] }>),
+
+  vramQuotaEvaluate: (dryRun = true) =>
+    fetch(`/api/vram-quota/evaluate?dry_run=${dryRun ? 1 : 0}`).then(jsonOf<{
+      ok: boolean; dry_run: boolean;
+      fires: Array<{ rule_id: string; pid: number; name: string;
+                     used_mib: number; max_mib: number; action: string;
+                     escalation: string; breached_for_s: number; dry_run: boolean }>;
+    }>),
+
+  carbon: () =>
+    fetch("/api/carbon").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reason?: string;
+      csv_path?: string;
+      current_gco2_per_kwh?: number;
+      current_hour?: number;
+      gco2_today_g?: number;
+      gco2_month_kg?: number;
+      gco2_per_token_g?: number;
+      day_min_gco2_per_kwh?: number;
+      day_max_gco2_per_kwh?: number;
+      day_avg_gco2_per_kwh?: number;
+    }>),
+
+  bestGpu: () =>
+    fetch("/api/best-gpu").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      best_index?: number;
+      best_score?: number;
+      shell_export?: string;
+      reasoning?: string;
+      ranked?: Array<{ index: number; name: string; temp_c: number | null;
+                       util_pct: number | null; vram_used_mib: number | null;
+                       vram_total_mib: number | null; score: number }>;
+    }>),
+
   // ── R&D #12.2 — disk health (UI sprint cycle 3) ────────────────────────
   diskHealth: () =>
     fetch("/api/disk-health").then(jsonOf<{

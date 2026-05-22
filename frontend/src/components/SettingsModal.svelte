@@ -882,6 +882,44 @@
     return "var(--text-dim)";
   }
 
+  // ── UI sprint cycle 4 — R&D #13 features ────────────────────────────────
+  let wizardLoading = $state(false);
+  let wizardData = $state<Awaited<ReturnType<typeof api.hotGpuWizard>> | null>(null);
+  async function runHotGpuWizard() {
+    wizardLoading = true;
+    try { wizardData = await api.hotGpuWizard(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { wizardLoading = false; }
+  }
+
+  let vramQuotaData = $state<Awaited<ReturnType<typeof api.vramQuotaStatus>> | null>(null);
+  let vramEvalLoading = $state(false);
+  async function loadVramQuota() {
+    try { vramQuotaData = await api.vramQuotaStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function evalVramQuota() {
+    vramEvalLoading = true;
+    try {
+      const r = await api.vramQuotaEvaluate(true);
+      toast.emit(`✓ Evaluated — ${r.fires.length} breach(es)`, "ok");
+      await loadVramQuota();  // reload audit
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { vramEvalLoading = false; }
+  }
+
+  let carbonData = $state<Awaited<ReturnType<typeof api.carbon>> | null>(null);
+  async function loadCarbon() {
+    try { carbonData = await api.carbon(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let bestGpuData = $state<Awaited<ReturnType<typeof api.bestGpu>> | null>(null);
+  async function loadBestGpu() {
+    try { bestGpuData = await api.bestGpu(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -893,6 +931,10 @@
       if (!airgapStat) loadAirgapStatus();
       if (!wallMeter) loadWallMeter();
       if (!peersData) loadPeers();
+      // R&D #13 cards
+      if (!vramQuotaData) loadVramQuota();
+      if (!carbonData) loadCarbon();
+      if (!bestGpuData) loadBestGpu();
     }
   });
 
@@ -2246,6 +2288,189 @@
           </table>
         {:else}
           <p class="muted">{i18n.t("integrations.peers.none")}</p>
+        {/if}
+      </div>
+
+      <!-- UI sprint cycle 4 — R&D #13 cards -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wizard.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wizard.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={runHotGpuWizard} disabled={wizardLoading}>
+            {wizardLoading ? "⏳…" : i18n.t("integrations.wizard.run")}
+          </button>
+        </div>
+        {#if wizardData}
+          <p style="margin: 8px 0;">
+            <b style:color={_verdictColor(wizardData.verdict)}>
+              {wizardData.verdict === "pass" ? i18n.t("integrations.wizard.verdict_pass")
+                : wizardData.verdict === "warn" ? i18n.t("integrations.wizard.verdict_warn")
+                : wizardData.verdict === "fail" ? i18n.t("integrations.wizard.verdict_fail")
+                : i18n.t("integrations.wizard.verdict_skip")}
+            </b>
+          </p>
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse;">
+            <tbody>
+              {#each wizardData.steps as s}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 5px; width: 90px;"><b>{s.step}</b></td>
+                  <td style="padding: 5px;">
+                    <span style:color={_verdictColor(s.kind)}>{s.kind}</span>
+                  </td>
+                  <td style="padding: 5px; color: var(--text-dim);">{s.detail}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+          {#if wizardData.actions && wizardData.actions.length > 0}
+            <p style="margin: 10px 0 4px 0;"><b>{i18n.t("integrations.wizard.actions_label")} :</b></p>
+            <ul style="margin: 0; padding-left: 18px; font-size: 0.9em;">
+              {#each wizardData.actions as action}
+                <li>{action}</li>
+              {/each}
+            </ul>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vram.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vram.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={evalVramQuota} disabled={vramEvalLoading}>
+            {vramEvalLoading ? "⏳…" : i18n.t("integrations.vram.eval")}
+          </button>
+        </div>
+        {#if vramQuotaData}
+          {#if vramQuotaData.rules.length === 0}
+            <p class="muted">{i18n.t("integrations.vram.no_rules")}</p>
+          {:else}
+            <table style="width:100%; font-size:0.9em; border-collapse: collapse; margin-top: 6px;">
+              <thead>
+                <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                  <th style="padding: 4px;">id</th>
+                  <th style="padding: 4px;">regex</th>
+                  <th style="padding: 4px;">max</th>
+                  <th style="padding: 4px;">grace</th>
+                  <th style="padding: 4px;">action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each vramQuotaData.rules as r}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 5px;"><b>{r.id}</b></td>
+                    <td style="padding: 5px; font-family: monospace; font-size: 0.85em;">{r.process_regex}</td>
+                    <td style="padding: 5px;">{r.max_vram_mib} MiB</td>
+                    <td style="padding: 5px;">{r.grace_s ?? 60}s</td>
+                    <td style="padding: 5px;">{r.action}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+          {#if vramQuotaData.audit.length > 0}
+            <p style="margin: 10px 0 4px 0;"><b>{i18n.t("integrations.vram.recent_fires")} :</b></p>
+            <table style="width:100%; font-size:0.85em; border-collapse: collapse;">
+              <tbody>
+                {#each vramQuotaData.audit.slice(0, 5) as f}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px; color: var(--text-dim); font-size: 0.85em;">
+                      {new Date(f.ts * 1000).toLocaleTimeString()}
+                    </td>
+                    <td style="padding: 4px;">{f.name?.split("/").pop()}</td>
+                    <td style="padding: 4px;">{f.used_mib}/{f.max_mib} MiB</td>
+                    <td style="padding: 4px;">
+                      <span style:color={f.escalation.includes("kill") ? "var(--err)" : f.escalation.includes("term") ? "var(--warn)" : "var(--text-dim)"}>
+                        {f.escalation}
+                      </span>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.carbon.title")}</h4>
+        <p class="muted">{i18n.t("integrations.carbon.desc")}</p>
+        {#if carbonData && carbonData.available}
+          <div class="form-row" style="flex-wrap: wrap; gap: 14px; margin-top: 8px;">
+            <span class="kv">{i18n.t("integrations.carbon.current")} :
+              <b>{carbonData.current_gco2_per_kwh} gCO2/kWh</b>
+            </span>
+            {#if carbonData.gco2_today_g != null}
+              <span class="kv">{i18n.t("integrations.carbon.today")} :
+                <b>{carbonData.gco2_today_g} g</b>
+              </span>
+            {/if}
+            {#if carbonData.gco2_month_kg != null}
+              <span class="kv">{i18n.t("integrations.carbon.month")} :
+                <b>{carbonData.gco2_month_kg} kg</b>
+              </span>
+            {/if}
+            {#if carbonData.gco2_per_token_g != null}
+              <span class="kv">{i18n.t("integrations.carbon.per_token")} :
+                <b style="color: var(--ok);">{carbonData.gco2_per_token_g.toFixed(6)} g</b>
+              </span>
+            {/if}
+          </div>
+          {#if carbonData.day_min_gco2_per_kwh != null}
+            <p class="muted" style="margin: 8px 0; font-size: 0.88em;">
+              {i18n.t("integrations.carbon.day_range")} :
+              {carbonData.day_min_gco2_per_kwh} ·
+              {carbonData.day_avg_gco2_per_kwh} ·
+              {carbonData.day_max_gco2_per_kwh} gCO2/kWh
+            </p>
+          {/if}
+        {:else if carbonData}
+          <p class="muted">{carbonData.reason ?? i18n.t("integrations.carbon.not_configured")}</p>
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bestgpu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bestgpu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBestGpu}>{i18n.t("integrations.bestgpu.refresh")}</button>
+        </div>
+        {#if bestGpuData && bestGpuData.available}
+          <p style="margin: 8px 0;">
+            {bestGpuData.reasoning}
+          </p>
+          <div class="form-row" style="gap: 8px; margin-top: 6px;">
+            <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                          font-family: monospace; border-radius: 4px;">
+              {bestGpuData.shell_export}
+            </code>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(bestGpuData?.shell_export ?? "")}>📋</button>
+          </div>
+          {#if bestGpuData.ranked && bestGpuData.ranked.length > 1}
+            <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 10px;">
+              <thead>
+                <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                  <th style="padding: 4px;">idx</th>
+                  <th style="padding: 4px;">temp</th>
+                  <th style="padding: 4px;">util</th>
+                  <th style="padding: 4px;">vram</th>
+                  <th style="padding: 4px;">score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each bestGpuData.ranked as r, i}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px;">{r.index}{i === 0 ? " ★" : ""}</td>
+                    <td style="padding: 4px;">{r.temp_c ?? '—'}°C</td>
+                    <td style="padding: 4px;">{r.util_pct ?? '—'}%</td>
+                    <td style="padding: 4px;">{r.vram_used_mib ?? '—'}/{r.vram_total_mib ?? '—'} MiB</td>
+                    <td style="padding: 4px; font-variant-numeric: tabular-nums;">{r.score}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
         {/if}
       </div>
 
