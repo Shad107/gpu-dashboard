@@ -197,16 +197,21 @@
             ENC <b>{g.util_enc ?? 0}%</b> · DEC <b>{g.util_dec ?? 0}%</b>
           </div>
         {/if}
-      </div>
-      {/if}
-
-      {#if layout.visible("vram")}
-      <div class="card">
-        <h2>{i18n.t("card.vram")}</h2>
-        <div class="big">
-          {(g.mem_used_mib / 1024).toFixed(1)}
-          <span class="sub" style="font-size:.55em">/ {(g.mem_total_mib / 1024).toFixed(1)} GiB</span>
-        </div>
+        <!-- VRAM folded into GPU card (cycle 144d, user fb 'regroupé la vrm avec la carte gpu') -->
+        {#if layout.visible("vram")}
+          <div class="sub" style="margin-top:.4em;padding-top:.3em;border-top:1px solid var(--border-subtle)">
+            VRAM <b style="color:var(--text-muted)">{(g.mem_used_mib / 1024).toFixed(1)}</b> / {(g.mem_total_mib / 1024).toFixed(1)} GiB
+          </div>
+        {/if}
+        <!-- PCIe folded into GPU card (cycle 144d, 'pareil pour le pcie') -->
+        {#if layout.visible("pcie") && g.pcie_gen != null && g.pcie_width != null}
+          {@const pcieDowngrade = (g.pcie_gen_max != null && g.pcie_gen < g.pcie_gen_max)
+                               || (g.pcie_width_max != null && g.pcie_width < g.pcie_width_max)}
+          <div class="sub" style="margin-top:.2em">
+            PCIe <b style:color={pcieDowngrade ? "var(--accent-warn)" : "var(--text-muted)"}>Gen {g.pcie_gen} ×{g.pcie_width}</b>
+            {#if pcieDowngrade}<span style="color:var(--accent-warn);margin-left:.3em">⚠️</span>{/if}
+          </div>
+        {/if}
       </div>
       {/if}
 
@@ -235,22 +240,6 @@
       </div>
       {/if}
 
-      {#if layout.visible("pcie") && g.pcie_gen != null && g.pcie_width != null}
-        {@const downgrade = (g.pcie_gen_max != null && g.pcie_gen < g.pcie_gen_max)
-                         || (g.pcie_width_max != null && g.pcie_width < g.pcie_width_max)}
-        <div class="card">
-          <h2>{i18n.t("card.pcie") ?? "PCIe"}</h2>
-          <div class="big" style:color={downgrade ? "var(--accent-warn)" : "var(--accent)"}>
-            Gen {g.pcie_gen} ×{g.pcie_width}
-          </div>
-          <div class="sub">
-            {#if g.pcie_gen_max != null && g.pcie_width_max != null}
-              max Gen {g.pcie_gen_max} ×{g.pcie_width_max}
-              {#if downgrade}<span style="color:var(--accent-warn);margin-left:.4em">⚠️ {i18n.t("pcie.downgrade") ?? "downgraded"}</span>{/if}
-            {/if}
-          </div>
-        </div>
-      {/if}
     {:else}
       <div class="card">
         <h2>{i18n.t("card.gpu")}</h2>
@@ -321,12 +310,8 @@
         <div class="sub">{d.watchdog.drops} {i18n.t("oculink.drops")}</div>
       </div>
     {/if}
-    </div>
-  </div>
 
-  <div class="strip-group">
-    <h4 class="strip-group-label">🪙 {i18n.t("group.llm") ?? "LLM"}</h4>
-    <div class="strip-cards">
+  <span class="group-divider"><span class="group-divider-label">🪙 {i18n.t("group.llm") ?? "LLM"}</span></span>
     {#if d?.llm_model && layout.visible("llm_model")}
       <div class="card">
         <h2>{i18n.t("card.llm_model")}</h2>
@@ -378,12 +363,8 @@
         {/if}
       </div>
     {/if}
-    </div>
-  </div>
 
-  <div class="strip-group">
-    <h4 class="strip-group-label">💸 {i18n.t("group.cost") ?? "Coût"}</h4>
-    <div class="strip-cards">
+  <span class="group-divider"><span class="group-divider-label">💸 {i18n.t("group.cost") ?? "Coût"}</span></span>
     {#if elec && layout.visible("electricity")}
       {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
       {@const budgetUsedPct = elec.budget_kwh > 0 ? Math.min(100, (elec.kwh_month / elec.budget_kwh) * 100) : 0}
@@ -476,7 +457,5 @@
         </div>
       {/if}
     {/each}
-    </div>
-  </div>
 </div>
 </div>
