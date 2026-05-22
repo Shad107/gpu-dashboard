@@ -2772,6 +2772,13 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #9.1 — VFIO / GPU passthrough sentinel ──────────────────────────────
+def handle_vfio_status(ctx: dict) -> Response:
+    """Return VFIO passthrough status for all NVIDIA GPUs."""
+    from .modules import vfio_sentinel
+    return 200, vfio_sentinel.status()
+
+
 # ─── R&D #8.4 — llama-bench history + regression detector ────────────────────
 def handle_llamabench_status(ctx: dict) -> Response:
     """Status of the llama-bench monitor : binary presence + recent history."""

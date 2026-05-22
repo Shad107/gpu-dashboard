@@ -11,6 +11,30 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #9 (2026-05-22 15:18) — AUTO-OPENED post #8 complete
+
+Per the auto-rebound rule. 8 fresh angles (containers, GPU passthrough, auth, HF cache, multi-user audit, time-series anomaly).
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 9.1 | **VFIO/Passthrough Sentinel** | S | 5 | Detect GPU bound to vfio-pci → which VM holds it. Unique demo |
+| 9.2 | Container Topology Map | M | 5 | Docker/Podman/k8s → GPU tree via /proc + cgroups |
+| 9.3 | Dashboard Auth + Read-Only Share | M | 5 | HMAC tokens, scope claims, safe Tailscale Funnel |
+| 9.4 | HF Cache Janitor | S | 5 | Surface 80+ GB cold model files, dry-run prune |
+| 9.5 | Quant Recommender | S | 4 | Given VRAM budget, suggest best quant for HF model |
+| 9.6 | Multi-User Audit Log | S | 5 | Every settings mutation → audit_log row, blame per-user |
+| 9.7 | Process Timeline Replay | M | 5 | Swimlane chart of PIDs claiming VRAM over time |
+| 9.8 | Holt-Winters Anomaly Scorer | M | 4 | Stdlib triple-expo smoothing, dedup notif storms |
+
+**Start order** : 9.1 (S, unique demo) → 9.4 (S, useful) → 9.6 (S, ties to existing auth idea) → 9.3 (M, security) → 9.7 (M, visual).
+
+---
+
+## ✅ R&D iteration #8 complete (4/4 priority shipped — 2026-05-22 15:13)
+8.1 history scrubber · 8.2 thermal coach R² + notif bridge · 8.7 Jupyter monitor · 8.4 llama-bench monitor.
+
+---
+
 ## 💡 R&D iteration #8 (2026-05-22 14:45) — AUTO-OPENED post #7 complete
 
 Per the auto-rebound rule. Surveyed angle : visual / demo-able features
