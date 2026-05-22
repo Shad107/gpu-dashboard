@@ -11,6 +11,34 @@ Source de vérité pour : ce qui est fait, en cours, à venir.
 4.1 Prometheus /metrics · 4.2 clocks-event-reasons decoder · 4.3 ECC health · 4.4 fan curve hysteresis · 4.5 idle-state audit.
 Backlog still queued (4.6-4.11) : per-process tab, MangoHud bridge, workload tagger, PCIe probe, allow/block list, undervolt auto-tuner.
 
+## 💡 R&D iteration #7 (2026-05-22 14:25) — AUTO-OPENED post #6 complete
+
+Per the standing **auto-rebound rule**, surveyed NEW tools (OpenTelemetry,
+WebSocket streaming, MQTT, SSH fleet aggregator, InfluxDB line protocol,
+UPS/NUT, remote action console, eBPF tracer, Loki push, audio cues, Prometheus
+AlertManager). Frontier : **integration / fleet / actions** (the dashboard
+is now mature for single-host monitoring).
+
+| # | Feature | Effort | Fit | Notes |
+|---|---------|--------|-----|-------|
+| 7.1 | WebSocket live stream (replace polling) | M | 5 | Sub-second updates, less CPU on idle tabs |
+| 7.2 | MQTT bridge (Home Assistant compat) | M | 5 | Trigger smart-plug shutoff / room AC on overtemp |
+| 7.3 | SSH fleet aggregator | L | 5 | Multi-host fleet wall via ssh -L + ControlMaster |
+| 7.4 | **InfluxDB line protocol pusher** | S | 4 | One-line Grafana/Influx integration |
+| 7.5 | UPS / NUT awareness | M | 5 | Auto-throttle PL on battery, extend uptime |
+| 7.6 | Remote action console (sudo wrap) | M | 5 | One-click reboot/restart-vllm with audit log |
+| 7.7 | eBPF GPU syscall tracer | L | 4 | bpftrace bridge for ioctl storms, OOM hits |
+| 7.8 | Loki log push | S | 4 | Grafana ecosystem completion |
+| 7.9 | Audio cue engine (espeak) | XS | 3 | Spoken alerts for headless rigs |
+| 7.10 | Prometheus AlertManager rules export | S | 4 | rules.yaml download button |
+
+**Start order** : 7.4 (S, immediate Grafana value) → 7.10 (S) → 7.5 (M, real LLM-rig pain) → 7.1 (M, infra) → 7.2 (M).
+
+---
+
+## ✅ R&D iteration #6 complete (5/5 priority shipped — 2026-05-22 13:40)
+6.1 unified notification hub · 6.2 deadman heartbeat · 6.3 sys-context · 6.7 journalctl bridge · 6.8 cgroup power accounting.
+
 ## 💡 R&D iteration #6 (2026-05-22 13:50) — AUTO-OPENED post #5
 
 Per the standing **auto-rebound rule**, surveyed fresh tools (Apprise, Healthchecks, journalctl, cgroup/systemd-cgtop, glances iowait, restic/borg, kernel sysrq, Tailscale/Caddy reverse-proxy) — identified 8 candidates :
