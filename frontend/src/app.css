@@ -697,6 +697,26 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
   .heatmap-grid { grid-template-columns: repeat(6, 1fr); }
 }
 
+/* Monthly power budget tracker (electricity card, cycle 121) */
+.budget-tracker { display: flex; flex-direction: column; gap: 0.15em; }
+.budget-line {
+  display: flex; align-items: baseline; gap: 0.4em;
+  font-size: 0.78em; flex-wrap: wrap;
+}
+.budget-bar {
+  position: relative; height: 6px; background: var(--bg-page);
+  border-radius: 3px; overflow: hidden;
+}
+.budget-fill {
+  position: absolute; top: 0; left: 0; height: 100%;
+  transition: width .3s;
+}
+.budget-forecast {
+  position: absolute; top: 0; height: 100%;
+  background: rgba(251, 191, 36, 0.25);
+  border-left: 1px dashed rgba(251, 191, 36, 0.8);
+}
+
 /* Profile activity log (About tab) */
 .profile-log {
   display: flex;
