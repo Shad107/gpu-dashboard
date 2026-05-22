@@ -37,7 +37,7 @@ pip install -e .[dev]
 pytest
 ```
 
-The test suite is fast (~4s for 420+ tests) and uses no external services —
+The test suite is fast (~5s for 530+ tests) and uses no external services —
 `subprocess` calls are mocked with `monkeypatch`, `urllib.request.urlopen` is
 mocked for HTTP fetchers, `os.execv` and `sys.exit` are monkeypatched away in
 lifecycle tests. **CI runs the suite on Python 3.9 → 3.13**.
@@ -92,6 +92,22 @@ PYTHONPATH=src pytest tests/ -v
 5. Test that an old-schema DB created manually gets migrated on open
    (see `test_storage_migration.py` for the pattern).
 
+Current schema is v4 — see `_migrate_v1_to_v2` (tokens_total_snapshot),
+`_migrate_v2_to_v3` (push_subscriptions table), `_migrate_v3_to_v4` (gpu_index).
+
+### Multi-GPU contributions
+
+The dashboard supports rigs with multiple NVIDIA GPUs. New endpoints that
+return per-sample data should accept a `?gpu_index=N` query param :
+
+1. Use the `_parse_gpu_index(params)` helper from `api.py`.
+2. Pass it to `storage.get_samples(gpu_index=N)`.
+3. Default to `0` for back-compat (`-1` = all GPUs, used by `alert_monitor`).
+4. Add a TDD test that verifies filtering works for index 0 vs 1.
+
+The frontend `api.ts` wrappers all take an optional trailing `gpu = 0` arg
+and append `&gpu_index=N` when non-zero.
+
 ## 🚫 What we don't accept
 
 - New runtime dependencies (other than `jsonschema`) without prior discussion
@@ -124,5 +140,44 @@ pnpm dev                # dev server :5173 (proxies /api to :9999)
 When you submit a PR that touches `frontend/src/`, **always commit the rebuilt
 `src/gpu_dashboard/static/` along with your source changes** so the project
 stays installable without Node.
+
+### Frontend architecture (v0.3)
+
+```
+frontend/src/
+├── App.svelte              # Top-level : Header · TopNav · view dispatch · Modal · Toast
+├── components/
+│   ├── Header.svelte           multi-GPU picker · gear icon
+│   ├── TopNav.svelte           Dashboard · Stats · History tabs
+│   ├── Cards.svelte            8 live cards (GPU/Power/Fans/VRAM/LLM/Electricity/Processes)
+│   ├── CoolingChart.svelte     live fan+temp chart
+│   ├── PowerChart.svelte       live power draw chart
+│   ├── HistoryView.svelte      24h/7d/30d ranges · Compare-to · CSV export
+│   ├── StatsView.svelte        sparkline aggregates · heatmap · alerts list
+│   ├── HistoryChart.svelte     reusable SVG line chart
+│   ├── Sparkline.svelte        compact mini-chart
+│   ├── FanCurveEditor.svelte   drag-and-drop SVG curve editor
+│   ├── SettingsModal.svelte    10-tab settings : Tuning · Alerts · Ops · Advanced · Préférences
+│   ├── SetupWizard.svelte      5-step first-run wizard
+│   ├── IdleBanner.svelte       shown after 30 min of <5% util
+│   ├── LatestAlertFooter.svelte shows last alert + age
+│   └── Toast.svelte
+├── lib/
+│   ├── api.ts              typed fetch wrappers — all endpoints accept ?gpu_index=N
+│   ├── stores.svelte.ts    live (polled state) · toast · modal · wizard
+│   ├── view.svelte.ts      'dashboard' | 'history' | 'stats' (top-nav routing)
+│   ├── layout.svelte.ts    cards visibility + drag-reorder + URL embeds
+│   ├── theme.svelte.ts     dark / light theme + class application on <html>
+│   ├── gpu.svelte.ts       selected GPU index (multi-GPU rigs)
+│   ├── push.svelte.ts      Browser Push subscribe / unsubscribe state machine
+│   ├── charts.ts           smoothPath helper + color functions
+│   └── i18n/               EN + FR translation tables
+└── public/
+    └── sw.js               Service worker for push notifications
+```
+
+CSS variables in `app.css` (`:root, html.theme-dark` vs `html.theme-light`) make
+the theme system work — any new component should consume `var(--bg-card)` etc.
+rather than hard-coding colors.
 
 See `frontend/README.md` for the full layout + how to add a language.
