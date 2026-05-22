@@ -201,7 +201,7 @@
         <!-- Cycle 148d/f user fb : 'mettre GPU et nom de carte sur la meme
              ligne' + 'utilisé la meme police celle de GPU' — same h2 styling -->
         <h2>
-          {i18n.t("card.gpu")}{#if g.name} {g.name.replace(/^NVIDIA\s+(GeForce\s+)?/i, "")}{/if}
+          {i18n.t("card.gpu")}{#if g.name}&nbsp;{g.name.replace(/^NVIDIA\s+(GeForce\s+)?/i, "")}{/if}
         </h2>
         <div class="big" style:color={tempColor(g.temp)}>{g.temp}°C</div>
         <div class="sub">{i18n.t("gpu.util")} {g.util_gpu}% · {i18n.t("gpu.draw")} {g.power.toFixed(0)} W</div>
