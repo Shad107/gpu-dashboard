@@ -253,3 +253,4 @@ from ._core import (  # noqa: F401
 )
 
 from .embed import handle_embed  # noqa: F401,F811
+from .ci_tag import handle_ci_tag  # noqa: F401,F811

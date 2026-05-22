@@ -632,6 +632,19 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ups_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ci-tag":
+                # R&D #12.5 — CI runner GPU labels endpoint
+                code, text = api.handle_ci_tag(ctx, params)
+                data = text.encode("utf-8")
+                self.send_response(code)
+                fmt = (params or {}).get("fmt", "text")
+                ct = "application/json" if fmt == "json" else "text/plain"
+                self.send_header("Content-Type", f"{ct}; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path == "/api/snapshot":
                 code, body = api.handle_snapshot_at(ctx, params)
                 self._send_json(code, body)
