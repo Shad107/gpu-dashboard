@@ -3,9 +3,9 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:24 (cycle 128 done — R&D #2.1 sysreport)
-**Latest commit** : `85b2528` — CHANGELOG + refresh dashboard/stats.png
-**Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
+**Last updated** : 2026-05-22 08:30 (cycle 129 done — R&D #2.2 lifetime stats)
+**Latest commit** : `09bd3ae` — lifetime peak temp/power/fan + lowest idle
+**Tests** : 612 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
 
@@ -98,7 +98,10 @@ no SaaS, no paid tier).
 1. **`/api/sysreport`** (cycle 128) ✅ DONE
    - Live tested : kernel 6.17, Ubuntu 25.10, NVIDIA 590.48.01, CUDA 13.1, RTX 3090, 30.3 GB RAM, 14.9 GB disk free
    - 8 new TDD tests · 598 → 606
-2. **Per-metric lifetime min/max** (cycle 128) — extend stats with peak_ever_temp, lowest_ever_idle_w, peak_ever_power. Sticky across restarts.
+2. **Per-metric lifetime min/max** (cycle 129) ✅ DONE
+   - GET /api/lifetime-stats : peak_temp_c, peak_power_w, peak_fan_pct, peak_fan_rpm, lowest_idle_power_w
+   - Computed on-the-fly via SQL aggregates (no schema bump)
+   - 6 new TDD tests · 606 → 612
 3. **Per-GPU cost split** (cycle 129) — multi-GPU rigs : `/api/electricity?gpu_index=N` already filters by GPU ; surface per-card breakdown in About / Stats.
 4. **Sticky peak alerts** (cycle 130) — alert if recorded temp/power ever exceeds a configured threshold ; remembered across restarts via storage.
 5. **Scheduled benchmarks** (cycle 131) — POST /api/benchmark/schedule with cron-like spec ; runs in background thread.
