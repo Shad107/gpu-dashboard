@@ -288,3 +288,4 @@ from .mps_health import handle_mps_health_status  # noqa: F401,F811
 from .process_nice import handle_process_nice_status  # noqa: F401,F811
 from .warmup_profile import handle_warmup_profile_status, handle_warmup_profile_probe  # noqa: F401,F811
 from .suspend_guard import handle_suspend_guard_status  # noqa: F401,F811
+from .container_audit import handle_container_audit_status  # noqa: F401,F811

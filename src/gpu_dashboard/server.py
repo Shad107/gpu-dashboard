@@ -677,6 +677,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_suspend_guard_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/container-audit":
+                # R&D #20.1 — NVIDIA Container Toolkit GPU visibility audit
+                code, body = api.handle_container_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
