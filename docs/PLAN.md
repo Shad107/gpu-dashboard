@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:30 (cycle 110 done — alerts list in Stats)
-**Latest commit** : `c0e7c04` — alerts list in StatsView
+**Last updated** : 2026-05-22 02:35 (cycle 111 done — README roadmap + CI flake fix)
+**Latest commit** : `7e70ac9` — kwh_year precision fix
 **Tests** : 534 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -59,6 +59,11 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 111 — README Roadmap + CI flake fix (3 commits)
+- `f4bd605` Expanded README Roadmap section (Delivered / Parked / Won't do)
+- `956853f` Timezone-robust kwh_today test (CI was failing at midnight UTC)
+- `7e70ac9` Align kwh_year rounding with kwh_today (4 decimals, not 2)
 
 ### Cycle 110 — Recent alerts section in StatsView (1 commit)
 - `c0e7c04` New section after the heatmap : 🚨 Recent alerts (7 days)
@@ -509,7 +514,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~119 |
+| Commits since v0.1.0 | ~122 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
