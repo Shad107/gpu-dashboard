@@ -541,6 +541,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hf_card(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/vector-db":
+                code, body = api.handle_vector_db(ctx)
+                self._send_json(code, body)
+                return
             if path.startswith("/badge/") and path.endswith(".svg"):
                 # R&D #10.7 — live README SVG badge
                 metric = path[len("/badge/"):-len(".svg")]

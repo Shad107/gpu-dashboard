@@ -2772,6 +2772,13 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #10.1 — Vector DB watchdog (Chroma / Qdrant / pgvector) ─────────────
+def handle_vector_db(ctx: dict) -> Response:
+    """Probe locally-configured vector stores and return aggregated status."""
+    from .modules import vector_db
+    return 200, vector_db.status(ctx["config"])
+
+
 # ─── R&D #10.3 — HF model card cross-reference ──────────────────────────────
 def handle_hf_card(ctx: dict, params: Optional[dict] = None) -> Response:
     """Look up the HF model card for a given repo_id or path.
