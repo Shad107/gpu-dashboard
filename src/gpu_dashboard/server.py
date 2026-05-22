@@ -613,6 +613,28 @@ def make_handler(ctx: dict):
                 code, body = api.handle_idle_json(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/ecc-remap":
+                # R&D #17.1 — ECC remap scrubber status
+                code, body = api.handle_ecc_remap_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/ecc-remap/record":
+                code, body = api.handle_ecc_remap_record(ctx, params)
+                self._send_json(code, body)
+                return
+            if path == "/api/ecc-remap/rma-report.csv":
+                code, csv_text = api.handle_ecc_remap_rma_csv(ctx)
+                data = csv_text.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "text/csv; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header(
+                    "Content-Disposition",
+                    'attachment; filename="ecc-remap-rma-report.csv"',
+                )
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if path == "/tldr":
                 # R&D #10.6 — ANSI/tldr endpoint for CLI users
                 req_headers = {k: v for k, v in self.headers.items()}
