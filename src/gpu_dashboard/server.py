@@ -557,6 +557,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_watchdog_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/services-discovered":
+                code, body = api.handle_service_discovery(ctx, params)
+                self._send_json(code, body)
+                return
             if path.startswith("/badge/") and path.endswith(".svg"):
                 # R&D #10.7 — live README SVG badge
                 metric = path[len("/badge/"):-len(".svg")]

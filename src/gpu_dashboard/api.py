@@ -2772,6 +2772,15 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #11.4 — Auto-discover well-known LLM/RAG/GPU services ────────────
+def handle_service_discovery(ctx: dict, params: Optional[dict] = None) -> Response:
+    """Return list of detected services + unknown listeners on the host."""
+    from .modules import service_discovery
+    params = params or {}
+    probe = params.get("probe", "1") not in ("0", "false", "False")
+    return 200, service_discovery.discover(probe=probe)
+
+
 # ─── R&D #11.1b — Watchdog setup (install systemd units from UI) ──────────
 def handle_watchdog_status(ctx: dict) -> Response:
     from .modules import watchdog_setup
