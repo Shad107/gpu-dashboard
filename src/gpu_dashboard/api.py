@@ -2772,6 +2772,20 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #9.4 — HF cache janitor (cold large models) ─────────────────────────
+def handle_hf_janitor(ctx: dict, params: Optional[dict] = None) -> Response:
+    """Surface cold large model files across known cache/model dirs."""
+    from .modules import hf_janitor
+    params = params or {}
+    extra_raw = ctx["config"].get("MODELS_DIRS", "") or ""
+    extra = [d.strip() for d in extra_raw.split(",") if d.strip()] or None
+    try:
+        limit = max(1, min(500, int(params.get("limit", "50"))))
+    except (ValueError, TypeError):
+        limit = 50
+    return 200, hf_janitor.audit(extra_dirs=extra, limit=limit)
+
+
 # ─── R&D #9.1 — VFIO / GPU passthrough sentinel ──────────────────────────────
 def handle_vfio_status(ctx: dict) -> Response:
     """Return VFIO passthrough status for all NVIDIA GPUs."""

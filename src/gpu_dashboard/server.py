@@ -557,6 +557,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_vfio_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hf-janitor":
+                code, body = api.handle_hf_janitor(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/alertmanager/rules.yaml":
                 code, text_body = api.handle_alertmanager_rules(ctx)
                 data = text_body.encode("utf-8")
