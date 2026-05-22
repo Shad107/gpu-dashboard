@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 08:01 (cycle 122 done — R&D #4 benchmark backend)
-**Latest commit** : `a42ba7b` — benchmark helpers + 7 tests
+**Last updated** : 2026-05-22 08:05 (cycle 123 done — R&D #4 COMPLETE — benchmark shipped)
+**Latest commit** : `a3e8b57` — benchmark API + UI + 7 more tests
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -60,9 +60,9 @@ no SaaS, no paid tier).
    - POST /api/electricity/config accepts budget_kwh
    - Electricity card shows actual progress bar + forecast band + ⚠️ over_budget
    - 8 new TDD tests · 572 → 580
-4. **Compare-A-vs-B benchmark** (cycles 122-123)
-   - Cycle 122 ✓ : `modules/benchmark.py` helpers (run_segment + compare) + 7 tests (`a42ba7b`)
-   - Cycle 123 next : /api/benchmark/run handler + UI modal
+4. **Compare-A-vs-B benchmark** (cycles 122-123) ✅ DONE
+   - Cycle 122 ✓ : benchmark helpers + 7 tests (`a42ba7b`)
+   - Cycle 123 ✓ : POST /api/benchmark/run + UI tab + 7 more tests (`a3e8b57`) — total 14 tests
 5. **Plot SVG export** (cycle 124) — ⬇️ button on each chart → download SVG.
 6. **GPU process tree expansion** (cycle 125) — Cards processes : PID + cmdline tooltip + %VRAM bar.
 
