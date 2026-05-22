@@ -1043,6 +1043,66 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── UI sprint cycle 7 — R&D #16 features ────────────────────────────────
+  let drBundles = $state<Awaited<ReturnType<typeof api.drBundleList>>["bundles"] | null>(null);
+  let drBuilding = $state(false);
+  async function loadDrBundles() {
+    try { const r = await api.drBundleList(); drBundles = r.bundles; }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function buildDrBundle() {
+    drBuilding = true;
+    try {
+      const r = await api.drBundleBuild();
+      if (r.ok) {
+        toast.emit(`✓ Bundle built · ${((r.size_bytes ?? 0) / 1024).toFixed(1)} KiB · ${r.file_count} files`, "ok");
+        await loadDrBundles();
+      } else {
+        toast.emit("✗ " + (r.error || "build failed"), "err");
+      }
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { drBuilding = false; }
+  }
+  async function deleteDrBundle(name: string) {
+    if (!confirm(`Delete bundle ${name}?`)) return;
+    try {
+      await api.drBundleDelete(name);
+      toast.emit("✓ Deleted", "ok");
+      await loadDrBundles();
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let lmStudioData = $state<Awaited<ReturnType<typeof api.lmStudioInventory>> | null>(null);
+  async function loadLmStudio() {
+    try { lmStudioData = await api.lmStudioInventory(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let driverVaultData = $state<Awaited<ReturnType<typeof api.driverVaultStatus>> | null>(null);
+  let driverVaultScript = $state<string | null>(null);
+  async function loadDriverVault() {
+    try { driverVaultData = await api.driverVaultStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function stashDriver() {
+    try {
+      const r = await api.driverVaultStash();
+      toast.emit(r.ok ? "✓ Driver stashed" : "✗ " + (r.reason || "stash failed"),
+                 r.ok ? "ok" : "err");
+      await loadDriverVault();
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function showRollbackScript(name: string) {
+    try {
+      const r = await api.driverVaultRollbackScript(name);
+      if (r.ok && r.script) {
+        driverVaultScript = r.script;
+      } else {
+        toast.emit("✗ " + (r.error || "script generation failed"), "err");
+      }
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -1067,6 +1127,10 @@
       if (!bootProfileData) loadBootProfile();
       if (!tariffData) loadTariff();
       if (!discordData) loadDiscordRpc();
+      // R&D #16 cards
+      if (!drBundles) loadDrBundles();
+      if (!lmStudioData) loadLmStudio();
+      if (!driverVaultData) loadDriverVault();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -2906,6 +2970,177 @@
               {i18n.t("integrations.discord.ready")}
             </p>
           {/if}
+        {/if}
+      </div>
+
+      <!-- UI sprint cycle 7 — R&D #16 cards (rendered before bestgpu) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.noc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.noc.desc")}</p>
+        <div class="form-row">
+          <a class="btn" href="/noc" target="_blank" rel="noopener">
+            {i18n.t("integrations.noc.open")} ↗
+          </a>
+        </div>
+        <p class="muted" style="font-size: 0.82em; margin-top: 8px;
+                                  font-family: monospace;">
+          {i18n.t("integrations.noc.kiosk_hint")}
+        </p>
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dr.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dr.desc")}</p>
+        <div class="form-row">
+          <button class="btn btn-primary" onclick={buildDrBundle} disabled={drBuilding}>
+            {drBuilding ? i18n.t("integrations.dr.building") : i18n.t("integrations.dr.build")}
+          </button>
+        </div>
+        {#if drBundles}
+          {#if drBundles.length === 0}
+            <p class="muted">{i18n.t("integrations.dr.list_empty")}</p>
+          {:else}
+            <p style="margin: 8px 0 4px 0;"><b>{i18n.t("integrations.dr.bundles_label")} :</b></p>
+            <table style="width:100%; font-size:0.88em; border-collapse: collapse;">
+              <tbody>
+                {#each drBundles as b}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 5px; font-family: monospace; font-size: 0.85em;">{b.name}</td>
+                    <td style="padding: 5px; text-align: right;">
+                      {(b.size_bytes / 1024).toFixed(1)} KiB
+                    </td>
+                    <td style="padding: 5px; color: var(--text-dim); font-size: 0.85em;">
+                      {new Date(b.ts * 1000).toLocaleString()}
+                    </td>
+                    <td style="padding: 5px;">
+                      <button class="btn btn-small btn-danger" onclick={() => deleteDrBundle(b.name)}>×</button>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.lmstudio.title")}</h4>
+        <p class="muted">{i18n.t("integrations.lmstudio.desc")}</p>
+        {#if lmStudioData}
+          {#if !lmStudioData.available}
+            <p class="muted">{lmStudioData.reason ?? i18n.t("integrations.lmstudio.no_lmstudio")}</p>
+          {:else}
+            <div class="form-row" style="flex-wrap: wrap; gap: 14px; margin-top: 6px;">
+              <span class="kv">{i18n.t("integrations.lmstudio.models_count")} :
+                <b>{lmStudioData.models_count}</b>
+              </span>
+              <span class="kv">{i18n.t("integrations.lmstudio.total_size")} :
+                <b>{lmStudioData.total_size_gib} GiB</b>
+              </span>
+              {#if (lmStudioData.duplication_suspect_count ?? 0) > 0}
+                <span class="kv">{i18n.t("integrations.lmstudio.dup_suspects")} :
+                  <b style="color: var(--warn);">
+                    {lmStudioData.duplication_suspect_count}
+                    ({lmStudioData.duplication_suspect_gib} GB)
+                  </b>
+                </span>
+              {/if}
+            </div>
+            <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+              <thead>
+                <tr style="text-align: left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                  <th style="padding: 4px;">name</th>
+                  <th style="padding: 4px;">size</th>
+                  <th style="padding: 4px;">quant</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each (lmStudioData.models ?? []).slice(0, 10) as m}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">{m.name}</td>
+                    <td style="padding: 4px; text-align: right;">
+                      {(m.size_mib / 1024).toFixed(1)} GiB
+                    </td>
+                    <td style="padding: 4px;">
+                      <code style="font-size: 0.85em;">{m.quant ?? '—'}</code>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.driver.title")}</h4>
+        <p class="muted">{i18n.t("integrations.driver.desc")}</p>
+        {#if driverVaultData?.current}
+          <p style="margin: 8px 0;">
+            <b>{i18n.t("integrations.driver.current")} :</b>
+            <code style="margin-left: 6px; font-size: 0.9em;">
+              {driverVaultData.current.package} {driverVaultData.current.version}
+            </code>
+          </p>
+        {/if}
+        <div class="form-row">
+          <button class="btn btn-primary" onclick={stashDriver}>
+            {i18n.t("integrations.driver.stash")}
+          </button>
+        </div>
+        {#if driverVaultData}
+          {#if driverVaultData.vaulted.length === 0}
+            <p class="muted" style="margin-top: 8px;">{i18n.t("integrations.driver.vault_empty")}</p>
+          {:else}
+            <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+              <tbody>
+                {#each driverVaultData.vaulted as v}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 5px; font-family: monospace; font-size: 0.85em;">{v.name}</td>
+                    <td style="padding: 5px; text-align: right;">
+                      {(v.size_bytes / 1024 / 1024).toFixed(1)} MiB
+                    </td>
+                    <td style="padding: 5px;">
+                      <button class="btn btn-small" onclick={() => showRollbackScript(v.name)}>
+                        {i18n.t("integrations.driver.show_script")}
+                      </button>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+          {#if driverVaultData.recent_events && driverVaultData.recent_events.length > 0}
+            <p style="margin: 10px 0 4px 0;">
+              <b>{i18n.t("integrations.driver.recent_events")} ({driverVaultData.recent_events.length}) :</b>
+            </p>
+            <table style="width:100%; font-size:0.82em; border-collapse: collapse;">
+              <tbody>
+                {#each driverVaultData.recent_events.slice(0, 3) as e}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 4px; color: var(--text-dim);">{e.start}</td>
+                    <td style="padding: 4px;">{e.action}</td>
+                    <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">
+                      {e.packages[0]?.name}
+                      {#if e.packages[0]?.ver_from && e.packages[0]?.ver_to}
+                        {e.packages[0].ver_from} → {e.packages[0].ver_to}
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        {/if}
+        {#if driverVaultScript}
+          <div style="margin-top: 12px; padding: 10px; background: var(--bg-2); border-radius: 4px;">
+            <div class="form-row" style="margin-bottom: 6px;">
+              <button class="btn btn-small" onclick={() => copyToClipboard(driverVaultScript!)}>📋 Copy</button>
+              <button class="btn btn-small" onclick={() => (driverVaultScript = null)}>×</button>
+            </div>
+            <pre style="white-space: pre-wrap; font-size: 0.78em; max-height: 280px; overflow: auto;
+                          margin: 0; font-family: monospace;">{driverVaultScript}</pre>
+          </div>
         {/if}
       </div>
 

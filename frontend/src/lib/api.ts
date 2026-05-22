@@ -563,6 +563,69 @@ export const api = {
       }[];
     }>),
 
+  // ── R&D #16 features (UI sprint cycle 7) ───────────────────────────────
+  drBundleList: () =>
+    fetch("/api/dr-bundle").then(jsonOf<{
+      ok: boolean;
+      bundles: Array<{ name: string; path: string; size_bytes: number; ts: number }>;
+    }>),
+
+  drBundleBuild: () =>
+    fetch("/api/dr-bundle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }).then(jsonOf<{
+      ok: boolean;
+      path?: string; name?: string;
+      size_bytes?: number; file_count?: number;
+      snapshot_db_included?: boolean;
+      error?: string;
+    }>),
+
+  drBundleDelete: (name: string) =>
+    fetch(`/api/dr-bundle/delete/${encodeURIComponent(name)}`,
+          { method: "POST" }).then(jsonOf<{ ok: boolean; deleted?: string }>),
+
+  lmStudioInventory: () =>
+    fetch("/api/lm-studio/inventory").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reason?: string;
+      models_dir?: string;
+      models_count?: number;
+      total_size_gib?: number;
+      duplication_suspect_count?: number;
+      duplication_suspect_gib?: number;
+      models?: Array<{
+        path: string; name: string; size_mib: number;
+        is_gguf: boolean; quant?: string | null; dir_top: string;
+      }>;
+    }>),
+
+  driverVaultStatus: () =>
+    fetch("/api/driver-vault").then(jsonOf<{
+      ok: boolean;
+      current: { package: string; version: string } | null;
+      vaulted: Array<{ name: string; size_bytes: number; ts: number }>;
+      vault_max: number;
+      recent_events: Array<{ start: string; action: string;
+                              packages: Array<{ name: string; ver_from: string | null; ver_to: string | null }> }>;
+    }>),
+
+  driverVaultStash: () =>
+    fetch("/api/driver-vault/stash", { method: "POST" }).then(jsonOf<{
+      ok: boolean;
+      vaulted_path?: string;
+      current?: { package: string; version: string };
+      reason?: string;
+    }>),
+
+  driverVaultRollbackScript: (name: string) =>
+    fetch(`/api/driver-vault/rollback-script?name=${encodeURIComponent(name)}`)
+      .then(jsonOf<{ ok: boolean; script?: string; target?: string;
+                      current_package?: string; error?: string }>),
+
   // ── R&D #15 features (UI sprint cycle 6) ───────────────────────────────
   bootProfileStatus: () =>
     fetch("/api/boot-profile").then(jsonOf<{
