@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:39 (cycle 112 done — CONTRIBUTING refresh)
-**Latest commit** : `9b7e7d8` — CONTRIBUTING v0.3 refresh
+**Last updated** : 2026-05-22 02:43 (cycle 113 done — screenshots refresh)
+**Latest commit** : `c85748d` — refresh About + Stats screenshots
 **Tests** : 534 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -59,6 +59,13 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 113 — Refresh About + Stats screenshots (1 commit)
+- `c85748d` docs/modal/about.png + docs/stats.png updated with v0.3 features
+  - About : year-to-date + profile time + recent switches visible
+  - Stats : all 6 sections visible (LLM perf, Power, Thermal, Profiles,
+    Heatmap, Alerts list)
+  - README gains '📈 Stats page' section before Fan curve
 
 ### Cycle 112 — CONTRIBUTING.md refresh (1 commit)
 - `9b7e7d8` Updates dev docs for v0.3 architecture :
@@ -522,7 +529,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~123 |
+| Commits since v0.1.0 | ~124 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
