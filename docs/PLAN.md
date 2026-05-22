@@ -3,7 +3,7 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 05:17 (heartbeat #5)
+**Last updated** : 2026-05-22 05:20 (heartbeat #6)
 **Latest commit** : `b206025` — release v0.3.0
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
@@ -19,6 +19,7 @@ Heartbeats :
 - 2026-05-22 04:16 : git clean (no commits since heartbeat #2), CI green.
 - 2026-05-22 04:19 : git clean (no commits since heartbeat #3), CI green.
 - 2026-05-22 05:17 : git clean (no commits since heartbeat #4), CI green.
+- 2026-05-22 05:20 : git clean (no commits since heartbeat #5), CI green.
 
 ---
 
