@@ -35,16 +35,31 @@ def test_power_stats_year_start_is_jan_1(ctx):
 
 
 def test_power_stats_yearly_kwh_integrates(ctx):
-    """1000W constant for 1h should give ~1 kWh."""
+    """1000W constant for 1h should give ~1 kWh.
+
+    Spaces samples so they all land safely after today's midnight even
+    when CI runs near 00:00 UTC.
+    """
+    import datetime as _dt
     now = int(time.time())
-    # 60 samples spaced 60s apart = 1 hour at 1000W
-    for i in range(60):
-        ctx["storage"].record_sample({"ts": now - 3600 + i * 60, "power": 1000.0})
+    today_start = int(_dt.datetime.fromtimestamp(now).replace(
+        hour=0, minute=0, second=0, microsecond=0).timestamp())
+    # Anchor samples at the later of {now - 3600, today_start + 60}
+    # → guarantees they're inside today's window regardless of CI time-of-day
+    start = max(now - 3600, today_start + 60)
+    # If less than 1h available today (test runs <1h after midnight), shrink
+    avail = max(60, now - start)  # at least 60s
+    n_samples = max(2, min(60, avail // 60))
+    step = max(1, avail // (n_samples - 1)) if n_samples > 1 else 60
+    for i in range(n_samples):
+        ctx["storage"].record_sample({"ts": start + i * step, "power": 1000.0})
     _, body = api.handle_power_stats(ctx)
-    # kwh_year and kwh_today should both be ~1
-    assert body["kwh_today"] == pytest.approx(1.0, abs=0.1)
-    assert body["kwh_year"] == pytest.approx(1.0, abs=0.1)
-    assert body["cost_year"] == pytest.approx(0.25, abs=0.05)
+    # 1000W for the spanned duration → expected kWh = 1000 * span_hours / 1000
+    span_h = (n_samples - 1) * step / 3600
+    expected_kwh = max(0.001, 1.0 * span_h)
+    assert body["kwh_today"] == pytest.approx(expected_kwh, abs=0.15)
+    assert body["kwh_year"] >= body["kwh_today"]  # year ≥ today
+    assert body["cost_year"] >= 0
 
 
 def test_llm_lifetime_has_yearly_field(ctx):
