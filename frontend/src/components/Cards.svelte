@@ -136,15 +136,13 @@
   }
 </script>
 
-<!-- 4 horizontal-strip sections (cycle 143, user proposal). Each strip has
-     its own overflow-x scroll so the dashboard's overall height stays
-     compact even when a group has many cards. Wheel-to-horizontal handler
-     makes desktop mouse-wheel feel natural. -->
+<!-- Cycle 144b — ONE horizontal strip with ALL cards (user :
+     'les tab ne sont pas sur une ligne'). Cards from all groups
+     packed in a single overflow-x row, with subtle vertical
+     dividers between groups instead of 4 separate strips. -->
 
-<!-- 🖥️ GPU LIVE -->
-<section class="strip-block">
-  <h4 class="group-label">🖥️ {i18n.t("group.gpu") ?? "GPU live"}</h4>
-  <div class="strip" use:wheelScroll>
+<div class="strip strip-merged" use:wheelScroll>
+  <span class="group-divider"><span class="group-divider-label">🖥️ {i18n.t("group.gpu") ?? "GPU"}</span></span>
     {#if alive && g && g.alive}
       {#if layout.visible("gpu")}
       <div class="card">
@@ -222,13 +220,8 @@
         <div class="sub">{i18n.t("gpu.no_response")}</div>
       </div>
     {/if}
-  </div>
-</section>
 
-<!-- 🔧 TUNING -->
-<section class="strip-block">
-  <h4 class="group-label">🔧 {i18n.t("group.tuning") ?? "Tuning"}</h4>
-  <div class="strip" use:wheelScroll>
+  <span class="group-divider"><span class="group-divider-label">🔧 {i18n.t("group.tuning") ?? "Tuning"}</span></span>
     {#if alive && g && g.alive && layout.visible("power_limit")}
     <div class="card">
       <h2>{i18n.t("card.power_limit")}</h2>
@@ -290,13 +283,8 @@
         <div class="sub">{d.watchdog.drops} {i18n.t("oculink.drops")}</div>
       </div>
     {/if}
-  </div>
-</section>
 
-<!-- 🪙 LLM -->
-<section class="strip-block">
-  <h4 class="group-label">🪙 {i18n.t("group.llm") ?? "LLM"}</h4>
-  <div class="strip" use:wheelScroll>
+  <span class="group-divider"><span class="group-divider-label">🪙 {i18n.t("group.llm") ?? "LLM"}</span></span>
     {#if d?.llm_model && layout.visible("llm_model")}
       <div class="card">
         <h2>{i18n.t("card.llm_model")}</h2>
@@ -348,13 +336,8 @@
         {/if}
       </div>
     {/if}
-  </div>
-</section>
 
-<!-- 💸 COÛT & PROCESSUS -->
-<section class="strip-block">
-  <h4 class="group-label">💸 {i18n.t("group.cost") ?? "Coût & processus"}</h4>
-  <div class="strip" use:wheelScroll>
+  <span class="group-divider"><span class="group-divider-label">💸 {i18n.t("group.cost") ?? "Coût"}</span></span>
     {#if elec && layout.visible("electricity")}
       {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
       {@const budgetUsedPct = elec.budget_kwh > 0 ? Math.min(100, (elec.kwh_month / elec.budget_kwh) * 100) : 0}
@@ -447,5 +430,4 @@
         </div>
       {/if}
     {/each}
-  </div>
-</section>
+</div>

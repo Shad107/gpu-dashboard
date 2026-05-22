@@ -82,22 +82,10 @@ body {
 h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .ts { color: var(--text-faint); font-size: 0.78em; margin-bottom: 0.6em; }
 
-/* Cycle 143 — horizontal strips per group (user proposal :
- * 'tout sur une ligne par bloc, type une tab avec un overflow x'). */
-.strip-block {
-  margin-bottom: 0.6em;
-}
-.strip-block .group-label {
-  margin: 0.4em 0 0.3em;
-  color: var(--text-muted);
-  font-size: 0.8em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 0.2em;
-}
-.strip-block:first-of-type .group-label { margin-top: 0; }
+/* Cycle 144b — ONE merged horizontal strip with all cards. User :
+ * 'les tab ne sont pas sur une ligne' — wants a single horizontal
+ * scroll, not 4 separate strips. Inline .group-divider markers
+ * provide the visual category separation. */
 .strip {
   display: flex;
   flex-direction: row;
@@ -105,21 +93,41 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
   overflow-x: auto;
   overflow-y: hidden;
   gap: 0.5em;
-  padding: 0.2em 0;
+  padding: 0.4em 0 0.8em;
   scrollbar-width: thin;
+  scroll-snap-type: x proximity;
   /* Fade-out gradient hint on the right edge → there's more to scroll */
-  mask-image: linear-gradient(to right, black 92%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 95%, transparent 100%);
 }
-.strip > .card {
-  flex: 0 0 200px;        /* fixed width per card so they don't stretch */
+.strip-merged > .card {
+  flex: 0 0 200px;
   scroll-snap-align: start;
 }
-.strip {
-  scroll-snap-type: x proximity;
+/* Inline vertical-pill dividers between groups */
+.group-divider {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  border-left: 2px solid var(--border-subtle);
+  padding-left: 0.5em;
+  margin-left: 0.2em;
 }
-/* Legacy .row class kept for back-compat (no tiles render it anymore) */
-.row { display: contents; }
+.group-divider:first-child { border-left: none; padding-left: 0; margin-left: 0; }
+.group-divider-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  color: var(--text-muted);
+  font-size: 0.72em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  padding: 0.3em 0;
+}
+/* Legacy .row + .strip-block kept for back-compat (no tiles render them now) */
+.row, .strip-block { display: contents; }
+.group-label { display: none; }
 
 /* (cycle 142b) Removed .dash-scroll + flex tricks — too brittle with
  * variable tile counts. Body scroll is the single source of truth. */
