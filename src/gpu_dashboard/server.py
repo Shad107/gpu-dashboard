@@ -549,6 +549,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_jupyter_kernels(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/llamabench/status":
+                code, body = api.handle_llamabench_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/alertmanager/rules.yaml":
                 code, text_body = api.handle_alertmanager_rules(ctx)
                 data = text_body.encode("utf-8")

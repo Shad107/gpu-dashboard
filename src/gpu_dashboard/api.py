@@ -2772,6 +2772,36 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #8.4 — llama-bench history + regression detector ────────────────────
+def handle_llamabench_status(ctx: dict) -> Response:
+    """Status of the llama-bench monitor : binary presence + recent history."""
+    from .modules import llama_bench as _lb
+    bin_path = _lb.find_binary()
+    runs: list = []
+    # If user has a 'llama_bench_runs' table in storage, read it.
+    # Optional schema — skip if not present.
+    storage = ctx.get("storage")
+    if storage:
+        try:
+            with storage._lock:
+                rows = storage._conn.execute(
+                    "SELECT ts, model, test, avg_ts, stddev_ts "
+                    "FROM llama_bench_runs ORDER BY ts ASC LIMIT 200"
+                ).fetchall()
+                runs = [dict(r) for r in rows]
+        except Exception:
+            runs = []  # table doesn't exist yet, no harm
+    regression = _lb.detect_regression(runs) if runs else None
+    return 200, {
+        "ok": True,
+        "binary_available": bin_path is not None,
+        "binary_path": bin_path,
+        "runs_count": len(runs),
+        "recent_runs": runs[-10:],
+        "regression": regression,
+    }
+
+
 # ─── R&D #8.7 — Jupyter kernel monitor ───────────────────────────────────────
 def handle_jupyter_kernels(ctx: dict) -> Response:
     """List Jupyter kernels with GPU attribution."""
