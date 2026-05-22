@@ -1056,4 +1056,41 @@ export const api = {
       budget_kwh: number;
       over_budget: boolean;
     }>),
+
+  // ── R&D #17.5 LLM hot-swap orchestrator (UI sprint 8) ──────────────────
+  llmSwapStatus: () =>
+    fetch("/api/llm-swap").then(jsonOf<{
+      ok: boolean;
+      loaded_count: number;
+      loaded: Array<{
+        name: string; source: "ollama" | "llamacpp";
+        size_bytes?: number; vram_bytes?: number;
+        n_ctx_train?: number; n_params?: number;
+      }>;
+      total_vram_bytes: number;
+      total_vram_gib: number;
+      pins: string[];
+      timeline_count: number;
+      recent_events: Array<{ kind: "load" | "unload"; name: string;
+                              source: string; ts: number; vram_bytes?: number }>;
+    }>),
+
+  llmSwapPin: (name: string, action: "pin" | "unpin") =>
+    fetch("/api/llm-swap/pin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, action }),
+    }).then(jsonOf<{ ok: boolean; pinned?: string; unpinned?: string | null;
+                      error?: string }>),
+
+  llmSwapSuggest: (neededBytes: number) =>
+    fetch(`/api/llm-swap/suggest?needed_bytes=${neededBytes}`)
+      .then(jsonOf<{
+        to_evict: Array<{ name: string; source: string;
+                           vram_bytes: number; last_seen: number }>;
+        freed_bytes: number;
+        sufficient: boolean;
+        needed_bytes: number;
+        reason: string;
+      }>),
 };

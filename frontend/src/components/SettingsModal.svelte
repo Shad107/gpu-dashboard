@@ -1103,6 +1103,29 @@
     } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #17.5 LLM hot-swap orchestrator (UI sprint 8) ────────────────────
+  let llmSwapData = $state<Awaited<ReturnType<typeof api.llmSwapStatus>> | null>(null);
+  let llmSwapNeededGib = $state<number>(8);
+  let llmSwapSuggestion = $state<Awaited<ReturnType<typeof api.llmSwapSuggest>> | null>(null);
+  async function loadLlmSwap() {
+    try { llmSwapData = await api.llmSwapStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function toggleLlmPin(name: string, isPinned: boolean) {
+    try {
+      const r = await api.llmSwapPin(name, isPinned ? "unpin" : "pin");
+      if (r.ok) {
+        toast.emit(isPinned ? "Unpinned" : "📌 Pinned", "ok");
+        await loadLlmSwap();
+      } else { toast.emit("✗ " + (r.error || "pin failed"), "err"); }
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function previewLlmSwap() {
+    const needed = Math.max(1, Math.floor(llmSwapNeededGib * 1024 ** 3));
+    try { llmSwapSuggestion = await api.llmSwapSuggest(needed); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -1131,6 +1154,8 @@
       if (!drBundles) loadDrBundles();
       if (!lmStudioData) loadLmStudio();
       if (!driverVaultData) loadDriverVault();
+      // R&D #17 cards
+      if (!llmSwapData) loadLlmSwap();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -3186,6 +3211,116 @@
               </tbody>
             </table>
           {/if}
+        {/if}
+      </div>
+
+      <!-- R&D #17.5 LLM hot-swap orchestrator (UI sprint 8) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.llmswap.title")}</h4>
+        <p class="muted">{i18n.t("integrations.llmswap.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLlmSwap}>{i18n.t("integrations.llmswap.refresh")}</button>
+          <span class="kv" style="margin-left: 12px;">
+            {i18n.t("integrations.llmswap.total_vram")} :
+            <b>{llmSwapData?.total_vram_gib ?? 0} GiB</b>
+          </span>
+        </div>
+        {#if llmSwapData && llmSwapData.loaded_count === 0}
+          <p class="muted" style="margin-top: 8px;">{i18n.t("integrations.llmswap.none")}</p>
+        {/if}
+        {#if llmSwapData && llmSwapData.loaded_count > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">{i18n.t("integrations.llmswap.source")}</th>
+                <th style="padding: 4px;">model</th>
+                <th style="padding: 4px;">{i18n.t("integrations.llmswap.vram")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.llmswap.size")}</th>
+                <th style="padding: 4px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each llmSwapData.loaded as m}
+                {@const pinned = llmSwapData.pins.includes(m.name)}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; color: var(--text-dim);">{m.source}</td>
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.92em;">
+                    {pinned ? "📌 " : ""}{m.name}
+                  </td>
+                  <td style="padding: 4px;">
+                    {((m.vram_bytes ?? 0) / 1024 ** 3).toFixed(2)} GiB
+                  </td>
+                  <td style="padding: 4px;">
+                    {((m.size_bytes ?? 0) / 1024 ** 3).toFixed(2)} GiB
+                  </td>
+                  <td style="padding: 4px;">
+                    <button class="btn btn-small"
+                            onclick={() => toggleLlmPin(m.name, pinned)}>
+                      {pinned ? i18n.t("integrations.llmswap.unpin")
+                              : i18n.t("integrations.llmswap.pin")}
+                    </button>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+        <div class="form-row" style="margin-top: 14px; gap: 10px; align-items: center;">
+          <label style="margin: 0;">
+            {i18n.t("integrations.llmswap.suggest_label")}
+            <input type="number" min="1" max="48" step="1"
+                   bind:value={llmSwapNeededGib}
+                   style="width: 64px; margin-left: 6px;" />
+          </label>
+          <button class="btn btn-small" onclick={previewLlmSwap}>
+            {i18n.t("integrations.llmswap.suggest_btn")}
+          </button>
+        </div>
+        {#if llmSwapSuggestion}
+          <p class="muted" style="margin-top: 8px;"
+             style:color={llmSwapSuggestion.sufficient ? "var(--ok)" : "var(--warn)"}>
+            {llmSwapSuggestion.sufficient
+              ? i18n.t("integrations.llmswap.suggest_sufficient",
+                       { gib: ((llmSwapSuggestion.freed_bytes / 1024 ** 3).toFixed(2)) })
+              : i18n.t("integrations.llmswap.suggest_insufficient")}
+          </p>
+          {#if llmSwapSuggestion.to_evict.length > 0}
+            <ul style="margin: 4px 0 0 18px; font-size: 0.88em;">
+              {#each llmSwapSuggestion.to_evict as e}
+                <li>
+                  <code>{e.name}</code>
+                  <span class="muted">({(e.vram_bytes / 1024 ** 3).toFixed(2)} GiB, {e.source})</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        {/if}
+        {#if llmSwapData && llmSwapData.recent_events.length > 0}
+          <h5 style="margin: 14px 0 4px 0;">{i18n.t("integrations.llmswap.timeline_events")}
+            ({llmSwapData.timeline_count})</h5>
+          <table style="width:100%; font-size:0.85em; border-collapse: collapse;">
+            <tbody>
+              {#each llmSwapData.recent_events.slice(-10).reverse() as e}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; color: var(--text-dim); font-size: 0.85em;">
+                    {e.ts ? new Date(e.ts * 1000).toLocaleTimeString() : "—"}
+                  </td>
+                  <td style="padding: 4px;">
+                    <span style:color={e.kind === "unload" ? "var(--warn)" : "var(--ok)"}>
+                      {e.kind === "load"
+                        ? i18n.t("integrations.llmswap.event_load")
+                        : i18n.t("integrations.llmswap.event_unload")}
+                    </span>
+                  </td>
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">
+                    {e.name}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {:else if llmSwapData}
+          <p class="muted" style="margin-top: 8px;">{i18n.t("integrations.llmswap.no_events")}</p>
         {/if}
       </div>
 
