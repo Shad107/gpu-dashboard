@@ -3,7 +3,7 @@
 This package is being split out from a single 4800-line `api.py` into
 logical submodules. During the migration :
 
-  - `_monolith.py` contains the un-migrated handlers.
+  - `_core.py` contains the un-migrated handlers.
   - Each new submodule (auth.py, integrations.py, ...) extracts a coherent
     group of handlers. They are added to the re-export below as they land.
 
@@ -12,7 +12,7 @@ External callers (server.py, tests, modules) continue to do
 the names are re-exported here.
 """
 
-# Migrated submodules — names here take precedence over _monolith re-exports
+# Migrated submodules — names here take precedence over _core re-exports
 # below (they're defined after, so they win the second pass).
 from .auth import (  # noqa: F401
     handle_auth_tokens_list,
@@ -108,7 +108,7 @@ from .integrations import (  # noqa: F401,F811
 )
 
 # Public handlers + builders from the legacy monolith.
-from ._monolith import *  # noqa: F401,F403
+from ._core import *  # noqa: F401,F403
 
 # Re-import migrated symbols AFTER the wildcard so they're not shadowed.
 from .auth import (  # noqa: F401,F811
@@ -227,7 +227,7 @@ from .power import _POWER_PROFILES, _read_power_profile  # noqa: F401,F811
 
 # Private helpers used by tests (and by future submodules during migration).
 # `from X import *` skips underscore-prefixed names, so we list these explicitly.
-from ._monolith import (  # noqa: F401
+from ._core import (  # noqa: F401
     Response,
     # Snapshot + GPU detection
     _gpu_card_snapshot,

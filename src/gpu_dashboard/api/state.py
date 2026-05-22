@@ -16,7 +16,7 @@ import os
 import time
 from typing import Any, Optional, Tuple
 
-from . import _monolith as _m
+from . import _core as _m
 
 
 Response = Tuple[int, dict]

@@ -13,13 +13,13 @@ import subprocess
 import time
 from typing import Optional, Tuple
 
-from . import _monolith as _m
+from . import _core as _m
 
 
 Response = Tuple[int, dict]
 
 
-# Forwarding stubs so tests patching api._monolith.X take effect here too.
+# Forwarding stubs so tests patching api._core.X take effect here too.
 # *args/**kw so test mocks with arbitrary signatures still resolve correctly.
 def _gpu_card_snapshot(*args, **kw):
     return _m._gpu_card_snapshot(*args, **kw)

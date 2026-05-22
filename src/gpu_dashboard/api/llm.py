@@ -16,14 +16,14 @@ import subprocess
 from typing import Optional, Tuple
 
 from .. import detect
-from . import _monolith as _m
+from . import _core as _m
 
 
 Response = Tuple[int, dict]
 
 
 def _gpu_card_snapshot(gpu_index: int = 0):
-    """Forward to _monolith so tests patching api._monolith._gpu_card_snapshot
+    """Forward to _core so tests patching api._core._gpu_card_snapshot
     are honored everywhere."""
     return _m._gpu_card_snapshot(gpu_index)
 

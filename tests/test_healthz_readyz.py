@@ -39,7 +39,7 @@ def test_healthz_includes_timestamp():
 
 def test_readyz_all_ok_returns_200(ctx):
     """sampler + storage + nvidia all reachable → 200."""
-    with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]):
+    with patch.object(api._core, "_gpus_available", return_value=[{"index": 0}]):
         code, body = api.handle_readyz(ctx)
     assert code == 200
     assert body["ready"] is True
@@ -48,7 +48,7 @@ def test_readyz_all_ok_returns_200(ctx):
 def test_readyz_no_sampler_returns_503():
     """Without sampler → 503 readiness."""
     ctx = {"config": Config(defaults={}), "sampler": None, "storage": None}
-    with patch.object(api._monolith, "_gpus_available", return_value=[]):
+    with patch.object(api._core, "_gpus_available", return_value=[]):
         code, body = api.handle_readyz(ctx)
     assert code == 503
     assert body["ready"] is False
@@ -57,7 +57,7 @@ def test_readyz_no_sampler_returns_503():
 
 def test_readyz_no_nvidia_returns_503(ctx):
     """nvidia-smi unreachable → 503."""
-    with patch.object(api._monolith, "_gpus_available", return_value=[]):
+    with patch.object(api._core, "_gpus_available", return_value=[]):
         code, body = api.handle_readyz(ctx)
     assert code == 503
     assert body["checks"]["nvidia"]["ok"] is False
@@ -68,7 +68,7 @@ def test_readyz_storage_locked_returns_503(ctx):
     fake_conn = MagicMock()
     fake_conn.execute.side_effect = RuntimeError("db locked")
     ctx["storage"]._conn = fake_conn
-    with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]):
+    with patch.object(api._core, "_gpus_available", return_value=[{"index": 0}]):
         code, body = api.handle_readyz(ctx)
     assert code == 503
     assert body["checks"]["storage"]["ok"] is False
@@ -76,7 +76,7 @@ def test_readyz_storage_locked_returns_503(ctx):
 
 def test_readyz_default_skip_ecc_drift_checks(ctx):
     """Without ?strict=1, ECC + drift are NOT in checks."""
-    with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]):
+    with patch.object(api._core, "_gpus_available", return_value=[{"index": 0}]):
         code, body = api.handle_readyz(ctx)
     assert "ecc" not in body["checks"]
     assert "drift" not in body["checks"]
@@ -84,7 +84,7 @@ def test_readyz_default_skip_ecc_drift_checks(ctx):
 
 def test_readyz_strict_includes_ecc_drift(ctx):
     """With ?strict=1, ECC + drift checks added (even if passing)."""
-    with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]):
+    with patch.object(api._core, "_gpus_available", return_value=[{"index": 0}]):
         code, body = api.handle_readyz(ctx, {"strict": "1"})
     assert "ecc" in body["checks"]
     assert "drift" in body["checks"]
@@ -94,7 +94,7 @@ def test_readyz_strict_includes_ecc_drift(ctx):
 def test_readyz_strict_ecc_failing_returns_503(ctx):
     """Strict mode + ECC verdict='failing' → 503."""
     fake_ecc = {"verdict_kind": "failing", "verdict_msg": "Memory degrading"}
-    with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]), \
+    with patch.object(api._core, "_gpus_available", return_value=[{"index": 0}]), \
          patch.object(api.diagnostics, "handle_ecc_health", return_value=(200, fake_ecc)), \
          patch.object(api.diagnostics, "handle_drift_check", return_value=(200, {"last_drift": None})):
         code, body = api.handle_readyz(ctx, {"strict": "1"})
@@ -106,7 +106,7 @@ def test_readyz_strict_recent_drift_returns_503(ctx):
     """Strict mode + driver drift in last 24h → 503."""
     import time
     fake_drift = {"last_drift": {"ts": int(time.time()) - 3600, "diffs": [{"field": "driver"}]}}
-    with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]), \
+    with patch.object(api._core, "_gpus_available", return_value=[{"index": 0}]), \
          patch.object(api.diagnostics, "handle_ecc_health", return_value=(200, {"verdict_kind": "ok"})), \
          patch.object(api.diagnostics, "handle_drift_check", return_value=(200, fake_drift)):
         code, body = api.handle_readyz(ctx, {"strict": "1"})
@@ -118,7 +118,7 @@ def test_readyz_strict_old_drift_passes(ctx):
     """Strict mode + drift > 24h ago → readyz still passes."""
     import time
     fake_drift = {"last_drift": {"ts": int(time.time()) - 48 * 3600, "diffs": [{}]}}
-    with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]), \
+    with patch.object(api._core, "_gpus_available", return_value=[{"index": 0}]), \
          patch.object(api.diagnostics, "handle_ecc_health", return_value=(200, {"verdict_kind": "ok"})), \
          patch.object(api.diagnostics, "handle_drift_check", return_value=(200, fake_drift)):
         code, body = api.handle_readyz(ctx, {"strict": "1"})

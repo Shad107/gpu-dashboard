@@ -5,7 +5,7 @@ Covers R&D #9.1 / #9.4 / #10.1 / #10.3 / #11.1 / #11.4 / #11.5 / #11.6.
 
 Note : badge SVG (#10.7) and ANSI tldr (#10.6) — along with their
 helpers _ANSI/_color/_temp_color/_spark/_badge_svg/_BADGE_TEMP_COLORS —
-stay in _monolith for now ; they move in cycle 3b.
+stay in _core for now ; they move in cycle 3b.
 """
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ import time
 from typing import Optional, Tuple
 
 # Cross-module refs : handle_readyz needs _gpus_available + ECC + drift
-# handlers, all still in _monolith.py. We forward at call time so the
-# test suite can patch via api._monolith.X and the override is honored.
-from . import _monolith as _m
+# handlers, all still in _core.py. We forward at call time so the
+# test suite can patch via api._core.X and the override is honored.
+from . import _core as _m
 
 
 def _gpus_available(*args, **kw):
@@ -23,7 +23,7 @@ def _gpus_available(*args, **kw):
 
 
 def _gpu_card_snapshot(*args, **kw):
-    """Forward to _monolith — used by handle_tldr and handle_badge."""
+    """Forward to _core — used by handle_tldr and handle_badge."""
     return _m._gpu_card_snapshot(*args, **kw)
 
 

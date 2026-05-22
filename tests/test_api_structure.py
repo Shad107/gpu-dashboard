@@ -4,7 +4,7 @@ Guards against regressions we hit while splitting api.py from a 4809-line
 monolith into submodules. Without these checks, any future PR that :
 
   * moves a handler without updating api/__init__.py re-exports
-  * leaves a stale stub of a moved handler in _monolith.py
+  * leaves a stale stub of a moved handler in _core.py
   * patches a non-existent attribute via patch.object(api.X, "name")
   * routes a URL in server.py to a handler that doesn't exist
   * silently double-defines a handler in two submodules
@@ -35,7 +35,7 @@ TESTS_DIR = REPO_ROOT / "tests"
 
 def _api_submodules() -> list:
     """Return the importable api submodules (auth, llm, power, cost, ...).
-    Excludes _monolith — which is migration-state, not target architecture."""
+    Excludes _core — which is migration-state, not target architecture."""
     out: list = []
     for info in pkgutil.iter_modules([str(API_DIR)]):
         if info.name.startswith("_"):
@@ -93,7 +93,7 @@ def test_every_submodule_handler_is_reexported():
             if via_api is not via_mod:
                 failures.append(
                     f"api.{name} != {mod.__name__}.{name} "
-                    f"(re-export stale — likely shadowed by _monolith)"
+                    f"(re-export stale — likely shadowed by _core)"
                 )
     assert not failures, "Missing or stale re-exports :\n  " + "\n  ".join(failures)
 
@@ -128,7 +128,7 @@ def _is_forwarding_stub(fn_node: ast.FunctionDef) -> bool:
 
 
 def test_no_duplicate_handler_definitions():
-    """If a handler appears defined in both _monolith AND a submodule, the
+    """If a handler appears defined in both _core AND a submodule, the
     migration left a stub behind. Forwarding stubs (body = return _m.X(...))
     are explicitly allowed since they bridge cross-module refs during
     the split."""
@@ -169,18 +169,18 @@ def test_server_routes_resolve_to_real_handlers():
     assert not unknown, f"server.py routes to missing handlers : {unknown}"
 
 
-# ── 4. test files patching api._monolith or api.<sub> point at real attrs ────
+# ── 4. test files patching api._core or api.<sub> point at real attrs ────
 
 
 def test_patch_object_targets_exist():
-    """tests/*.py uses patch.object(api._monolith, 'X') and similar.
+    """tests/*.py uses patch.object(api._core, 'X') and similar.
     When a handler moves submodules, these targets break SILENTLY (the
     real implementation runs instead of the mock). This test catches
     moved-but-not-updated patch targets early.
     """
-    # patch.object(api._monolith, "X")        OR
+    # patch.object(api._core, "X")        OR
     # patch.object(api.auth, "X")             OR
-    # monkeypatch.setattr(api._monolith, "X") OR
+    # monkeypatch.setattr(api._core, "X") OR
     # monkeypatch.setattr(api.power, "X")
     pattern = re.compile(
         r"\b(?:patch\.object|monkeypatch\.setattr)"
@@ -217,7 +217,7 @@ def test_handler_signatures_take_ctx_first():
     Tests instantiate ctx dicts ; without this convention, callers break."""
     import inspect
     failures: list = []
-    for mod in _api_submodules() + [api._monolith]:
+    for mod in _api_submodules() + [api._core]:
         for name in dir(mod):
             if not name.startswith("handle_"):
                 continue
@@ -238,19 +238,19 @@ def test_handler_signatures_take_ctx_first():
     assert not failures, "Handler signature violations :\n  " + "\n  ".join(failures)
 
 
-# ── 6. forwarding stubs in submodules genuinely forward to _monolith ──────
+# ── 6. forwarding stubs in submodules genuinely forward to _core ──────
 
 
 def test_forwarding_stubs_resolve():
     """During the split, submodules define forwarding stubs like
     `def _gpus_available(): return _m._gpus_available()` so tests
-    patching `api._monolith._gpus_available` are honored.
+    patching `api._core._gpus_available` are honored.
 
-    If _monolith ever loses a helper that a submodule forwards, the
+    If _core ever loses a helper that a submodule forwards, the
     forwarding stub breaks at first call. Verify they resolve at import.
     """
     failures: list = []
-    monolith = api._monolith
+    monolith = api._core
     for mod in _api_submodules():
         # Find module-level functions whose body is just `return _m.X(...)`
         src = Path(mod.__file__).read_text()
@@ -271,6 +271,6 @@ def test_forwarding_stubs_resolve():
                 if not hasattr(monolith, forwarded_name):
                     failures.append(
                         f"{mod.__name__}.{node.name} forwards to "
-                        f"_m.{forwarded_name} which no longer exists in _monolith"
+                        f"_m.{forwarded_name} which no longer exists in _core"
                     )
     assert not failures, "Broken forwarding stubs :\n  " + "\n  ".join(failures)

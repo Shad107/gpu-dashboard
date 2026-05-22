@@ -12,13 +12,13 @@ import os
 import time
 from typing import Optional, Tuple
 
-from . import _monolith as _m
+from . import _core as _m
 
 
 Response = Tuple[int, dict]
 
 
-# Forwarding stubs : tests patching api._monolith.X are honored here.
+# Forwarding stubs : tests patching api._core.X are honored here.
 def _gpus_available():
     return _m._gpus_available()
 

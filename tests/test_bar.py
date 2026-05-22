@@ -18,7 +18,7 @@ def _snap(temp=50, util=20, power=80, name="RTX 3090"):
 
 
 def test_waybar_default_fmt():
-    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
+    with patch.object(api._core, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
         code, body = api.handle_bar(_ctx(), None)
     assert code == 200
     assert isinstance(body, dict)
@@ -29,19 +29,19 @@ def test_waybar_default_fmt():
 
 
 def test_waybar_critical_temp_class():
-    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap(86, 90, 320)):
+    with patch.object(api._core, "_gpu_card_snapshot", return_value=_snap(86, 90, 320)):
         code, body = api.handle_bar(_ctx(), None)
     assert body["class"] == "critical"
 
 
 def test_waybar_warning_temp_class():
-    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap(78, 70, 250)):
+    with patch.object(api._core, "_gpu_card_snapshot", return_value=_snap(78, 70, 250)):
         code, body = api.handle_bar(_ctx(), None)
     assert body["class"] == "warning"
 
 
 def test_polybar_format_has_color_tags():
-    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
+    with patch.object(api._core, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
         code, body = api.handle_bar(_ctx(), {"fmt": "polybar"})
     assert code == 200
     assert isinstance(body, str)
@@ -51,7 +51,7 @@ def test_polybar_format_has_color_tags():
 
 
 def test_i3blocks_format_3_lines():
-    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
+    with patch.object(api._core, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
         code, body = api.handle_bar(_ctx(), {"fmt": "i3blocks"})
     lines = body.split("\n")
     assert len(lines) == 3
@@ -61,7 +61,7 @@ def test_i3blocks_format_3_lines():
 
 
 def test_tmux_format_has_fg_tag():
-    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
+    with patch.object(api._core, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
         code, body = api.handle_bar(_ctx(), {"fmt": "tmux"})
     assert "#[fg=" in body
     assert "50°C" in body
@@ -69,13 +69,13 @@ def test_tmux_format_has_fg_tag():
 
 
 def test_plain_format_no_markup():
-    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
+    with patch.object(api._core, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
         code, body = api.handle_bar(_ctx(), {"fmt": "plain"})
     assert body == "50°C 20% 80W"
 
 
 def test_gpu_off_returns_off_status():
-    with patch.object(api._monolith, "_gpu_card_snapshot", return_value={"alive": False}):
+    with patch.object(api._core, "_gpu_card_snapshot", return_value={"alive": False}):
         code, body = api.handle_bar(_ctx(), None)
     assert body["text"] == "GPU N/A"
     assert body["class"] == "off"

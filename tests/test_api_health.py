@@ -38,14 +38,14 @@ def healthy_ctx():
 class TestHealthOK:
     def test_returns_200_when_all_components_up(self, healthy_ctx, monkeypatch):
         # Mock _gpu_card_snapshot to return alive
-        monkeypatch.setattr(api._monolith, "_gpu_card_snapshot",
+        monkeypatch.setattr(api._core, "_gpu_card_snapshot",
                             lambda: {"alive": True, "name": "RTX 3090"})
         code, body = api.handle_health(healthy_ctx)
         assert code == 200
         assert body["status"] == "ok"
 
     def test_includes_components(self, healthy_ctx, monkeypatch):
-        monkeypatch.setattr(api._monolith, "_gpu_card_snapshot",
+        monkeypatch.setattr(api._core, "_gpu_card_snapshot",
                             lambda: {"alive": True, "name": "X"})
         _, body = api.handle_health(healthy_ctx)
         assert body["components"]["gpu"] is True
@@ -53,7 +53,7 @@ class TestHealthOK:
         assert body["components"]["storage"] is True
 
     def test_includes_uptime_and_version(self, healthy_ctx, monkeypatch):
-        monkeypatch.setattr(api._monolith, "_gpu_card_snapshot",
+        monkeypatch.setattr(api._core, "_gpu_card_snapshot",
                             lambda: {"alive": True, "name": "X"})
         _, body = api.handle_health(healthy_ctx)
         assert body["uptime_seconds"] >= 0
@@ -62,7 +62,7 @@ class TestHealthOK:
 
 class TestHealthDegraded:
     def test_gpu_down_returns_503(self, healthy_ctx, monkeypatch):
-        monkeypatch.setattr(api._monolith, "_gpu_card_snapshot",
+        monkeypatch.setattr(api._core, "_gpu_card_snapshot",
                             lambda: {"alive": False, "name": "?"})
         code, body = api.handle_health(healthy_ctx)
         assert code == 503
@@ -70,7 +70,7 @@ class TestHealthDegraded:
         assert body["components"]["gpu"] is False
 
     def test_sampler_missing_returns_503(self, monkeypatch):
-        monkeypatch.setattr(api._monolith, "_gpu_card_snapshot",
+        monkeypatch.setattr(api._core, "_gpu_card_snapshot",
                             lambda: {"alive": True, "name": "X"})
         ctx = {"started_at": time.time(), "sampler": None, "storage": FakeStorage()}
         code, body = api.handle_health(ctx)
@@ -78,7 +78,7 @@ class TestHealthDegraded:
         assert body["components"]["sampler"] is False
 
     def test_storage_broken_returns_503(self, monkeypatch):
-        monkeypatch.setattr(api._monolith, "_gpu_card_snapshot",
+        monkeypatch.setattr(api._core, "_gpu_card_snapshot",
                             lambda: {"alive": True, "name": "X"})
         ctx = {"started_at": time.time(), "sampler": FakeSampler(),
                "storage": FakeStorage(working=False)}
