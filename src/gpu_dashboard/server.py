@@ -682,6 +682,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_container_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ups-runtime":
+                # R&D #20.7 — UPS runtime vs GPU-load estimator
+                code, body = api.handle_ups_runtime_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
