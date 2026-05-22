@@ -733,6 +733,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_tariff_cheapest(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/discord-rpc":
+                # R&D #15.7 — Discord Rich Presence status
+                code, body = api.handle_discord_rpc_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/hot-swap/evaluate":
                 code, body = api.handle_hot_swap_evaluate(ctx, params)
                 self._send_json(code, body)
