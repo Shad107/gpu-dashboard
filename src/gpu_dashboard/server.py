@@ -470,6 +470,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_clock_events(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/idle-audit":
+                code, body = api.handle_idle_audit(ctx)
+                self._send_json(code, body)
+                return
             if path == "/metrics":
                 # Prometheus / OpenMetrics scrape endpoint (R&D #4.1)
                 code, text_body = api.handle_prometheus_metrics(ctx)

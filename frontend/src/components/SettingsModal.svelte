@@ -620,6 +620,10 @@
   // About is now lean — perf totals moved to Stats page in cycle 115.
   // Lifetime records added back in cycle 130 (small + meta-info, fits About).
   let aboutData = $state<Awaited<ReturnType<typeof api.about>> | null>(null);
+  let idleAudit = $state<Awaited<ReturnType<typeof api.idleAudit>> | null>(null);
+  async function loadIdleAudit() {
+    try { idleAudit = await api.idleAudit(); } catch { idleAudit = null; }
+  }
   let lifetimeStats = $state<Awaited<ReturnType<typeof api.lifetimeStats>> | null>(null);
   async function loadAbout() {
     try { aboutData = await api.about(); } catch { aboutData = null; }
@@ -627,6 +631,7 @@
   }
   $effect(() => {
     if (modal.open && modal.section === "about" && !aboutData) loadAbout();
+    if (modal.open && modal.section === "about") loadIdleAudit();
   });
 
   function fmtTrackingSince(ts: number | null): string {
@@ -1067,6 +1072,31 @@
                 </tr>
               </tbody>
             </table>
+          {/if}
+
+          <!-- ─── R&D #4.5 Idle-state audit ─── -->
+          {#if idleAudit?.available && idleAudit.status !== "unknown"}
+            <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
+              🛌 {i18n.t("about.idle_audit") ?? "Audit veille (idle)"}
+            </h3>
+            {#if idleAudit.status === "busy"}
+              <p class="sub" style="margin:0;font-size:.82em">
+                ⏳ {idleAudit.verdict} ({idleAudit.util_gpu}% util · {idleAudit.power?.toFixed(1)} W)
+              </p>
+            {:else if idleAudit.verdict_kind === "ok"}
+              <p class="sub" style="margin:0;font-size:.82em;color:var(--accent)">
+                ✓ {idleAudit.verdict}
+              </p>
+            {:else if idleAudit.verdict_kind === "high"}
+              <p class="sub" style="margin:0;font-size:.82em;color:var(--accent-warn)">
+                ⚠️ {idleAudit.verdict}
+              </p>
+              <ul style="margin:.4em 0 0;padding-left:1.4em;font-size:.78em">
+                {#each idleAudit.checklist ?? [] as item}
+                  <li title={item.hint}><b>{item.label}</b> — <span class="sub">{item.hint}</span></li>
+                {/each}
+              </ul>
+            {/if}
           {/if}
 
           <!-- ─── Update check + 1-click pull (cycle 144 — moved from Services per user fb) ─── -->

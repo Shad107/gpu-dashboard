@@ -456,6 +456,22 @@ export const api = {
       raw: Record<string, boolean>;
     }>),
 
+  idleAudit: () =>
+    fetch("/api/idle-audit").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      status?: "idle" | "busy" | "unknown";
+      verdict_kind?: "ok" | "high";
+      verdict?: string;
+      name?: string;
+      power?: number;
+      util_gpu?: number;
+      pstate?: string;
+      persistence_mode?: string;
+      baseline?: { low: number; high: number; family: string };
+      checklist?: Array<{ key: string; label: string; hint: string }>;
+    }>),
+
   lifetimeStats: (gpu = 0) =>
     fetch("/api/lifetime-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;

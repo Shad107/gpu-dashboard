@@ -2771,6 +2771,138 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #4.5 — Idle-state audit ─────────────────────────────────────────────
+# Reference baselines : expected idle draw (W) per GPU family.
+# Sources : community reports + datasheet idle figures, conservative bands.
+_IDLE_BASELINES = [
+    # (substring in name → (low_w, high_w, family_label))
+    ("RTX 4090",  (15, 25,  "Ada/RTX 4090")),
+    ("RTX 4080",  (12, 22,  "Ada/RTX 4080")),
+    ("RTX 4070",  ( 8, 16,  "Ada/RTX 4070")),
+    ("RTX 4060",  ( 6, 14,  "Ada/RTX 4060")),
+    ("RTX 3090",  (15, 25,  "Ampere/RTX 3090")),
+    ("RTX 3080",  (12, 22,  "Ampere/RTX 3080")),
+    ("RTX 3070",  ( 8, 18,  "Ampere/RTX 3070")),
+    ("RTX 3060",  ( 8, 16,  "Ampere/RTX 3060")),
+    ("RTX 2080",  (10, 20,  "Turing/RTX 2080")),
+    ("RTX 2070",  ( 8, 16,  "Turing/RTX 2070")),
+    ("RTX 2060",  ( 7, 14,  "Turing/RTX 2060")),
+    ("Tesla",     ( 8, 25,  "Tesla/datacenter")),
+    ("A100",      (45, 75,  "A100 datacenter")),
+    ("H100",      (60, 100, "H100 datacenter")),
+]
+
+
+def _baseline_for(name: str) -> Optional[tuple]:
+    if not name:
+        return None
+    for needle, band in _IDLE_BASELINES:
+        if needle.lower() in name.lower():
+            return band
+    return None
+
+
+def handle_idle_audit(ctx: dict) -> Response:
+    """Audit idle-state power draw vs expected baseline for this GPU family.
+
+    Logic :
+      1. Read current util + power + pstate via nvidia-smi
+      2. If util > 5% → status="busy" (audit only meaningful at idle)
+      3. Compare power against family baseline (low_w .. high_w)
+      4. Return verdict + list of checklist items if verdict is "high"
+
+    Designed to be polled by the UI About tab; cheap (one nvidia-smi call).
+    """
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "-i", "0",
+             "--query-gpu=name,utilization.gpu,power.draw,pstate,persistence_mode",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=2,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return 200, {"ok": True, "available": False}
+    if r.returncode != 0 or not r.stdout.strip():
+        return 200, {"ok": True, "available": False}
+
+    parts = [p.strip() for p in r.stdout.strip().splitlines()[0].split(",")]
+    if len(parts) < 5:
+        return 200, {"ok": True, "available": False}
+    name = parts[0]
+    try:
+        util_gpu = int(parts[1])
+        power = float(parts[2])
+    except ValueError:
+        return 200, {"ok": True, "available": False}
+    pstate = parts[3]
+    persistence = parts[4]
+
+    baseline = _baseline_for(name)
+    if baseline is None:
+        return 200, {
+            "ok": True, "available": True, "status": "unknown",
+            "name": name, "power": power, "pstate": pstate,
+            "persistence_mode": persistence,
+            "verdict": "no baseline for this GPU family",
+            "checklist": [],
+        }
+    low_w, high_w, family = baseline
+
+    if util_gpu > 5:
+        return 200, {
+            "ok": True, "available": True, "status": "busy",
+            "name": name, "power": power, "util_gpu": util_gpu,
+            "pstate": pstate, "persistence_mode": persistence,
+            "baseline": {"low": low_w, "high": high_w, "family": family},
+            "verdict": "GPU is busy — re-check when idle",
+            "checklist": [],
+        }
+
+    # Idle ; compare against baseline
+    if power <= high_w:
+        verdict = "ok"
+        msg = f"Idle power {power:.1f} W within expected {low_w}-{high_w} W for {family}."
+        checklist = []
+    else:
+        verdict = "high"
+        excess = power - high_w
+        msg = f"Idle power {power:.1f} W is {excess:.1f} W above expected high ({high_w} W) for {family}."
+        checklist = []
+        if persistence and "Disabled" in persistence:
+            checklist.append({
+                "key": "persistence_mode",
+                "label": "Enable persistence mode",
+                "hint": "Run : sudo nvidia-smi -pm 1   (prevents driver re-init on every nvidia-smi call)",
+            })
+        if pstate and pstate != "P8":
+            checklist.append({
+                "key": "pstate_high",
+                "label": f"P-state is {pstate}, expected P8 at idle",
+                "hint": "Compositor or background app holding the GPU. Check Xorg, browser hardware accel, OBS.",
+            })
+        # General checklist items always shown for 'high'
+        checklist.append({
+            "key": "compositor",
+            "label": "Check display compositor / hardware accel",
+            "hint": "Disable HW accel in Chrome / Electron apps. Test with `nvidia-smi pmon -c 1`.",
+        })
+        checklist.append({
+            "key": "modeset",
+            "label": "Enable kernel modesetting",
+            "hint": "Add `nvidia-drm.modeset=1` to kernel cmdline if not already set.",
+        })
+
+    return 200, {
+        "ok": True, "available": True, "status": "idle",
+        "name": name, "power": power, "util_gpu": util_gpu,
+        "pstate": pstate, "persistence_mode": persistence,
+        "baseline": {"low": low_w, "high": high_w, "family": family},
+        "verdict": msg,
+        "verdict_kind": verdict,
+        "checklist": checklist,
+    }
+
+
 # ─── R&D #4.2 — Clocks-event-reasons decoder ────────────────────────────────
 _CLOCK_EVENT_REASONS = [
     # field name in nvidia-smi → (key, label_short, mitigation_hint)
