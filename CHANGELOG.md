@@ -4,13 +4,50 @@ All notable changes to gpu-dashboard. Format inspired by [Keep a Changelog](http
 
 ## [Unreleased]
 
-### Added — Per-application profile triggers (cycles 116-119, R&D feature #1)
-- New module `modules/app_triggers.py` : `scan_running_apps()` reads `/proc/*/comm`, `load_triggers()` / `save_triggers()` persist to `~/.config/gpu-dashboard/app_triggers.json`, `match_trigger()` does case-insensitive substring matching with profile-priority resolution (boost > sweet > silent).
-- `AutoProfileDaemon` now consults triggers each tick and forces the matching profile immediately (no stability gate — the user explicitly opted-in). When no trigger matches, falls through to the existing load-classification.
-- `GET / POST /api/app-triggers` with validation (profile ∈ {silent, sweet, boost}).
-- UI : new tab **Déclencheurs apps** under Settings → AVANCÉ. Row editor with app text input, profile select, remove button. + Add / Save buttons.
-- `status()` of auto_profile now reports `trigger_match` for introspection.
-- Tests : 537 → 575 (38 new). Bundle +0.4 KB gzip.
+### R&D iteration — 6 features inspired by equivalent tools (cycles 115-125)
+
+Surveyed CoreCtrl, LACT, GreenWithEnvy, MSI Afterburner, HWiNFO, GPU-Z, Mission Center, nvtop, nvitop. Picked 6 high-value features fitting the project's spirit (Linux/NVIDIA, no SaaS, no paid tier).
+
+#### Added — Per-application profile triggers (cycles 116-119, R&D #1)
+- `modules/app_triggers.py` : `scan_running_apps()` reads `/proc/*/comm`, `load_triggers()` / `save_triggers()` persist to `~/.config/gpu-dashboard/app_triggers.json`, `match_trigger()` does case-insensitive substring matching with profile-priority resolution (boost > sweet > silent).
+- `AutoProfileDaemon` consults triggers each tick and forces the matching profile immediately (no stability gate — the user explicitly opted-in). When no trigger matches, falls through to load-classification.
+- `GET / POST /api/app-triggers` with validation. UI tab **Déclencheurs apps** under Settings → AVANCÉ.
+- 38 new tests. Inspired by CoreCtrl / LACT.
+
+#### Added — NVENC/NVDEC + PCIe link state metrics (cycle 120, R&D #2)
+- nvidia-smi query extended to capture `utilization.encoder`, `utilization.decoder`, `pcie.link.gen.current/max`, `pcie.link.width.current/max`.
+- Plumbed into `/api/state.gpu` + `MetricsSampler` CSV poll.
+- GPU card shows `ENC X% · DEC Y%` when active. New **PCIe card** with downgrade detection (⚠️ amber when current < max) — catches PCIe Gen 4 → Gen 1 fallback under ASPM or riser/cable problems.
+- 5 new tests. Inspired by HWiNFO.
+
+#### Added — Monthly power budget tracker (cycle 121, R&D #3)
+- `/api/power-stats` + `/api/electricity` expose `kwh_month`, `cost_month`, `month_progress_pct`, `forecast_kwh`, `budget_kwh`, `over_budget`.
+- `POST /api/electricity/config` accepts `budget_kwh` (0 disables tracking, validated 0-10000).
+- Electricity card shows a 2-tone progress bar : solid for actual usage, dashed amber overlay for the forecast band beyond. ⚠️ over_budget flag flips the bar to amber.
+- 8 new tests. Inspired by Mission Center.
+
+#### Added — A/B Profile benchmark (cycles 122-123, R&D #4)
+- `modules/benchmark.py` : `run_segment(duration, profile, apply_cb, sampler)` aggregates power/temp/util/tokens over the window. `compare(a, b)` returns deltas + per-criterion winners (cooler, lower_power, higher_throughput, more_efficient, cheaper).
+- `POST /api/benchmark/run` validates inputs (profile ∈ {silent,sweet,boost}, duration ∈ [5, 300], a ≠ b), runs both segments synchronously, returns the comparison.
+- UI tab **Comparateur A/B** under AVANCÉ : profile selectors + duration input + ▶ Run + 5-row result table with winner highlighted per criterion.
+- 14 new tests (helper + API + injectable sleep/now for fast unit tests).
+
+#### Added — Plot SVG export (cycle 124, R&D #5)
+- `charts.ts` `exportSvgAsFile()` helper : clones the live SVG, adds xmlns + dark background rect, serializes via XMLSerializer with XML preamble, triggers browser download via Blob + temp `<a download>`.
+- HistoryChart adds a ⬇️ button top-right. Filename includes the metric + ISO timestamp.
+
+#### Added — GPU process tree expansion (cycle 125, R&D #6)
+- `_read_cmdline(pid)` helper reads `/proc/<pid>/cmdline` (NUL-sep → space-sep, 200-char truncation).
+- `/api/processes` attaches `cmdline` to each row.
+- Cards.svelte processes table : 3px per-row VRAM bar (green < 50%, amber < 80%, red ≥ 80%) + cmdline tooltip on hover.
+- 4 new tests. Inspired by nvtop / nvitop.
+
+### Stats summary
+- Tests : 537 → 598 (+61 new TDD tests across 11 cycles)
+- Bundle : ~82 KB gzip → ~86 KB gzip (+5% for 6 features)
+- 1 new schema-less config file (`~/.config/gpu-dashboard/app_triggers.json`)
+- 1 new endpoint family : `/api/benchmark/run`, `/api/app-triggers`
+- 6 new pieces of metadata in `/api/state` (encoder/decoder/pcie × 2)
 
 ## [0.3.0] — 2026-05-22
 
