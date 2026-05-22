@@ -2266,6 +2266,21 @@ def handle_logs(ctx: dict, params: dict) -> Response:
     log_file = (cfg.get("LOG_FILE", "") if cfg else "").strip()
     journalctl_unit = (cfg.get("JOURNALCTL_UNIT", "") if cfg else "").strip()
 
+    # Auto-detect : if neither is set, default to journalctl --user -u
+    # gpu-dashboard.service (the canonical install path documented in README).
+    # This avoids the "no log source configured" error for users who
+    # installed via the standard systemd-user unit.
+    if not log_file and not journalctl_unit:
+        try:
+            r = subprocess.run(
+                ["systemctl", "--user", "is-active", "gpu-dashboard.service"],
+                capture_output=True, text=True, timeout=2,
+            )
+            if r.returncode == 0 and r.stdout.strip() in ("active", "activating"):
+                journalctl_unit = "gpu-dashboard.service"
+        except (FileNotFoundError, subprocess.SubprocessError, OSError):
+            pass
+
     if log_file:
         log_file = os.path.expanduser(log_file)
         if not os.path.isfile(log_file):
@@ -2304,7 +2319,10 @@ def handle_logs(ctx: dict, params: dict) -> Response:
 
     return 200, {
         "ok": False,
-        "reason": "no log source configured — set LOG_FILE or JOURNALCTL_UNIT in config.env",
+        "reason": "no log source configured — neither LOG_FILE nor JOURNALCTL_UNIT is set, "
+                  "and no `gpu-dashboard.service` user unit appears active. "
+                  "Set LOG_FILE=/path/to/log or JOURNALCTL_UNIT=your-unit-name in "
+                  "~/.config/gpu-dashboard/config.env, then restart the dashboard.",
     }
 
 
