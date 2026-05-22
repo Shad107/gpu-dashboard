@@ -74,6 +74,17 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     auth TEXT NOT NULL,
     created_ts INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts INTEGER NOT NULL,
+    route TEXT NOT NULL,
+    actor TEXT,           -- token id or 'anonymous' (R&D #9.3 will set this)
+    before_json TEXT,
+    after_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts);
+CREATE INDEX IF NOT EXISTS idx_audit_route ON audit_log(route);
 """
 
 
@@ -175,6 +186,46 @@ class Storage:
                 f"INSERT OR REPLACE INTO samples ({cols}) VALUES ({placeholders})",
                 values,
             )
+
+    # ── audit log (R&D #9.6) ─────────────────────────────────────────────────
+
+    def record_audit(self, route: str, before: Optional[dict] = None,
+                     after: Optional[dict] = None, actor: Optional[str] = None) -> int:
+        """Append a row to audit_log. Returns the new row id.
+
+        - route   : e.g. '/api/fan-curve POST'
+        - before  : current state JSON (any dict)
+        - after   : new state JSON (any dict)
+        - actor   : token id (R&D #9.3 wires this) or None for anonymous
+        """
+        import json as _json
+        import time as _time
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO audit_log (ts, route, actor, before_json, after_json) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (int(_time.time()), route, actor or "anonymous",
+                 _json.dumps(before) if before is not None else None,
+                 _json.dumps(after) if after is not None else None),
+            )
+            return cur.lastrowid
+
+    def get_audit_log(self, limit: int = 100, since_ts: Optional[int] = None) -> list:
+        """Read recent audit entries, newest first."""
+        with self._lock:
+            if since_ts is not None:
+                rows = self._conn.execute(
+                    "SELECT id, ts, route, actor, before_json, after_json "
+                    "FROM audit_log WHERE ts >= ? ORDER BY ts DESC LIMIT ?",
+                    (since_ts, limit),
+                ).fetchall()
+            else:
+                rows = self._conn.execute(
+                    "SELECT id, ts, route, actor, before_json, after_json "
+                    "FROM audit_log ORDER BY ts DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+        return [dict(r) for r in rows]
 
     def get_samples(
         self,

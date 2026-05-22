@@ -2772,6 +2772,25 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #9.6 — Multi-user audit log ─────────────────────────────────────────
+def handle_audit_log(ctx: dict, params: Optional[dict] = None) -> Response:
+    """Read recent settings-mutation audit entries."""
+    storage = ctx.get("storage")
+    if not storage:
+        return 503, {"ok": False, "error": "storage unavailable"}
+    params = params or {}
+    try:
+        limit = max(1, min(500, int(params.get("limit", "100"))))
+    except (ValueError, TypeError):
+        limit = 100
+    try:
+        since_ts = int(params["since"]) if "since" in params else None
+    except (ValueError, TypeError):
+        since_ts = None
+    rows = storage.get_audit_log(limit=limit, since_ts=since_ts)
+    return 200, {"ok": True, "count": len(rows), "entries": rows}
+
+
 # ─── R&D #9.4 — HF cache janitor (cold large models) ─────────────────────────
 def handle_hf_janitor(ctx: dict, params: Optional[dict] = None) -> Response:
     """Surface cold large model files across known cache/model dirs."""
