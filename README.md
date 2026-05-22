@@ -355,6 +355,70 @@ Profiles for new cards are **the highest-value contribution**. See
 
 MIT. See [`LICENSE`](LICENSE).
 
-## Roadmap
+## 🗺️ Roadmap
 
-See [`docs/PLAN.md`](docs/PLAN.md) for the detailed plan, sequencing, and milestones.
+### ✅ Delivered (v0.3.0-dev — cycles 1-110)
+
+**Live monitoring**
+- 8 cards : GPU · Power Limit · Fans (RPM/target) · VRAM · OcuLink · Modèle LLM · Débit LLM (tokens + tok/W) · Électricité (€/month) · GPU processes
+- Live tab title : `44°C · 250W · GPU Dashboard`
+- Idle banner when GPU has been <5% util for 30 min (with calculated €/month savings)
+
+**Stats & history**
+- Top-level views : Dashboard · Stats · History (URL-hash bookmarkable)
+- Stats sparklines : LLM perf · Power · Thermal · Profile time · Fan distribution · Heatmap
+- History chart : 1h/6h/24h/7d/30d ranges × 6 metrics · compare-to-24h/7d/30d · Export CSV
+- 24-hour heatmap : avg watts × hour-of-day, color-coded by €/h
+- About tab : Year-to-date energy + tokens · 24h profile-time breakdown · recent profile switches
+
+**Tuning**
+- Power limit slider + 3 named presets (Silent/Sweet/Boost)
+- Clock offsets (GPU/mem) with safe/moderate/aggressive zones
+- **Fan curve editor** : drag-and-drop SVG + keyboard fine-tuning + 3 presets + persist to disk
+- Auto-profile daemon : classifies load (silent/sweet/boost) and switches automatically
+
+**Multi-GPU**
+- Picker dropdown in header (shows when >1 NVIDIA GPU detected)
+- Per-GPU samples, per-GPU API (`?gpu_index=N`), per-GPU UI
+
+**Alerts & integrations**
+- Telegram + webhook outbound (Discord/Slack/n8n/Home Assistant auto-detected)
+- Browser push notifications (VAPID + service worker)
+- Sound notification toggle
+- Threshold alerts (GPU/mem temp, fan %, VRAM %) with cooldown + min-consecutive
+- Latest-alert footer on dashboard + alerts list in Stats
+
+**Customization**
+- Layout : hide/show each card · drag-and-drop reorder · custom URL iframe cards
+- Theme : dark (default) / light · 🎨 toggle in Layout tab · `?theme=light|dark` URL override
+- i18n : English + French (full coverage)
+
+**API & ecosystem**
+- 30+ endpoints (state, history, stats, alerts, push, fan-curve, profile-stats, power-heatmap, llm/perf, llm/lifetime, electricity, version, export, export/year, …)
+- Prometheus exporter `/api/prom` with year-to-date gauges (kWh, cost, tokens, alert age)
+- Grafana ready-to-import dashboard : [`docs/grafana/yearly_dashboard.json`](docs/grafana/yearly_dashboard.json)
+- Uptime Kuma compatible `/api/health` with `recent_alerts`
+- CSV export with `/api/export?since=` and `/api/export/year`
+
+**Quality**
+- 530+ Python tests on Py 3.9-3.13 in CI (GitHub Actions matrix)
+- Pure-stdlib backend (only `jsonschema` runtime dep) · openssl for VAPID + signing
+- DB schema v4 with idempotent migrations
+- Mobile responsive (768/600px breakpoints)
+
+### 💡 Parked / future work
+
+Niche items not currently planned but considered :
+- **Per-fan RPM curves** : separate fan 0 / fan 1 curves (eGPU-specific use case)
+- **RFC 8291 encrypted Web Push** : currently uses a fetch-on-push pivot (functional but the notification text comes from the SW fetching `/api/alerts/latest` rather than from the push payload)
+- **AMD/Intel GPU backends** : Linux-only NVIDIA today ; v1.0 territory, needs a HAL abstraction
+- **Coolbits auto-detection in wizard** : check `/etc/X11/xorg.conf.d/*.conf` for `Coolbits=28`
+- **Cloud telemetry SaaS** : opt-in dashboard sharing across rigs (local-only for now per design)
+- **Windows / macOS support** : Linux-only by design
+
+### 🚫 Won't do
+
+- Monetization / paid tier (it's an OSS project for personal rigs)
+- Closed-source forks repackaging the OSS work (license is MIT, but please at least cite)
+
+See [`docs/PLAN.md`](docs/PLAN.md) for the detailed cycle log and per-commit history.
