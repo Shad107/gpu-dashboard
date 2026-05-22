@@ -628,6 +628,10 @@
   async function loadEccHealth() {
     try { eccHealth = await api.eccHealth(); } catch { eccHealth = null; }
   }
+  let driftInfo = $state<Awaited<ReturnType<typeof api.drift>> | null>(null);
+  async function loadDrift() {
+    try { driftInfo = await api.drift(); } catch { driftInfo = null; }
+  }
   let lifetimeStats = $state<Awaited<ReturnType<typeof api.lifetimeStats>> | null>(null);
   async function loadAbout() {
     try { aboutData = await api.about(); } catch { aboutData = null; }
@@ -637,6 +641,7 @@
     if (modal.open && modal.section === "about" && !aboutData) loadAbout();
     if (modal.open && modal.section === "about") loadIdleAudit();
     if (modal.open && modal.section === "about") loadEccHealth();
+    if (modal.open && modal.section === "about") loadDrift();
   });
 
   function fmtTrackingSince(ts: number | null): string {
@@ -1077,6 +1082,36 @@
                 </tr>
               </tbody>
             </table>
+          {/if}
+
+          <!-- ─── R&D #5.2 Driver/kernel drift detector ─── -->
+          {#if driftInfo?.has_baseline && driftInfo.last_drift}
+            <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
+              🔧 {i18n.t("about.drift") ?? "Drift driver / kernel"}
+            </h3>
+            <p class="sub" style="margin:0 0 .4em;font-size:.82em;color:var(--accent-warn)">
+              ⚠️ {driftInfo.last_drift.diffs.length} {i18n.t("about.drift_changed") ?? "changement(s) depuis le dernier démarrage"} :
+            </p>
+            <ul style="margin:0;padding-left:1.4em;font-size:.78em">
+              {#each driftInfo.last_drift.diffs as d}
+                <li>
+                  <b>{d.field}</b> :
+                  <span style="color:var(--text-dim)">{d.old ?? "—"}</span>
+                  →
+                  <b style="color:var(--accent-cool)">{d.new ?? "—"}</b>
+                </li>
+              {/each}
+            </ul>
+            <p class="sub" style="margin-top:.4em;font-size:.72em;color:var(--text-dim)">
+              {driftInfo.history_count} {i18n.t("about.drift_history_count") ?? "drift(s) enregistré(s) au total"}
+            </p>
+          {:else if driftInfo?.has_baseline}
+            <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
+              🔧 {i18n.t("about.drift") ?? "Drift driver / kernel"}
+            </h3>
+            <p class="sub" style="margin:0;font-size:.82em;color:var(--accent)">
+              ✓ {i18n.t("about.drift_none") ?? "Aucun changement depuis la baseline initiale."}
+            </p>
           {/if}
 
           <!-- ─── R&D #4.3 ECC + memory health ─── -->

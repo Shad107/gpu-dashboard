@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import subprocess
 from typing import Any, Tuple
 
@@ -2769,6 +2770,133 @@ def handle_alerts_test(ctx: dict) -> Response:
     )
     code = 200 if ok else 502
     return code, {"ok": ok, "msg": msg}
+
+
+# ─── R&D #5.2 — Driver/kernel drift detector ─────────────────────────────────
+_DRIFT_FIELDS_CMD = ["driver_version", "vbios_version", "name",
+                     "persistence_mode", "ecc.mode.current", "mig.mode.current"]
+
+
+def _read_drift_snapshot() -> dict:
+    """Capture the current driver+kernel+ECC/MIG fingerprint."""
+    snap: dict = {"ts": int(time.time())}
+    # nvidia-smi side
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "-i", "0", f"--query-gpu={','.join(_DRIFT_FIELDS_CMD)}",
+             "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=2,
+        )
+        if r.returncode == 0 and r.stdout.strip():
+            parts = [p.strip() for p in r.stdout.strip().splitlines()[0].split(",")]
+            for i, key in enumerate(_DRIFT_FIELDS_CMD):
+                snap[key.replace(".", "_")] = parts[i] if i < len(parts) else ""
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        pass
+    # Kernel side
+    try:
+        r = subprocess.run(["uname", "-r"], capture_output=True, text=True, timeout=1)
+        if r.returncode == 0:
+            snap["kernel_release"] = r.stdout.strip()
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        pass
+    return snap
+
+
+def _drift_snapshot_path() -> str:
+    return os.path.expanduser("~/.config/gpu-dashboard/drift_baseline.json")
+
+
+def _drift_history_path() -> str:
+    return os.path.expanduser("~/.config/gpu-dashboard/drift_history.json")
+
+
+def _diff_snapshots(old: dict, new: dict) -> list:
+    """Return list of {field, old, new} for fields that changed.
+    Ignores 'ts' (always different)."""
+    diffs: list = []
+    keys = set(old.keys()) | set(new.keys())
+    keys.discard("ts")
+    for k in sorted(keys):
+        if old.get(k) != new.get(k):
+            diffs.append({"field": k, "old": old.get(k), "new": new.get(k)})
+    return diffs
+
+
+def detect_drift_on_startup() -> Optional[list]:
+    """Called once at server boot. Reads current snapshot, compares with
+    saved baseline, and if anything changed records a history entry +
+    updates the baseline. Returns the diff list (empty = no drift).
+
+    Returns None if drift_baseline doesn't exist yet (first ever boot —
+    baseline gets created silently).
+    """
+    new = _read_drift_snapshot()
+    if not new or len(new) <= 1:  # only ts
+        return None
+    baseline_p = _drift_snapshot_path()
+    os.makedirs(os.path.dirname(baseline_p), exist_ok=True)
+    if not os.path.exists(baseline_p):
+        with open(baseline_p, "w") as f:
+            json.dump(new, f, indent=2)
+        return None
+    try:
+        with open(baseline_p) as f:
+            old = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        old = {}
+    diffs = _diff_snapshots(old, new)
+    if diffs:
+        # Append to history
+        history_p = _drift_history_path()
+        try:
+            history = []
+            if os.path.exists(history_p):
+                with open(history_p) as f:
+                    history = json.load(f)
+            history.append({"ts": new["ts"], "diffs": diffs,
+                            "old_snapshot": old, "new_snapshot": new})
+            # Cap history at 100 entries
+            history = history[-100:]
+            with open(history_p, "w") as f:
+                json.dump(history, f, indent=2)
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+        # Update baseline
+        with open(baseline_p, "w") as f:
+            json.dump(new, f, indent=2)
+    return diffs
+
+
+def handle_drift_check(ctx: dict) -> Response:
+    """Return the most recent drift entry + current snapshot.
+
+    Response :
+      {ok, has_baseline, current: {...}, last_drift: {ts, diffs, ...} | null,
+       history_count: int}
+    """
+    new = _read_drift_snapshot()
+    baseline_p = _drift_snapshot_path()
+    history_p = _drift_history_path()
+    has_baseline = os.path.exists(baseline_p)
+    last_drift = None
+    history_count = 0
+    if os.path.exists(history_p):
+        try:
+            with open(history_p) as f:
+                history = json.load(f)
+            history_count = len(history)
+            if history:
+                last_drift = history[-1]
+        except (OSError, json.JSONDecodeError):
+            pass
+    return 200, {
+        "ok": True,
+        "has_baseline": has_baseline,
+        "current": new,
+        "last_drift": last_drift,
+        "history_count": history_count,
+    }
 
 
 # ─── R&D #5.4 — Bar JSON for Waybar/polybar/i3blocks/tmux ────────────────────

@@ -133,6 +133,18 @@ def _load_context(config_path: Optional[str] = None, profiles_dir: str = "profil
     )
     sampler.start()
 
+    # R&D #5.2 — drift detection : capture driver/kernel/ECC fingerprint
+    # on each startup and diff vs the saved baseline. Cheap (one nvidia-smi
+    # call) so it runs unconditionally.
+    try:
+        from . import api as _api
+        drifts = _api.detect_drift_on_startup()
+        if drifts:
+            for d in drifts:
+                print(f"[drift] {d['field']} : {d['old']!r} → {d['new']!r}")
+    except Exception as e:
+        print(f"[drift] check skipped : {e}")
+
     # Retention daemon (purge + vacuum)
     retention = RetentionTask(
         storage,
@@ -476,6 +488,10 @@ def make_handler(ctx: dict):
                 return
             if path == "/api/ecc-health":
                 code, body = api.handle_ecc_health(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/drift":
+                code, body = api.handle_drift_check(ctx)
                 self._send_json(code, body)
                 return
             if path == "/api/bar":

@@ -472,6 +472,18 @@ export const api = {
       checklist?: Array<{ key: string; label: string; hint: string }>;
     }>),
 
+  drift: () =>
+    fetch("/api/drift").then(jsonOf<{
+      ok: boolean;
+      has_baseline: boolean;
+      current: Record<string, any>;
+      last_drift: {
+        ts: number;
+        diffs: Array<{ field: string; old: any; new: any }>;
+      } | null;
+      history_count: number;
+    }>),
+
   eccHealth: () =>
     fetch("/api/ecc-health").then(jsonOf<{
       ok: boolean;
