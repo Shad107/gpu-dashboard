@@ -89,6 +89,11 @@ from .ops import (  # noqa: F401
     handle_modules_list, handle_modules_toggle,
     handle_setup_detect, handle_setup_recheck, handle_setup_save,
 )
+from .state import (  # noqa: F401
+    handle_state, handle_history, handle_events,
+    handle_export, handle_export_year,
+    handle_lifetime_stats,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
@@ -178,6 +183,11 @@ from .ops import (  # noqa: F401,F811
     handle_setup_detect, handle_setup_recheck, handle_setup_save,
 )
 from .ops import _git, _redact_env_file, _REDACT_KEYS  # noqa: F401,F811
+from .state import (  # noqa: F401,F811
+    handle_state, handle_history, handle_events,
+    handle_export, handle_export_year,
+    handle_lifetime_stats,
+)
 # Helpers moved to submodules — re-export for tests
 from .llm import (  # noqa: F401,F811
     _parse_llamacpp_metrics,
