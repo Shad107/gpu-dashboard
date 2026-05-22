@@ -565,6 +565,10 @@ def make_handler(ctx: dict):
                 code, body = api.handle_audit_log(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/auth/tokens":
+                code, body = api.handle_auth_tokens_list(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/alertmanager/rules.yaml":
                 code, text_body = api.handle_alertmanager_rules(ctx)
                 data = text_body.encode("utf-8")
@@ -773,6 +777,20 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/notif/test":
                 code, body = api.handle_notif_channel_test(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/auth/tokens":
+                code, body = api.handle_auth_token_create(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path.startswith("/api/auth/tokens/") and self.path.endswith("/delete"):
+                # POST /api/auth/tokens/<id>/delete
+                token_id = self.path[len("/api/auth/tokens/"):-len("/delete")]
+                code, body = api.handle_auth_token_delete(ctx, token_id)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/auth/share":
+                code, body = api.handle_auth_share_create(ctx, payload)
                 self._send_json(code, body)
                 return
 
