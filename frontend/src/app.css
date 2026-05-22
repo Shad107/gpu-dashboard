@@ -167,9 +167,13 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
   flex-wrap: nowrap;
   gap: 0.5em;
 }
+.strip-cards {
+  align-items: stretch;   /* cards inside a group → same height (cycle 147) */
+}
 .strip-cards > .card,
 .strip-merged > .card {
   flex: 0 0 200px;
+  min-height: 7em;        /* cycle 147 user fb 'hauteur des carte doit être identique' */
   scroll-snap-align: start;
 }
 /* Group separators between card groups in the merged strip.

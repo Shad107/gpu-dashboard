@@ -109,12 +109,11 @@
   <Toast />
 {:else}
   <Header />
+  <!-- Cycle 147 user fb : 'sous les tab → a mettre au dessus'.
+       Cards strip BEFORE TopNav so it sits between Header and tabs. -->
+  <Cards />
   <TopNav />
   <IdleBanner />
-  <!-- Cycle 146 — Cards strip is now ALWAYS visible (outside tab switch).
-       User : 'mettre ces cartes en dehors des tab pour les avoir toujours
-       visible'. Tabs switch only the lower content area. -->
-  <Cards />
   {#if view.current === "dashboard"}
     <div class="dash-scroll-y">
       <CoolingChart />
