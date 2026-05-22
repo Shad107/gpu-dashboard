@@ -665,6 +665,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_airgap_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/disk-health":
+                # R&D #12.2 — SMART disk health
+                code, body = api.handle_disk_health(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/airgap/audit":
                 code, body = api.handle_airgap_audit(ctx, params)
                 self._send_json(code, body)
