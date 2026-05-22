@@ -620,6 +620,16 @@ def make_handler(ctx: dict):
                 code, body = api.handle_lm_studio_inventory(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/driver-vault":
+                # R&D #16.4 — driver rollback vault status
+                code, body = api.handle_driver_vault_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/driver-vault/rollback-script":
+                # R&D #16.4 — generate sudo rollback script (never auto-runs)
+                code, body = api.handle_driver_vault_rollback_script(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/noc":
                 # R&D #16.6 — NOC board for wall-mounted screens
                 code, html_text = api.handle_noc(ctx, params)
@@ -1052,6 +1062,11 @@ def make_handler(ctx: dict):
             if self.path.startswith("/api/dr-bundle/delete/"):
                 name = self.path[len("/api/dr-bundle/delete/"):]
                 code, body = api.handle_dr_bundle_delete(ctx, name)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/driver-vault/stash":
+                # R&D #16.4 — capture the currently-installed driver .deb
+                code, body = api.handle_driver_vault_stash(ctx)
                 self._send_json(code, body)
                 return
             if self.path == "/api/boot-profile/clear":
