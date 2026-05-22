@@ -662,6 +662,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_mps_health_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/process-nice":
+                # R&D #19.1 — GPU process nice/ionice advisor
+                code, body = api.handle_process_nice_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
