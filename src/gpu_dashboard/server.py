@@ -650,6 +650,15 @@ def make_handler(ctx: dict):
                 code, body = api.handle_wall_meter(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/rules":
+                # R&D #12.4 — declarative rule engine list
+                code, body = api.handle_rules_list(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/rules/evaluate":
+                code, body = api.handle_rules_evaluate(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/snapshot":
                 code, body = api.handle_snapshot_at(ctx, params)
                 self._send_json(code, body)
@@ -882,6 +891,11 @@ def make_handler(ctx: dict):
                 return
             if self.path == "/api/notif/channels":
                 code, body = api.handle_notif_channel_save(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/rules":
+                # R&D #12.4 — save the whole rules list
+                code, body = api.handle_rules_save(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/notif/test":
