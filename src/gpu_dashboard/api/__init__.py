@@ -281,3 +281,4 @@ from .tdp_auto import handle_tdp_auto_status, handle_tdp_auto_save, handle_tdp_a
 from .llm_swap import handle_llm_swap_status, handle_llm_swap_pin, handle_llm_swap_suggest  # noqa: F401,F811
 from .cuda_advisor import handle_cuda_advisor_status  # noqa: F401,F811
 from .nvme_swap import handle_nvme_swap_status  # noqa: F401,F811
+from .cuda_matrix import handle_cuda_matrix_status  # noqa: F401,F811
