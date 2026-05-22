@@ -42,7 +42,8 @@ def _per_fan_state(cfg):
 
 
 def _alert_consecutive_to_for(*args, **kw):
-    return _m._alert_consecutive_to_for(*args, **kw)
+    from . import alerts as _alerts  # cycle 8 late import to avoid cycle
+    return _alerts._alert_consecutive_to_for(*args, **kw)
 
 
 # ─── R&D #6.7 — journalctl bridge with saved filters ─────────────────────────

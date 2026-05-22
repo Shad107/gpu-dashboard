@@ -72,6 +72,12 @@ from .diagnostics import (  # noqa: F401
     handle_alertmanager_rules, build_alertmanager_rules_yaml,
     handle_logs,
 )
+from .alerts import (  # noqa: F401
+    handle_alerts_config_get, handle_alerts_config_post,
+    handle_alerts_latest,
+    handle_notif_channels_list, handle_notif_channel_save, handle_notif_channel_test,
+    handle_heartbeat_list, handle_heartbeat_ping, handle_heartbeat_config,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
@@ -140,6 +146,15 @@ from .diagnostics import (  # noqa: F401,F811
     _normalize_cgroup, _linear_fit, _r_squared,
     _LAST_CPU_LINE, _LAST_CPU_TS, _LAST_VMSTAT, _LAST_VMSTAT_TS,
 )
+from .alerts import (  # noqa: F401,F811
+    handle_alerts_config_get, handle_alerts_config_post,
+    handle_alerts_latest,
+    handle_notif_channels_list, handle_notif_channel_save, handle_notif_channel_test,
+    handle_heartbeat_list, handle_heartbeat_ping, handle_heartbeat_config,
+)
+from .alerts import (  # noqa: F401,F811
+    _alert_consecutive_to_for, _load_heartbeats, _save_heartbeats,
+)
 # Helpers moved to submodules — re-export for tests
 from .llm import (  # noqa: F401,F811
     _parse_llamacpp_metrics,
@@ -168,12 +183,9 @@ from ._monolith import (  # noqa: F401
     # (kept for compat: import from there above)
     # Drift detector
 
-    # Heartbeats (deadman)
-    _load_heartbeats,
-    _save_heartbeats,
+    # Heartbeats (deadman) — moved to api.alerts (above)
     # cgroup attribution — moved to api.diagnostics (above)
-    # Alert escalation
-    _alert_consecutive_to_for,
+    # Alert escalation — moved to api.alerts (above)
     # SVG badge generator (R&D #10.7)
     _badge_svg,
     _BADGE_TEMP_COLORS,

@@ -13,7 +13,7 @@ def _ctx():
 
 
 def _with_tmp_heartbeats(td):
-    return patch.object(api._monolith, "_heartbeats_path", return_value=os.path.join(td, "hb.json"))
+    return patch.object(api.alerts, "_heartbeats_path", return_value=os.path.join(td, "hb.json"))
 
 
 def test_empty_list():
