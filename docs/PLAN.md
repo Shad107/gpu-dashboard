@@ -3,7 +3,7 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 09:57 (R&D iteration #3 opened — 5 features picked)
+**Last updated** : 2026-05-22 09:20 (cycle 134 done — R&D #3.1 sysreport bundle)
 **Latest commit** : `fe2d2a9` — benchmark scheduler helpers
 **Tests** : 637 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
@@ -155,7 +155,11 @@ Inspired by LibreHardwareMonitor, hardinfo/inxi, HWMonitor, systemd timers
 
 ### Picked for upcoming cycles (smallest first)
 
-1. **Diagnostic bundle** (cycle 134) — `/api/sysreport/bundle` returns a tar.gz of sysreport + last 100 events + config.env redacted + recent logs. One-click for support handoffs.
+1. **Diagnostic bundle** (cycle 134) ✅ DONE
+   - /api/sysreport/bundle returns gpu-dashboard-sysreport-YYYYMMDD-HHMMSS.tar.gz
+   - Includes sysreport.json + events.json + REDACTED config.env + recent.log (500 lines)
+   - _redact_env_file strips TELEGRAM_BOT_TOKEN, WEBHOOK_URL, VAPID keys
+   - 6 new TDD tests · 637 → 643
 2. **Header status chip** (cycle 135) — small pill in header showing 'just switched: boost' or 'last alert: 30m ago — temp_high', clickable to open the relevant modal tab.
 3. **Uptime % in /api/health** (cycle 136) — add `up_seconds`, `restart_count`, `uptime_pct_24h` for Uptime Kuma badges.
 4. **Anomaly bands on history charts** (cycle 137) — compute μ ± 2σ rolling band, render dimmed area. Marks visual outliers.
