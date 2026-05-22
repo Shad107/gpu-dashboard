@@ -737,6 +737,8 @@ def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
 
     today_start = int(_dt.datetime.fromtimestamp(now).replace(
         hour=0, minute=0, second=0, microsecond=0).timestamp())
+    month_start = int(_dt.datetime.fromtimestamp(now).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
     year_start = int(_dt.datetime.fromtimestamp(now).replace(
         month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
 
@@ -785,6 +787,40 @@ def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
     kwh_year = year_wh / 1000
     cost_year = round(kwh_year * price, 4)  # match kwh_today precision
 
+    # Monthly kWh — integrate over month-to-date samples
+    month_samples = storage.get_samples(from_ts=month_start, to_ts=now, gpu_index=gpu)
+    month_wh = 0.0
+    for i in range(1, len(month_samples)):
+        prev_s = month_samples[i - 1]
+        cur = month_samples[i]
+        if prev_s.get("power") is None or cur.get("power") is None:
+            continue
+        dt = min(cur["ts"] - prev_s["ts"], 300)
+        avg = (prev_s["power"] + cur["power"]) / 2
+        month_wh += avg * dt / 3600
+    kwh_month = month_wh / 1000
+    cost_month = round(kwh_month * price, 4)
+
+    # Budget tracker — forecast end-of-month from linear extrapolation
+    budget_kwh = 0.0
+    if cfg is not None:
+        try:
+            budget_kwh = float(cfg.get("ELECTRICITY_MONTHLY_BUDGET_KWH", default="0") or 0)
+        except (ValueError, TypeError):
+            budget_kwh = 0.0
+    # Days in current month for end-of-month timestamp
+    import calendar as _cal
+    cur_dt = _dt.datetime.fromtimestamp(now)
+    days_in_month = _cal.monthrange(cur_dt.year, cur_dt.month)[1]
+    month_end_ts = int(_dt.datetime(
+        cur_dt.year, cur_dt.month, days_in_month, 23, 59, 59
+    ).timestamp())
+    month_total_s = max(1, month_end_ts - month_start)
+    month_elapsed_s = max(1, min(month_total_s, now - month_start))
+    month_progress_pct = round(month_elapsed_s / month_total_s * 100, 1)
+    forecast_kwh = round(kwh_month / (month_elapsed_s / month_total_s), 2) if kwh_month > 0 else 0.0
+    over_budget = budget_kwh > 0 and forecast_kwh > budget_kwh
+
     series = []
     for h in range(24):
         bucket_start = now - (24 - h) * 3600
@@ -803,6 +839,14 @@ def handle_power_stats(ctx: dict, params: Optional[dict] = None) -> Response:
         "kwh_year": round(kwh_year, 4),  # 4-decimal precision matches kwh_today
         "cost_year": cost_year,
         "year_start_ts": year_start,
+        "kwh_month": round(kwh_month, 4),
+        "cost_month": cost_month,
+        "month_start_ts": month_start,
+        "month_end_ts": month_end_ts,
+        "month_progress_pct": month_progress_pct,
+        "forecast_kwh": forecast_kwh,
+        "budget_kwh": round(budget_kwh, 2),
+        "over_budget": over_budget,
         "currency": currency,
         "price_per_kwh": price,
         "series_24h": series,
@@ -1004,9 +1048,21 @@ def handle_electricity_config(ctx: dict, payload: dict) -> Response:
     if len(currency) > 4:
         return 400, {"ok": False, "error": "currency code too long"}
 
+    # Optional monthly budget (cycle 121) — 0 disables tracking
+    budget_kwh = 0.0
+    if "budget_kwh" in payload:
+        try:
+            budget_kwh = float(payload.get("budget_kwh") or 0)
+        except (ValueError, TypeError):
+            return 400, {"ok": False, "error": "budget_kwh must be a number"}
+        if budget_kwh < 0 or budget_kwh > 10000:
+            return 400, {"ok": False, "error": "budget_kwh out of range (0, 10000)"}
+
     # 1) Update in-memory Config (effective immediately)
     cfg.set("ELECTRICITY_PRICE_EUR_PER_KWH", price)
     cfg.set("ELECTRICITY_CURRENCY", currency)
+    if "budget_kwh" in payload:
+        cfg.set("ELECTRICITY_MONTHLY_BUDGET_KWH", budget_kwh)
 
     # 2) Persist to config.env so it survives restart
     config_path = ctx.get("config_path") or os.path.expanduser(
@@ -1014,13 +1070,14 @@ def handle_electricity_config(ctx: dict, payload: dict) -> Response:
     )
     try:
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        # Read existing, update / add the keys, write back
         existing = {}
         if os.path.isfile(config_path):
             from .config import parse_env_file
             existing = parse_env_file(config_path)
         existing["ELECTRICITY_PRICE_EUR_PER_KWH"] = str(price)
         existing["ELECTRICITY_CURRENCY"] = currency
+        if "budget_kwh" in payload:
+            existing["ELECTRICITY_MONTHLY_BUDGET_KWH"] = str(budget_kwh)
         from .config import write_env_file
         write_env_file(config_path, existing,
                        header="# Auto-updated by gpu-dashboard /api/electricity/config")
@@ -1028,6 +1085,7 @@ def handle_electricity_config(ctx: dict, payload: dict) -> Response:
         return 500, {"ok": False, "error": f"could not write config.env: {e}"}
 
     return 200, {"ok": True, "price_per_kwh": price, "currency": currency,
+                 "budget_kwh": budget_kwh,
                  "config_path": config_path}
 
 
@@ -1075,6 +1133,39 @@ def handle_electricity(ctx: dict, params: dict) -> Response:
     monthly_kwh = daily_kwh * 30
     monthly_cost = daily_cost * 30
 
+    # Budget tracker (cycle 121) — month-to-date actual + forecast
+    budget_kwh = 0.0
+    if cfg is not None:
+        try:
+            budget_kwh = float(cfg.get("ELECTRICITY_MONTHLY_BUDGET_KWH", default="0") or 0)
+        except (ValueError, TypeError):
+            budget_kwh = 0.0
+
+    import datetime as _dtm
+    import calendar as _cal
+    cur_dt = _dtm.datetime.fromtimestamp(now)
+    month_start = int(cur_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
+    days_in_month = _cal.monthrange(cur_dt.year, cur_dt.month)[1]
+    month_end_ts = int(_dtm.datetime(cur_dt.year, cur_dt.month, days_in_month, 23, 59, 59).timestamp())
+    month_total_s = max(1, month_end_ts - month_start)
+    month_elapsed_s = max(1, min(month_total_s, now - month_start))
+    month_progress_pct = round(month_elapsed_s / month_total_s * 100, 1)
+    # Integrate month-to-date samples for actual kWh
+    month_samples = storage.get_samples(from_ts=month_start, to_ts=now, gpu_index=gpu)
+    month_wh = 0.0
+    for i in range(1, len(month_samples)):
+        prev_s = month_samples[i - 1]
+        cur_s = month_samples[i]
+        if prev_s.get("power") is None or cur_s.get("power") is None:
+            continue
+        dt = min(cur_s["ts"] - prev_s["ts"], 300)
+        avg = (prev_s["power"] + cur_s["power"]) / 2
+        month_wh += avg * dt / 3600
+    kwh_month = month_wh / 1000.0
+    cost_month = kwh_month * price
+    forecast_kwh = (kwh_month / (month_elapsed_s / month_total_s)) if kwh_month > 0 else 0.0
+    over_budget = budget_kwh > 0 and forecast_kwh > budget_kwh
+
     return 200, {
         "ok": True,
         "window_seconds": window,
@@ -1088,6 +1179,12 @@ def handle_electricity(ctx: dict, params: dict) -> Response:
         "daily_cost": round(daily_cost, 3),
         "monthly_kwh": round(monthly_kwh, 2),
         "monthly_cost": round(monthly_cost, 2),
+        "kwh_month": round(kwh_month, 3),
+        "cost_month": round(cost_month, 3),
+        "month_progress_pct": month_progress_pct,
+        "forecast_kwh": round(forecast_kwh, 2),
+        "budget_kwh": round(budget_kwh, 2),
+        "over_budget": over_budget,
     }
 
 

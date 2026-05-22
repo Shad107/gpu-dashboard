@@ -244,6 +244,8 @@
 
   {#if elec && layout.visible("electricity")}
     {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
+    {@const budgetUsedPct = elec.budget_kwh > 0 ? Math.min(100, (elec.kwh_month / elec.budget_kwh) * 100) : 0}
+    {@const budgetForecastPct = elec.budget_kwh > 0 ? Math.min(150, (elec.forecast_kwh / elec.budget_kwh) * 100) : 0}
     <div class="card" style:order={layout.indexOf("electricity")}>
       <h2>⚡ {i18n.t("card.electricity")}</h2>
       <div class="big">
@@ -257,6 +259,27 @@
       <div class="sub" style="font-size:.72em;margin-top:.15em;color:#7c8aa3">
         {i18n.t("electricity.at_rate", { price: elec.price_per_kwh.toFixed(3), sym: symbol })}
       </div>
+      {#if elec.budget_kwh > 0}
+        <div class="budget-tracker" style="margin-top:.5em">
+          <div class="budget-line">
+            <span class="sub" style="font-size:.74em">{i18n.t("electricity.budget_label") ?? "Budget"}:</span>
+            <span style:color={elec.over_budget ? "var(--accent-warn)" : "var(--accent)"}>
+              <b>{elec.kwh_month.toFixed(1)}</b> / {elec.budget_kwh.toFixed(0)} kWh
+            </span>
+            <span class="sub" style="font-size:.7em;margin-left:.4em">({elec.month_progress_pct.toFixed(0)}% {i18n.t("electricity.month_done") ?? "of month"})</span>
+          </div>
+          <div class="budget-bar">
+            <div class="budget-fill" style:width="{budgetUsedPct}%" style:background={elec.over_budget ? "var(--accent-warn)" : "var(--accent)"}></div>
+            {#if budgetForecastPct > budgetUsedPct}
+              <div class="budget-forecast" style:left="{budgetUsedPct}%" style:width="{Math.max(0, budgetForecastPct - budgetUsedPct)}%"></div>
+            {/if}
+          </div>
+          <div class="sub" style="font-size:.7em;margin-top:.15em" style:color={elec.over_budget ? "var(--accent-warn)" : "var(--text-dim)"}>
+            {#if elec.over_budget}⚠️ {/if}{i18n.t("electricity.forecast") ?? "Forecast"}:
+            <b>{elec.forecast_kwh.toFixed(1)} kWh</b>
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 

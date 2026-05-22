@@ -384,6 +384,14 @@ export const api = {
       kwh_year: number;
       cost_year: number;
       year_start_ts: number;
+      kwh_month: number;
+      cost_month: number;
+      month_start_ts: number;
+      month_end_ts: number;
+      month_progress_pct: number;
+      forecast_kwh: number;
+      budget_kwh: number;
+      over_budget: boolean;
       currency: string;
       price_per_kwh: number;
       series_24h: number[];
@@ -450,5 +458,11 @@ export const api = {
       daily_cost: number;
       monthly_kwh: number;
       monthly_cost: number;
+      kwh_month: number;
+      cost_month: number;
+      month_progress_pct: number;
+      forecast_kwh: number;
+      budget_kwh: number;
+      over_budget: boolean;
     }>),
 };
