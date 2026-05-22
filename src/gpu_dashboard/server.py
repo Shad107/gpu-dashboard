@@ -655,6 +655,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_rules_list(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/peers":
+                # R&D #12.3 — LAN-discovered fleet peers
+                code, body = api.handle_peers(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/rules/evaluate":
                 code, body = api.handle_rules_evaluate(ctx, params)
                 self._send_json(code, body)

@@ -256,3 +256,4 @@ from .embed import handle_embed  # noqa: F401,F811
 from .ci_tag import handle_ci_tag  # noqa: F401,F811
 from .wall_meter import handle_wall_meter  # noqa: F401,F811
 from .rules import handle_rules_list, handle_rules_save, handle_rules_evaluate  # noqa: F401,F811
+from .peers import handle_peers  # noqa: F401,F811
