@@ -533,6 +533,8 @@
       icon: "M14.06 9L15 9.94 5.92 19H5v-.92L14.06 9m3.6-6c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83a.996.996 0 0 0 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
     { id: "diagnostics", group: "ops", labelKey: "modal.diagnostics" as const,
       icon: "M14.6 16.6L19.2 12L14.6 7.4L16 6l6 6-6 6-1.4-1.4M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4z" },
+    { id: "integrations", group: "ops", labelKey: "modal.integrations" as const,
+      icon: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-1 17.93A8 8 0 0 1 4.07 13H7v1a2 2 0 0 0 2 2h1zm6.9-2.54A2 2 0 0 0 16 16h-1v-3a1 1 0 0 0-1-1H8v-2h2a1 1 0 0 0 1-1V7h2a2 2 0 0 0 2-2v-.41a8 8 0 0 1 2.9 12.8z" },
     { id: "profile", group: "advanced", labelKey: "modal.profile" as const,
       icon: "M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
     { id: "apptriggers", group: "advanced", labelKey: "modal.apptriggers" as const,
@@ -614,6 +616,89 @@
   }
   $effect(() => {
     if (modal.open && modal.section === "diagnostics" && !logsData) loadLogs();
+  });
+
+  // ── R&D #12 UI sprint — Integrations section ─────────────────────────────
+  // Watchdog
+  let wdLoading = $state(false);
+  let wdInstalled = $state(false);
+  let wdActive = $state(false);
+  let wdStrict = $state(false);
+  let wdInterval = $state(60);
+  async function loadWatchdog() {
+    wdLoading = true;
+    try {
+      const r = await api.watchdogStatus();
+      wdInstalled = r.installed;
+      wdActive = r.active;
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { wdLoading = false; }
+  }
+  async function watchdogEnable() {
+    wdLoading = true;
+    try {
+      const r = await api.watchdogEnable({ strict: wdStrict, interval_s: wdInterval });
+      if (r.ok) {
+        wdInstalled = r.installed;
+        wdActive = r.active;
+        toast.emit("✓ Watchdog enabled", "ok");
+      } else {
+        toast.emit("✗ " + (r.msg || "enable failed"), "err");
+      }
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { wdLoading = false; }
+  }
+  async function watchdogDisable() {
+    wdLoading = true;
+    try {
+      const r = await api.watchdogDisable();
+      if (r.ok) {
+        wdInstalled = r.installed;
+        wdActive = r.active;
+        toast.emit("✓ Watchdog disabled", "ok");
+      } else {
+        toast.emit("✗ " + (r.msg || "disable failed"), "err");
+      }
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { wdLoading = false; }
+  }
+
+  // Service discovery
+  let svcLoading = $state(false);
+  let services = $state<Awaited<ReturnType<typeof api.servicesDiscovered>>["services"]>([]);
+  let unknownListeners = $state<Awaited<ReturnType<typeof api.servicesDiscovered>>["unknown_listeners"]>([]);
+  async function loadServices() {
+    svcLoading = true;
+    try {
+      const r = await api.servicesDiscovered();
+      services = r.services ?? [];
+      unknownListeners = r.unknown_listeners ?? [];
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { svcLoading = false; }
+  }
+
+  // HF Janitor
+  let hfLoading = $state(false);
+  let hfStats = $state<Awaited<ReturnType<typeof api.hfJanitor>> | null>(null);
+  async function loadHFJanitor() {
+    hfLoading = true;
+    try {
+      hfStats = await api.hfJanitor(20);
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally { hfLoading = false; }
+  }
+
+  // Auto-load each card the first time the section is opened
+  $effect(() => {
+    if (modal.open && modal.section === "integrations") {
+      if (!wdLoading) loadWatchdog();
+      if (services.length === 0 && !svcLoading) loadServices();
+    }
   });
 
   // ── About state ───────────────────────────────────────────────────────────
@@ -1429,6 +1514,162 @@
             {/each}
           </div>
         {/if}
+      </div>
+
+      <!-- Integrations : Watchdog + Services + HF Janitor (R&D #12 UI sprint) -->
+      <div class="modal-section" class:active={modal.section === "integrations"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("integrations")} /></svg>
+          {i18n.t("integrations.title")}
+        </h3>
+        <p class="muted">{i18n.t("integrations.description")}</p>
+
+        <!-- 🐕 Watchdog -->
+        <div class="card-form">
+          <h4>{i18n.t("integrations.watchdog.title")}</h4>
+          <p class="muted">{i18n.t("integrations.watchdog.desc")}</p>
+          {#if wdLoading}
+            <p class="muted">⏳…</p>
+          {:else}
+            <div class="form-row">
+              <span class="kv">
+                {i18n.t("integrations.watchdog.installed")} :
+                <b style:color={wdInstalled ? "var(--ok)" : "var(--text-dim)"}>{wdInstalled ? "✓" : "—"}</b>
+              </span>
+              <span class="kv">
+                {i18n.t("integrations.watchdog.active")} :
+                <b style:color={wdActive ? "var(--ok)" : "var(--text-dim)"}>{wdActive ? "✓" : "—"}</b>
+              </span>
+            </div>
+            <div class="form-row" style="flex-wrap: wrap; gap: 12px;">
+              <label class="kv">
+                <input type="checkbox" bind:checked={wdStrict} />
+                {i18n.t("integrations.watchdog.strict")}
+              </label>
+              <label class="kv">
+                {i18n.t("integrations.watchdog.interval")} :
+                <input type="number" min="30" max="3600" bind:value={wdInterval}
+                       style="width: 80px; margin-left: 6px;" />
+              </label>
+            </div>
+            <div class="form-row">
+              {#if wdActive}
+                <button class="btn btn-danger" onclick={watchdogDisable}>
+                  {i18n.t("integrations.watchdog.disable")}
+                </button>
+              {:else}
+                <button class="btn btn-primary" onclick={watchdogEnable}>
+                  {i18n.t("integrations.watchdog.enable")}
+                </button>
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        <!-- 🔍 Services discovered -->
+        <div class="card-form">
+          <h4>{i18n.t("integrations.services.title")}</h4>
+          <p class="muted">{i18n.t("integrations.services.desc")}</p>
+          <div class="form-row">
+            <button class="btn" onclick={loadServices}>
+              {i18n.t("integrations.services.refresh")}
+            </button>
+          </div>
+          {#if svcLoading}
+            <p class="muted">⏳…</p>
+          {:else if services.length === 0}
+            <p class="muted">{i18n.t("integrations.services.none")}</p>
+          {:else}
+            <table style="width:100%; font-size:0.92em; margin-top: 8px; border-collapse: collapse;">
+              <thead>
+                <tr style="text-align: left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                  <th style="padding: 4px 6px;">Service</th>
+                  <th style="padding: 4px 6px;">Category</th>
+                  <th style="padding: 4px 6px;">Ports</th>
+                  <th style="padding: 4px 6px;">Health</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each services as svc (svc.pid ?? svc.service + svc.primary_port)}
+                  <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 6px;"><b>{svc.service}</b></td>
+                    <td style="padding: 6px; color: var(--text-dim);">{svc.category}</td>
+                    <td style="padding: 6px; font-variant-numeric: tabular-nums;">
+                      {svc.ports.join(", ")}
+                    </td>
+                    <td style="padding: 6px;">
+                      {#if svc.health?.ok}
+                        <span style="color: var(--ok);">✓ {svc.health.status} ({svc.health.ms}ms)</span>
+                      {:else if svc.health}
+                        <span style="color: var(--err);">✗</span>
+                      {:else}
+                        <span class="muted">—</span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+            {#if unknownListeners.length > 0}
+              <p class="muted" style="margin-top: 12px;">
+                {i18n.t("integrations.services.unknown")} ({unknownListeners.length}) :
+                {unknownListeners.slice(0, 5).map(u => `${u.proc_name}:${u.port}`).join(", ")}
+                {unknownListeners.length > 5 ? "…" : ""}
+              </p>
+            {/if}
+          {/if}
+        </div>
+
+        <!-- 🧹 HF Cache Janitor -->
+        <div class="card-form">
+          <h4>{i18n.t("integrations.hf.title")}</h4>
+          <p class="muted">{i18n.t("integrations.hf.desc")}</p>
+          <div class="form-row">
+            <button class="btn" onclick={loadHFJanitor}>{i18n.t("integrations.hf.scan")}</button>
+          </div>
+          {#if hfLoading}
+            <p class="muted">⏳…</p>
+          {:else if hfStats}
+            {#if !hfStats.available}
+              <p class="muted">— {hfStats.reason ?? ""}</p>
+            {:else}
+              <div class="form-row" style="flex-wrap: wrap; gap: 14px; margin-top: 8px;">
+                <span class="kv">{i18n.t("integrations.hf.total")} : <b>{((hfStats.total_size_mib ?? 0) / 1024).toFixed(1)} GiB</b></span>
+                <span class="kv">{i18n.t("integrations.hf.cold")} : <b style="color: var(--warn);">{((hfStats.cold_size_mib ?? 0) / 1024).toFixed(1)} GiB</b></span>
+                <span class="kv">{i18n.t("integrations.hf.hot")} : <b>{hfStats.hot_count ?? 0}</b></span>
+              </div>
+              <p class="muted" style="margin-top: 6px; font-size: 0.88em;">
+                {i18n.t("integrations.hf.dirs")} : {(hfStats.dirs_scanned ?? []).join(", ")}
+              </p>
+              {#if (hfStats.top_cold?.length ?? 0) > 0}
+                <h5 style="margin: 14px 0 6px 0;">{i18n.t("integrations.hf.top")}</h5>
+                <table style="width:100%; font-size:0.88em; border-collapse: collapse;">
+                  <tbody>
+                    {#each hfStats.top_cold ?? [] as f, i (f.path)}
+                      {#if i < 10}
+                        <tr style="border-bottom: 1px solid var(--border);">
+                          <td style="padding: 5px; font-variant-numeric: tabular-nums; text-align: right;">
+                            {(f.size_mib / 1024).toFixed(1)} GiB
+                          </td>
+                          <td style="padding: 5px; text-align: right; color: var(--text-dim);">
+                            {f.age_days}d
+                          </td>
+                          <td style="padding: 5px;">
+                            {f.is_hot ? "🔥" : "❄️"}
+                          </td>
+                          <td style="padding: 5px; font-family: monospace; font-size: 0.85em; color: var(--text-dim);
+                                     overflow: hidden; text-overflow: ellipsis; max-width: 0;">
+                            {f.path.replace(/^.*\/(models--[^\/]+|[^\/]+)\/(blobs|snapshots).*$/, "$1")}
+                          </td>
+                        </tr>
+                      {/if}
+                    {/each}
+                  </tbody>
+                </table>
+              {/if}
+            {/if}
+          {/if}
+        </div>
       </div>
 
       <!-- Layout : card hide/show + drag-and-drop reorder -->

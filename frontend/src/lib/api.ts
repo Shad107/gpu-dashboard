@@ -563,6 +563,65 @@ export const api = {
       }[];
     }>),
 
+  // ── R&D #11.1b — Watchdog setup (UI sprint) ────────────────────────────
+  watchdogStatus: () =>
+    fetch("/api/watchdog/status").then(jsonOf<{
+      ok: boolean;
+      installed: boolean;
+      active: boolean;
+      service_path: string;
+      timer_path: string;
+    }>),
+
+  watchdogEnable: (opts?: { strict?: boolean; interval_s?: number }) =>
+    fetch("/api/watchdog/enable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(opts || {}),
+    }).then(jsonOf<{ ok: boolean; msg: string; installed: boolean; active: boolean }>),
+
+  watchdogDisable: () =>
+    fetch("/api/watchdog/disable", { method: "POST" })
+      .then(jsonOf<{ ok: boolean; msg: string; installed: boolean; active: boolean }>),
+
+  // ── R&D #11.4 — Service discovery (UI sprint) ───────────────────────────
+  servicesDiscovered: () =>
+    fetch("/api/services-discovered").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      services_count: number;
+      services: Array<{
+        service: string;
+        category: string;
+        pid: number | null;
+        proc_name: string;
+        ports: number[];
+        primary_port: number | null;
+        health?: { ok: boolean; status: number | null; ms: number | null };
+      }>;
+      unknown_count: number;
+      unknown_listeners: Array<{ port: number; proc_name: string; cmdline_preview: string }>;
+    }>),
+
+  // ── R&D #9.4 — HF cache janitor (UI sprint) ─────────────────────────────
+  hfJanitor: (limit = 20) =>
+    fetch(`/api/hf-janitor?limit=${limit}`).then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reason?: string;
+      dirs_scanned?: string[];
+      files_total?: number;
+      total_size_mib?: number;
+      cold_size_mib?: number;
+      hot_count?: number;
+      top_cold?: Array<{
+        path: string;
+        size_mib: number;
+        age_days: number;
+        is_hot: boolean;
+      }>;
+    }>),
+
   electricity: (since = 3600, gpu = 0) =>
     fetch(`/api/electricity?since=${since}` + (gpu ? `&gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
