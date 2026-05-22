@@ -685,6 +685,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hot_gpu_wizard(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/carbon":
+                # R&D #13.4 — carbon intensity overlay (local CSV)
+                code, body = api.handle_carbon(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/vram-quota/evaluate":
                 code, body = api.handle_vram_quota_evaluate(ctx, params)
                 self._send_json(code, body)
