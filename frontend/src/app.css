@@ -212,7 +212,9 @@ h1 { margin: 0 0 0.1em; font-size: 0.95em; }
  * la version en fait seul les graph doivent avoir un scroll vertical'). */
 .header, .top-nav, .strip-container {
   position: sticky;
-  z-index: 5;
+  /* z-index bumped to 50 (cycle 151b user : 'les courbes passe au dessus
+   * des fan0 rpm') — SVG charts were rendering ABOVE the sticky stack. */
+  z-index: 50;
   /* Cycle 151 user fb : 'sur les espace quand on scroll on voit un bout
    * des graphiques etc' — sticky elements MUST have opaque background
    * + extra padding to cover the content scrolling beneath. var(--bg-page)
@@ -239,9 +241,14 @@ h1 { margin: 0 0 0.1em; font-size: 0.95em; }
 .strip-container::before {
   content: "";
   position: absolute;
-  top: 0; left: -0.5em; right: -0.5em; bottom: 0;
+  top: -0.3em; left: -0.5em; right: -0.5em; bottom: -0.3em;
   background: var(--bg-page);
   z-index: -1;
+}
+/* Cycle 151b : SVG / chart elements must NOT outrank the sticky stack. */
+.chart-card svg, .chart-svg, svg.cooling-chart, svg.power-chart {
+  position: relative;
+  z-index: 1;
 }
 .version-footer {
   position: sticky;
