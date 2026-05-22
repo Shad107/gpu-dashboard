@@ -85,28 +85,37 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .ts { color: var(--text-faint); font-size: 0.78em; margin-bottom: 0.6em; }
 
 .row {
+  /* 2 rows of tiles, auto-fitting columns. Cards shrink to keep everything
+   * visible without page scroll on typical 1080p+ displays.
+   * Cycle 139 (user feedback) : 'deux lignes de tuiles, pas de possibilité de scroller'. */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.6em;
-  margin-bottom: 0.6em;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  grid-auto-rows: minmax(0, auto);
+  gap: 0.5em;
+  margin-bottom: 0.5em;
 }
 
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.7em 0.8em;
+  padding: 0.5em 0.7em;
+  min-width: 0;          /* allow grid items to shrink below intrinsic content */
+  overflow: hidden;      /* very long names truncate instead of expanding */
 }
 .card h2 {
-  margin: 0 0 0.25em;
-  font-size: 0.72em;
+  margin: 0 0 0.2em;
+  font-size: 0.68em;
   color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.big { font-size: 1.65em; font-weight: 600; line-height: 1.1; }
-.sub { color: var(--text-faint); font-size: 0.82em; margin-top: 0.25em; }
+.big { font-size: 1.4em; font-weight: 600; line-height: 1.1; }
+.sub { color: var(--text-faint); font-size: 0.78em; margin-top: 0.2em; }
 .ok { color: var(--accent); } .warn { color: var(--accent-warn); } .bad { color: var(--accent-bad); }
 
 .chart-row {

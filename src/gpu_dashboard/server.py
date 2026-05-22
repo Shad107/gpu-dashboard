@@ -353,6 +353,15 @@ def make_handler(ctx: dict):
             if path.startswith("/static/"):
                 self._send_static(path[len("/static/"):])
                 return
+            # Service Worker must be served from root scope to control / .
+            # Cycle 139 (user feedback) : `sw.js` was returning 404, breaking
+            # Web Push registration.
+            if path == "/sw.js":
+                self._send_static("sw.js")
+                return
+            if path == "/manifest.json":
+                self._send_static("manifest.json")
+                return
             if path == "/api/state":
                 code, body = api.handle_state(ctx, params)
                 self._send_json(code, body)
