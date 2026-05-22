@@ -6,7 +6,7 @@
   import { onMount } from "svelte";
   import { api } from "../lib/api";
   import { i18n } from "../lib/i18n/index.svelte";
-  import { toast } from "../lib/stores.svelte";
+  import { toast, live } from "../lib/stores.svelte";
 
   let version = $state<string>("…");
   let info = $state<Awaited<ReturnType<typeof api.updateCheck>> | null>(null);
@@ -65,8 +65,6 @@
 
 <div class="version-footer" class:has-update={updateAvailable}>
   <span class="vf-left">
-    <!-- cycle 148 user fb : 'mettre le refresh devant mise à jour' -->
-    <span class="vf-refresh">{i18n.t("footer.refresh")}</span>
     <span class="vf-pill" title={info?.current_sha ?? ""}>
       v<b>{version}</b>
       {#if info?.current_sha}<span class="vf-sha">({info.current_sha.slice(0, 7)})</span>{/if}
@@ -86,7 +84,15 @@
     {/if}
   </span>
   <span class="vf-right">
-    <a href="https://github.com/Shad107/gpu-dashboard" target="_blank" rel="noopener">github</a>
+    <!-- cycle 148c user fb : 'rafraichissement 5s 'maj 14:18:39' '
+         — show the last-update timestamp next to the refresh interval -->
+    <span class="vf-refresh">
+      {i18n.t("footer.refresh")}
+      {#if live.data}
+        · <span class="vf-maj">{i18n.t("ts.updated") ?? "maj"} {new Date().toLocaleTimeString()}</span>
+      {/if}
+    </span>
+    · <a href="https://github.com/Shad107/gpu-dashboard" target="_blank" rel="noopener">github</a>
   </span>
 </div>
 

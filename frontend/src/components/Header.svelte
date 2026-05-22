@@ -96,6 +96,9 @@
 <div class="header">
   <div>
     <h1>🎛️ {i18n.t("app.title")}</h1>
+    <!-- Cycle 148c user fb : 'a viré en haut a gauche NVIDIA GeForce RTX 3090'
+         — GPU name moved to the GPU card. Header keeps only the picker if
+         multi-GPU. Timestamp moved to the bottom-right footer. -->
     {#if hasMultipleGpus}
       <div class="ts" style="display:flex;align-items:center;gap:.6em;flex-wrap:wrap">
         <span>{i18n.t("header.gpu_picker_label")}</span>
@@ -104,10 +107,7 @@
             <option value={g.index}>GPU {g.index} — {g.name}</option>
           {/each}
         </select>
-        <span style="color:var(--text-faint)">· {tsText}</span>
       </div>
-    {:else}
-      <div class="ts">{singleGpuName} · {tsText}</div>
     {/if}
   </div>
   {#if chip.kind !== "none"}

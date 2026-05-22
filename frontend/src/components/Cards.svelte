@@ -370,12 +370,13 @@
 
     {#if layout.visible("llm_throughput") && llm?.available && (llm.tokens_generated_total ?? 0) > 0}
       <div class="card">
-        <h2>🪙 {i18n.t("card.llm_throughput")}</h2>
+        <h2 title={i18n.t("llm.tooltip_throughput") ?? "LLM inference throughput tracking"}>🪙 {i18n.t("card.llm_throughput")}</h2>
         {#if llmPerf?.available && (llmPerf.series_1h?.some(v => v > 0) ?? false)}
           {@const headline = (llmPerf.avg_tps_1m ?? 0) > 0
             ? (llmPerf.avg_tps_1m ?? 0)
             : (llmPerf.avg_tps_5m ?? 0)}
-          <div class="big" style="color:#f472b6">
+          <div class="big" style="color:#f472b6"
+               title={i18n.t("llm.tooltip_tps") ?? "Tokens generated per second (current rate)"}>
             {headline.toFixed(1)}
             <span class="sub" style="font-size:.45em">tok/s</span>
           </div>
@@ -385,28 +386,32 @@
             </div>
           {/if}
           <div class="sub" style="font-size:.75em">
-            5m <b>{(llmPerf.avg_tps_5m ?? 0).toFixed(1)}</b> ·
-            1h <b>{(llmPerf.avg_tps_1h ?? 0).toFixed(1)}</b>
+            <span title={i18n.t("llm.tooltip_avg_5m") ?? "Average tok/s over the last 5 minutes"}>5m <b>{(llmPerf.avg_tps_5m ?? 0).toFixed(1)}</b></span> ·
+            <span title={i18n.t("llm.tooltip_avg_1h") ?? "Average tok/s over the last hour"}>1h <b>{(llmPerf.avg_tps_1h ?? 0).toFixed(1)}</b></span>
             {#if llm.tokens_per_watt}
-              · <b style="color:#a3e635">{llm.tokens_per_watt.toFixed(2)}</b> tok/W
+              · <b style="color:#a3e635"
+                   title={i18n.t("llm.tooltip_tok_per_watt") ?? "Energy efficiency : tokens generated per Watt-hour. Higher = better."}>{llm.tokens_per_watt.toFixed(2)}</b> tok/Wh
             {/if}
           </div>
         {:else}
-          <div class="big">
+          <div class="big"
+               title={i18n.t("llm.tooltip_tokens_total") ?? "Total tokens generated since service started (current session)"}>
             {(llm.tokens_generated_total ?? 0).toLocaleString()}
-            <span class="sub" style="font-size:.45em">{i18n.t("llm.tokens_generated")}</span>
+            <span class="sub" style="font-size:.45em">{i18n.t("llm.tokens_generated") ?? "tokens (this session)"}</span>
           </div>
           {#if llm.tokens_per_watt}
-            <div class="sub" style="margin-top:.2em;color:#a3e635">
-              <b>{llm.tokens_per_watt.toFixed(2)}</b> {i18n.t("llm.tok_per_watt")}
+            <div class="sub" style="margin-top:.2em;color:#a3e635"
+                 title={i18n.t("llm.tooltip_tok_per_watt") ?? "Energy efficiency : tokens generated per Watt-hour."}>
+              <b>{llm.tokens_per_watt.toFixed(2)}</b> tok/Wh ({i18n.t("llm.efficiency") ?? "efficacité"})
             </div>
           {/if}
         {/if}
         {#if llmLifetime?.available && llmLifetime.total_tokens_generated > 0}
-          <div class="sub" style="margin-top:.35em;padding-top:.3em;border-top:1px solid #22262e;font-size:.78em">
+          <div class="sub" style="margin-top:.35em;padding-top:.3em;border-top:1px solid #22262e;font-size:.78em"
+               title={i18n.t("llm.tooltip_lifetime") ?? "Lifetime total since first install — cumulates across restarts"}>
             {i18n.t("llm.lifetime")} <b style="color:#fbbf24">{fmtBig(llmLifetime.total_tokens_generated)}</b>
             {#if llmLifetime.avg_tokens_per_watt}
-              · <b style="color:#a3e635">{llmLifetime.avg_tokens_per_watt.toFixed(2)}</b> {i18n.t("llm.tok_per_watt")}
+              · <b style="color:#a3e635">{llmLifetime.avg_tokens_per_watt.toFixed(2)}</b> tok/Wh
             {/if}
           </div>
         {/if}
