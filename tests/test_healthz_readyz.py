@@ -95,8 +95,8 @@ def test_readyz_strict_ecc_failing_returns_503(ctx):
     """Strict mode + ECC verdict='failing' → 503."""
     fake_ecc = {"verdict_kind": "failing", "verdict_msg": "Memory degrading"}
     with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]), \
-         patch.object(api._monolith, "handle_ecc_health", return_value=(200, fake_ecc)), \
-         patch.object(api._monolith, "handle_drift_check", return_value=(200, {"last_drift": None})):
+         patch.object(api.diagnostics, "handle_ecc_health", return_value=(200, fake_ecc)), \
+         patch.object(api.diagnostics, "handle_drift_check", return_value=(200, {"last_drift": None})):
         code, body = api.handle_readyz(ctx, {"strict": "1"})
     assert code == 503
     assert body["checks"]["ecc"]["ok"] is False
@@ -107,8 +107,8 @@ def test_readyz_strict_recent_drift_returns_503(ctx):
     import time
     fake_drift = {"last_drift": {"ts": int(time.time()) - 3600, "diffs": [{"field": "driver"}]}}
     with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]), \
-         patch.object(api._monolith, "handle_ecc_health", return_value=(200, {"verdict_kind": "ok"})), \
-         patch.object(api._monolith, "handle_drift_check", return_value=(200, fake_drift)):
+         patch.object(api.diagnostics, "handle_ecc_health", return_value=(200, {"verdict_kind": "ok"})), \
+         patch.object(api.diagnostics, "handle_drift_check", return_value=(200, fake_drift)):
         code, body = api.handle_readyz(ctx, {"strict": "1"})
     assert code == 503
     assert "recent driver/kernel drift" in body["checks"]["drift"]["reason"]
@@ -119,8 +119,8 @@ def test_readyz_strict_old_drift_passes(ctx):
     import time
     fake_drift = {"last_drift": {"ts": int(time.time()) - 48 * 3600, "diffs": [{}]}}
     with patch.object(api._monolith, "_gpus_available", return_value=[{"index": 0}]), \
-         patch.object(api._monolith, "handle_ecc_health", return_value=(200, {"verdict_kind": "ok"})), \
-         patch.object(api._monolith, "handle_drift_check", return_value=(200, fake_drift)):
+         patch.object(api.diagnostics, "handle_ecc_health", return_value=(200, {"verdict_kind": "ok"})), \
+         patch.object(api.diagnostics, "handle_drift_check", return_value=(200, fake_drift)):
         code, body = api.handle_readyz(ctx, {"strict": "1"})
     assert code == 200
     assert body["checks"]["drift"]["ok"] is True

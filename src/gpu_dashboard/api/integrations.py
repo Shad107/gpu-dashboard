@@ -23,11 +23,13 @@ def _gpus_available():
 
 
 def handle_ecc_health(ctx):
-    return _m.handle_ecc_health(ctx)
+    from . import diagnostics as _diag  # late import to avoid cycle
+    return _diag.handle_ecc_health(ctx)
 
 
 def handle_drift_check(ctx):
-    return _m.handle_drift_check(ctx)
+    from . import diagnostics as _diag
+    return _diag.handle_drift_check(ctx)
 
 
 Response = Tuple[int, dict]

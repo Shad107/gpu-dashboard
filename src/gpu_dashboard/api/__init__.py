@@ -57,6 +57,14 @@ from .cost import (  # noqa: F401
     handle_electricity_config,
     handle_electricity,
 )
+from .diagnostics import (  # noqa: F401
+    handle_journal_tail,
+    handle_drift_check, detect_drift_on_startup,
+    handle_bar,
+    handle_ecc_health,
+    handle_idle_audit,
+    handle_clock_events,
+)
 
 # Public handlers + builders from the legacy monolith.
 from ._monolith import *  # noqa: F401,F403
@@ -105,6 +113,15 @@ from .cost import (  # noqa: F401,F811
     handle_electricity_config,
     handle_electricity,
 )
+from .diagnostics import (  # noqa: F401,F811
+    handle_journal_tail,
+    handle_drift_check, detect_drift_on_startup,
+    handle_bar,
+    handle_ecc_health,
+    handle_idle_audit,
+    handle_clock_events,
+)
+from .diagnostics import _JOURNAL_FILTERS, _diff_snapshots  # noqa: F401,F811
 # Helpers moved to submodules — re-export for tests
 from .llm import (  # noqa: F401,F811
     _parse_llamacpp_metrics,
@@ -133,7 +150,7 @@ from ._monolith import (  # noqa: F401
     _linear_fit,
     _r_squared,
     # Drift detector
-    _diff_snapshots,
+
     # Heartbeats (deadman)
     _load_heartbeats,
     _save_heartbeats,

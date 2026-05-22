@@ -102,19 +102,29 @@ def test_every_submodule_handler_is_reexported():
 
 
 def _is_forwarding_stub(fn_node: ast.FunctionDef) -> bool:
-    """True if the function body is JUST `return _m.X(...)` — a thin
-    delegation used during the split to keep tests patching api._monolith.X
-    working. These are intentional, not duplicates."""
-    if len(fn_node.body) != 1:
-        return False
-    stmt = fn_node.body[0]
-    if not isinstance(stmt, ast.Return):
-        return False
-    val = stmt.value
-    return (isinstance(val, ast.Call)
-            and isinstance(val.func, ast.Attribute)
-            and isinstance(val.func.value, ast.Name)
-            and val.func.value.id == "_m")
+    """True if the function body is a thin one-call delegation : either
+    `return _m.X(...)` (simple form) or `from . import Y as _x ; return
+    _x.X(...)` (late-import form used when forwarding to a sibling
+    submodule that would otherwise cause a cycle).
+
+    These are intentional bridging during the split, not duplicates.
+    """
+    body = fn_node.body
+    # Simple form : single `return _m.X(...)`
+    if len(body) == 1 and isinstance(body[0], ast.Return):
+        val = body[0].value
+        return (isinstance(val, ast.Call)
+                and isinstance(val.func, ast.Attribute)
+                and isinstance(val.func.value, ast.Name))
+    # Late-import form : `from . import X as _foo` then `return _foo.X(...)`
+    if (len(body) == 2
+            and isinstance(body[0], ast.ImportFrom)
+            and isinstance(body[1], ast.Return)):
+        val = body[1].value
+        return (isinstance(val, ast.Call)
+                and isinstance(val.func, ast.Attribute)
+                and isinstance(val.func.value, ast.Name))
+    return False
 
 
 def test_no_duplicate_handler_definitions():

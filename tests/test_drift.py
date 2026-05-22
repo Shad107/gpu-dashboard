@@ -50,8 +50,8 @@ def test_first_boot_creates_baseline_returns_none():
         with patch.object(os.path, "expanduser", return_value=td + "/drift_baseline.json"), \
              patch.object(subprocess, "run", side_effect=_run_mock):
             # Force expanduser to also redirect history path. Easier : patch both helpers.
-            with patch.object(api._monolith, "_drift_snapshot_path", return_value=td + "/baseline.json"), \
-                 patch.object(api._monolith, "_drift_history_path", return_value=td + "/history.json"):
+            with patch.object(api.diagnostics, "_drift_snapshot_path", return_value=td + "/baseline.json"), \
+                 patch.object(api.diagnostics, "_drift_history_path", return_value=td + "/history.json"):
                 diffs = api.detect_drift_on_startup()
             assert diffs is None
             assert os.path.exists(td + "/baseline.json")
@@ -74,8 +74,8 @@ def test_unchanged_drift_returns_empty_list():
         baseline_path = td + "/baseline.json"
         with open(baseline_path, "w") as f:
             json.dump(baseline, f)
-        with patch.object(api._monolith, "_drift_snapshot_path", return_value=baseline_path), \
-             patch.object(api._monolith, "_drift_history_path", return_value=td + "/history.json"), \
+        with patch.object(api.diagnostics, "_drift_snapshot_path", return_value=baseline_path), \
+             patch.object(api.diagnostics, "_drift_history_path", return_value=td + "/history.json"), \
              patch.object(subprocess, "run", side_effect=_run_mock):
             diffs = api.detect_drift_on_startup()
         assert diffs == []
@@ -99,8 +99,8 @@ def test_changed_driver_records_history_and_returns_diff():
         with open(baseline_path, "w") as f:
             json.dump(baseline, f)
 
-        with patch.object(api._monolith, "_drift_snapshot_path", return_value=baseline_path), \
-             patch.object(api._monolith, "_drift_history_path", return_value=history_path), \
+        with patch.object(api.diagnostics, "_drift_snapshot_path", return_value=baseline_path), \
+             patch.object(api.diagnostics, "_drift_history_path", return_value=history_path), \
              patch.object(subprocess, "run", side_effect=_run_mock):
             diffs = api.detect_drift_on_startup()
 
