@@ -2772,6 +2772,41 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #10.3 — HF model card cross-reference ──────────────────────────────
+def handle_hf_card(ctx: dict, params: Optional[dict] = None) -> Response:
+    """Look up the HF model card for a given repo_id or path.
+
+    Query params :
+      repo  : 'org/repo' (preferred)
+      path  : a model file path → parse_repo_from_path heuristic
+      force : '1' to bypass 7-day cache
+
+    Response : {ok, repo, card: {id, license, base_model, downloads, ...},
+                license_color: '#xxxxxx', cached: bool}
+    """
+    from .modules import hf_cards
+    params = params or {}
+    repo = params.get("repo")
+    path = params.get("path")
+    force = params.get("force") in ("1", "true", "True")
+
+    if not repo and path:
+        repo = hf_cards.parse_repo_from_path(path)
+    if not repo:
+        return 400, {"ok": False, "error": "repo or path required"}
+
+    card = hf_cards.get_card(repo, force_refresh=force)
+    if card is None:
+        return 200, {"ok": True, "repo": repo, "card": None,
+                     "error": "not found / network failure / no cache"}
+    return 200, {
+        "ok": True,
+        "repo": repo,
+        "card": card,
+        "license_color": hf_cards.license_color(card.get("license")),
+    }
+
+
 # ─── R&D #10.7 — Live README badge SVG generator ─────────────────────────────
 def _badge_svg(label: str, value: str, color: str = "#4c1") -> str:
     """Return a shields.io-style SVG badge with the given label / value / color.
