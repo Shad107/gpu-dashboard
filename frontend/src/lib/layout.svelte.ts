@@ -6,18 +6,23 @@
 const STORAGE_KEY = "gpu-dashboard-layout";
 
 /** All known card identifiers. Add new ones here when introducing a new card. */
+// Default order grouped by category (cycle 141, user choice) :
+//   1. GPU live status   : gpu, vram, fans, pcie
+//   2. Tuning + power     : power_limit, tuning, oculink
+//   3. LLM                : llm_model, llm_throughput
+//   4. Cost + processes   : electricity, processes
 export const CARD_NAMES = [
   "gpu",
-  "power_limit",
-  "fans",
   "vram",
-  "oculink",
+  "fans",
   "pcie",
+  "power_limit",
+  "tuning",
+  "oculink",
   "llm_model",
   "llm_throughput",
   "electricity",
   "processes",
-  "tuning",
 ] as const;
 
 export type CardName = (typeof CARD_NAMES)[number];
