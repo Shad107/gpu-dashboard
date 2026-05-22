@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 07:38 (R&D section opened — user redirect to autonomous feature discovery)
-**Latest commit** : `bdb3d02` — refreshed docs/ screenshots
+**Last updated** : 2026-05-22 07:42 (cycle 116 done — R&D #1 app_triggers backend)
+**Latest commit** : `d38e798` — app_triggers module + 17 tests
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -45,7 +45,11 @@ no SaaS, no paid tier).
 
 ### Picked for upcoming cycles (ranked by value/effort)
 
-1. **Per-app profile triggers** (cycle 116-119) — watch `/proc/*/comm` for `blender`, `llama-server`, etc., each mapped to a profile.
+1. **Per-app profile triggers** (cycles 116-119) — watch `/proc/*/comm` for `blender`, `llama-server`, etc., each mapped to a profile.
+   - Cycle 116 ✓ : backend module `modules/app_triggers.py` + 17 tests (`d38e798`)
+   - Cycle 117 next : wire into auto_profile_daemon (trigger overrides classify)
+   - Cycle 118 : UI in Settings → AVANCÉ
+   - Cycle 119 : README + screenshot
 2. **NVENC/NVDEC + PCIe metrics** (cycle 120) — nvidia-smi exposes encoder/decoder util + pcie.link.gen/width.
 3. **Monthly power budget tracker** (cycle 121) — kWh budget config + dashboard progress bar + forecast alert.
 4. **Compare-A-vs-B benchmark** (cycle 122-123) — modal to run workload on 2 profiles + compare.
