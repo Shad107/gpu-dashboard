@@ -859,13 +859,23 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
 .module-info { display: flex; flex-direction: column; flex: 1; }
 .module-label { font-weight: 500; color: var(--text-muted); }
 
-/* Inline electricity rate edit (cycle 139) */
+/* Inline electricity rate edit (cycle 139) — cycle 148e : color it up */
 .edit-rate {
-  background: none; border: none; color: var(--text-dim);
-  cursor: pointer; padding: 0.1em 0.3em; margin-left: 0.3em;
-  font-size: 0.9em; border-radius: 3px;
+  background: rgba(96, 165, 250, 0.15);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  color: var(--accent-cool, #60a5fa);
+  cursor: pointer;
+  padding: 0.1em 0.4em;
+  margin-left: 0.4em;
+  font-size: 0.9em;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.edit-rate:hover { color: var(--accent); background: var(--bg-page); }
+.edit-rate:hover {
+  color: #fff;
+  background: var(--accent-cool, #60a5fa);
+  border-color: var(--accent-cool, #60a5fa);
+}
 .price-input {
   width: 70px;
   padding: 0.15em 0.35em;
