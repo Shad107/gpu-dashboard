@@ -481,6 +481,8 @@
       icon: "M14.6 16.6L19.2 12L14.6 7.4L16 6l6 6-6 6-1.4-1.4M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4z" },
     { id: "profile", group: "advanced", labelKey: "modal.profile" as const,
       icon: "M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" },
+    { id: "apptriggers", group: "advanced", labelKey: "modal.apptriggers" as const,
+      icon: "M4 2h16a2 2 0 0 1 2 2v4H2V4a2 2 0 0 1 2-2zm0 8h6v10H4a2 2 0 0 1-2-2V10zm8 0h10v8a2 2 0 0 1-2 2h-8V10z" },
     { id: "layout", group: "meta", labelKey: "modal.layout" as const,
       icon: "M3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2zm16 0v3H5V5zm-7 5v9H5v-9zm2 0h5v9h-5z" },
     { id: "language", group: "meta", labelKey: "modal.language" as const,
@@ -566,6 +568,47 @@
   }
   $effect(() => {
     if (modal.open && modal.section === "about" && !aboutData) loadAbout();
+  });
+
+  // ── App triggers state (R&D #1, cycle 118) ────────────────────────────
+  type TrigEntry = { app: string; profile: string };
+  let triggerEntries = $state<TrigEntry[]>([]);
+  let triggersLoaded = $state(false);
+  let triggersSaving = $state(false);
+  async function loadAppTriggers() {
+    try {
+      const r = await api.getAppTriggers();
+      triggerEntries = Object.entries(r.triggers || {}).map(([app, profile]) => ({ app, profile }));
+    } catch {
+      triggerEntries = [];
+    }
+    triggersLoaded = true;
+  }
+  function addTrigger() {
+    triggerEntries = [...triggerEntries, { app: "", profile: "boost" }];
+  }
+  function removeTrigger(i: number) {
+    triggerEntries = triggerEntries.filter((_, idx) => idx !== i);
+  }
+  async function saveTriggers() {
+    triggersSaving = true;
+    const dict: Record<string, string> = {};
+    for (const t of triggerEntries) {
+      const k = t.app.trim();
+      if (k) dict[k] = t.profile;
+    }
+    try {
+      const r = await api.setAppTriggers(dict);
+      if (r.ok) toast.show(i18n.t("apptriggers.saved"), "success");
+      else toast.show(r.error || "save failed", "error");
+    } catch (e: any) {
+      toast.show(e?.message || "save failed", "error");
+    } finally {
+      triggersSaving = false;
+    }
+  }
+  $effect(() => {
+    if (modal.open && modal.section === "apptriggers" && !triggersLoaded) loadAppTriggers();
   });
   function fmtUptime(s: number): string {
     const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
@@ -919,6 +962,48 @@
           <button class="btn" onclick={formatProfileJson}>📝 {i18n.t("profile.format_btn")}</button>
           <button class="btn" onclick={resetProfile}>↩️ {i18n.t("profile.reset_btn")}</button>
         </div>
+      </div>
+
+      <!-- ─── Per-app profile triggers (R&D #1, cycle 118) ─────────────── -->
+      <div class="modal-section" class:active={modal.section === "apptriggers"}>
+        <h3 class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("apptriggers")} /></svg>
+          <span>{i18n.t("apptriggers.title")}</span>
+        </h3>
+        <p class="sub" style="margin:0 0 .8em">{i18n.t("apptriggers.hint")}</p>
+
+        {#if !triggersLoaded}
+          <p class="sub">{i18n.t("history.loading")}</p>
+        {:else}
+          <div class="trig-rows">
+            {#each triggerEntries as t, i}
+              <div class="trig-row">
+                <input
+                  type="text"
+                  bind:value={t.app}
+                  placeholder={i18n.t("apptriggers.app_placeholder")}
+                  class="trig-app"
+                />
+                <span class="trig-arrow">→</span>
+                <select bind:value={t.profile} class="trig-profile">
+                  <option value="boost">🚀 boost</option>
+                  <option value="sweet">⭐ sweet</option>
+                  <option value="silent">🤫 silent</option>
+                </select>
+                <button class="btn btn-icon" onclick={() => removeTrigger(i)} title={i18n.t("apptriggers.remove")}>✕</button>
+              </div>
+            {/each}
+          </div>
+          <div class="btn-row" style="margin-top:.6em">
+            <button class="btn" onclick={addTrigger}>+ {i18n.t("apptriggers.add")}</button>
+            <button class="btn btn-primary" disabled={triggersSaving} onclick={saveTriggers}>
+              💾 {triggersSaving ? "…" : i18n.t("apptriggers.save")}
+            </button>
+          </div>
+          <p class="sub" style="margin-top:.8em;font-size:.78em;color:var(--text-dim)">
+            💡 {i18n.t("apptriggers.examples")}
+          </p>
+        {/if}
       </div>
 
       <!-- Diagnostics / logs -->

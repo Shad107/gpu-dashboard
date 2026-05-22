@@ -398,6 +398,23 @@ export const api = {
       avg_tokens_per_watt: number | null;
     }>),
 
+  getAppTriggers: () =>
+    fetch("/api/app-triggers").then(jsonOf<{
+      ok: boolean;
+      triggers: Record<string, string>;
+    }>),
+
+  setAppTriggers: (triggers: Record<string, string>) =>
+    fetch("/api/app-triggers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ triggers }),
+    }).then(jsonOf<{
+      ok: boolean;
+      triggers?: Record<string, string>;
+      error?: string;
+    }>),
+
   powerHeatmap: (days = 7, gpu = 0) =>
     fetch(`/api/power-heatmap?days=${days}` + (gpu ? `&gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
