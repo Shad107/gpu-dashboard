@@ -404,6 +404,14 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sysreport(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sysreport/bundle":
+                result = api.handle_sysreport_bundle(ctx)
+                if len(result) == 4:
+                    code, payload, ctype, fname = result
+                    self._send_binary(code, payload, ctype, fname)
+                else:
+                    self._send_json(result[0], result[1])
+                return
             if path == "/api/lifetime-stats":
                 code, body = api.handle_lifetime_stats(ctx, params)
                 self._send_json(code, body)

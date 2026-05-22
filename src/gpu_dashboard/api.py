@@ -1798,6 +1798,105 @@ def handle_lifetime_stats(ctx: dict, params: Optional[dict] = None) -> Response:
     }
 
 
+_REDACT_KEYS = (
+    "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID",
+    "WEBHOOK_URL",
+    "VAPID_PRIVATE_KEY", "VAPID_PUBLIC_KEY",
+    "PUSH_VAPID_PRIVATE", "PUSH_VAPID_PUBLIC",
+)
+
+
+def _redact_env_file(content: str) -> str:
+    """Replace VALUE with '***REDACTED***' for any sensitive key."""
+    out_lines = []
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            out_lines.append(line)
+            continue
+        if "=" in line:
+            key, _ = line.split("=", 1)
+            if any(redacted in key for redacted in _REDACT_KEYS):
+                out_lines.append(f"{key}=***REDACTED***")
+                continue
+        out_lines.append(line)
+    return "\n".join(out_lines) + "\n"
+
+
+def handle_sysreport_bundle(ctx: dict) -> tuple:
+    """Bundle sysreport + events + redacted config + recent logs into tar.gz.
+
+    Returns (200, bytes, content_type, filename) for the server to wrap with
+    _send_binary. On error returns (500, json_dict).
+    """
+    import io
+    import tarfile
+    import gzip
+    import datetime as _dt
+    import json as _json
+
+    # 1) Gather pieces
+    _, sysreport = handle_sysreport(ctx)
+    sysreport_bytes = _json.dumps(sysreport, indent=2).encode("utf-8")
+
+    events_bytes = b"[]"
+    storage = ctx.get("storage")
+    if storage is not None:
+        try:
+            events = storage.get_events(from_ts=0)
+            events_bytes = _json.dumps(events[-100:], indent=2, default=str).encode("utf-8")
+        except Exception:
+            pass
+
+    config_bytes = b""
+    config_path = ctx.get("config_path") or os.path.expanduser(
+        "~/.config/gpu-dashboard/config.env"
+    )
+    if os.path.isfile(config_path):
+        try:
+            with open(config_path, "r") as f:
+                raw = f.read()
+            config_bytes = _redact_env_file(raw).encode("utf-8")
+        except OSError:
+            pass
+
+    log_bytes = b""
+    cfg = ctx.get("config")
+    log_file = (cfg.get("LOG_FILE") if cfg else "") or ""
+    if log_file and os.path.isfile(log_file):
+        try:
+            with open(log_file, "rb") as f:
+                # Read last ~64 KB and keep the last 500 lines
+                f.seek(0, 2)
+                size = f.tell()
+                f.seek(max(0, size - 65536))
+                tail = f.read().decode("utf-8", errors="replace")
+            log_bytes = "\n".join(tail.splitlines()[-500:]).encode("utf-8")
+        except OSError:
+            pass
+
+    # 2) Build tar.gz in memory
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        def _add(name: str, data: bytes):
+            ti = tarfile.TarInfo(name)
+            ti.size = len(data)
+            ti.mtime = int(_dt.datetime.now().timestamp())
+            ti.mode = 0o644
+            tar.addfile(ti, io.BytesIO(data))
+
+        _add("sysreport.json", sysreport_bytes)
+        _add("events.json", events_bytes)
+        if config_bytes:
+            _add("config.env", config_bytes)
+        if log_bytes:
+            _add("recent.log", log_bytes)
+
+    payload = buf.getvalue()
+    ts = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    return 200, payload, "application/gzip", f"gpu-dashboard-sysreport-{ts}.tar.gz"
+
+
 def handle_sysreport(ctx: dict) -> Response:
     """One-shot system info dump for support tickets / bug reports.
 
