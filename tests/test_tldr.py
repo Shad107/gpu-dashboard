@@ -51,14 +51,14 @@ def test_spark_returns_unicode_blocks():
 
 
 def test_tldr_offline_gpu_short_message():
-    with patch.object(api, "_gpu_card_snapshot", return_value={"alive": False}):
+    with patch.object(api._monolith, "_gpu_card_snapshot", return_value={"alive": False}):
         code, body = api.handle_tldr(_ctx())
     assert code == 200
     assert "offline" in body.lower()
 
 
 def test_tldr_default_format_3_lines():
-    with patch.object(api, "_gpu_card_snapshot", return_value=_snap()):
+    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap()):
         code, body = api.handle_tldr(_ctx())
     lines = body.rstrip("\n").split("\n")
     # default 'tldr' format = 3 lines
@@ -68,7 +68,7 @@ def test_tldr_default_format_3_lines():
 
 
 def test_tldr_oneline_format():
-    with patch.object(api, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
+    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap(50, 20, 80)):
         code, body = api.handle_tldr(_ctx(), {"fmt": "oneline"})
     # one line, no carriage at start
     lines = body.rstrip("\n").split("\n")
@@ -79,7 +79,7 @@ def test_tldr_oneline_format():
 
 
 def test_tldr_full_format_includes_pcie():
-    with patch.object(api, "_gpu_card_snapshot", return_value=_snap()):
+    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap()):
         code, body = api.handle_tldr(_ctx(), {"fmt": "full"})
     assert "Temperature" in body
     assert "VRAM" in body
@@ -88,21 +88,21 @@ def test_tldr_full_format_includes_pcie():
 
 
 def test_tldr_no_color_header_suppresses_ansi():
-    with patch.object(api, "_gpu_card_snapshot", return_value=_snap()):
+    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap()):
         code, body = api.handle_tldr(_ctx(), headers={"NO_COLOR": "1"})
     # No escape sequences
     assert "\x1b[" not in body
 
 
 def test_tldr_color_on_by_default():
-    with patch.object(api, "_gpu_card_snapshot", return_value=_snap()):
+    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap()):
         code, body = api.handle_tldr(_ctx())
     assert "\x1b[" in body  # ANSI codes present
 
 
 def test_tldr_cols_clamped_to_range():
     """cols param clamped to [40, 200] in full mode."""
-    with patch.object(api, "_gpu_card_snapshot", return_value=_snap()):
+    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap()):
         # cols=10 should clamp to 40 → at least 40 dashes in separator
         code, body = api.handle_tldr(_ctx(), {"fmt": "full", "cols": "10"})
     # Separator line has at least 40 dashes
@@ -112,7 +112,7 @@ def test_tldr_cols_clamped_to_range():
 def test_tldr_sparkline_from_sampler_history():
     """When sampler has util history, the sparkline shows up."""
     samples = [{"util_gpu": i * 10} for i in range(20)]
-    with patch.object(api, "_gpu_card_snapshot", return_value=_snap()):
+    with patch.object(api._monolith, "_gpu_card_snapshot", return_value=_snap()):
         code, body = api.handle_tldr(_ctx(samples))
     # sparkline = unicode blocks
     blocks = "▁▂▃▄▅▆▇█"

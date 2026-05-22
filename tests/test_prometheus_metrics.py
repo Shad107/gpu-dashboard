@@ -37,7 +37,7 @@ def test_text_ends_with_newline():
 
 def test_no_gpu_still_returns_200_and_skeleton():
     """When no GPU is detected (no nvidia-smi), only HELP/TYPE lines + info."""
-    with patch.object(api, "_gpus_available", return_value=[]):
+    with patch.object(api._monolith, "_gpus_available", return_value=[]):
         code, body = api.handle_prometheus_metrics(_ctx())
     assert code == 200
     # No data series, just HELP/TYPE preamble + info gauge
@@ -54,9 +54,9 @@ def test_emits_data_when_gpu_alive():
         "mem_used_mib": 8192, "mem_total_mib": 24576,
         "pcie_gen": 4, "pcie_width": 16,
     }
-    with patch.object(api, "_gpus_available", return_value=fake_gpus), \
-         patch.object(api, "_gpu_card_snapshot", return_value=fake_snap), \
-         patch.object(api, "_per_fan_state", return_value=[]):
+    with patch.object(api._monolith, "_gpus_available", return_value=fake_gpus), \
+         patch.object(api._monolith, "_gpu_card_snapshot", return_value=fake_snap), \
+         patch.object(api._monolith, "_per_fan_state", return_value=[]):
         code, body = api.handle_prometheus_metrics(_ctx())
     assert code == 200
     assert 'gpu_temp_celsius{gpu="0",name="RTX 3090",uuid="GPU-AAAA"} 42' in body
@@ -71,9 +71,9 @@ def test_label_escaping_for_quotes_in_name():
     """A GPU name with quotes/backslashes must be escaped per OpenMetrics."""
     fake_gpus = [{"index": 0, "name": 'RTX "weird\\name"', "uuid": "U"}]
     fake_snap = {"alive": True, "name": 'RTX "weird\\name"', "uuid": "U", "temp": 50}
-    with patch.object(api, "_gpus_available", return_value=fake_gpus), \
-         patch.object(api, "_gpu_card_snapshot", return_value=fake_snap), \
-         patch.object(api, "_per_fan_state", return_value=[]):
+    with patch.object(api._monolith, "_gpus_available", return_value=fake_gpus), \
+         patch.object(api._monolith, "_gpu_card_snapshot", return_value=fake_snap), \
+         patch.object(api._monolith, "_per_fan_state", return_value=[]):
         code, body = api.handle_prometheus_metrics(_ctx())
     assert code == 200
     # double-quote → \"  ; backslash → \\

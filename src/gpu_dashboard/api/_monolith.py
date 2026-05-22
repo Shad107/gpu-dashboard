@@ -16,10 +16,10 @@ import time
 import subprocess
 from typing import Any, Tuple
 
-from . import detect
-from .modules import power_limit as pl
-from .modules import clock_offsets as co
-from .modules import telegram_alerts as tg
+from .. import detect
+from ..modules import power_limit as pl
+from ..modules import clock_offsets as co
+from ..modules import telegram_alerts as tg
 
 
 Response = Tuple[int, dict]
@@ -415,7 +415,7 @@ def handle_alerts_config_post(ctx: dict, payload: dict) -> Response:
         return 400, {"ok": False, "error": "token and chat_id required when enabled"}
 
     # Write secrets.env
-    from .config import write_env_file
+    from ..config import write_env_file
     os.makedirs(os.path.dirname(secrets_path), exist_ok=True)
     write_env_file(secrets_path, {
         "TG_ENABLED": "1" if enabled else "0",
@@ -1073,13 +1073,13 @@ def handle_electricity_config(ctx: dict, payload: dict) -> Response:
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         existing = {}
         if os.path.isfile(config_path):
-            from .config import parse_env_file
+            from ..config import parse_env_file
             existing = parse_env_file(config_path)
         existing["ELECTRICITY_PRICE_EUR_PER_KWH"] = str(price)
         existing["ELECTRICITY_CURRENCY"] = currency
         if "budget_kwh" in payload:
             existing["ELECTRICITY_MONTHLY_BUDGET_KWH"] = str(budget_kwh)
-        from .config import write_env_file
+        from ..config import write_env_file
         write_env_file(config_path, existing,
                        header="# Auto-updated by gpu-dashboard /api/electricity/config")
     except OSError as e:
@@ -1347,7 +1347,7 @@ def handle_benchmark_run(ctx: dict, payload) -> Response:
     def _apply(profile_name: str) -> None:
         handle_power_profile_apply(ctx, profile_name)
 
-    from .modules.benchmark import run_segment, compare
+    from ..modules.benchmark import run_segment, compare
     seg_a = run_segment(duration, a, _apply, sampler, price_per_kwh=price)
     seg_b = run_segment(duration, b, _apply, sampler, price_per_kwh=price)
     cmp = compare(seg_a, seg_b)
@@ -1375,8 +1375,8 @@ def handle_power_profile_apply(ctx: dict, name: str) -> Response:
         return 400, {"ok": False, "error": f"profile {name!r} is not configured (POWER_PROFILE_{name.upper()}_W)"}
 
     gpu_profile = ctx.get("profile") or {}
-    from .modules import power_limit as _pl
-    from .modules import clock_offsets as _co
+    from ..modules import power_limit as _pl
+    from ..modules import clock_offsets as _co
 
     wrapper = cfg.get("POWER_LIMIT_WRAPPER", "/usr/local/bin/set-power-limit")
     display = cfg.get("CLOCK_OFFSETS_DISPLAY", ":0")
@@ -1573,13 +1573,13 @@ def handle_prom(ctx: dict) -> Response:
 
 def handle_app_triggers_get(ctx: dict) -> Response:
     """Return the user-configured per-app profile triggers map."""
-    from .modules import app_triggers as _at
+    from ..modules import app_triggers as _at
     return 200, {"ok": True, "triggers": _at.load_triggers()}
 
 
 def handle_app_triggers_post(ctx: dict, payload) -> Response:
     """Persist {app: profile} mapping. Validates each profile name."""
-    from .modules import app_triggers as _at
+    from ..modules import app_triggers as _at
     if not isinstance(payload, dict):
         return 400, {"ok": False, "error": "payload must be an object"}
     triggers = payload.get("triggers")
@@ -1617,7 +1617,7 @@ def handle_profile_save(ctx: dict, payload: dict) -> Response:
     automatically (via `profile.get_profile_for_gpu`'s override-dir param).
     """
     import re as _re
-    from .profile import load_schema, validate_profile
+    from ..profile import load_schema, validate_profile
 
     if not isinstance(payload, dict):
         return 400, {"ok": False, "error": "payload must be an object"}
@@ -1655,7 +1655,7 @@ def handle_profile_save(ctx: dict, payload: dict) -> Response:
 
 def handle_fan_curve_get(ctx: dict) -> Response:
     """Return the active fan curve + current target % + daemon status + hysteresis."""
-    from .modules import fan_curve as _fc
+    from ..modules import fan_curve as _fc
     profile = ctx.get("profile") or {}
     curve = _fc.pick_curve(profile)
     daemon = ctx.get("fan_curve_daemon")
@@ -1678,7 +1678,7 @@ def handle_fan_curve_post(ctx: dict, payload: dict) -> Response:
     the next tick) — user feedback : 'sauvegarde doit-être appliqué tout
     de suite'.
     """
-    from .modules import fan_curve as _fc
+    from ..modules import fan_curve as _fc
     curve = payload.get("curve") if isinstance(payload, dict) else None
     ok, err = _fc.validate_user_curve(curve)
     if not ok:
@@ -1765,7 +1765,7 @@ def handle_health(ctx: dict) -> Response:
     lets the caller diagnose which subsystem is down.
     """
     import time as _time
-    from . import __version__ as _ver
+    from .. import __version__ as _ver
 
     components = {"gpu": False, "sampler": False, "storage": False}
 
@@ -2006,7 +2006,7 @@ def handle_sysreport(ctx: dict) -> Response:
     Aggregates kernel, distro, NVIDIA driver, GPU list, disk free for the
     DB dir, RAM total. All sub-fields tolerate missing tools (returns None).
     """
-    from . import __version__ as _ver
+    from .. import __version__ as _ver
     import datetime as _dt
     import sys as _sys
     import platform as _plat
@@ -2128,7 +2128,7 @@ def handle_version(ctx: dict) -> Response:
     than /api/about — designed to be polled cheaply from scripts that just
     need to verify the dashboard is up and at the expected version.
     """
-    from . import __version__ as _ver
+    from .. import __version__ as _ver
     cfg = ctx.get("config")
     schema_version = None
     storage = ctx.get("storage")
@@ -2166,7 +2166,7 @@ def handle_push_vapid(ctx: dict) -> Response:
     The frontend feeds this into PushManager.subscribe({applicationServerKey}).
     Private key stays server-side, never exposed.
     """
-    from .modules import web_push
+    from ..modules import web_push
     cfg_dir = os.path.expanduser("~/.config/gpu-dashboard")
     try:
         data = web_push.ensure_vapid_keys(cfg_dir)
@@ -2231,7 +2231,7 @@ def handle_push_status(ctx: dict) -> Response:
     storage = ctx.get("storage")
     if storage is None:
         return 503, {"ok": False, "error": "storage not available"}
-    from .modules import web_push
+    from ..modules import web_push
     cfg_dir = os.path.expanduser("~/.config/gpu-dashboard")
     try:
         data = web_push.ensure_vapid_keys(cfg_dir)
@@ -2250,7 +2250,7 @@ def handle_about(ctx: dict) -> Response:
     import platform
     import sys as _sys
     import time as _time
-    from . import __version__ as _ver
+    from .. import __version__ as _ver
 
     started = ctx.get("started_at") or _time.time()
     uptime = max(0, int(_time.time() - started))
@@ -2580,10 +2580,10 @@ def handle_modules_toggle(ctx: dict, payload) -> Response:
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         existing = {}
         if os.path.isfile(config_path):
-            from .config import parse_env_file
+            from ..config import parse_env_file
             existing = parse_env_file(config_path)
         existing[key] = "1" if enabled else "0"
-        from .config import write_env_file
+        from ..config import write_env_file
         write_env_file(config_path, existing,
                        header="# Auto-updated by gpu-dashboard /api/modules/toggle")
     except OSError as e:
@@ -2639,8 +2639,8 @@ def handle_setup_detect(ctx: dict) -> Response:
     Pure GET — never modifies state. The frontend calls this on wizard load
     and re-calls after the user reports they've executed sudo commands.
     """
-    from .install import _gather_env, recommend_modules
-    from .profile import get_profile_for_gpu
+    from ..install import _gather_env, recommend_modules
+    from ..profile import get_profile_for_gpu
 
     try:
         env = _gather_env()
@@ -2672,8 +2672,8 @@ def handle_setup_recheck(ctx: dict, module_name: str) -> Response:
 
     Used by the wizard's "I executed the command, recheck now" button.
     """
-    from .modules import power_limit as _pl, clock_offsets as _co
-    from . import detect as _detect
+    from ..modules import power_limit as _pl, clock_offsets as _co
+    from .. import detect as _detect
 
     if module_name == "power_limit":
         wrapper = ctx["config"].get("POWER_LIMIT_WRAPPER", "/usr/local/bin/set-power-limit")
@@ -2723,7 +2723,7 @@ def handle_setup_save(ctx: dict, payload: dict) -> Response:
         "power_default": int (optional, default 250),
       }
     """
-    from .install import generate_config_env
+    from ..install import generate_config_env
 
     choices = payload.get("modules") or {}
     if not isinstance(choices, dict):
@@ -2779,7 +2779,7 @@ def handle_ical_feed(ctx: dict, params: Optional[dict] = None) -> Tuple[int, str
     Query params :
       days = lookback period (default 30, max 365)
     """
-    from .modules import ical_feed
+    from ..modules import ical_feed
     params = params or {}
     try:
         days = max(1, min(365, int(params.get("days", "30"))))
@@ -2807,7 +2807,7 @@ def handle_weekly_report(ctx: dict, params: Optional[dict] = None) -> Tuple[int,
         days = max(1, min(90, int(params.get("days", "7"))))
     except (ValueError, TypeError):
         days = 7
-    from .modules import weekly_report
+    from ..modules import weekly_report
     stats = weekly_report.compute_stats(storage, days=days)
     if fmt == "text":
         return 200, weekly_report.render_text(stats, ctx.get("config"))
@@ -2817,7 +2817,7 @@ def handle_weekly_report(ctx: dict, params: Optional[dict] = None) -> Tuple[int,
 # ─── R&D #11.4 — Auto-discover well-known LLM/RAG/GPU services ────────────
 def handle_service_discovery(ctx: dict, params: Optional[dict] = None) -> Response:
     """Return list of detected services + unknown listeners on the host."""
-    from .modules import service_discovery
+    from ..modules import service_discovery
     params = params or {}
     probe = params.get("probe", "1") not in ("0", "false", "False")
     return 200, service_discovery.discover(probe=probe)
@@ -2825,12 +2825,12 @@ def handle_service_discovery(ctx: dict, params: Optional[dict] = None) -> Respon
 
 # ─── R&D #11.1b — Watchdog setup (install systemd units from UI) ──────────
 def handle_watchdog_status(ctx: dict) -> Response:
-    from .modules import watchdog_setup
+    from ..modules import watchdog_setup
     return 200, {"ok": True, **watchdog_setup.status()}
 
 
 def handle_watchdog_enable(ctx: dict, payload: dict) -> Response:
-    from .modules import watchdog_setup
+    from ..modules import watchdog_setup
     cfg = ctx["config"]
     try:
         port = int(cfg.get("DASHBOARD_PORT", "9999"))
@@ -2847,7 +2847,7 @@ def handle_watchdog_enable(ctx: dict, payload: dict) -> Response:
 
 
 def handle_watchdog_disable(ctx: dict) -> Response:
-    from .modules import watchdog_setup
+    from ..modules import watchdog_setup
     ok, msg = watchdog_setup.uninstall()
     return (200 if ok else 502), {"ok": ok, "msg": msg, **watchdog_setup.status()}
 
@@ -2962,7 +2962,7 @@ def handle_readyz(ctx: dict, params: Optional[dict] = None) -> Tuple[int, dict]:
 # ─── R&D #10.1 — Vector DB watchdog (Chroma / Qdrant / pgvector) ─────────────
 def handle_vector_db(ctx: dict) -> Response:
     """Probe locally-configured vector stores and return aggregated status."""
-    from .modules import vector_db
+    from ..modules import vector_db
     return 200, vector_db.status(ctx["config"])
 
 
@@ -2978,7 +2978,7 @@ def handle_hf_card(ctx: dict, params: Optional[dict] = None) -> Response:
     Response : {ok, repo, card: {id, license, base_model, downloads, ...},
                 license_color: '#xxxxxx', cached: bool}
     """
-    from .modules import hf_cards
+    from ..modules import hf_cards
     params = params or {}
     repo = params.get("repo")
     path = params.get("path")
@@ -3076,7 +3076,7 @@ def handle_badge(ctx: dict, metric: str) -> Tuple[int, str]:
             r = []
         # Read from /api/llm if available — best-effort
         try:
-            from .modules import llm_stats as _llm  # may or may not exist
+            from ..modules import llm_stats as _llm  # may or may not exist
             val = _llm.tokens_per_watt_hour()
         except Exception:
             val = None
@@ -3240,7 +3240,7 @@ def handle_tldr(ctx: dict, params: Optional[dict] = None,
 # ─── R&D #9.3 — Auth tokens + share links ────────────────────────────────────
 def handle_auth_tokens_list(ctx: dict) -> Response:
     """List tokens (secrets are NEVER returned, only hash prefixes for ID)."""
-    from .modules import auth_tokens as _at
+    from ..modules import auth_tokens as _at
     tokens = _at.load_tokens()
     out = []
     for t in tokens:
@@ -3256,7 +3256,7 @@ def handle_auth_tokens_list(ctx: dict) -> Response:
 
 def handle_auth_token_create(ctx: dict, payload: dict) -> Response:
     """Create a token. Returns the raw secret ONCE in the response."""
-    from .modules import auth_tokens as _at
+    from ..modules import auth_tokens as _at
     if not isinstance(payload, dict):
         return 400, {"ok": False, "error": "payload must be a dict"}
     name = str(payload.get("name", "")).strip() or "unnamed"
@@ -3280,7 +3280,7 @@ def handle_auth_token_create(ctx: dict, payload: dict) -> Response:
 
 
 def handle_auth_token_delete(ctx: dict, token_id: str) -> Response:
-    from .modules import auth_tokens as _at
+    from ..modules import auth_tokens as _at
     if _at.delete_token(token_id):
         return 200, {"ok": True, "deleted": token_id}
     return 404, {"ok": False, "error": "token not found"}
@@ -3288,7 +3288,7 @@ def handle_auth_token_delete(ctx: dict, token_id: str) -> Response:
 
 def handle_auth_share_create(ctx: dict, payload: dict) -> Response:
     """Generate a stateless share-link. No DB row — entirely signed payload."""
-    from .modules import auth_tokens as _at
+    from ..modules import auth_tokens as _at
     if not isinstance(payload, dict):
         return 400, {"ok": False, "error": "payload must be a dict"}
     scope = str(payload.get("scope", "read"))
@@ -3328,7 +3328,7 @@ def handle_audit_log(ctx: dict, params: Optional[dict] = None) -> Response:
 # ─── R&D #9.4 — HF cache janitor (cold large models) ─────────────────────────
 def handle_hf_janitor(ctx: dict, params: Optional[dict] = None) -> Response:
     """Surface cold large model files across known cache/model dirs."""
-    from .modules import hf_janitor
+    from ..modules import hf_janitor
     params = params or {}
     extra_raw = ctx["config"].get("MODELS_DIRS", "") or ""
     extra = [d.strip() for d in extra_raw.split(",") if d.strip()] or None
@@ -3342,14 +3342,14 @@ def handle_hf_janitor(ctx: dict, params: Optional[dict] = None) -> Response:
 # ─── R&D #9.1 — VFIO / GPU passthrough sentinel ──────────────────────────────
 def handle_vfio_status(ctx: dict) -> Response:
     """Return VFIO passthrough status for all NVIDIA GPUs."""
-    from .modules import vfio_sentinel
+    from ..modules import vfio_sentinel
     return 200, vfio_sentinel.status()
 
 
 # ─── R&D #8.4 — llama-bench history + regression detector ────────────────────
 def handle_llamabench_status(ctx: dict) -> Response:
     """Status of the llama-bench monitor : binary presence + recent history."""
-    from .modules import llama_bench as _lb
+    from ..modules import llama_bench as _lb
     bin_path = _lb.find_binary()
     runs: list = []
     # If user has a 'llama_bench_runs' table in storage, read it.
@@ -3379,7 +3379,7 @@ def handle_llamabench_status(ctx: dict) -> Response:
 # ─── R&D #8.7 — Jupyter kernel monitor ───────────────────────────────────────
 def handle_jupyter_kernels(ctx: dict) -> Response:
     """List Jupyter kernels with GPU attribution."""
-    from .modules import jupyter_monitor as _jm
+    from ..modules import jupyter_monitor as _jm
     kernels = _jm.list_kernels()
     return 200, {
         "ok": True,
@@ -3453,7 +3453,7 @@ def handle_snapshot_at(ctx: dict, params: Optional[dict] = None) -> Response:
 # ─── R&D #7.5 — UPS/NUT awareness ────────────────────────────────────────────
 def handle_ups_status(ctx: dict) -> Response:
     """Query the local NUT server and return the first UPS' state."""
-    from .modules import ups_nut
+    from ..modules import ups_nut
     cfg = ctx["config"]
     host = cfg.get("NUT_HOST", "localhost")
     try:
@@ -3864,7 +3864,7 @@ def handle_sys_context(ctx: dict) -> Response:
 # ─── R&D #6.1 — Unified notification hub (Apprise-style fanout) ──────────────
 def handle_notif_channels_list(ctx: dict) -> Response:
     """Return all configured channels (with secrets masked)."""
-    from .modules import notif_hub as _nh
+    from ..modules import notif_hub as _nh
     channels = _nh.load_channels()
     out: list = []
     for ch in channels:
@@ -3882,7 +3882,7 @@ def handle_notif_channel_save(ctx: dict, payload: dict) -> Response:
     """Create or update a channel by id. Payload :
       {id, type, name, enabled, min_level, gpu_filter, quiet_hours, ...adapter-specific...}
     Or {delete: id}."""
-    from .modules import notif_hub as _nh
+    from ..modules import notif_hub as _nh
     if not isinstance(payload, dict):
         return 400, {"ok": False, "error": "payload must be a dict"}
     channels = _nh.load_channels()
@@ -3909,7 +3909,7 @@ def handle_notif_channel_save(ctx: dict, payload: dict) -> Response:
 def handle_notif_channel_test(ctx: dict, payload: dict) -> Response:
     """Fire a test notification to the channel specified in payload (no save).
     Useful before saving — user can validate the credentials inline."""
-    from .modules import notif_hub as _nh
+    from ..modules import notif_hub as _nh
     if not isinstance(payload, dict) or "type" not in payload:
         return 400, {"ok": False, "error": "payload requires 'type'"}
     ok, msg = _nh.send_test(payload)
@@ -4227,7 +4227,7 @@ def handle_thermal_coach(ctx: dict) -> Response:
     if (projected_throttle_s is not None and projected_throttle_s < 120
             and confidence > 0.5):
         try:
-            from .modules import notif_hub as _nh
+            from ..modules import notif_hub as _nh
             _nh.send(
                 level="warning",
                 title="⚠️ GPU throttle imminent",
@@ -4737,7 +4737,7 @@ def handle_prometheus_metrics(ctx: dict) -> Tuple[int, str]:
 
     Permissive : missing fields are silently skipped (don't break the scrape).
     """
-    from . import __version__ as VERSION
+    from .. import __version__ as VERSION
 
     lines: list[str] = []
 
