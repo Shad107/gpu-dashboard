@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 02:35 (cycle 111 done — README roadmap + CI flake fix)
-**Latest commit** : `7e70ac9` — kwh_year precision fix
+**Last updated** : 2026-05-22 02:39 (cycle 112 done — CONTRIBUTING refresh)
+**Latest commit** : `9b7e7d8` — CONTRIBUTING v0.3 refresh
 **Tests** : 534 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -59,6 +59,14 @@ Optional follow-ups for future iterations :
 ---
 
 ## ✅ Done (chronological, latest at top)
+
+### Cycle 112 — CONTRIBUTING.md refresh (1 commit)
+- `9b7e7d8` Updates dev docs for v0.3 architecture :
+  - Test count 420→530
+  - Frontend tree : TopNav, History/Stats views, FanCurveEditor, Sparkline,
+    lib/{view,layout,theme,gpu,push} stores, sw.js
+  - Multi-GPU contributions section (gpu_index plumbing)
+  - Schema v4 + all 3 migrations documented
 
 ### Cycle 111 — README Roadmap + CI flake fix (3 commits)
 - `f4bd605` Expanded README Roadmap section (Delivered / Parked / Won't do)
@@ -514,7 +522,7 @@ Rules :
 | Test runtime | ~4s |
 | Bundle JS | 215.31 KB raw / 72.74 KB gzip |
 | Bundle CSS | 23.10 KB raw / 5.30 KB gzip |
-| Commits since v0.1.0 | ~122 |
+| Commits since v0.1.0 | ~123 |
 | API endpoints | 35+ |
 | Opt-in modules | 9 (added web_push) |
 | Background daemons | 5 (sampler, retention, fan_curve, auto_profile, alert_monitor) |
