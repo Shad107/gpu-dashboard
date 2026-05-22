@@ -3,8 +3,8 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 07:52 (cycle 120 done — R&D #2 NVENC/NVDEC/PCIe)
-**Latest commit** : `1b9dbf8` — encoder/decoder + PCIe link state
+**Last updated** : 2026-05-22 07:58 (cycle 121 done — R&D #3 monthly budget)
+**Latest commit** : `866c8f8` — monthly budget tracker
 **Tests** : 537 passing · **CI** : ✅ green · **Bundle** : 72.74 KB gzip · CSS 5.30 KB
 
 ---
@@ -55,7 +55,11 @@ no SaaS, no paid tier).
    - GPU card shows 'ENC X% · DEC Y%' when active
    - New PCIe card with downgrade warning (current < max)
    - 5 new TDD tests · 567 → 572
-3. **Monthly power budget tracker** (cycle 121) — kWh budget config + dashboard progress bar + forecast alert.
+3. **Monthly power budget tracker** (cycle 121) ✅ DONE
+   - /api/power-stats + /api/electricity expose kwh_month/forecast_kwh/budget_kwh/over_budget
+   - POST /api/electricity/config accepts budget_kwh
+   - Electricity card shows actual progress bar + forecast band + ⚠️ over_budget
+   - 8 new TDD tests · 572 → 580
 4. **Compare-A-vs-B benchmark** (cycle 122-123) — modal to run workload on 2 profiles + compare.
 5. **Plot SVG export** (cycle 124) — ⬇️ button on each chart → download SVG.
 6. **GPU process tree expansion** (cycle 125) — Cards processes : PID + cmdline tooltip + %VRAM bar.
