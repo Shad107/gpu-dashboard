@@ -111,13 +111,16 @@
   <TopNav />
   <IdleBanner />
   {#if view.current === "dashboard"}
-    <Cards />
-    <!-- Scroll-scoped area : only the charts + alert footer can scroll
-         (user feedback cycle 142 : 'overflow ne la mettre que sous les tuiles') -->
-    <div class="dash-scroll">
-      <CoolingChart />
-      <PowerChart />
-      <LatestAlertFooter />
+    <!-- Dashboard view : single scroll zone under the tiles. Tiles are
+         flex:0 (natural height). dash-scroll is flex:1 + overflow-y so
+         only ONE scrollbar appears, only under the tiles. -->
+    <div class="dashboard-view">
+      <Cards />
+      <div class="dash-scroll">
+        <CoolingChart />
+        <PowerChart />
+        <LatestAlertFooter />
+      </div>
     </div>
   {:else if view.current === "history"}
     <HistoryView />

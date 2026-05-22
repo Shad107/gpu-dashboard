@@ -66,10 +66,11 @@ body, .card, .modal-section, .stats-card, .top-nav-btn, .btn {
   transition: background-color 0.25s, color 0.25s, border-color 0.25s;
 }
 
-/* Global styles — kept close to the v0.1 vanilla version for visual parity.
- * Cycle 141 (user feedback) : 'je ne peux pas descendre pas d'overflow' —
- * removed overflow:hidden + fixed height so the page scrolls when content
- * exceeds the viewport. */
+/* Global styles. Cycle 142 (user feedback 'ca fais x ligne de tuiles
+ * donc 2 overflow y') : back to overflow:hidden + height:100vh on body
+ * + dashboard-view uses flex so only ONE scrollbar appears (inside
+ * .dash-scroll). History + Stats views use auto so the inner content
+ * scrolls naturally on long pages. */
 body {
   font-family: system-ui, -apple-system, sans-serif;
   margin: 0;
@@ -79,9 +80,23 @@ body {
   line-height: 1.3;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   box-sizing: border-box;
 }
+#app {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;   /* allow flex children to shrink below intrinsic size */
+}
+.dashboard-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.dashboard-view .row { flex: 0 0 auto; }
 
 h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 .ts { color: var(--text-faint); font-size: 0.78em; margin-bottom: 0.6em; }
@@ -113,19 +128,22 @@ h1 { margin: 0 0 0.15em; font-size: 1.2em; }
 }
 .group-label:first-of-type { margin-top: 0; }
 
-/* Scroll-scoped area in dashboard view (cycle 142, user feedback :
- * 'pour la partie overflow ne la mettre que sous les tuiles').
- * Tiles stay fixed at top, the charts + alert footer area scrolls. */
+/* Scoped scroll under the tiles (cycle 142 / 143).
+ * Uses flex: 1 + min-height: 0 so it fills the remaining viewport space
+ * after the tiles. Only ONE scrollbar appears system-wide. */
 .dash-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  /* Reserve space below the header / top-nav / tiles. The viewport-height
-   * minus an estimate of the static-area height. Conservative cap. */
-  max-height: calc(100vh - 18em);
   padding-right: 0.2em;
 }
-@media (max-width: 768px) {
-  .dash-scroll { max-height: none; }   /* on mobile, let body scroll */
+/* History + Stats views can grow tall — keep them on body-level scroll
+ * via overflow:auto on the #app container. */
+.view-history, .view-stats-wrap {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 .card {
