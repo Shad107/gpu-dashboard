@@ -563,6 +563,96 @@ export const api = {
       }[];
     }>),
 
+  // ── R&D #15 features (UI sprint cycle 6) ───────────────────────────────
+  bootProfileStatus: () =>
+    fetch("/api/boot-profile").then(jsonOf<{
+      ok: boolean;
+      configured: boolean;
+      profile: { name: string; power_limit_w?: number;
+                 persistence_mode?: boolean;
+                 gpu_clock_offset_mhz?: number;
+                 mem_clock_offset_mhz?: number;
+                 fan_curve?: number[][] } | null;
+      last_outcome: any | null;
+      history_count: number;
+    }>),
+
+  bootProfileSave: (payload: Record<string, any>) =>
+    fetch("/api/boot-profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(jsonOf<{ ok: boolean; saved_name?: string; error?: string }>),
+
+  bootProfileClear: () =>
+    fetch("/api/boot-profile/clear", { method: "POST" })
+      .then(jsonOf<{ ok: boolean; deleted?: boolean }>),
+
+  bootProfileApplyNow: () =>
+    fetch("/api/boot-profile/apply-now", { method: "POST" })
+      .then(jsonOf<{ ok: boolean; ready_probe?: any; applied?: any; errors?: any[] }>),
+
+  tariffStatus: () =>
+    fetch("/api/tariff/status").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reason?: string;
+      current_hour?: number;
+      current_eur_per_kwh?: number;
+      day_min_eur_per_kwh?: number;
+      day_max_eur_per_kwh?: number;
+      day_avg_eur_per_kwh?: number;
+      cheapest_hours?: number[];
+      peak_hours?: number[];
+    }>),
+
+  tariffCheapest: (watts: number, duration_s: number, within_h = 24) =>
+    fetch(`/api/tariff/cheapest?watts=${watts}&duration_s=${duration_s}&within_h=${within_h}`)
+      .then(jsonOf<{
+        ok: boolean;
+        available: boolean;
+        best?: { start_hour: number; hours_until_start: number; cost_eur: number; kwh: number };
+        worst_for_comparison?: { cost_eur: number };
+        absolute_savings_eur?: number;
+        savings_pct?: number;
+      }>),
+
+  hfDedupPlan: () =>
+    fetch("/api/hf-dedup/plan").then(jsonOf<{
+      ok: boolean;
+      available: boolean;
+      reason?: string;
+      files_scanned?: number;
+      duplicate_groups?: number;
+      reclaim_mib?: number;
+      plan?: Array<{ keep: string; replace: string; size: number; sha: string }>;
+      cross_device_skipped?: any[];
+    }>),
+
+  hfDedupExecute: (plan: any[], dry_run = true) =>
+    fetch("/api/hf-dedup/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan, dry_run }),
+    }).then(jsonOf<{
+      ok: boolean;
+      dry_run: boolean;
+      applied: number;
+      errors: any[];
+      bytes_reclaimed: number;
+      reclaim_mib: number;
+      report_path?: string;
+    }>),
+
+  discordRpcStatus: () =>
+    fetch("/api/discord-rpc").then(jsonOf<{
+      ok: boolean;
+      enabled: boolean;
+      discord_ipc_present: boolean;
+      socket_path: string | null;
+      app_id_configured: boolean;
+    }>),
+
   // ── R&D #14 features (UI sprint cycle 5) ───────────────────────────────
   xidEvents: (since = "24h") =>
     fetch(`/api/xid?since=${encodeURIComponent(since)}`).then(jsonOf<{

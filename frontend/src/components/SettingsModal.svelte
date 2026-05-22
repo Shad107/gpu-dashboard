@@ -952,6 +952,97 @@
     return `${seconds / 86400}d`;
   }
 
+  // ── UI sprint cycle 6 — R&D #15 features ────────────────────────────────
+  let bootProfileData = $state<Awaited<ReturnType<typeof api.bootProfileStatus>> | null>(null);
+  let bootProfileForm = $state<{ name: string; power_limit_w: number; persistence_mode: boolean }>({
+    name: "", power_limit_w: 250, persistence_mode: true,
+  });
+  let bootSaving = $state(false);
+  async function loadBootProfile() {
+    try {
+      bootProfileData = await api.bootProfileStatus();
+      // Pre-fill the form if a profile is loaded
+      if (bootProfileData?.profile) {
+        bootProfileForm.name = bootProfileData.profile.name || "";
+        bootProfileForm.power_limit_w = bootProfileData.profile.power_limit_w ?? 250;
+        bootProfileForm.persistence_mode = bootProfileData.profile.persistence_mode ?? true;
+      }
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function saveBootProfile() {
+    if (!bootProfileForm.name.trim()) {
+      toast.emit("✗ name required", "err");
+      return;
+    }
+    bootSaving = true;
+    try {
+      const r = await api.bootProfileSave({ ...bootProfileForm });
+      if (r.ok) {
+        toast.emit("✓ Boot profile saved", "ok");
+        await loadBootProfile();
+      } else {
+        toast.emit("✗ " + (r.error || "save failed"), "err");
+      }
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { bootSaving = false; }
+  }
+  async function clearBootProfile() {
+    if (!confirm("Clear boot profile?")) return;
+    try {
+      await api.bootProfileClear();
+      bootProfileData = null;
+      toast.emit("✓ Cleared", "ok");
+      await loadBootProfile();
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function applyBootProfileNow() {
+    try {
+      const r = await api.bootProfileApplyNow();
+      toast.emit(r.ok ? "✓ Applied" : "✗ Apply failed (see logs)",
+                 r.ok ? "ok" : "err");
+      await loadBootProfile();
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let tariffData = $state<Awaited<ReturnType<typeof api.tariffStatus>> | null>(null);
+  let cheapestData = $state<Awaited<ReturnType<typeof api.tariffCheapest>> | null>(null);
+  async function loadTariff() {
+    try {
+      tariffData = await api.tariffStatus();
+      if (tariffData?.available) {
+        // Default : 300W × 4h
+        cheapestData = await api.tariffCheapest(300, 4 * 3600);
+      }
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
+  let dedupData = $state<Awaited<ReturnType<typeof api.hfDedupPlan>> | null>(null);
+  let dedupScanning = $state(false);
+  let dedupExecuting = $state(false);
+  async function scanDedup() {
+    dedupScanning = true;
+    try { dedupData = await api.hfDedupPlan(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { dedupScanning = false; }
+  }
+  async function executeDedup(dryRun: boolean) {
+    if (!dedupData || !dedupData.plan || dedupData.plan.length === 0) return;
+    if (!dryRun && !confirm("Live dedup ! Files will be replaced with hardlinks. Proceed?")) return;
+    dedupExecuting = true;
+    try {
+      const r = await api.hfDedupExecute(dedupData.plan, dryRun);
+      const tag = dryRun ? "dry-run" : "LIVE";
+      toast.emit(`✓ ${tag} : ${r.applied} ops · ${r.reclaim_mib.toFixed(1)} MiB`, "ok");
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { dedupExecuting = false; }
+  }
+
+  let discordData = $state<Awaited<ReturnType<typeof api.discordRpcStatus>> | null>(null);
+  async function loadDiscordRpc() {
+    try { discordData = await api.discordRpcStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -972,6 +1063,11 @@
       if (!hotSwapData) loadHotSwap();
       if (!costData) loadInferenceCost();
       if (!labUsageData) loadLabUsage();
+      // R&D #15 cards
+      if (!bootProfileData) loadBootProfile();
+      if (!tariffData) loadTariff();
+      if (!discordData) loadDiscordRpc();
+      // Dedup is on-demand only (scan is expensive)
     }
   });
 
@@ -2641,6 +2737,174 @@
                 {/each}
               </tbody>
             </table>
+          {/if}
+        {/if}
+      </div>
+
+      <!-- UI sprint cycle 6 — R&D #15 cards (rendered before bestgpu so they
+           appear in document order with the R&D #14 cards) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.boot.title")}</h4>
+        <p class="muted">{i18n.t("integrations.boot.desc")}</p>
+        {#if bootProfileData}
+          <div class="form-row" style="flex-wrap: wrap; gap: 12px; margin-top: 6px;">
+            <label class="kv">{i18n.t("integrations.boot.name_label")}
+              <input type="text" bind:value={bootProfileForm.name} style="width: 140px;" />
+            </label>
+            <label class="kv">{i18n.t("integrations.boot.pl_label")}
+              <input type="number" min="50" max="600"
+                     bind:value={bootProfileForm.power_limit_w} style="width: 80px;" />
+            </label>
+            <label class="kv">
+              <input type="checkbox" bind:checked={bootProfileForm.persistence_mode} />
+              {i18n.t("integrations.boot.pm_label")}
+            </label>
+          </div>
+          <div class="form-row" style="gap: 6px; margin-top: 8px;">
+            <button class="btn btn-primary" onclick={saveBootProfile} disabled={bootSaving}>
+              {i18n.t("integrations.boot.save")}
+            </button>
+            <button class="btn" onclick={applyBootProfileNow}
+                    disabled={!bootProfileData.configured}>
+              {i18n.t("integrations.boot.apply_now")}
+            </button>
+            {#if bootProfileData.configured}
+              <button class="btn btn-danger" onclick={clearBootProfile}>
+                {i18n.t("integrations.boot.clear")}
+              </button>
+            {/if}
+          </div>
+          {#if !bootProfileData.configured}
+            <p class="muted">{i18n.t("integrations.boot.not_configured")}</p>
+          {/if}
+          {#if bootProfileData.last_outcome}
+            <div style="margin-top: 10px; padding: 8px; background: var(--bg-2); border-radius: 4px;
+                          font-size: 0.85em;">
+              <b>{i18n.t("integrations.boot.last_outcome")} :</b>
+              <span style:color={bootProfileData.last_outcome.ok ? 'var(--ok)' : 'var(--err)'}>
+                {bootProfileData.last_outcome.ok ? "✓ success" : "✗ failed"}
+              </span>
+              {#if bootProfileData.last_outcome.ready_probe}
+                <span class="muted" style="margin-left: 8px;">
+                  driver ready in {bootProfileData.last_outcome.ready_probe.elapsed_s}s
+                </span>
+              {/if}
+            </div>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.tariff.title")}</h4>
+        <p class="muted">{i18n.t("integrations.tariff.desc")}</p>
+        {#if tariffData && tariffData.available}
+          <div class="form-row" style="flex-wrap: wrap; gap: 14px; margin-top: 8px;">
+            <span class="kv">{i18n.t("integrations.tariff.current_rate")} :
+              <b>{tariffData.current_eur_per_kwh} €/kWh</b>
+              <span class="muted" style="margin-left: 4px;">@ {tariffData.current_hour}h</span>
+            </span>
+            <span class="kv">{i18n.t("integrations.tariff.day_range_label")} :
+              <b>{tariffData.day_min_eur_per_kwh} · {tariffData.day_avg_eur_per_kwh} · {tariffData.day_max_eur_per_kwh}</b>
+            </span>
+          </div>
+          <p class="muted" style="margin-top: 6px; font-size: 0.88em;">
+            {i18n.t("integrations.tariff.cheapest_hours_label")} :
+            <b>{tariffData.cheapest_hours?.sort((a,b)=>a-b).join(", ")}h</b>
+            ·
+            {i18n.t("integrations.tariff.peak_hours_label")} :
+            <b>{tariffData.peak_hours?.sort((a,b)=>a-b).join(", ")}h</b>
+          </p>
+          {#if cheapestData?.best}
+            <div style="margin-top: 10px; padding: 8px; background: var(--bg-2);
+                         border-radius: 4px;">
+              <b>Cheapest start for 300W × 4h :</b>
+              <span style="color: var(--ok); font-weight: 600; margin-left: 6px;">
+                {String(cheapestData.best.start_hour).padStart(2, "0")}h00
+              </span>
+              <span class="muted">(+{cheapestData.best.hours_until_start}h)</span>
+              <span style="margin-left: 8px;">→ {cheapestData.best.cost_eur.toFixed(4)} €</span>
+              <span class="muted" style="margin-left: 8px;">
+                (save {cheapestData.absolute_savings_eur?.toFixed(4)} € vs worst,
+                 {cheapestData.savings_pct?.toFixed(0)}%)
+              </span>
+            </div>
+          {/if}
+        {:else if tariffData}
+          <p class="muted">{tariffData.reason ?? i18n.t("integrations.tariff.not_configured")}</p>
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dedup.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dedup.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={scanDedup} disabled={dedupScanning}>
+            {dedupScanning ? "⏳…" : i18n.t("integrations.dedup.scan")}
+          </button>
+        </div>
+        {#if dedupData && dedupData.available}
+          <div class="form-row" style="flex-wrap: wrap; gap: 14px; margin-top: 8px;">
+            <span class="kv">{i18n.t("integrations.dedup.files_scanned")} :
+              <b>{dedupData.files_scanned}</b>
+            </span>
+            <span class="kv">{i18n.t("integrations.dedup.dupe_groups")} :
+              <b>{dedupData.duplicate_groups}</b>
+            </span>
+            <span class="kv">{i18n.t("integrations.dedup.reclaim")} :
+              <b style="color: var(--ok);">{((dedupData.reclaim_mib ?? 0) / 1024).toFixed(2)} GiB</b>
+            </span>
+            {#if (dedupData.cross_device_skipped?.length ?? 0) > 0}
+              <span class="kv muted">
+                {i18n.t("integrations.dedup.cross_device")} : {dedupData.cross_device_skipped?.length}
+              </span>
+            {/if}
+          </div>
+          {#if (dedupData.plan?.length ?? 0) > 0}
+            <div class="form-row" style="gap: 6px; margin-top: 10px;">
+              <button class="btn" onclick={() => executeDedup(true)} disabled={dedupExecuting}>
+                {i18n.t("integrations.dedup.execute_dry")}
+              </button>
+              <button class="btn btn-danger" onclick={() => executeDedup(false)} disabled={dedupExecuting}>
+                {i18n.t("integrations.dedup.execute_live")}
+              </button>
+            </div>
+          {/if}
+        {/if}
+      </div>
+
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.discord.title")}</h4>
+        <p class="muted">{i18n.t("integrations.discord.desc")}</p>
+        {#if discordData}
+          <div class="form-row" style="flex-wrap: wrap; gap: 12px; margin-top: 6px;">
+            <span class="kv">IPC :
+              <b style:color={discordData.discord_ipc_present ? "var(--ok)" : "var(--text-dim)"}>
+                {discordData.discord_ipc_present ? "✓ detected" : "—"}
+              </b>
+            </span>
+            <span class="kv">App ID :
+              <b style:color={discordData.app_id_configured ? "var(--ok)" : "var(--text-dim)"}>
+                {discordData.app_id_configured ? "✓ set" : "not set"}
+              </b>
+            </span>
+            <span class="kv">Bridge :
+              <b style:color={discordData.enabled ? "var(--ok)" : "var(--text-dim)"}>
+                {discordData.enabled ? "✓ enabled" : "off"}
+              </b>
+            </span>
+          </div>
+          {#if !discordData.discord_ipc_present}
+            <p class="muted" style="margin-top: 8px; font-size: 0.88em;">
+              {i18n.t("integrations.discord.no_discord")}
+            </p>
+          {:else if !discordData.app_id_configured}
+            <p class="muted" style="margin-top: 8px; font-size: 0.88em;">
+              {i18n.t("integrations.discord.no_app_id")}
+            </p>
+          {:else if !discordData.enabled}
+            <p class="muted" style="margin-top: 8px; font-size: 0.88em;">
+              {i18n.t("integrations.discord.ready")}
+            </p>
           {/if}
         {/if}
       </div>
