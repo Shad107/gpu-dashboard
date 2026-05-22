@@ -265,6 +265,7 @@
   "benchmark.col_throughput": "Throughput",
   "benchmark.col_efficiency": "Efficiency",
   "benchmark.col_cost": "Cost",
+  "chart.download_svg": "Download chart as SVG",
   "card.pcie": "PCIe",
   "pcie.downgrade": "downgraded",
   "electricity.budget_label": "Budget",

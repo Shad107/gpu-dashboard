@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { smoothPath } from "../lib/charts";
+  import { smoothPath, exportSvgAsFile } from "../lib/charts";
+  import { i18n } from "../lib/i18n/index.svelte";
   import type { HistorySample, StoredEvent } from "../lib/api";
 
   type Metric = "power" | "temp" | "fan_pct" | "util_gpu" | "tokens_per_sec" | "tokens_per_watt";
@@ -14,6 +15,14 @@
     compareLabel?: string;
   };
   const { samples, metric, color, unit, events = [], compareSamples = [], compareLabel }: Props = $props();
+
+  let svgEl: SVGSVGElement | undefined = $state();
+  function downloadSvg() {
+    if (svgEl) {
+      const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      exportSvgAsFile(svgEl, `gpu-history-${metric}-${ts}.svg`);
+    }
+  }
 
   // Marker color per event kind
   const EVENT_COLORS: Record<string, string> = {
@@ -108,7 +117,9 @@
     <slot name="empty" />
   </div>
 {:else}
-  <svg viewBox="0 0 {W} {H}" preserveAspectRatio="none" style="width:100%;height:100%;display:block">
+  <div class="chart-wrap">
+    <button class="chart-export" title={i18n.t("chart.download_svg") ?? "Download as SVG"} onclick={downloadSvg}>⬇️</button>
+  <svg bind:this={svgEl} viewBox="0 0 {W} {H}" preserveAspectRatio="none" style="width:100%;height:100%;display:block">
     {#each gridY as g}
       <line x1={PAD_L} x2={W - PAD_R} y1={g.yy} y2={g.yy} stroke="#22262e" stroke-width="0.5" />
       <text x={PAD_L - 6} y={g.yy + 3.5} fill="#7c8aa3" font-size="10" text-anchor="end">
@@ -146,4 +157,27 @@
       </circle>
     {/each}
   </svg>
+  </div>
 {/if}
+
+<style>
+  .chart-wrap { position: relative; width: 100%; height: 100%; }
+  .chart-export {
+    position: absolute;
+    top: 0.4em;
+    right: 0.4em;
+    background: rgba(15, 19, 28, 0.85);
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 0.2em 0.5em;
+    font-size: 0.95em;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 0.15s, color 0.15s;
+  }
+  .chart-export:hover {
+    background: var(--bg-card);
+    color: var(--accent);
+  }
+</style>

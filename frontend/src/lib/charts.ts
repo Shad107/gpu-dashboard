@@ -156,3 +156,49 @@ export const tempColor = (t: number) =>
 
 export const colorFan = (f: number) =>
   f < 40 ? "#4ade80" : f < 60 ? "#a3e635" : f < 80 ? "#fbbf24" : "#f87171";
+
+/** Serialize an SVGElement to a standalone .svg file and trigger a download.
+ *
+ * Inlines the page's `--bg-page` / `--text-muted` etc. computed colors so
+ * the saved file renders correctly outside the dashboard CSS context.
+ *
+ * Pure DOM API : no fetch, no backend round-trip. The user gets the file
+ * instantly. */
+export function exportSvgAsFile(svgEl: SVGSVGElement, filename = "chart.svg"): void {
+  if (!svgEl) return;
+  // Clone so we don't mutate the live DOM
+  const clone = svgEl.cloneNode(true) as SVGSVGElement;
+
+  // Ensure xmlns is set (the original lives inside the HTML doc so may not have it)
+  if (!clone.getAttribute("xmlns")) {
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  }
+
+  // Add a white-on-dark background <rect> first so the chart is readable
+  // when opened standalone in a browser (which has no theme stylesheet).
+  const viewBox = clone.getAttribute("viewBox");
+  if (viewBox) {
+    const [vx, vy, vw, vh] = viewBox.split(/\s+/).map(parseFloat);
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bg.setAttribute("x", String(vx));
+    bg.setAttribute("y", String(vy));
+    bg.setAttribute("width", String(vw));
+    bg.setAttribute("height", String(vh));
+    bg.setAttribute("fill", "#10131a");
+    clone.insertBefore(bg, clone.firstChild);
+  }
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  // Prepend the standard SVG preamble for downloaded files
+  const fullSvg = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
+  const blob = new Blob([fullSvg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Defer revocation so the click() handoff completes
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
