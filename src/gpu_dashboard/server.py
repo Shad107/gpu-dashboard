@@ -537,6 +537,17 @@ def make_handler(ctx: dict):
                 code, body = api.handle_influxdb_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/alertmanager/rules.yaml":
+                code, text_body = api.handle_alertmanager_rules(ctx)
+                data = text_body.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "application/x-yaml; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Content-Disposition", 'attachment; filename="gpu-dashboard-rules.yaml"')
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             # /api/heartbeat/<token> — inbound ping from training scripts
             if path.startswith("/api/heartbeat/"):
                 token = path[len("/api/heartbeat/"):].strip("/")
