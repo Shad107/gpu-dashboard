@@ -17,6 +17,7 @@
   let heatmapData  = $state<Awaited<ReturnType<typeof api.powerHeatmap>> | null>(null);
   let heatmapDays  = $state(7);
   let alerts = $state<Array<{ ts: number; payload: any }>>([]);
+  let llmLifetime = $state<Awaited<ReturnType<typeof api.llmLifetime>> | null>(null);
   let timer: ReturnType<typeof setInterval> | null = null;
 
   async function loadAll() {
@@ -25,6 +26,7 @@
     try { powerStats   = await api.powerStats(gpu.selected);           } catch {}
     try { profileTime  = await api.profileStats(86400);                } catch {}  // profile-stats is global
     try { heatmapData  = await api.powerHeatmap(heatmapDays, gpu.selected); } catch {}
+    try { llmLifetime  = await api.llmLifetime(gpu.selected);          } catch {}
     // /api/health.recent_alerts (last 5, 7-day window)
     try {
       const r = await fetch("/api/health", { cache: "no-store" });
@@ -197,6 +199,28 @@
     </div>
   {/if}
 
+  <!-- 📊 Year-to-date totals (migrated from About in cycle 115) -->
+  {#if powerStats && powerStats.year_start_ts}
+    {@const sym = powerStats.currency === "EUR" ? "€" : powerStats.currency === "USD" ? "$" : powerStats.currency}
+    {@const yearDate = new Date(powerStats.year_start_ts * 1000).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+    <div class="stats-card">
+      <div class="stats-card-head">
+        <h3>📊 {i18n.t("stats.section_year") ?? "Year-to-date totals"}</h3>
+        <span class="sub" style="font-size:.78em">{i18n.t("about.year_since", { date: yearDate })}</span>
+      </div>
+      <div class="ytd-row">
+        <span class="ytd-label">⚡ {i18n.t("about.year_electricity")}</span>
+        <span><b>{powerStats.kwh_year.toFixed(1)}</b> kWh · <b style="color:#fb923c">{powerStats.cost_year.toFixed(2)} {sym}</b></span>
+      </div>
+      {#if llmLifetime?.available && llmLifetime.total_tokens_this_year > 0}
+        <div class="ytd-row">
+          <span class="ytd-label">🪙 {i18n.t("about.year_tokens")}</span>
+          <span><b style="color:#fbbf24">{fmtBig(llmLifetime.total_tokens_this_year)}</b> {i18n.t("llm.tokens_generated")}</span>
+        </div>
+      {/if}
+    </div>
+  {/if}
+
   <!-- 🎯 Profiles -->
   {#if profileTime && profSum > 0}
     <div class="stats-card">
@@ -214,6 +238,20 @@
           </div>
         {/if}
       {/each}
+      {#if profileTime.recent_events && profileTime.recent_events.length > 0}
+        <h4 class="subhead">{i18n.t("about.profile_activity") ?? "Recent switches"}</h4>
+        <div class="profile-log">
+          {#each profileTime.recent_events.slice(0, 8) as ev}
+            {@const dt = profileTime.now - ev.ts}
+            {@const ago = dt < 60 ? `${dt}s` : dt < 3600 ? `${Math.floor(dt/60)}m` : dt < 86400 ? `${Math.floor(dt/3600)}h` : `${Math.floor(dt/86400)}d`}
+            <div class="profile-log-row">
+              <span class="profile-log-emoji">{PROFILE_EMOJI[ev.to] || "·"}</span>
+              <span class="profile-log-name">{ev.to}</span>
+              <span class="profile-log-time">{ago}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -388,6 +426,15 @@
   .alert-ago { color: var(--accent-warn); font-weight: 500; width: 90px; }
   .alert-kind { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: 0.9em; }
   .alert-detail { color: var(--text-dim); font-size: 0.85em; }
+
+  .ytd-row { display: flex; justify-content: space-between; padding: 0.4em 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.92em; }
+  .ytd-row:last-child { border-bottom: none; }
+  .ytd-label { color: var(--text-muted); }
+  .subhead { margin: 1em 0 0.4em; color: var(--text-muted); font-size: 0.82em; font-weight: 600; }
+  .profile-log { display: flex; flex-direction: column; gap: 0.2em; max-width: 360px; }
+  .profile-log-row { display: grid; grid-template-columns: 28px 1fr 60px; align-items: center; gap: 0.6em; padding: 0.25em 0.5em; background: var(--bg-page); border: 1px solid var(--border-subtle); border-radius: 4px; font-size: 0.82em; }
+  .profile-log-name { color: var(--text-muted); }
+  .profile-log-time { color: var(--text-dim); text-align: right; font-size: 0.85em; }
 
   @media (max-width: 600px) {
     .stats-row { gap: 0.8em; }

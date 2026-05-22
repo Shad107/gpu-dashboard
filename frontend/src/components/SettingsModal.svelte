@@ -559,43 +559,14 @@
   });
 
   // ── About state ───────────────────────────────────────────────────────────
+  // About is now lean — perf totals moved to Stats page in cycle 115.
   let aboutData = $state<Awaited<ReturnType<typeof api.about>> | null>(null);
-  let profileTime = $state<Awaited<ReturnType<typeof api.profileStats>> | null>(null);
-  let yearPower = $state<Awaited<ReturnType<typeof api.powerStats>> | null>(null);
-  let yearLlm = $state<Awaited<ReturnType<typeof api.llmLifetime>> | null>(null);
   async function loadAbout() {
     try { aboutData = await api.about(); } catch { aboutData = null; }
-    try { profileTime = await api.profileStats(86400); } catch { profileTime = null; }
-    try { yearPower = await api.powerStats(); } catch { yearPower = null; }
-    try { yearLlm = await api.llmLifetime(); } catch { yearLlm = null; }
   }
   $effect(() => {
     if (modal.open && modal.section === "about" && !aboutData) loadAbout();
   });
-
-  function fmtTokens(n: number): string {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + "M";
-    if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
-    return String(n);
-  }
-  function fmtYearSince(ts: number): string {
-    if (!ts) return "";
-    return new Date(ts * 1000).toLocaleDateString(undefined, {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  }
-
-  function fmtDuration(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
-    return `${m}m`;
-  }
-  const PROFILE_EMOJI: Record<string, string> = {
-    silent: "🤫",
-    sweet: "⭐",
-    boost: "🚀",
-  };
   function fmtUptime(s: number): string {
     const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
     const m = Math.floor((s % 3600) / 60), sec = s % 60;
@@ -919,89 +890,9 @@
             </tbody>
           </table>
 
-          {#if profileTime}
-            {@const totals = profileTime.totals}
-            {@const sum = Object.values(totals).reduce((a, b) => a + b, 0)}
-            <h3 style="margin-top:1.6em;color:#cdd2da;font-size:.95em;font-weight:600">
-              {i18n.t("about.profile_time_24h")}
-            </h3>
-            {#if sum > 0}
-              <table class="about-table" style="margin-top:.4em">
-                <tbody>
-                  {#each ["boost", "sweet", "silent"] as p}
-                    {#if totals[p]}
-                      {@const pct = ((totals[p] / sum) * 100).toFixed(1)}
-                      <tr>
-                        <td>{PROFILE_EMOJI[p] || ""} {p}</td>
-                        <td>
-                          <b>{fmtDuration(totals[p])}</b>
-                          <span class="sub" style="margin-left:.6em">({pct}%)</span>
-                          <div style="height:3px;background:#22262e;border-radius:2px;margin-top:.25em;width:240px">
-                            <div style="height:100%;background:#4ade80;width:{pct}%;border-radius:2px"></div>
-                          </div>
-                        </td>
-                      </tr>
-                    {/if}
-                  {/each}
-                </tbody>
-              </table>
-            {:else}
-              <p class="sub">{i18n.t("about.profile_time_none")}</p>
-            {/if}
-
-            {#if yearPower}
-              {@const sym = yearPower.currency === "EUR" ? "€" : yearPower.currency === "USD" ? "$" : yearPower.currency}
-              <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
-                📊 {i18n.t("about.year_in_review")}
-              </h3>
-              <p class="sub" style="margin:0 0 .4em;font-size:.78em">
-                {i18n.t("about.year_since", { date: fmtYearSince(yearPower.year_start_ts) })}
-              </p>
-              <table class="about-table" style="margin-top:.3em;max-width:380px">
-                <tbody>
-                  <tr>
-                    <td>⚡ {i18n.t("about.year_electricity")}</td>
-                    <td>
-                      <b>{yearPower.kwh_year.toFixed(1)}</b> kWh ·
-                      <b style="color:var(--accent-cost)">{yearPower.cost_year.toFixed(2)} {sym}</b>
-                    </td>
-                  </tr>
-                  {#if yearLlm?.available && yearLlm.total_tokens_this_year > 0}
-                    <tr>
-                      <td>🪙 {i18n.t("about.year_tokens")}</td>
-                      <td>
-                        <b style="color:var(--accent-warn)">{fmtTokens(yearLlm.total_tokens_this_year)}</b>
-                        {i18n.t("llm.tokens_generated")}
-                      </td>
-                    </tr>
-                  {/if}
-                </tbody>
-              </table>
-            {/if}
-
-            {#if profileTime.recent_events && profileTime.recent_events.length > 0}
-              <h3 style="margin-top:1.6em;color:var(--text-muted);font-size:.95em;font-weight:600">
-                {i18n.t("about.profile_activity")}
-              </h3>
-              <p class="sub" style="margin:0 0 .4em;font-size:.78em">
-                {i18n.t("about.profile_activity_hint", { n: profileTime.events_count })}
-              </p>
-              <div class="profile-log">
-                {#each profileTime.recent_events.slice(0, 10) as ev}
-                  {@const dt = profileTime.now - ev.ts}
-                  {@const relative = dt < 60 ? `${dt}s ago`
-                                   : dt < 3600 ? `${Math.floor(dt/60)}m ago`
-                                   : dt < 86400 ? `${Math.floor(dt/3600)}h ago`
-                                   : `${Math.floor(dt/86400)}d ago`}
-                  <div class="profile-log-row">
-                    <span class="profile-log-emoji">{PROFILE_EMOJI[ev.to] || "·"}</span>
-                    <span class="profile-log-name">{ev.to}</span>
-                    <span class="profile-log-time">{relative}</span>
-                  </div>
-                {/each}
-              </div>
-            {/if}
-          {/if}
+          <p class="sub" style="margin-top:1.4em;font-size:.78em">
+            💡 {i18n.t("about.stats_moved_hint")}
+          </p>
         {:else}
           <p class="sub">{i18n.t("history.loading")}</p>
         {/if}
