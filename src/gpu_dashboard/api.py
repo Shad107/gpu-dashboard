@@ -2772,6 +2772,21 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #7.5 — UPS/NUT awareness ────────────────────────────────────────────
+def handle_ups_status(ctx: dict) -> Response:
+    """Query the local NUT server and return the first UPS' state."""
+    from .modules import ups_nut
+    cfg = ctx["config"]
+    host = cfg.get("NUT_HOST", "localhost")
+    try:
+        port = int(cfg.get("NUT_PORT", "3493"))
+    except (ValueError, TypeError):
+        port = 3493
+    ups_name = cfg.get("NUT_UPS") or None
+    result = ups_nut.query(host=host, port=port, ups=ups_name, timeout=2.0)
+    return 200, result
+
+
 # ─── R&D #7.10 — Prometheus AlertManager rules export ────────────────────────
 def _alert_consecutive_to_for(min_n: int, interval_s: int) -> str:
     """Translate 'N consecutive samples at <interval>s' into Prom 'for: Xs'."""
