@@ -715,6 +715,19 @@ def make_handler(ctx: dict):
                 code, body = api.handle_boot_profile_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/tariff/status":
+                # R&D #15.2 — tariff-aware scheduler
+                code, body = api.handle_tariff_status(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/tariff/estimate":
+                code, body = api.handle_tariff_estimate(ctx, params)
+                self._send_json(code, body)
+                return
+            if path == "/api/tariff/cheapest":
+                code, body = api.handle_tariff_cheapest(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/hot-swap/evaluate":
                 code, body = api.handle_hot_swap_evaluate(ctx, params)
                 self._send_json(code, body)
