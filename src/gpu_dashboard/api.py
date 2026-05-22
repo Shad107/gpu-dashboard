@@ -2772,6 +2772,19 @@ def handle_alerts_test(ctx: dict) -> Response:
     return code, {"ok": ok, "msg": msg}
 
 
+# ─── R&D #8.7 — Jupyter kernel monitor ───────────────────────────────────────
+def handle_jupyter_kernels(ctx: dict) -> Response:
+    """List Jupyter kernels with GPU attribution."""
+    from .modules import jupyter_monitor as _jm
+    kernels = _jm.list_kernels()
+    return 200, {
+        "ok": True,
+        "available": True,
+        "count": len(kernels),
+        "kernels": kernels,
+    }
+
+
 # ─── R&D #8.1 — History scrubber (snapshot at past timestamp) ────────────────
 def handle_snapshot_at(ctx: dict, params: Optional[dict] = None) -> Response:
     """Return the GPU sample CLOSEST (within ±60s by default) to the
