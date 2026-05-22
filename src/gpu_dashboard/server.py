@@ -652,6 +652,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_histogram_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/throttle-cause":
+                # R&D #19.2 — Thermal/power throttle root-cause classifier
+                code, body = api.handle_throttle_cause_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
