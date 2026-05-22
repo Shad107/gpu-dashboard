@@ -1166,14 +1166,28 @@
         {/if}
       </div>
 
-      <!-- ─── Profile A/B Benchmark (R&D #4, cycle 123) ──────────────── -->
+      <!-- ─── Profile A/B Benchmark (R&D #4 — polished cycle 140) ──── -->
       <div class="modal-section" class:active={modal.section === "benchmark"}>
         <h3 class="title">
           <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={iconOf("benchmark")} /></svg>
-          <span>{i18n.t("benchmark.title")}</span>
+          <span>⚖️ {i18n.t("benchmark.title")}</span>
         </h3>
-        <p class="sub" style="margin:0 0 .8em">{i18n.t("benchmark.hint")}</p>
 
+        <div class="bench-explainer">
+          <p style="margin:0 0 .4em;color:var(--text-muted)">
+            <b>{i18n.t("benchmark.what_label")}</b>
+          </p>
+          <ol style="margin:0;padding-left:1.2em;font-size:.86em;line-height:1.5">
+            <li>{i18n.t("benchmark.step1")}</li>
+            <li>{i18n.t("benchmark.step2")}</li>
+            <li>{i18n.t("benchmark.step3")}</li>
+          </ol>
+          <p class="sub" style="margin:.5em 0 0;font-size:.78em">
+            💡 {i18n.t("benchmark.workload_hint")}
+          </p>
+        </div>
+
+        <h4 class="bench-section-h">{i18n.t("benchmark.config_label")}</h4>
         <div class="bench-form">
           <label class="bench-cell">
             <span class="sub">{i18n.t("benchmark.profile_a")}</span>
@@ -1197,34 +1211,55 @@
             <input type="number" min="5" max="300" step="5" bind:value={benchDuration} class="bench-dur" />
           </label>
           <button class="btn btn-primary" disabled={benchRunning} onclick={runBench}>
-            {benchRunning ? "⏳…" : "▶ " + i18n.t("benchmark.run")}
+            {benchRunning ? "⏳ " + i18n.t("benchmark.running_short") : "▶ " + i18n.t("benchmark.run")}
           </button>
         </div>
         {#if benchRunning}
-          <p class="sub" style="margin-top:.6em">{i18n.t("benchmark.running", { d: benchDuration * 2 })}</p>
+          <div class="bench-progress">
+            ⏳ {i18n.t("benchmark.running", { d: benchDuration * 2 })}
+          </div>
         {/if}
         {#if benchResult}
           {@const a = benchResult.segment_a}
           {@const b = benchResult.segment_b}
           {@const w = benchResult.comparison.winners}
-          <div class="bench-result">
+          <h4 class="bench-section-h">{i18n.t("benchmark.result_label")}</h4>
+          <div class="bench-result-card">
             <table class="bench-table">
               <thead>
-                <tr><th></th><th>{a.profile}</th><th>{b.profile}</th><th>Δ</th></tr>
+                <tr>
+                  <th></th>
+                  <th class="bench-col-a">{a.profile}</th>
+                  <th class="bench-col-b">{b.profile}</th>
+                  <th>🏆 {i18n.t("benchmark.winner")}</th>
+                </tr>
               </thead>
               <tbody>
-                <tr><td>{i18n.t("benchmark.col_temp")}</td><td>{a.avg_temp_c}°C</td><td>{b.avg_temp_c}°C</td>
-                  <td class:win-a={w.cooler === a.profile} class:win-b={w.cooler === b.profile}>🌡️ {w.cooler}</td></tr>
-                <tr><td>{i18n.t("benchmark.col_power")}</td><td>{a.avg_power_w} W</td><td>{b.avg_power_w} W</td>
-                  <td class:win-a={w.lower_power === a.profile} class:win-b={w.lower_power === b.profile}>⚡ {w.lower_power}</td></tr>
-                <tr><td>{i18n.t("benchmark.col_throughput")}</td><td>{a.tokens_per_s} tok/s</td><td>{b.tokens_per_s} tok/s</td>
-                  <td class:win-a={w.higher_throughput === a.profile} class:win-b={w.higher_throughput === b.profile}>🪙 {w.higher_throughput}</td></tr>
-                <tr><td>{i18n.t("benchmark.col_efficiency")}</td><td>{a.tokens_per_kwh.toFixed(0)} tok/kWh</td><td>{b.tokens_per_kwh.toFixed(0)} tok/kWh</td>
-                  <td class:win-a={w.more_efficient === a.profile} class:win-b={w.more_efficient === b.profile}>⚖️ {w.more_efficient}</td></tr>
-                <tr><td>{i18n.t("benchmark.col_cost")}</td><td>{a.cost.toFixed(4)}</td><td>{b.cost.toFixed(4)}</td>
-                  <td class:win-a={w.cheaper === a.profile} class:win-b={w.cheaper === b.profile}>💸 {w.cheaper}</td></tr>
+                <tr><td>🌡️ {i18n.t("benchmark.col_temp")}</td>
+                  <td class:win-a={w.cooler === a.profile}>{a.avg_temp_c}°C</td>
+                  <td class:win-b={w.cooler === b.profile}>{b.avg_temp_c}°C</td>
+                  <td><b>{w.cooler}</b></td></tr>
+                <tr><td>⚡ {i18n.t("benchmark.col_power")}</td>
+                  <td class:win-a={w.lower_power === a.profile}>{a.avg_power_w} W</td>
+                  <td class:win-b={w.lower_power === b.profile}>{b.avg_power_w} W</td>
+                  <td><b>{w.lower_power}</b></td></tr>
+                <tr><td>🪙 {i18n.t("benchmark.col_throughput")}</td>
+                  <td class:win-a={w.higher_throughput === a.profile}>{a.tokens_per_s} tok/s</td>
+                  <td class:win-b={w.higher_throughput === b.profile}>{b.tokens_per_s} tok/s</td>
+                  <td><b>{w.higher_throughput}</b></td></tr>
+                <tr><td>⚖️ {i18n.t("benchmark.col_efficiency")}</td>
+                  <td class:win-a={w.more_efficient === a.profile}>{a.tokens_per_kwh.toFixed(0)} tok/kWh</td>
+                  <td class:win-b={w.more_efficient === b.profile}>{b.tokens_per_kwh.toFixed(0)} tok/kWh</td>
+                  <td><b>{w.more_efficient}</b></td></tr>
+                <tr><td>💸 {i18n.t("benchmark.col_cost")}</td>
+                  <td class:win-a={w.cheaper === a.profile}>{a.cost.toFixed(4)}</td>
+                  <td class:win-b={w.cheaper === b.profile}>{b.cost.toFixed(4)}</td>
+                  <td><b>{w.cheaper}</b></td></tr>
               </tbody>
             </table>
+            <p class="sub" style="margin-top:.6em;font-size:.78em">
+              {i18n.t("benchmark.result_note")}
+            </p>
           </div>
         {/if}
       </div>
