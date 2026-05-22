@@ -198,15 +198,15 @@
     {#if alive && g && g.alive}
       {#if layout.visible("gpu")}
       <div class="card">
-        <h2>{i18n.t("card.gpu")}</h2>
-        <!-- Cycle 148 user fb : 'mettre le nom de la carte dans GPU mais
-             juste NVIDIA 3090 ou équivalent' — strip the long
-             'NVIDIA GeForce RTX' prefix and keep just 'RTX 3090'. -->
-        {#if g.name}
-          <div class="sub" style="font-size:.72em;margin:-.1em 0 .15em">
-            {g.name.replace(/^NVIDIA\s+(GeForce\s+)?/i, "")}
-          </div>
-        {/if}
+        <!-- Cycle 148d user fb : 'mettre GPU et nom de carte sur la meme ligne' -->
+        <h2>
+          {i18n.t("card.gpu")}
+          {#if g.name}
+            <span style="font-weight:400;color:var(--text-muted);font-size:.85em;margin-left:.3em">
+              {g.name.replace(/^NVIDIA\s+(GeForce\s+)?/i, "")}
+            </span>
+          {/if}
+        </h2>
         <div class="big" style:color={tempColor(g.temp)}>{g.temp}°C</div>
         <div class="sub">{i18n.t("gpu.util")} {g.util_gpu}% · {i18n.t("gpu.draw")} {g.power.toFixed(0)} W</div>
         {#if g.mem_temp !== null && g.mem_temp !== undefined}
