@@ -119,10 +119,16 @@
   const sign = (v: number) => (v >= 0 ? "+" : "") + v;
 </script>
 
-<div class="row" style="display:flex;flex-wrap:wrap">
+<div class="row card-grid">
+  <!-- Group headers : full-width grid items at order=0/100/200/300 so they
+       sit before the cards of each group. -->
+  <h4 class="group-label" style="order:0">🖥️ {i18n.t("group.gpu") ?? "GPU live"}</h4>
+  <h4 class="group-label" style="order:100">🔧 {i18n.t("group.tuning") ?? "Tuning"}</h4>
+  <h4 class="group-label" style="order:200">🪙 {i18n.t("group.llm") ?? "LLM"}</h4>
+  <h4 class="group-label" style="order:300">💸 {i18n.t("group.cost") ?? "Coût & processus"}</h4>
   {#if alive && g && g.alive}
     {#if layout.visible("gpu")}
-    <div class="card" style:order={layout.indexOf("gpu")}>
+    <div class="card" style:order={layout.groupedOrder("gpu")}>
       <h2>{i18n.t("card.gpu")}</h2>
       <div class="big" style:color={tempColor(g.temp)}>{g.temp}°C</div>
       <div class="sub">{i18n.t("gpu.util")} {g.util_gpu}% · {i18n.t("gpu.draw")} {g.power.toFixed(0)} W</div>
@@ -142,7 +148,7 @@
     {#if layout.visible("pcie") && g.pcie_gen != null && g.pcie_width != null}
       {@const downgrade = (g.pcie_gen_max != null && g.pcie_gen < g.pcie_gen_max)
                        || (g.pcie_width_max != null && g.pcie_width < g.pcie_width_max)}
-      <div class="card" style:order={layout.indexOf("pcie")}>
+      <div class="card" style:order={layout.groupedOrder("pcie")}>
         <h2>{i18n.t("card.pcie") ?? "PCIe"}</h2>
         <div class="big" style:color={downgrade ? "var(--accent-warn)" : "var(--accent)"}>
           Gen {g.pcie_gen} ×{g.pcie_width}
@@ -157,7 +163,7 @@
     {/if}
 
     {#if layout.visible("power_limit")}
-    <div class="card" style:order={layout.indexOf("power_limit")}>
+    <div class="card" style:order={layout.groupedOrder("power_limit")}>
       <h2>{i18n.t("card.power_limit")}</h2>
       <div class="big">
         {g.power_limit.toFixed(0)} <span class="sub" style="font-size:.55em">/ 350 W</span>
@@ -170,7 +176,7 @@
     {/if}
 
     {#if layout.visible("fans")}
-    <div class="card" style:order={layout.indexOf("fans")}>
+    <div class="card" style:order={layout.groupedOrder("fans")}>
       <h2>{i18n.t("card.fans")}</h2>
       <div class="fan-visual">
         {#each fans as f}
@@ -195,7 +201,7 @@
     {/if}
 
     {#if layout.visible("vram")}
-    <div class="card" style:order={layout.indexOf("vram")}>
+    <div class="card" style:order={layout.groupedOrder("vram")}>
       <h2>{i18n.t("card.vram")}</h2>
       <div class="big">
         {(g.mem_used_mib / 1024).toFixed(1)}
@@ -204,7 +210,7 @@
     </div>
     {/if}
   {:else}
-    <div class="card" style:order={layout.indexOf("gpu")}>
+    <div class="card" style:order={layout.groupedOrder("gpu")}>
       <h2>{i18n.t("card.gpu")}</h2>
       <div class="big bad">{i18n.t("gpu.off_bus")}</div>
       <div class="sub">{i18n.t("gpu.no_response")}</div>
@@ -212,7 +218,7 @@
   {/if}
 
   {#if d?.watchdog?.available && layout.visible("oculink")}
-    <div class="card" style:order={layout.indexOf("oculink")}>
+    <div class="card" style:order={layout.groupedOrder("oculink")}>
       <h2>{i18n.t("card.oculink")}</h2>
       <div class="big" class:warn={d.watchdog.drops > 0} class:ok={d.watchdog.drops === 0}>
         {d.watchdog.last_uptime}
@@ -222,14 +228,14 @@
   {/if}
 
   {#if d?.llm_model && layout.visible("llm_model")}
-    <div class="card" style:order={layout.indexOf("llm_model")}>
+    <div class="card" style:order={layout.groupedOrder("llm_model")}>
       <h2>{i18n.t("card.llm_model")}</h2>
       <div class="big" style="font-size:1em;word-break:break-all">{d.llm_model}</div>
     </div>
   {/if}
 
   {#if layout.visible("llm_throughput") && llm?.available && (llm.tokens_generated_total ?? 0) > 0}
-    <div class="card" style:order={layout.indexOf("llm_throughput")}>
+    <div class="card" style:order={layout.groupedOrder("llm_throughput")}>
       <h2>🪙 {i18n.t("card.llm_throughput")}</h2>
       {#if llmPerf?.available && (llmPerf.series_1h?.some(v => v > 0) ?? false)}
         {@const headline = (llmPerf.avg_tps_1m ?? 0) > 0
@@ -277,7 +283,7 @@
     {@const symbol = elec.currency === "EUR" ? "€" : elec.currency === "USD" ? "$" : elec.currency}
     {@const budgetUsedPct = elec.budget_kwh > 0 ? Math.min(100, (elec.kwh_month / elec.budget_kwh) * 100) : 0}
     {@const budgetForecastPct = elec.budget_kwh > 0 ? Math.min(150, (elec.forecast_kwh / elec.budget_kwh) * 100) : 0}
-    <div class="card" style:order={layout.indexOf("electricity")}>
+    <div class="card" style:order={layout.groupedOrder("electricity")}>
       <h2>⚡ {i18n.t("card.electricity")}</h2>
       <div class="big">
         {elec.avg_power_watts.toFixed(0)} W
@@ -330,7 +336,7 @@
 
   {#if layout.visible("processes") && (d?.processes?.length ?? 0) > 0}
     {@const vramTotalMib = d?.gpu?.mem_total_mib ?? 24576}
-    <div class="card" style:order={layout.indexOf("processes")}>
+    <div class="card" style:order={layout.groupedOrder("processes")}>
       <h2>{i18n.t("card.processes")}</h2>
       <table class="proc-table">
         <tbody>
@@ -353,7 +359,7 @@
 
   {#each layout.customCards as cc (cc.id)}
     {#if layout.visible(cc.id)}
-      <div class="card custom-card" style:order={layout.indexOf(cc.id)}>
+      <div class="card custom-card" style:order={layout.groupedOrder(cc.id)}>
         <h2>🧩 {cc.name}</h2>
         <iframe
           src={cc.url}
@@ -367,7 +373,7 @@
   {/each}
 
   {#if showTuning && layout.visible("tuning")}
-    <div class="card" style:order={layout.indexOf("tuning")}>
+    <div class="card" style:order={layout.groupedOrder("tuning")}>
       <h2>{i18n.t("card.tuning")}</h2>
       <div class="tuning-row">
         <div class="tuning-lbl">{i18n.t("card.gpu")}</div>

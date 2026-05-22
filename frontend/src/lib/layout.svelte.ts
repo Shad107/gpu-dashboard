@@ -30,7 +30,28 @@ export type CardName = (typeof CARD_NAMES)[number];
 function defaultVisible(): Record<string, boolean> {
   const out: Record<string, boolean> = {};
   for (const n of CARD_NAMES) out[n] = true;
+  // Processus GPU hidden by default (user feedback cycle 141 :
+  // 'la tuile sur la 2eme ligne processeur gpu est inutile').
+  // Users who want it back can toggle in Settings → Affichage.
+  out["processes"] = false;
   return out;
+}
+
+/** Group each card by category for the visual grouping in Cards.svelte. */
+export const CARD_GROUPS: Record<string, "live" | "tuning" | "llm" | "cost"> = {
+  gpu: "live", vram: "live", fans: "live", pcie: "live",
+  power_limit: "tuning", tuning: "tuning", oculink: "tuning",
+  llm_model: "llm", llm_throughput: "llm",
+  electricity: "cost", processes: "cost",
+};
+
+const _GROUP_BASE = { live: 0, tuning: 100, llm: 200, cost: 300 } as const;
+
+/** CSS `order` value that puts the card AFTER its group header. Custom cards
+ * (iframe URL embeds) fall into the 'cost' bucket by default. */
+export function groupedOrder(cardName: string, indexInOrder: number): number {
+  const g = CARD_GROUPS[cardName] ?? "cost";
+  return _GROUP_BASE[g] + indexInOrder + 1;  // +1 so the label sits before
 }
 
 function defaultOrder(): string[] {
@@ -114,6 +135,12 @@ class LayoutStore {
   indexOf(name: string): number {
     const i = this._state.order.indexOf(name);
     return i >= 0 ? i : this._state.order.length;  // unknown → at the end
+  }
+
+  /** CSS `order` value that lands the card AFTER its group header (cycle 141).
+   * Groups : live (0-99) · tuning (100-199) · llm (200-299) · cost (300-399). */
+  groupedOrder(name: string): number {
+    return groupedOrder(name, this.indexOf(name));
   }
 
   toggle(name: string): void {
