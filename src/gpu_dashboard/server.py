@@ -647,6 +647,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cuda_matrix_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pcie-histogram":
+                # R&D #18.6 — PCIe link-state thrasher histogram
+                code, body = api.handle_pcie_histogram_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
