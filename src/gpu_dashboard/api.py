@@ -1383,6 +1383,44 @@ def handle_prom(ctx: dict) -> Response:
     return 200, "\n".join(lines) + "\n"
 
 
+# ────────────────────────── /api/app-triggers ─────────────────────────────
+
+
+def handle_app_triggers_get(ctx: dict) -> Response:
+    """Return the user-configured per-app profile triggers map."""
+    from .modules import app_triggers as _at
+    return 200, {"ok": True, "triggers": _at.load_triggers()}
+
+
+def handle_app_triggers_post(ctx: dict, payload) -> Response:
+    """Persist {app: profile} mapping. Validates each profile name."""
+    from .modules import app_triggers as _at
+    if not isinstance(payload, dict):
+        return 400, {"ok": False, "error": "payload must be an object"}
+    triggers = payload.get("triggers")
+    if not isinstance(triggers, dict):
+        return 400, {"ok": False, "error": "triggers must be an object"}
+    valid = {"silent", "sweet", "boost"}
+    cleaned: dict = {}
+    for k, v in triggers.items():
+        if not isinstance(k, str) or not isinstance(v, str):
+            continue
+        k = k.strip()
+        if not k:
+            continue
+        if v not in valid:
+            return 400, {
+                "ok": False,
+                "error": f"profile '{v}' invalid (must be one of {sorted(valid)})",
+            }
+        cleaned[k] = v
+    try:
+        _at.save_triggers(cleaned)
+    except OSError as e:
+        return 500, {"ok": False, "error": f"save failed: {e}"}
+    return 200, {"ok": True, "triggers": cleaned}
+
+
 # ────────────────────────── /api/profile/save ─────────────────────────────
 
 
