@@ -1537,6 +1537,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_ns_mountinfo_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/efi-runtime-map-audit":
+                # R&D #65.3 — UEFI runtime map
+                code, body = api.handle_efi_runtime_map_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
