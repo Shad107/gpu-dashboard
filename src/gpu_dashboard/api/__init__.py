@@ -465,3 +465,4 @@ from .devfreq_event_audit import handle_devfreq_event_audit_status  # noqa: F401
 from .cpuidle_residency_audit import handle_cpuidle_residency_audit_status  # noqa: F401,F811
 from .cpufreq_residency_audit import handle_cpufreq_residency_audit_status  # noqa: F401,F811
 from .mtd_flash_audit import handle_mtd_flash_audit_status  # noqa: F401,F811
+from .spi_firmware_loader_audit import handle_spi_firmware_loader_audit_status  # noqa: F401,F811

@@ -1562,6 +1562,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_mtd_flash_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/spi-firmware-loader-audit":
+                # R&D #66.4 — SPI + firmware loader + profiling
+                code, body = api.handle_spi_firmware_loader_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
