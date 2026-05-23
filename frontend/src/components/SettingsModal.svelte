@@ -1712,6 +1712,23 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #46 (UI sprint 37) ────────────────────────────────────────────
+  let keyringAuditData    = $state<Awaited<ReturnType<typeof api.keyringAuditStatus>>    | null>(null);
+  let securityPostureData = $state<Awaited<ReturnType<typeof api.securityPostureStatus>> | null>(null);
+  let vfsLimitsAuditData  = $state<Awaited<ReturnType<typeof api.vfsLimitsAuditStatus>>  | null>(null);
+  async function loadKeyringAudit() {
+    try { keyringAuditData = await api.keyringAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSecurityPosture() {
+    try { securityPostureData = await api.securityPostureStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadVfsLimitsAudit() {
+    try { vfsLimitsAuditData = await api.vfsLimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1948,6 +1965,10 @@
       if (!nfConntrackAuditData)  loadNfConntrackAudit();
       if (!sysvipcAuditData)      loadSysvipcAudit();
       if (!mdraidHealthData)      loadMdraidHealth();
+      // R&D #46 cards
+      if (!keyringAuditData)      loadKeyringAudit();
+      if (!securityPostureData)   loadSecurityPosture();
+      if (!vfsLimitsAuditData)    loadVfsLimitsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -7770,6 +7791,132 @@
                              border-radius: 4px; overflow-x: auto;">{mdraidHealthData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(mdraidHealthData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #46.4 keyring audit (UI sprint 37) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kr.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kr.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKeyringAudit}>{i18n.t("integrations.kr.refresh")}</button>
+          {#if keyringAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={keyringAuditData.verdict.verdict === 'uid_quota_approaching' ? 'var(--warn)' :
+                             keyringAuditData.verdict.verdict === 'many_session_keyrings' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {keyringAuditData.user_count ?? 0} UIDs · {i18n.t("integrations.kr.verdict")} : <b>{keyringAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if keyringAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        keyringAuditData.verdict.verdict === 'uid_quota_approaching' ? 'var(--warn)' :
+                        keyringAuditData.verdict.verdict === 'many_session_keyrings' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Per-UID quota</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each keyringAuditData.users as u}
+                  <li>uid {u.uid}: keys={u.keys}/{u.maxkeys}, bytes={u.bytes}/{u.maxbytes}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{keyringAuditData.verdict.reason}</p>
+            {#if keyringAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.kr.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{keyringAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(keyringAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #46.2 security posture (UI sprint 37) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sec.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sec.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSecurityPosture}>{i18n.t("integrations.sec.refresh")}</button>
+          {#if securityPostureData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={securityPostureData.verdict.verdict === 'paranoid_too_loose' ? 'var(--warn)' :
+                             securityPostureData.verdict.verdict === 'lockdown_confined' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.sec.verdict")} : <b>{securityPostureData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if securityPostureData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        securityPostureData.verdict.verdict === 'paranoid_too_loose' ? 'var(--warn)' :
+                        securityPostureData.verdict.verdict === 'lockdown_confined' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">LSMs: {securityPostureData.security.lsm?.join(', ') ?? '?'}</span>
+              <span class="kv">lockdown=<b>{securityPostureData.security.lockdown ?? '?'}</b></span>
+              <span class="kv">ptrace_scope=<b>{securityPostureData.sysctls.ptrace_scope ?? '?'}</b></span>
+              <span class="kv">perf_paranoid=<b>{securityPostureData.sysctls.perf_event_paranoid ?? '?'}</b></span>
+              <span class="kv">kptr=<b>{securityPostureData.sysctls.kptr_restrict ?? '?'}</b></span>
+            </div>
+            <p style="margin: 4px 0;">{securityPostureData.verdict.reason}</p>
+            {#if securityPostureData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sec.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{securityPostureData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(securityPostureData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #46.3 VFS limits (UI sprint 37) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vfs.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vfs.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVfsLimitsAudit}>{i18n.t("integrations.vfs.refresh")}</button>
+          {#if vfsLimitsAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['file_nr_high','aio_nr_high'].includes(vfsLimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.vfs.verdict")} : <b>{vfsLimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vfsLimitsAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['file_nr_high','aio_nr_high'].includes(vfsLimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              {#if vfsLimitsAuditData.limits.file_nr}
+                <span class="kv">file-nr: <b>{vfsLimitsAuditData.limits.file_nr.allocated}</b> allocated</span>
+              {/if}
+              <span class="kv">nr_open=<b>{vfsLimitsAuditData.limits.nr_open ?? '?'}</b></span>
+              <span class="kv">aio=<b>{vfsLimitsAuditData.limits.aio_nr ?? 0}</b>/{vfsLimitsAuditData.limits.aio_max_nr ?? '?'}</span>
+              <span class="kv">pipe_max=<b>{vfsLimitsAuditData.limits.pipe_max_size ?? '?'}</b> B</span>
+            </div>
+            <p style="margin: 4px 0;">{vfsLimitsAuditData.verdict.reason}</p>
+            {#if vfsLimitsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.vfs.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{vfsLimitsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(vfsLimitsAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

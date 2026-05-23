@@ -2882,4 +2882,43 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #46 (UI sprint 37) ──
+  keyringAuditStatus: () =>
+    fetch("/api/keyring-audit").then(jsonOf<{
+      ok: boolean;
+      user_count?: number; key_count?: number;
+      users: Array<{
+        uid: number; total: number; used: number; refs: number;
+        keys: number; maxkeys: number;
+        bytes: number; maxbytes: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  securityPostureStatus: () =>
+    fetch("/api/security-posture").then(jsonOf<{
+      ok: boolean;
+      sysctls: Record<string, number>;
+      security: {
+        lsm?: string[];
+        lockdown?: string | null;
+        lockdown_available?: string[];
+      };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  vfsLimitsAuditStatus: () =>
+    fetch("/api/vfs-limits-audit").then(jsonOf<{
+      ok: boolean;
+      limits: {
+        file_nr?: { allocated: number; free: number; max: number };
+        file_max?: number; nr_open?: number;
+        aio_nr?: number; aio_max_nr?: number;
+        pipe_max_size?: number;
+        pipe_user_pages_soft?: number;
+        pipe_user_pages_hard?: number;
+      };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
