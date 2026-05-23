@@ -466,3 +466,4 @@ from .cpuidle_residency_audit import handle_cpuidle_residency_audit_status  # no
 from .cpufreq_residency_audit import handle_cpufreq_residency_audit_status  # noqa: F401,F811
 from .mtd_flash_audit import handle_mtd_flash_audit_status  # noqa: F401,F811
 from .spi_firmware_loader_audit import handle_spi_firmware_loader_audit_status  # noqa: F401,F811
+from .proc_syscall_auxv_audit import handle_proc_syscall_auxv_audit_status  # noqa: F401,F811
