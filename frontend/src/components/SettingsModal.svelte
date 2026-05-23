@@ -1311,6 +1311,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #28 (UI sprint 19) ────────────────────────────────────────────
+  let pcieRpmData       = $state<Awaited<ReturnType<typeof api.pcieRpmAuditStatus>>   | null>(null);
+  let thermalZonesData  = $state<Awaited<ReturnType<typeof api.thermalZonesStatus>>   | null>(null);
+  let nvrmTailData      = $state<Awaited<ReturnType<typeof api.nvrmTailStatus>>       | null>(null);
+  let nvlinkHealthData  = $state<Awaited<ReturnType<typeof api.nvlinkHealthStatus>>   | null>(null);
+  async function loadPcieRpm() {
+    try { pcieRpmData = await api.pcieRpmAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadThermalZones() {
+    try { thermalZonesData = await api.thermalZonesStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNvrmTail() {
+    try { nvrmTailData = await api.nvrmTailStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNvlinkHealth() {
+    try { nvlinkHealthData = await api.nvlinkHealthStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1456,6 +1478,11 @@
       if (!rebarAuditData)     loadRebarAudit();
       if (!cpuRaplData)        loadCpuRapl();
       if (!clockGapData)       loadClockGap();
+      // R&D #28 cards
+      if (!pcieRpmData)        loadPcieRpm();
+      if (!thermalZonesData)   loadThermalZones();
+      if (!nvrmTailData)       loadNvrmTail();
+      if (!nvlinkHealthData)   loadNvlinkHealth();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -5486,6 +5513,183 @@
               {/if}
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #28.1 PCIe runtime-PM auditor (UI sprint 19) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rpm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rpm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieRpm}>{i18n.t("integrations.rpm.refresh")}</button>
+          {#if pcieRpmData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pcieRpmData.worst_verdict === 'active' ? 'var(--ok)' :
+                             pcieRpmData.worst_verdict === 'suspended_now' ? 'var(--warn)' :
+                             pcieRpmData.worst_verdict === 'error' ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.rpm.verdict")} : <b>{pcieRpmData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pcieRpmData?.cards}
+          {#each pcieRpmData.cards as c}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          c.verdict.verdict === 'active' ? 'var(--ok)' :
+                          c.verdict.verdict === 'suspended_now' ? 'var(--warn)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{c.bdf}</b>
+                <span class="kv">control={c.control ?? '—'}</span>
+                <span class="kv">status={c.runtime_status ?? '—'}</span>
+                <span class="kv"><b>{c.verdict.verdict}</b></span>
+              </div>
+              <p class="muted" style="margin: 4px 0;">{c.verdict.reason}</p>
+              {#if c.verdict.recommendation}
+                <p style="margin: 4px 0;">{c.verdict.recommendation}</p>
+              {/if}
+              {#if c.udev_recipe}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.rpm.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{c.udev_recipe}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(c.udev_recipe)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #28.5 Thermal-zone correlator (UI sprint 19) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.thermzones.title")}</h4>
+        <p class="muted">{i18n.t("integrations.thermzones.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadThermalZones}>{i18n.t("integrations.thermzones.refresh")}</button>
+          {#if thermalZonesData?.category_counts}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={(thermalZonesData.category_counts.critical ?? 0) > 0 ? 'var(--warn)' :
+                             (thermalZonesData.category_counts.hot ?? 0) > 0 ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {thermalZonesData.category_counts.cool ?? 0} {i18n.t("integrations.thermzones.cool")} ·
+              {thermalZonesData.category_counts.warm ?? 0} {i18n.t("integrations.thermzones.warm")} ·
+              {thermalZonesData.category_counts.hot ?? 0} {i18n.t("integrations.thermzones.hot")} ·
+              {thermalZonesData.category_counts.critical ?? 0} {i18n.t("integrations.thermzones.critical")}
+            </span>
+          {/if}
+        </div>
+        {#if thermalZonesData?.summary}
+          <p class="muted" style="margin-top: 6px;">{thermalZonesData.summary}</p>
+        {/if}
+        {#if thermalZonesData?.advice && thermalZonesData.advice.length > 0}
+          <h5 style="margin: 10px 0 4px 0;">{i18n.t("integrations.thermzones.advice")}</h5>
+          <ul style="margin: 4px 0 0 18px;">
+            {#each thermalZonesData.advice as a}
+              <li>{a}</li>
+            {/each}
+          </ul>
+        {/if}
+        {#if thermalZonesData?.zones && thermalZonesData.zones.length > 0}
+          <table style="width:100%; font-size:0.85em; border-collapse: collapse; margin-top: 6px;">
+            <tbody>
+              {#each thermalZonesData.zones as z}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">{z.type}</td>
+                  <td style="padding: 4px;">{z.temp_c} °C</td>
+                  <td style="padding: 4px;"
+                      style:color={z.category === 'cool' ? 'var(--text-dim)' :
+                                 z.category === 'warm' ? 'var(--accent)' :
+                                 z.category === 'hot' ? 'var(--warn)' :
+                                 'var(--warn)'}>{z.category}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #28.7 NVRM log tailer (UI sprint 19) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nvrmtail.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nvrmtail.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvrmTail}>{i18n.t("integrations.nvrmtail.refresh")}</button>
+          {#if nvrmTailData?.since}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.nvrmtail.since")} : <b>{nvrmTailData.since}</b>
+            </span>
+          {/if}
+          {#if nvrmTailData?.entry_count !== undefined}
+            <span class="kv">entries : <b>{nvrmTailData.entry_count}</b></span>
+          {/if}
+        </div>
+        {#if nvrmTailData?.category_counts && Object.keys(nvrmTailData.category_counts).length > 0}
+          <div class="form-row" style="gap: 14px; margin-top: 6px; flex-wrap: wrap;">
+            {#each Object.entries(nvrmTailData.category_counts) as [cat, n]}
+              <span class="kv"
+                    style:color={cat === 'xid' || cat === 'gsp' ? 'var(--warn)' : 'var(--text-dim)'}>
+                {cat} : <b>{n}</b>
+              </span>
+            {/each}
+          </div>
+        {/if}
+        {#if nvrmTailData?.entries && nvrmTailData.entries.length === 0}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.nvrmtail.no_entries")}</p>
+        {/if}
+        {#if nvrmTailData?.entries && nvrmTailData.entries.length > 0}
+          <table style="width:100%; font-size:0.82em; border-collapse: collapse;
+                         margin-top: 6px; font-family: monospace;">
+            <tbody>
+              {#each nvrmTailData.entries.slice(-30).reverse() as e}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 3px;"
+                      style:color={e.category === 'xid' || e.category === 'gsp' ? 'var(--warn)' :
+                                 e.category === 'rm_init' ? 'var(--ok)' :
+                                 'var(--text-dim)'}>{e.category}</td>
+                  <td style="padding: 3px; color: var(--text-dim);">{e.ts}</td>
+                  <td style="padding: 3px;">{e.body}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #28.4 NVLink health (UI sprint 19) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nvlink.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nvlink.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvlinkHealth}>{i18n.t("integrations.nvlink.refresh")}</button>
+          {#if nvlinkHealthData?.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={nvlinkHealthData.verdict.verdict === 'clean' ? 'var(--ok)' :
+                             nvlinkHealthData.verdict.verdict === 'link_down' ? 'var(--warn)' :
+                             nvlinkHealthData.verdict.verdict === 'crc_growth' ? 'var(--warn)' :
+                             nvlinkHealthData.verdict.verdict === 'replay_growth' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.nvlink.verdict")} : <b>{nvlinkHealthData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nvlinkHealthData && !nvlinkHealthData.supported}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.nvlink.unsupported")}</p>
+        {/if}
+        {#if nvlinkHealthData?.supported && nvlinkHealthData.verdict}
+          <p style="margin-top: 6px;">{nvlinkHealthData.verdict.reason}</p>
+          <div class="form-row" style="gap: 14px; margin-top: 4px; flex-wrap: wrap;">
+            <span class="kv">{i18n.t("integrations.nvlink.replay_delta")} : <b>{nvlinkHealthData.verdict.replay_delta ?? 0}</b></span>
+            <span class="kv">{i18n.t("integrations.nvlink.crc_delta")} : <b>{nvlinkHealthData.verdict.crc_delta ?? 0}</b></span>
+            <span class="kv">{i18n.t("integrations.nvlink.links_down")} : <b>{nvlinkHealthData.verdict.link_down_count ?? 0}</b></span>
+          </div>
+          {#if nvlinkHealthData.verdict.recommendation}
+            <p style="margin: 4px 0; color: var(--accent);">
+              {i18n.t("integrations.nvlink.fix")} : {nvlinkHealthData.verdict.recommendation}
+            </p>
+          {/if}
         {/if}
       </div>
 

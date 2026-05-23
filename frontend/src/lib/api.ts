@@ -1806,4 +1806,57 @@ export const api = {
         max_clk: number | null;
       }>;
     }>),
+
+  // ── R&D #28 (UI sprint 19) ─────────────────────────────────────────────
+  pcieRpmAuditStatus: () =>
+    fetch("/api/pcie-rpm-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      worst_verdict: string;
+      cards: Array<{
+        bdf: string;
+        control: string | null;
+        runtime_status: string | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+        udev_recipe: string;
+      }>;
+    }>),
+
+  thermalZonesStatus: () =>
+    fetch("/api/thermal-zones").then(jsonOf<{
+      ok: boolean;
+      zone_count: number;
+      summary: string;
+      gpu_thermal_throttle?: boolean;
+      category_counts?: Record<string, number>;
+      advice: string[];
+      zones: Array<{
+        name: string; type: string;
+        temp_mc: number; temp_c: number;
+        category: string;
+      }>;
+    }>),
+
+  nvrmTailStatus: () =>
+    fetch("/api/nvrm-tail").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      since?: string;
+      entry_count?: number;
+      category_counts?: Record<string, number>;
+      entries: Array<{ category: string; ts: string; body: string }>;
+    }>),
+
+  nvlinkHealthStatus: () =>
+    fetch("/api/nvlink-health").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      supported: boolean;
+      verdict: {
+        verdict: string; reason: string;
+        replay_delta?: number; crc_delta?: number;
+        link_down_count?: number; recommendation?: string;
+      };
+      statuses?: Record<string, Record<string, string>>;
+    }>),
 };
