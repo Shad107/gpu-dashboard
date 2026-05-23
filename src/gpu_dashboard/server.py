@@ -1262,6 +1262,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_tpm_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/wmi-vendor-audit":
+                # R&D #49.3 — WMI + vendor platform driver audit
+                code, body = api.handle_wmi_vendor_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
