@@ -842,6 +842,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_thermal_zones_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nvrm-tail":
+                # R&D #28.7 — kernel-NVRM / GSP / NvKms log tailer
+                code, body = api.handle_nvrm_tail_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
