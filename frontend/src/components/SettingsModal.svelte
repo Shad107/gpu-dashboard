@@ -2134,6 +2134,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #67 (UI sprint 58) ────────────────────────────────────────────
+  let efiEsrtAuditData         = $state<Awaited<ReturnType<typeof api.efiEsrtAuditStatus>>         | null>(null);
+  let vmallocinfoAuditData     = $state<Awaited<ReturnType<typeof api.vmallocinfoAuditStatus>>     | null>(null);
+  let fdinfoKindsAuditData     = $state<Awaited<ReturnType<typeof api.fdinfoKindsAuditStatus>>     | null>(null);
+  let timerListAuditData       = $state<Awaited<ReturnType<typeof api.timerListAuditStatus>>       | null>(null);
+  async function loadEfiEsrtAudit() {
+    try { efiEsrtAuditData = await api.efiEsrtAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadVmallocinfoAudit() {
+    try { vmallocinfoAuditData = await api.vmallocinfoAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFdinfoKindsAudit() {
+    try { fdinfoKindsAuditData = await api.fdinfoKindsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadTimerListAudit() {
+    try { timerListAuditData = await api.timerListAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2467,6 +2489,11 @@
       if (!spiFirmwareLoaderAuditData)  loadSpiFirmwareLoaderAudit();
       if (!procSyscallAuxvAuditData)    loadProcSyscallAuxvAudit();
       if (!btfBpfAuditData)             loadBtfBpfAudit();
+      // R&D #67 cards
+      if (!efiEsrtAuditData)            loadEfiEsrtAudit();
+      if (!vmallocinfoAuditData)        loadVmallocinfoAudit();
+      if (!fdinfoKindsAuditData)        loadFdinfoKindsAudit();
+      if (!timerListAuditData)          loadTimerListAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -11568,6 +11595,150 @@
                              border-radius: 4px; overflow-x: auto;">{btfBpfAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(btfBpfAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #67.1 UEFI ESRT (UI sprint 58) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.esrt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.esrt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadEfiEsrtAudit}>{i18n.t("integrations.esrt.refresh")}</button>
+          {#if efiEsrtAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={efiEsrtAuditData.verdict.verdict === 'last_capsule_failed' ? 'var(--err)' :
+                             efiEsrtAuditData.verdict.verdict === 'stale_firmware_components' ? 'var(--warn)' :
+                             ['no_esrt_support','esrt_empty'].includes(efiEsrtAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {efiEsrtAuditData.entry_count} entries · {i18n.t("integrations.esrt.verdict")} : <b>{efiEsrtAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if efiEsrtAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        efiEsrtAuditData.verdict.verdict === 'last_capsule_failed' ? 'var(--err)' :
+                        efiEsrtAuditData.verdict.verdict === 'stale_firmware_components' ? 'var(--warn)' :
+                        ['no_esrt_support','esrt_empty'].includes(efiEsrtAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{efiEsrtAuditData.verdict.reason}</p>
+            {#if efiEsrtAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.esrt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{efiEsrtAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(efiEsrtAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #67.3 vmallocinfo (UI sprint 58) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vmallocinfo.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vmallocinfo.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVmallocinfoAudit}>{i18n.t("integrations.vmallocinfo.refresh")}</button>
+          {#if vmallocinfoAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={vmallocinfoAuditData.verdict.verdict === 'vmalloc_giant_alloc' ? 'var(--warn)' :
+                             vmallocinfoAuditData.verdict.verdict === 'vmalloc_fragmentation' ? 'var(--warn)' :
+                             vmallocinfoAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {vmallocinfoAuditData.alloc_count} allocs · {i18n.t("integrations.vmallocinfo.verdict")} : <b>{vmallocinfoAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vmallocinfoAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['vmalloc_giant_alloc','vmalloc_fragmentation'].includes(vmallocinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                        vmallocinfoAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{vmallocinfoAuditData.verdict.reason}</p>
+            {#if vmallocinfoAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.vmallocinfo.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{vmallocinfoAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(vmallocinfoAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #67.2 fdinfo anon_inode kinds (UI sprint 58) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fdinfokinds.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fdinfokinds.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFdinfoKindsAudit}>{i18n.t("integrations.fdinfokinds.refresh")}</button>
+          {#if fdinfoKindsAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={fdinfoKindsAuditData.verdict.verdict === 'io_uring_in_unprivileged_proc' ? 'var(--warn)' :
+                             ['epoll_watch_runaway','eventfd_leak'].includes(fdinfoKindsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             fdinfoKindsAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {fdinfoKindsAuditData.pids_with_anon}/{fdinfoKindsAuditData.pid_count} PIDs · {i18n.t("integrations.fdinfokinds.verdict")} : <b>{fdinfoKindsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fdinfoKindsAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['io_uring_in_unprivileged_proc','epoll_watch_runaway','eventfd_leak'].includes(fdinfoKindsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        fdinfoKindsAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{fdinfoKindsAuditData.verdict.reason}</p>
+            {#if fdinfoKindsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fdinfokinds.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{fdinfoKindsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(fdinfoKindsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #67.4 /proc/timer_list hrtimers (UI sprint 58) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.timerlist.title")}</h4>
+        <p class="muted">{i18n.t("integrations.timerlist.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTimerListAudit}>{i18n.t("integrations.timerlist.refresh")}</button>
+          {#if timerListAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['nohz_disabled_on_idle_cpu','broadcast_device_missing','hrtimer_runaway'].includes(timerListAuditData.verdict.verdict) ? 'var(--warn)' :
+                             timerListAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {timerListAuditData.clocksource_current ?? '?'} · {i18n.t("integrations.timerlist.verdict")} : <b>{timerListAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if timerListAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['nohz_disabled_on_idle_cpu','broadcast_device_missing','hrtimer_runaway'].includes(timerListAuditData.verdict.verdict) ? 'var(--warn)' :
+                        timerListAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{timerListAuditData.verdict.reason}</p>
+            {#if timerListAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.timerlist.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{timerListAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(timerListAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

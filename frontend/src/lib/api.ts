@@ -4006,4 +4006,68 @@ export const api = {
                      entries: number | null };
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #67 (UI sprint 58) ──
+  efiEsrtAuditStatus: () =>
+    fetch("/api/efi-esrt-audit").then(jsonOf<{
+      ok: boolean;
+      efi_present: boolean;
+      esrt_present: boolean;
+      fw_resource_count: number | null;
+      fw_resource_count_max: number | null;
+      fw_resource_version: number | null;
+      entry_count: number;
+      entries_sample: Array<{
+        id: string;
+        fw_class: string | null;
+        fw_type: number | null;
+        fw_version: number | null;
+        lowest_supported_fw_version: number | null;
+        capsule_flags: number | null;
+        last_attempt_status: number | null;
+        last_attempt_version: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  vmallocinfoAuditStatus: () =>
+    fetch("/api/vmallocinfo-audit").then(jsonOf<{
+      ok: boolean;
+      file_present: boolean;
+      permission_denied: boolean;
+      alloc_count: number;
+      total_bytes: number;
+      by_kind: Record<string, number>;
+      top_callers: Array<{ caller: string; bytes: number }>;
+      largest: { size: number; caller: string; kind: string } | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  fdinfoKindsAuditStatus: () =>
+    fetch("/api/fdinfo-kinds-audit").then(jsonOf<{
+      ok: boolean;
+      pid_count: number;
+      pids_with_anon: number;
+      fdinfo_readable: number;
+      all_kinds: Record<string, number>;
+      iouring_in_nonroot: string[];
+      eventfd_offenders: Array<{ pid: string; count: number }>;
+      epoll_offenders: Array<{ pid: string; watches: number }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  timerListAuditStatus: () =>
+    fetch("/api/timer-list-audit").then(jsonOf<{
+      ok: boolean;
+      timer_list_present: boolean;
+      timer_list_permission_denied: boolean;
+      active_hrtimers: number;
+      broadcast_device_seen: boolean;
+      tick_stopped_zero_count: number;
+      cpus_seen: number;
+      timer_stats_present: boolean;
+      clocksource_current: string | null;
+      clocksource_available: string[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
