@@ -2051,4 +2051,66 @@ export const api = {
         fans: Array<{ channel: number; label: string | null; rpm: number | null }>;
       }>;
     }>),
+
+  // ── R&D #32 (UI sprint 23) ─────────────────────────────────────────────
+  vmSysctlStatus: () =>
+    fetch("/api/vm-sysctl").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      row_count?: number;
+      worst_severity?: string;
+      flagged_count?: number;
+      recipe?: string;
+      rows?: Array<{
+        name: string; value: number | null; severity: string;
+        reason: string; recommended: number | null;
+      }>;
+    }>),
+
+  psiPressureStatus: () =>
+    fetch("/api/psi-pressure").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      worst_verdict?: string;
+      resources?: Array<{
+        resource: string;
+        psi: {
+          some?: { avg10: number; avg60: number; avg300: number; total_us: number };
+          full?: { avg10: number; avg60: number; avg300: number; total_us: number };
+        };
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  procWchanStatus: () =>
+    fetch("/api/proc-wchan").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        state: string | null; wchan: string | null;
+        stack: string[] | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  cgroupMemcapStatus: () =>
+    fetch("/api/cgroup-memcap").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        cgroup_path: string | null;
+        memory_max: number | null;
+        memory_high: number | null;
+        memory_current: number | null;
+        memory_swap_current: number | null;
+        events: Record<string, number>;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
 };

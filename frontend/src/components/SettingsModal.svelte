@@ -1399,6 +1399,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #32 (UI sprint 23) ────────────────────────────────────────────
+  let vmSysctlData     = $state<Awaited<ReturnType<typeof api.vmSysctlStatus>>     | null>(null);
+  let psiPressureData  = $state<Awaited<ReturnType<typeof api.psiPressureStatus>>  | null>(null);
+  let procWchanData    = $state<Awaited<ReturnType<typeof api.procWchanStatus>>    | null>(null);
+  let cgroupMemcapData = $state<Awaited<ReturnType<typeof api.cgroupMemcapStatus>> | null>(null);
+  async function loadVmSysctl() {
+    try { vmSysctlData = await api.vmSysctlStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPsiPressure() {
+    try { psiPressureData = await api.psiPressureStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcWchan() {
+    try { procWchanData = await api.procWchanStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCgroupMemcap() {
+    try { cgroupMemcapData = await api.cgroupMemcapStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1564,6 +1586,11 @@
       if (!cpuTopologyData)    loadCpuTopology();
       if (!procSmapsData)      loadProcSmaps();
       if (!hwmonInventoryData) loadHwmonInventory();
+      // R&D #32 cards
+      if (!vmSysctlData)       loadVmSysctl();
+      if (!psiPressureData)    loadPsiPressure();
+      if (!procWchanData)      loadProcWchan();
+      if (!cgroupMemcapData)   loadCgroupMemcap();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6108,6 +6135,226 @@
                                border-radius: 4px; overflow-x: auto;">{c.verdict.recommendation}</pre>
                   <button class="btn btn-small"
                           onclick={() => copyToClipboard(c.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #32.4 VM sysctl audit (UI sprint 23) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vmsysctl.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vmsysctl.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVmSysctl}>{i18n.t("integrations.vmsysctl.refresh")}</button>
+          {#if vmSysctlData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={vmSysctlData.worst_severity === 'warn' ? 'var(--warn)' :
+                             vmSysctlData.worst_severity === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.vmsysctl.severity")} : <b>{vmSysctlData.worst_severity}</b>
+              · <b>{vmSysctlData.flagged_count}</b> {i18n.t("integrations.vmsysctl.flagged")}
+            </span>
+          {/if}
+        </div>
+        {#if vmSysctlData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.vmsysctl.unavailable")}</p>
+        {/if}
+        {#if vmSysctlData?.rows && vmSysctlData.rows.length > 0}
+          {#each vmSysctlData.rows as r}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          r.severity === 'warn' ? 'var(--warn)' :
+                          r.severity === 'unknown' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">vm.{r.name}</b>
+                <span class="kv">current : <b>{r.value ?? '—'}</b></span>
+                {#if r.recommended !== null}
+                  <span class="kv">recommended : <b>{r.recommended}</b></span>
+                {/if}
+                <span class="kv"><b>{r.severity}</b></span>
+              </div>
+              <p class="muted" style="margin: 4px 0;">{r.reason}</p>
+            </div>
+          {/each}
+        {/if}
+        {#if vmSysctlData?.recipe}
+          <details style="margin-top: 8px;">
+            <summary class="muted">{i18n.t("integrations.vmsysctl.recipe")}</summary>
+            <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                         border-radius: 4px; overflow-x: auto;">{vmSysctlData.recipe}</pre>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(vmSysctlData!.recipe!)}>📋 Copy</button>
+          </details>
+        {/if}
+      </div>
+
+      <!-- R&D #32.1 PSI pressure-stall correlator (UI sprint 23) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.psi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.psi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPsiPressure}>{i18n.t("integrations.psi.refresh")}</button>
+          {#if psiPressureData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={psiPressureData.worst_verdict === 'throttled' ? 'var(--warn)' :
+                             psiPressureData.worst_verdict === 'elevated' ? 'var(--warn)' :
+                             psiPressureData.worst_verdict === 'missing' ? 'var(--text-dim)' :
+                             'var(--accent)'}>
+              {i18n.t("integrations.psi.verdict")} : <b>{psiPressureData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if psiPressureData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.psi.unavailable")}</p>
+        {/if}
+        {#if psiPressureData?.resources && psiPressureData.resources.length > 0}
+          {#each psiPressureData.resources as r}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          r.verdict.verdict === 'throttled' ||
+                          r.verdict.verdict === 'elevated' ? 'var(--warn)' :
+                          r.verdict.verdict === 'missing' ? 'var(--text-dim)' :
+                          'var(--accent)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{r.resource}</b>
+                {#if r.psi.some}
+                  <span class="kv">{i18n.t("integrations.psi.some")} :
+                    <b>{r.psi.some.avg10.toFixed(2)}%</b>
+                  </span>
+                {/if}
+                {#if r.psi.full}
+                  <span class="kv">{i18n.t("integrations.psi.full")} :
+                    <b>{r.psi.full.avg10.toFixed(2)}%</b>
+                  </span>
+                {/if}
+                <span class="kv"><b>{r.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{r.verdict.reason}</p>
+              {#if r.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.psi.recommend")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{r.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(r.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #32.3 wchan + stack stuck debugger (UI sprint 23) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wchan.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wchan.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcWchan}>{i18n.t("integrations.wchan.refresh")}</button>
+          {#if procWchanData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['mem_pressure','page_cache_wait','io_bound','blocked'].includes(procWchanData.worst_verdict) ? 'var(--warn)' :
+                             procWchanData.worst_verdict === 'zombie' ? 'var(--warn)' :
+                             procWchanData.worst_verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procWchanData.process_count} procs · {i18n.t("integrations.wchan.verdict")} : <b>{procWchanData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procWchanData?.worst_verdict === 'no_llm_procs'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.wchan.no_procs")}</p>
+        {/if}
+        {#if procWchanData?.processes && procWchanData.processes.length > 0}
+          {#each procWchanData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          ['mem_pressure','page_cache_wait','io_bound','blocked','zombie'].includes(p.verdict.verdict) ? 'var(--warn)' :
+                          p.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{p.comm}</b>
+                <span class="kv">pid <b>{p.pid}</b></span>
+                <span class="kv">{i18n.t("integrations.wchan.state")} : <b>{p.state ?? '—'}</b></span>
+                <span class="kv">{i18n.t("integrations.wchan.wchan")} : <b style="font-family: monospace;">{p.wchan ?? '—'}</b></span>
+                <span class="kv"><b>{p.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{p.verdict.reason}</p>
+              {#if p.stack && p.stack.length > 0}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.wchan.stack")} ({p.stack.length} frames)</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.stack.join('\n')}</pre>
+                </details>
+              {/if}
+              {#if p.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.wchan.recommend")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(p.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #32.5 cgroup memory-cap scanner (UI sprint 23) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cgmemcap.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cgmemcap.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupMemcap}>{i18n.t("integrations.cgmemcap.refresh")}</button>
+          {#if cgroupMemcapData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['oom_killed','oom_capped','capped_below_model'].includes(cgroupMemcapData.worst_verdict) ? 'var(--warn)' :
+                             ['swap_active','memory_high_throttle','capped_tight'].includes(cgroupMemcapData.worst_verdict) ? 'var(--warn)' :
+                             cgroupMemcapData.worst_verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cgroupMemcapData.process_count} procs · {i18n.t("integrations.cgmemcap.verdict")} : <b>{cgroupMemcapData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupMemcapData?.worst_verdict === 'no_llm_procs'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.cgmemcap.no_procs")}</p>
+        {/if}
+        {#if cgroupMemcapData?.processes && cgroupMemcapData.processes.length > 0}
+          {#each cgroupMemcapData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          ['oom_killed','oom_capped','capped_below_model','swap_active','memory_high_throttle','capped_tight'].includes(p.verdict.verdict) ? 'var(--warn)' :
+                          p.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{p.comm}</b>
+                <span class="kv">pid <b>{p.pid}</b></span>
+                <span class="kv">{i18n.t("integrations.cgmemcap.max")} :
+                  <b>{p.memory_max === null ? '—' :
+                       p.memory_max >= 9_000_000_000_000_000_000 ? 'max' :
+                       (p.memory_max / 1024**3).toFixed(1) + ' GiB'}</b>
+                </span>
+                <span class="kv">{i18n.t("integrations.cgmemcap.current")} :
+                  <b>{p.memory_current === null ? '—' : (p.memory_current / 1024**3).toFixed(1) + ' GiB'}</b>
+                </span>
+                {#if p.memory_swap_current && p.memory_swap_current > 0}
+                  <span class="kv" style:color="var(--warn)">
+                    {i18n.t("integrations.cgmemcap.swap")} :
+                    <b>{(p.memory_swap_current / 1024**2).toFixed(0)} MiB</b>
+                  </span>
+                {/if}
+                <span class="kv"><b>{p.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{p.verdict.reason}</p>
+              {#if p.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.cgmemcap.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(p.verdict.recommendation)}>📋 Copy</button>
                 </details>
               {/if}
             </div>
