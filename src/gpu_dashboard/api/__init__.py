@@ -351,3 +351,4 @@ from .cpu_boost import handle_cpu_boost_status  # noqa: F401,F811
 from .net_sysctl_audit import handle_net_sysctl_status  # noqa: F401,F811
 from .smt_audit import handle_smt_audit_status  # noqa: F401,F811
 from .numa_placement import handle_numa_placement_status  # noqa: F401,F811
+from .kernel_taint import handle_kernel_taint_status  # noqa: F401,F811
