@@ -857,6 +857,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_kmod_params_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/thermal-slowdown-kind":
+                # R&D #29.7 — HW vs SW thermal slowdown distinguisher
+                code, body = api.handle_thermal_slowdown_kind_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
