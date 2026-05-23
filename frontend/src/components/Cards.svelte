@@ -355,7 +355,10 @@
     {#if d?.watchdog?.available && layout.visible("oculink")}
       <div class="card">
         <h2>{i18n.t("card.oculink")}</h2>
-        <div class="big" class:warn={d.watchdog.drops > 0} class:ok={d.watchdog.drops === 0}>
+        {#if !alive}
+          <div class="sub bad" style="font-weight:600;margin-bottom:.2em">⚠ {i18n.t("oculink.link_lost")}</div>
+        {/if}
+        <div class="big" class:bad={!alive} class:warn={alive && d.watchdog.drops > 0} class:ok={alive && d.watchdog.drops === 0}>
           {d.watchdog.last_uptime}
         </div>
         <div class="sub">{d.watchdog.drops} {i18n.t("oculink.drops")}</div>
