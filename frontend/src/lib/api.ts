@@ -2355,4 +2355,66 @@ export const api = {
       }>;
       verdict?: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #37 (UI sprint 28) + PAM limits (bonus) ──────────────────────
+  cpuVulnsStatus: () =>
+    fetch("/api/cpu-vulns").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      vulnerability_count?: number;
+      counts?: { not_affected: number; mitigated: number;
+                  vulnerable: number; unknown: number };
+      rows?: Array<{ name: string; state: string; detail: string;
+                      raw: string }>;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  hwWatchdogStatus: () =>
+    fetch("/api/hw-watchdog").then(jsonOf<{
+      ok: boolean;
+      watchdog_count: number;
+      watchdogs: Array<{
+        watchdog: string; identity: string;
+        timeout: number | null; bootstatus: number | null;
+        nowayout: number | null; state: string | null;
+        pretimeout: number | null; status: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  gpuCpuAffinityStatus: () =>
+    fetch("/api/gpu-cpu-affinity").then(jsonOf<{
+      ok: boolean;
+      gpu_count: number;
+      total_cpus: number;
+      cards: Array<{
+        gpu_bdf: string; local_cpulist: string | null;
+        local_cpus_count: number; numa_node: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  cacheTopologyStatus: () =>
+    fetch("/api/cache-topology").then(jsonOf<{
+      ok: boolean;
+      total_cpus: number;
+      l3_island_count: number;
+      islands: Array<{
+        cpu_list: string; cpus: number[];
+        size_bytes: number | null; size_mb: number;
+      }>;
+      l1d_kb: number | null;
+      l2_kb: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  limitsAuditStatus: () =>
+    fetch("/api/limits-audit").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      files?: string[];
+      memlock_rules?: Array<{ domain: string; type: string;
+                                item: string; value: string }>;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

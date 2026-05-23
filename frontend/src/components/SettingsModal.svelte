@@ -1509,6 +1509,33 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #37 (UI sprint 28) + PAM limits (bonus) ──────────────────────
+  let cpuVulnsData       = $state<Awaited<ReturnType<typeof api.cpuVulnsStatus>>       | null>(null);
+  let hwWatchdogData     = $state<Awaited<ReturnType<typeof api.hwWatchdogStatus>>     | null>(null);
+  let gpuCpuAffinityData = $state<Awaited<ReturnType<typeof api.gpuCpuAffinityStatus>> | null>(null);
+  let cacheTopologyData  = $state<Awaited<ReturnType<typeof api.cacheTopologyStatus>>  | null>(null);
+  let limitsAuditData    = $state<Awaited<ReturnType<typeof api.limitsAuditStatus>>    | null>(null);
+  async function loadCpuVulns() {
+    try { cpuVulnsData = await api.cpuVulnsStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadHwWatchdog() {
+    try { hwWatchdogData = await api.hwWatchdogStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadGpuCpuAffinity() {
+    try { gpuCpuAffinityData = await api.gpuCpuAffinityStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCacheTopology() {
+    try { cacheTopologyData = await api.cacheTopologyStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadLimitsAudit() {
+    try { limitsAuditData = await api.limitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1699,6 +1726,12 @@
       if (!cpuMicrocodeData)   loadCpuMicrocode();
       if (!hwpEppData)         loadHwpEpp();
       if (!cpuidleData)        loadCpuidle();
+      // R&D #37 cards + PAM limits bonus
+      if (!cpuVulnsData)       loadCpuVulns();
+      if (!hwWatchdogData)     loadHwWatchdog();
+      if (!gpuCpuAffinityData) loadGpuCpuAffinity();
+      if (!cacheTopologyData)  loadCacheTopology();
+      if (!limitsAuditData)    loadLimitsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6247,6 +6280,263 @@
               {/if}
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #37.1 CPU vulnerabilities mitigation cost (UI sprint 28) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cpvulns.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cpvulns.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuVulns}>{i18n.t("integrations.cpvulns.refresh")}</button>
+          {#if cpuVulnsData?.ok && cpuVulnsData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuVulnsData.verdict.verdict === 'vulnerable' ? 'var(--warn)' :
+                             cpuVulnsData.verdict.verdict === 'mitigated' ? 'var(--accent)' :
+                             cpuVulnsData.verdict.verdict === 'clean' ? 'var(--text-dim)' :
+                             'var(--text-dim)'}>
+              {cpuVulnsData.vulnerability_count} vulns · {i18n.t("integrations.cpvulns.verdict")} : <b>{cpuVulnsData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuVulnsData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.cpvulns.unavailable")}</p>
+        {/if}
+        {#if cpuVulnsData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuVulnsData.verdict?.verdict === 'vulnerable' ? 'var(--warn)' :
+                        cpuVulnsData.verdict?.verdict === 'mitigated' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if cpuVulnsData.counts}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <span class="kv">not_affected: <b>{cpuVulnsData.counts.not_affected}</b></span>
+                <span class="kv">mitigated: <b>{cpuVulnsData.counts.mitigated}</b></span>
+                {#if cpuVulnsData.counts.vulnerable > 0}
+                  <span class="kv" style:color="var(--warn)">vulnerable: <b>{cpuVulnsData.counts.vulnerable}</b></span>
+                {:else}
+                  <span class="kv">vulnerable: <b>0</b></span>
+                {/if}
+              </div>
+            {/if}
+            <p style="margin: 4px 0;">{cpuVulnsData.verdict?.reason}</p>
+            {#if cpuVulnsData.rows && cpuVulnsData.rows.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{cpuVulnsData.rows.length} entries</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each cpuVulnsData.rows as r}
+                    <li style:color={r.state === 'vulnerable' ? 'var(--warn)' :
+                                       r.state === 'mitigated' ? 'var(--accent)' :
+                                       ''}>
+                      <span style="font-family: monospace;">{r.name}</span>:
+                      <b>{r.state}</b>
+                      {#if r.detail}<span class="muted"> — {r.detail.substring(0, 100)}</span>{/if}
+                    </li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            {#if cpuVulnsData.verdict?.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cpvulns.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuVulnsData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuVulnsData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #37.3 Hardware watchdog (UI sprint 28) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wdog.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wdog.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHwWatchdog}>{i18n.t("integrations.wdog.refresh")}</button>
+          {#if hwWatchdogData?.ok && hwWatchdogData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={hwWatchdogData.verdict.verdict === 'bootstatus_set' ? 'var(--warn)' :
+                             ['unpinged','unknown'].includes(hwWatchdogData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {hwWatchdogData.watchdog_count} watchdogs · {i18n.t("integrations.wdog.verdict")} : <b>{hwWatchdogData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hwWatchdogData?.ok && hwWatchdogData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        hwWatchdogData.verdict.verdict === 'bootstatus_set' ? 'var(--warn)' :
+                        ['unpinged','unknown'].includes(hwWatchdogData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if hwWatchdogData.watchdogs && hwWatchdogData.watchdogs.length > 0}
+              {#each hwWatchdogData.watchdogs as w}
+                <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                  <b style="font-family: monospace;">{w.watchdog}</b>
+                  <span class="kv">{i18n.t("integrations.wdog.identity")} : <b>{w.identity}</b></span>
+                  {#if w.timeout !== null}
+                    <span class="kv">{i18n.t("integrations.wdog.timeout")} : <b>{w.timeout}s</b></span>
+                  {/if}
+                  {#if w.bootstatus !== null && w.bootstatus > 0}
+                    <span class="kv" style:color="var(--warn)">bootstatus : <b>{w.bootstatus}</b></span>
+                  {/if}
+                </div>
+              {/each}
+            {/if}
+            <p style="margin: 4px 0;">{hwWatchdogData.verdict.reason}</p>
+            {#if hwWatchdogData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.wdog.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{hwWatchdogData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(hwWatchdogData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #37.2 GPU↔CPU affinity (UI sprint 28) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.gpuaff.title")}</h4>
+        <p class="muted">{i18n.t("integrations.gpuaff.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadGpuCpuAffinity}>{i18n.t("integrations.gpuaff.refresh")}</button>
+          {#if gpuCpuAffinityData?.ok && gpuCpuAffinityData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={gpuCpuAffinityData.verdict.verdict === 'constrained_affinity' ? 'var(--warn)' :
+                             ['unset','unknown'].includes(gpuCpuAffinityData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {gpuCpuAffinityData.gpu_count} GPUs · {i18n.t("integrations.gpuaff.verdict")} : <b>{gpuCpuAffinityData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if gpuCpuAffinityData?.ok && gpuCpuAffinityData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        gpuCpuAffinityData.verdict.verdict === 'constrained_affinity' ? 'var(--warn)' :
+                        ['unset','unknown'].includes(gpuCpuAffinityData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#each gpuCpuAffinityData.cards as c}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{c.gpu_bdf}</b>
+                <span class="kv">{i18n.t("integrations.gpuaff.local")} :
+                  <b style="font-family: monospace;">{c.local_cpulist ?? '—'}</b>
+                  ({c.local_cpus_count}/{gpuCpuAffinityData.total_cpus})
+                </span>
+                <span class="kv">{i18n.t("integrations.gpuaff.numa")} : <b>{c.numa_node ?? '—'}</b></span>
+              </div>
+            {/each}
+            <p style="margin: 4px 0;">{gpuCpuAffinityData.verdict.reason}</p>
+            {#if gpuCpuAffinityData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.gpuaff.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{gpuCpuAffinityData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(gpuCpuAffinityData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #37.4 L3 cache topology (UI sprint 28) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cache.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cache.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCacheTopology}>{i18n.t("integrations.cache.refresh")}</button>
+          {#if cacheTopologyData?.ok && cacheTopologyData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cacheTopologyData.verdict.verdict === 'multi_l3_islands' ? 'var(--warn)' :
+                             cacheTopologyData.verdict.verdict === 'no_l3' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cacheTopologyData.l3_island_count} {i18n.t("integrations.cache.islands")} · <b>{cacheTopologyData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cacheTopologyData?.ok && cacheTopologyData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cacheTopologyData.verdict.verdict === 'multi_l3_islands' ? 'var(--warn)' :
+                        cacheTopologyData.verdict.verdict === 'no_l3' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              {#each cacheTopologyData.islands as isl}
+                <span class="kv">L3 {isl.cpu_list} : <b>{isl.size_mb} MiB</b></span>
+              {/each}
+              {#if cacheTopologyData.l1d_kb}
+                <span class="kv">{i18n.t("integrations.cache.l1d")} : <b>{cacheTopologyData.l1d_kb} KiB</b></span>
+              {/if}
+              {#if cacheTopologyData.l2_kb}
+                <span class="kv">{i18n.t("integrations.cache.l2")} : <b>{cacheTopologyData.l2_kb} KiB</b></span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{cacheTopologyData.verdict.reason}</p>
+            {#if cacheTopologyData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cache.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cacheTopologyData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cacheTopologyData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- PAM memlock audit (bonus — UI sprint 28) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pam.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pam.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLimitsAudit}>{i18n.t("integrations.pam.refresh")}</button>
+          {#if limitsAuditData?.ok && limitsAuditData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['explicit_low','default'].includes(limitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             limitsAuditData.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.pam.verdict")} : <b>{limitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if limitsAuditData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.pam.unavailable")}</p>
+        {/if}
+        {#if limitsAuditData?.ok && limitsAuditData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['explicit_low','default'].includes(limitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        limitsAuditData.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if limitsAuditData.files && limitsAuditData.files.length > 0}
+              <span class="kv muted">{i18n.t("integrations.pam.files")} : {limitsAuditData.files.join(', ')}</span>
+            {/if}
+            <p style="margin: 4px 0;">{limitsAuditData.verdict.reason}</p>
+            {#if limitsAuditData.memlock_rules && limitsAuditData.memlock_rules.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{limitsAuditData.memlock_rules.length} memlock rules</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each limitsAuditData.memlock_rules as r}
+                    <li><span style="font-family: monospace;">{r.domain} {r.type} {r.item} {r.value}</span></li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            {#if limitsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pam.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{limitsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(limitsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
         {/if}
       </div>
 
