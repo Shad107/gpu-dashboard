@@ -437,3 +437,4 @@ from .wakeup_sources_audit import handle_wakeup_sources_audit_status  # noqa: F4
 from .livepatch_audit import handle_livepatch_audit_status  # noqa: F401,F811
 from .backlight_pwm_audit import handle_backlight_pwm_audit_status  # noqa: F401,F811
 from .loadavg_pressure_audit import handle_loadavg_pressure_audit_status  # noqa: F401,F811
+from .pagetypeinfo_audit import handle_pagetypeinfo_audit_status  # noqa: F401,F811

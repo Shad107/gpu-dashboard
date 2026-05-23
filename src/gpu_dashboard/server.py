@@ -1422,6 +1422,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_loadavg_pressure_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pagetypeinfo-audit":
+                # R&D #57.2 — buddy allocator fragmentation
+                code, body = api.handle_pagetypeinfo_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
