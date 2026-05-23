@@ -847,6 +847,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_nvrm_tail_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nvlink-health":
+                # R&D #28.4 — NVLink CRC / replay error tracker
+                code, body = api.handle_nvlink_health_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
