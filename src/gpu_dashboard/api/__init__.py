@@ -332,3 +332,4 @@ from .nvme_iosched import handle_nvme_iosched_status  # noqa: F401,F811
 from .iommu_groups import handle_iommu_groups_status  # noqa: F401,F811
 from .msi_inventory import handle_msi_inventory_status  # noqa: F401,F811
 from .oom_priority import handle_oom_priority_status  # noqa: F401,F811
+from .cpu_topology import handle_cpu_topology_status  # noqa: F401,F811
