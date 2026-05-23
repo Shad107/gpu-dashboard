@@ -459,3 +459,4 @@ from .ptp_clock_audit import handle_ptp_clock_audit_status  # noqa: F401,F811
 from .mei_hdcp_pxp_audit import handle_mei_hdcp_pxp_audit_status  # noqa: F401,F811
 from .firmware_edd_mmc_audit import handle_firmware_edd_mmc_audit_status  # noqa: F401,F811
 from .devlink_smartnic_audit import handle_devlink_smartnic_audit_status  # noqa: F401,F811
+from .proc_ns_mountinfo_audit import handle_proc_ns_mountinfo_audit_status  # noqa: F401,F811
