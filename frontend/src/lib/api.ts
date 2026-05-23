@@ -3332,4 +3332,72 @@ export const api = {
       };
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #54 (UI sprint 45) ──
+  swapTunablesAuditStatus: () =>
+    fetch("/api/swap-tunables-audit").then(jsonOf<{
+      ok: boolean;
+      vm_knobs: {
+        available: boolean;
+        swappiness?: number | null;
+        "page-cluster"?: number | null;
+        watermark_scale_factor?: number | null;
+        watermark_boost_factor?: number | null;
+        min_free_kbytes?: number | null;
+        extfrag_threshold?: number | null;
+      };
+      swap_mm: { available: boolean; vma_ra_enabled?: string | null };
+      swaps: Array<{ path: string; type: string;
+                       size_kib: number | null;
+                       used_kib: number | null;
+                       device: string | null;
+                       rotational: number | null }>;
+      zram_active: string[];
+      gpu_present: boolean;
+      mem_total_kib: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  hugepagesAuditStatus: () =>
+    fetch("/api/hugepages-audit").then(jsonOf<{
+      ok: boolean;
+      pools: Array<{
+        size_kb: number; nr: number | null; free: number | null;
+        surplus: number | null; resv: number | null;
+        nr_overcommit: number | null;
+      }>;
+      per_node: Record<string, Record<string, number>>;
+      meminfo: Record<string, number>;
+      vm_nr_hugepages: number | null;
+      vm_nr_overcommit_hugepages: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  kvmMiscAuditStatus: () =>
+    fetch("/api/kvm-misc-audit").then(jsonOf<{
+      ok: boolean;
+      kvm_module_present: boolean;
+      kvm_variant: string | null;
+      nested: string | null;
+      kvm_params: { halt_poll_ns?: number | null;
+                     kvmclock_periodic_sync?: string | null;
+                     tdp_mmu?: string | null };
+      vfio_pci_loaded: boolean;
+      dev_kvm: { present: boolean; mode?: number;
+                   uid?: number; gid?: number;
+                   group_name?: string | null };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  ioUringRuntimeAuditStatus: () =>
+    fetch("/api/io-uring-runtime-audit").then(jsonOf<{
+      ok: boolean;
+      kernel_release: string;
+      io_uring_disabled: number | null;
+      io_uring_group: number | null;
+      sysctl_present: boolean;
+      debugfs_present: boolean;
+      debugfs_readable: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

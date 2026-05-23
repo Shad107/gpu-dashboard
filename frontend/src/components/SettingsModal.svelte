@@ -1878,6 +1878,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #54 (UI sprint 45) ────────────────────────────────────────────
+  let swapTunablesAuditData      = $state<Awaited<ReturnType<typeof api.swapTunablesAuditStatus>>      | null>(null);
+  let hugepagesAuditData         = $state<Awaited<ReturnType<typeof api.hugepagesAuditStatus>>         | null>(null);
+  let kvmMiscAuditData           = $state<Awaited<ReturnType<typeof api.kvmMiscAuditStatus>>           | null>(null);
+  let ioUringRuntimeAuditData    = $state<Awaited<ReturnType<typeof api.ioUringRuntimeAuditStatus>>    | null>(null);
+  async function loadSwapTunablesAudit() {
+    try { swapTunablesAuditData = await api.swapTunablesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadHugepagesAudit() {
+    try { hugepagesAuditData = await api.hugepagesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKvmMiscAudit() {
+    try { kvmMiscAuditData = await api.kvmMiscAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIoUringRuntimeAudit() {
+    try { ioUringRuntimeAuditData = await api.ioUringRuntimeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2152,6 +2174,11 @@
       if (!cpuVulnerabilitiesAuditData) loadCpuVulnerabilitiesAudit();
       if (!imaIntegrityAuditData)       loadImaIntegrityAudit();
       if (!raplPowerCapAuditData)       loadRaplPowerCapAudit();
+      // R&D #54 cards
+      if (!swapTunablesAuditData)       loadSwapTunablesAudit();
+      if (!hugepagesAuditData)          loadHugepagesAudit();
+      if (!kvmMiscAuditData)            loadKvmMiscAudit();
+      if (!ioUringRuntimeAuditData)     loadIoUringRuntimeAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -9328,6 +9355,186 @@
                              border-radius: 4px; overflow-x: auto;">{raplPowerCapAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(raplPowerCapAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #54.2 Swap tunables (UI sprint 45) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.swaptun.title")}</h4>
+        <p class="muted">{i18n.t("integrations.swaptun.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSwapTunablesAudit}>{i18n.t("integrations.swaptun.refresh")}</button>
+          {#if swapTunablesAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['swap_on_hdd','high_swappiness_with_gpu'].includes(swapTunablesAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['tiny_min_free','page_cluster_default_on_zram'].includes(swapTunablesAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.swaptun.verdict")} : <b>{swapTunablesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if swapTunablesAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['swap_on_hdd','high_swappiness_with_gpu'].includes(swapTunablesAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['tiny_min_free','page_cluster_default_on_zram'].includes(swapTunablesAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">vm knobs + swap devices</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                <li>swappiness=<b>{swapTunablesAuditData.vm_knobs.swappiness ?? '?'}</b>
+                  · page-cluster=<b>{swapTunablesAuditData.vm_knobs["page-cluster"] ?? '?'}</b>
+                  · min_free_kbytes={swapTunablesAuditData.vm_knobs.min_free_kbytes ?? '?'}
+                </li>
+                <li>GPU present: {swapTunablesAuditData.gpu_present ? 'yes' : 'no'}
+                  · zram active: {swapTunablesAuditData.zram_active.length ? swapTunablesAuditData.zram_active.join(',') : 'none'}
+                </li>
+                {#each swapTunablesAuditData.swaps as s}
+                  <li>{s.path} ({s.type}): device={s.device ?? '?'} rotational={s.rotational ?? '?'}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{swapTunablesAuditData.verdict.reason}</p>
+            {#if swapTunablesAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.swaptun.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{swapTunablesAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(swapTunablesAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #54.1 Hugepages (UI sprint 45) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.hugep.title")}</h4>
+        <p class="muted">{i18n.t("integrations.hugep.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHugepagesAudit}>{i18n.t("integrations.hugep.refresh")}</button>
+          {#if hugepagesAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['reserved_unused','exhausted'].includes(hugepagesAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['numa_imbalance','overcommit_disabled'].includes(hugepagesAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.hugep.verdict")} : <b>{hugepagesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hugepagesAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['reserved_unused','exhausted'].includes(hugepagesAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['numa_imbalance','overcommit_disabled'].includes(hugepagesAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Pools</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each hugepagesAuditData.pools as p}
+                  <li>{p.size_kb} kB: nr={p.nr ?? '?'} free={p.free ?? '?'} resv={p.resv ?? '?'} overcommit={p.nr_overcommit ?? '?'}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{hugepagesAuditData.verdict.reason}</p>
+            {#if hugepagesAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.hugep.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{hugepagesAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(hugepagesAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #54.3 KVM misc (UI sprint 45) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kvm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kvm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKvmMiscAudit}>{i18n.t("integrations.kvm.refresh")}</button>
+          {#if kvmMiscAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['kvm_disabled','nested_on_with_passthrough'].includes(kvmMiscAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['halt_poll_excessive','group_perm_missing'].includes(kvmMiscAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.kvm.verdict")} : <b>{kvmMiscAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kvmMiscAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['kvm_disabled','nested_on_with_passthrough'].includes(kvmMiscAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['halt_poll_excessive','group_perm_missing'].includes(kvmMiscAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>kvm module: {kvmMiscAuditData.kvm_module_present ? 'loaded' : 'absent'}
+                · variant: {kvmMiscAuditData.kvm_variant ?? '?'}
+                · nested: {kvmMiscAuditData.nested ?? '?'}
+                · vfio_pci: {kvmMiscAuditData.vfio_pci_loaded ? 'yes' : 'no'}
+              </li>
+              <li>halt_poll_ns: {kvmMiscAuditData.kvm_params.halt_poll_ns ?? '?'}</li>
+              {#if kvmMiscAuditData.dev_kvm.present}
+                <li>/dev/kvm mode=0{(kvmMiscAuditData.dev_kvm.mode ?? 0).toString(8)} group={kvmMiscAuditData.dev_kvm.group_name ?? '?'}</li>
+              {/if}
+            </ul>
+            <p style="margin: 4px 0;">{kvmMiscAuditData.verdict.reason}</p>
+            {#if kvmMiscAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.kvm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{kvmMiscAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(kvmMiscAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #54.4 io_uring runtime (UI sprint 45) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.iouring.title")}</h4>
+        <p class="muted">{i18n.t("integrations.iouring.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIoUringRuntimeAudit}>{i18n.t("integrations.iouring.refresh")}</button>
+          {#if ioUringRuntimeAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['disabled_systemwide','kernel_pre_cve_fix'].includes(ioUringRuntimeAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['unrestricted_to_all_users','debugfs_locked_requires_root'].includes(ioUringRuntimeAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              kernel={ioUringRuntimeAuditData.kernel_release} · {i18n.t("integrations.iouring.verdict")} : <b>{ioUringRuntimeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ioUringRuntimeAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['disabled_systemwide','kernel_pre_cve_fix'].includes(ioUringRuntimeAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['unrestricted_to_all_users','debugfs_locked_requires_root'].includes(ioUringRuntimeAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>io_uring_disabled = {ioUringRuntimeAuditData.io_uring_disabled ?? 'n/a'}
+                · io_uring_group = {ioUringRuntimeAuditData.io_uring_group ?? 'n/a'}
+              </li>
+              <li>debugfs: {ioUringRuntimeAuditData.debugfs_present ? (ioUringRuntimeAuditData.debugfs_readable ? 'readable' : 'root-only') : 'absent'}</li>
+            </ul>
+            <p style="margin: 4px 0;">{ioUringRuntimeAuditData.verdict.reason}</p>
+            {#if ioUringRuntimeAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.iouring.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ioUringRuntimeAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ioUringRuntimeAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
