@@ -787,6 +787,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_retired_pages_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/bug-report-prep":
+                # R&D #25.3 — NVIDIA bug-report ticket prepper
+                code, body = api.handle_bug_report_prep_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
