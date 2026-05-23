@@ -867,6 +867,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_d3cold_policy_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/rlimit-audit":
+                # R&D #29.8 — rlimit auditor for LLM daemons
+                code, body = api.handle_rlimit_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
