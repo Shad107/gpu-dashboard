@@ -375,3 +375,4 @@ from .nic_queue_affinity import handle_nic_queue_affinity_status  # noqa: F401,F
 from .panic_policy import handle_panic_policy_status  # noqa: F401,F811
 from .edac_ram_ecc import handle_edac_ram_ecc_status  # noqa: F401,F811
 from .inotify_audit import handle_inotify_audit_status  # noqa: F401,F811
+from .zswap_zram_audit import handle_zswap_zram_audit_status  # noqa: F401,F811
