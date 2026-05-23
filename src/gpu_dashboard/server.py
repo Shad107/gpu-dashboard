@@ -1117,6 +1117,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_zswap_zram_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpu-epb":
+                # R&D #42.4 — legacy MSR_IA32_ENERGY_PERF_BIAS audit
+                code, body = api.handle_cpu_epb_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
