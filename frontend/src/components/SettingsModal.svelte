@@ -1839,6 +1839,23 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #52 (UI sprint 43) ────────────────────────────────────────────
+  let ksmAuditData               = $state<Awaited<ReturnType<typeof api.ksmAuditStatus>>               | null>(null);
+  let i2cSmbusAuditData          = $state<Awaited<ReturnType<typeof api.i2cSmbusAuditStatus>>          | null>(null);
+  let moduleIntegrityAuditData   = $state<Awaited<ReturnType<typeof api.moduleIntegrityAuditStatus>>   | null>(null);
+  async function loadKsmAudit() {
+    try { ksmAuditData = await api.ksmAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadI2cSmbusAudit() {
+    try { i2cSmbusAuditData = await api.i2cSmbusAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadModuleIntegrityAudit() {
+    try { moduleIntegrityAuditData = await api.moduleIntegrityAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2104,6 +2121,10 @@
       if (!typecAuditData)            loadTypecAudit();
       if (!perfPmuAuditData)          loadPerfPmuAudit();
       if (!iomemPciAuditData)         loadIomemPciAudit();
+      // R&D #52 cards
+      if (!ksmAuditData)              loadKsmAudit();
+      if (!i2cSmbusAuditData)         loadI2cSmbusAudit();
+      if (!moduleIntegrityAuditData)  loadModuleIntegrityAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -8948,6 +8969,147 @@
                              border-radius: 4px; overflow-x: auto;">{iomemPciAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(iomemPciAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #52.1 KSM + THP (UI sprint 43) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ksm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ksm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKsmAudit}>{i18n.t("integrations.ksm.refresh")}</button>
+          {#if ksmAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['ksm_thrashing','thp_always_with_llm','thp_defrag_aggressive'].includes(ksmAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ksmAuditData.verdict.verdict === 'ksm_disabled_with_madvise' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.ksm.verdict")} : <b>{ksmAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ksmAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['ksm_thrashing','thp_always_with_llm','thp_defrag_aggressive'].includes(ksmAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ksmAuditData.verdict.verdict === 'ksm_disabled_with_madvise' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">KSM + THP knobs</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#if ksmAuditData.ksm.available}
+                  <li>KSM: run={ksmAuditData.ksm.run ?? '?'} sharing={ksmAuditData.ksm.pages_sharing ?? 0} scan={ksmAuditData.ksm.pages_to_scan ?? '?'} sleep={ksmAuditData.ksm.sleep_millisecs ?? '?'} ms</li>
+                {/if}
+                {#if ksmAuditData.thp.available}
+                  <li>THP: enabled=<b>{ksmAuditData.thp.enabled ?? '?'}</b> defrag=<b>{ksmAuditData.thp.defrag ?? '?'}</b></li>
+                {/if}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{ksmAuditData.verdict.reason}</p>
+            {#if ksmAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ksm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ksmAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ksmAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #52.2 I2C / SMBus / DDC (UI sprint 43) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.i2c.title")}</h4>
+        <p class="muted">{i18n.t("integrations.i2c.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadI2cSmbusAudit}>{i18n.t("integrations.i2c.refresh")}</button>
+          {#if i2cSmbusAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={i2cSmbusAuditData.verdict.verdict === 'ddc_bus_world_writable' ? 'var(--warn)' :
+                             ['i2c_dev_module_absent','nvidia_ddc_missing','smbus_orphan_adapter'].includes(i2cSmbusAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i2cSmbusAuditData.adapter_count ?? 0} adapters · {i18n.t("integrations.i2c.verdict")} : <b>{i2cSmbusAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if i2cSmbusAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        i2cSmbusAuditData.verdict.verdict === 'ddc_bus_world_writable' ? 'var(--warn)' :
+                        ['i2c_dev_module_absent','nvidia_ddc_missing','smbus_orphan_adapter'].includes(i2cSmbusAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Adapters</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each i2cSmbusAuditData.adapters.slice(0, 12) as a}
+                  <li>{a.id}: {a.name ?? '?'} · driver=<b
+                    style:color={a.driver ? 'inherit' : 'var(--warn)'}
+                  >{a.driver ?? 'none'}</b></li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{i2cSmbusAuditData.verdict.reason}</p>
+            {#if i2cSmbusAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.i2c.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{i2cSmbusAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(i2cSmbusAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #52.3 Module integrity (UI sprint 43) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.modint.title")}</h4>
+        <p class="muted">{i18n.t("integrations.modint.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadModuleIntegrityAudit}>{i18n.t("integrations.modint.refresh")}</button>
+          {#if moduleIntegrityAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['nvidia_version_mismatch','unsigned_modules_unexpected'].includes(moduleIntegrityAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['modules_disabled','tainted_oot_nvidia_only'].includes(moduleIntegrityAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              taint={moduleIntegrityAuditData.tainted_letters.join('') || '0'} · {i18n.t("integrations.modint.verdict")} : <b>{moduleIntegrityAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if moduleIntegrityAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['nvidia_version_mismatch','unsigned_modules_unexpected'].includes(moduleIntegrityAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['modules_disabled','tainted_oot_nvidia_only'].includes(moduleIntegrityAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Tainted modules + NVIDIA versions</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#if moduleIntegrityAuditData.nvidia_loaded_version}
+                  <li>nvidia loaded=<b>{moduleIntegrityAuditData.nvidia_loaded_version}</b>
+                    {#if moduleIntegrityAuditData.nvidia_runtime_version}
+                      runtime=<b style:color={moduleIntegrityAuditData.nvidia_loaded_version === moduleIntegrityAuditData.nvidia_runtime_version ? 'inherit' : 'var(--warn)'}>{moduleIntegrityAuditData.nvidia_runtime_version}</b>
+                    {/if}
+                  </li>
+                {/if}
+                {#each moduleIntegrityAuditData.tainted_modules.slice(0, 12) as m}
+                  <li>{m.name}: taint={m.taint}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{moduleIntegrityAuditData.verdict.reason}</p>
+            {#if moduleIntegrityAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.modint.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{moduleIntegrityAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(moduleIntegrityAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

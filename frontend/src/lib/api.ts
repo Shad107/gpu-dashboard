@@ -3222,4 +3222,49 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #52 (UI sprint 43) ──
+  ksmAuditStatus: () =>
+    fetch("/api/ksm-audit").then(jsonOf<{
+      ok: boolean;
+      ksm: {
+        available: boolean;
+        run?: number | null; pages_sharing?: number | null;
+        pages_shared?: number | null; pages_to_scan?: number | null;
+        sleep_millisecs?: number | null;
+        merge_across_nodes?: number | null;
+        use_zero_pages?: number | null;
+      };
+      thp: {
+        available: boolean;
+        enabled?: string | null; defrag?: string | null;
+        khugepaged_defrag?: number | null;
+        khugepaged_alloc_sleep_millisecs?: number | null;
+      };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  i2cSmbusAuditStatus: () =>
+    fetch("/api/i2c-smbus-audit").then(jsonOf<{
+      ok: boolean;
+      adapter_count?: number;
+      adapters: Array<{ id: string; name: string | null; driver: string | null }>;
+      dev_node_count?: number;
+      dev_nodes: Array<{ name: string; mode: number; uid: number; gid: number }>;
+      i2c_dev_class: string[];
+      nvidia_display: string[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  moduleIntegrityAuditStatus: () =>
+    fetch("/api/module-integrity-audit").then(jsonOf<{
+      ok: boolean;
+      tainted_mask: number | null;
+      tainted_letters: string[];
+      modules_disabled: number | null;
+      tainted_modules: Array<{ name: string; taint: string; srcversion: string | null }>;
+      nvidia_loaded_version: string | null;
+      nvidia_runtime_version: string | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
