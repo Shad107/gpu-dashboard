@@ -1057,6 +1057,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_maps_libs_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cmdline-audit":
+                # R&D #39.1 — /proc/cmdline boot-param auditor
+                code, body = api.handle_cmdline_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

@@ -364,3 +364,4 @@ from .pcie_aer_trend import handle_pcie_aer_trend_status  # noqa: F401,F811
 from .gpu_irq_affinity import handle_gpu_irq_affinity_status  # noqa: F401,F811
 from .modprobe_audit import handle_modprobe_audit_status  # noqa: F401,F811
 from .proc_maps_libs import handle_proc_maps_libs_status  # noqa: F401,F811
+from .cmdline_audit import handle_cmdline_audit_status  # noqa: F401,F811
