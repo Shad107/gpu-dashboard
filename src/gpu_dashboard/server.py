@@ -742,6 +742,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_aspm_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/fs-mount-audit":
+                # R&D #23.2 — FS mount-option auditor
+                code, body = api.handle_fs_mount_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
