@@ -451,3 +451,4 @@ from .alsa_codec_deep_audit import handle_alsa_codec_deep_audit_status  # noqa: 
 from .devfreq_audit import handle_devfreq_audit_status  # noqa: F401,F811
 from .mei_intel_me_audit import handle_mei_intel_me_audit_status  # noqa: F401,F811
 from .memory_hotplug_audit import handle_memory_hotplug_audit_status  # noqa: F401,F811
+from .proc_task_affinity_audit import handle_proc_task_affinity_audit_status  # noqa: F401,F811

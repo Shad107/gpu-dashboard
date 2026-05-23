@@ -1492,6 +1492,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_memory_hotplug_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-task-affinity-audit":
+                # R&D #62.4 — task affinity vs GPU local CPUs
+                code, body = api.handle_proc_task_affinity_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
