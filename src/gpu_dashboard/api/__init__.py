@@ -394,3 +394,4 @@ from .sysvipc_audit import handle_sysvipc_audit_status  # noqa: F401,F811
 from .mdraid_health import handle_mdraid_health_status  # noqa: F401,F811
 from .keyring_audit import handle_keyring_audit_status  # noqa: F401,F811
 from .security_posture import handle_security_posture_status  # noqa: F401,F811
+from .vfs_limits_audit import handle_vfs_limits_audit_status  # noqa: F401,F811
