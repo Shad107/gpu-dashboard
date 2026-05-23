@@ -1162,6 +1162,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_watchdog_inventory_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/net-proto-counters":
+                # R&D #44.4 — TCP/UDP protocol counter auditor
+                code, body = api.handle_net_proto_counters_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
