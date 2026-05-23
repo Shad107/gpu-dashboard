@@ -390,3 +390,4 @@ from .disk_io_latency import handle_disk_io_latency_status  # noqa: F401,F811
 from .slab_audit import handle_slab_audit_status  # noqa: F401,F811
 from .entropy_audit import handle_entropy_audit_status  # noqa: F401,F811
 from .nf_conntrack_audit import handle_nf_conntrack_audit_status  # noqa: F401,F811
+from .sysvipc_audit import handle_sysvipc_audit_status  # noqa: F401,F811
