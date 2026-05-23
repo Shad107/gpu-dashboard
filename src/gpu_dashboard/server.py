@@ -1222,6 +1222,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_mce_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/acpi-audit":
+                # R&D #47.2 — ACPI platform-profile + GPE
+                code, body = api.handle_acpi_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

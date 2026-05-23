@@ -397,3 +397,4 @@ from .security_posture import handle_security_posture_status  # noqa: F401,F811
 from .vfs_limits_audit import handle_vfs_limits_audit_status  # noqa: F401,F811
 from .nvidia_rm_audit import handle_nvidia_rm_audit_status  # noqa: F401,F811
 from .mce_audit import handle_mce_audit_status  # noqa: F401,F811
+from .acpi_audit import handle_acpi_audit_status  # noqa: F401,F811
