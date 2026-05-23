@@ -822,6 +822,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_rebar_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpu-rapl":
+                # R&D #27.3 — CPU-package RAPL harvester
+                code, body = api.handle_cpu_rapl_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

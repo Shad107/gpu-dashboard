@@ -317,3 +317,4 @@ from .proc_static_audit import handle_proc_static_audit_status  # noqa: F401,F81
 from .mem_bw_gauge import handle_mem_bw_gauge_status  # noqa: F401,F811
 from .power_envelope_drift import handle_power_envelope_drift_status  # noqa: F401,F811
 from .rebar_audit import handle_rebar_audit_status  # noqa: F401,F811
+from .cpu_rapl import handle_cpu_rapl_status  # noqa: F401,F811
