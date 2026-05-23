@@ -1542,6 +1542,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_efi_runtime_map_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/devfreq-event-audit":
+                # R&D #65.4 — devfreq event PMU counters
+                code, body = api.handle_devfreq_event_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
