@@ -2200,6 +2200,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #70 (UI sprint 61) ────────────────────────────────────────────
+  let remoteprocCoprocessorAuditData   = $state<Awaited<ReturnType<typeof api.remoteprocCoprocessorAuditStatus>>   | null>(null);
+  let uioGpioUserlandAuditData         = $state<Awaited<ReturnType<typeof api.uioGpioUserlandAuditStatus>>         | null>(null);
+  let devcoredumpInventoryAuditData    = $state<Awaited<ReturnType<typeof api.devcoredumpInventoryAuditStatus>>    | null>(null);
+  let cxlDaxMemoryAuditData            = $state<Awaited<ReturnType<typeof api.cxlDaxMemoryAuditStatus>>            | null>(null);
+  async function loadRemoteprocCoprocessorAudit() {
+    try { remoteprocCoprocessorAuditData = await api.remoteprocCoprocessorAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadUioGpioUserlandAudit() {
+    try { uioGpioUserlandAuditData = await api.uioGpioUserlandAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDevcoredumpInventoryAudit() {
+    try { devcoredumpInventoryAuditData = await api.devcoredumpInventoryAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCxlDaxMemoryAudit() {
+    try { cxlDaxMemoryAuditData = await api.cxlDaxMemoryAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2548,6 +2570,11 @@
       if (!damonCmaAuditData)                   loadDamonCmaAudit();
       if (!kpageflagsAuditData)                 loadKpageflagsAudit();
       if (!procStaticKernelRegistryAuditData)   loadProcStaticKernelRegistryAudit();
+      // R&D #70 cards
+      if (!remoteprocCoprocessorAuditData)      loadRemoteprocCoprocessorAudit();
+      if (!uioGpioUserlandAuditData)            loadUioGpioUserlandAudit();
+      if (!devcoredumpInventoryAuditData)       loadDevcoredumpInventoryAudit();
+      if (!cxlDaxMemoryAuditData)               loadCxlDaxMemoryAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -12087,6 +12114,152 @@
                              border-radius: 4px; overflow-x: auto;">{procStaticKernelRegistryAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(procStaticKernelRegistryAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #70.1 remoteproc (UI sprint 61) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.remoteproc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.remoteproc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRemoteprocCoprocessorAudit}>{i18n.t("integrations.remoteproc.refresh")}</button>
+          {#if remoteprocCoprocessorAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={remoteprocCoprocessorAuditData.verdict.verdict === 'remoteproc_crashed' ? 'var(--err)' :
+                             ['recovery_disabled','firmware_missing'].includes(remoteprocCoprocessorAuditData.verdict.verdict) ? 'var(--warn)' :
+                             remoteprocCoprocessorAuditData.verdict.verdict === 'state_offline' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {remoteprocCoprocessorAuditData.remoteproc_count} rprocs · {i18n.t("integrations.remoteproc.verdict")} : <b>{remoteprocCoprocessorAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if remoteprocCoprocessorAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        remoteprocCoprocessorAuditData.verdict.verdict === 'remoteproc_crashed' ? 'var(--err)' :
+                        ['recovery_disabled','firmware_missing'].includes(remoteprocCoprocessorAuditData.verdict.verdict) ? 'var(--warn)' :
+                        remoteprocCoprocessorAuditData.verdict.verdict === 'state_offline' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{remoteprocCoprocessorAuditData.verdict.reason}</p>
+            {#if remoteprocCoprocessorAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.remoteproc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{remoteprocCoprocessorAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(remoteprocCoprocessorAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #70.3 UIO + GPIO userland (UI sprint 61) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.uiogpio.title")}</h4>
+        <p class="muted">{i18n.t("integrations.uiogpio.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUioGpioUserlandAudit}>{i18n.t("integrations.uiogpio.refresh")}</button>
+          {#if uioGpioUserlandAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={uioGpioUserlandAuditData.verdict.verdict === 'uio_world_writable' ? 'var(--err)' :
+                             ['orphan_gpio_exported','legacy_gpio_sysfs_in_use','uio_present_unowned'].includes(uioGpioUserlandAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              uio={uioGpioUserlandAuditData.uio_count} · gpio={uioGpioUserlandAuditData.gpio_chip_count} · {i18n.t("integrations.uiogpio.verdict")} : <b>{uioGpioUserlandAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if uioGpioUserlandAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        uioGpioUserlandAuditData.verdict.verdict === 'uio_world_writable' ? 'var(--err)' :
+                        ['orphan_gpio_exported','legacy_gpio_sysfs_in_use','uio_present_unowned'].includes(uioGpioUserlandAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{uioGpioUserlandAuditData.verdict.reason}</p>
+            {#if uioGpioUserlandAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.uiogpio.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{uioGpioUserlandAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(uioGpioUserlandAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #70.4 devcoredump (UI sprint 61) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.devcd.title")}</h4>
+        <p class="muted">{i18n.t("integrations.devcd.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDevcoredumpInventoryAudit}>{i18n.t("integrations.devcd.refresh")}</button>
+          {#if devcoredumpInventoryAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={devcoredumpInventoryAuditData.verdict.verdict === 'gpu_devcoredump_present' ? 'var(--err)' :
+                             devcoredumpInventoryAuditData.verdict.verdict === 'recent_devcoredump_pending' ? 'var(--warn)' :
+                             ['devcoredump_disabled_globally','devcoredump_capability_missing'].includes(devcoredumpInventoryAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {devcoredumpInventoryAuditData.pending_count} pending · {i18n.t("integrations.devcd.verdict")} : <b>{devcoredumpInventoryAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if devcoredumpInventoryAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        devcoredumpInventoryAuditData.verdict.verdict === 'gpu_devcoredump_present' ? 'var(--err)' :
+                        devcoredumpInventoryAuditData.verdict.verdict === 'recent_devcoredump_pending' ? 'var(--warn)' :
+                        ['devcoredump_disabled_globally','devcoredump_capability_missing'].includes(devcoredumpInventoryAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{devcoredumpInventoryAuditData.verdict.reason}</p>
+            {#if devcoredumpInventoryAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.devcd.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{devcoredumpInventoryAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(devcoredumpInventoryAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #70.2 CXL + DAX + nvdimm (UI sprint 61) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cxldax.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cxldax.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCxlDaxMemoryAudit}>{i18n.t("integrations.cxldax.refresh")}</button>
+          {#if cxlDaxMemoryAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cxlDaxMemoryAuditData.verdict.verdict === 'cxl_decoder_error' ? 'var(--err)' :
+                             ['dax_size_zero_misconfigured','target_node_unbound'].includes(cxlDaxMemoryAuditData.verdict.verdict) ? 'var(--warn)' :
+                             cxlDaxMemoryAuditData.verdict.verdict === 'pmem_present_unused' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              cxl={cxlDaxMemoryAuditData.cxl_decoder_count}d · dax={cxlDaxMemoryAuditData.dax_device_count} · nd={cxlDaxMemoryAuditData.nd_region_count} · {i18n.t("integrations.cxldax.verdict")} : <b>{cxlDaxMemoryAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cxlDaxMemoryAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cxlDaxMemoryAuditData.verdict.verdict === 'cxl_decoder_error' ? 'var(--err)' :
+                        ['dax_size_zero_misconfigured','target_node_unbound'].includes(cxlDaxMemoryAuditData.verdict.verdict) ? 'var(--warn)' :
+                        cxlDaxMemoryAuditData.verdict.verdict === 'pmem_present_unused' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cxlDaxMemoryAuditData.verdict.reason}</p>
+            {#if cxlDaxMemoryAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cxldax.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cxlDaxMemoryAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cxlDaxMemoryAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

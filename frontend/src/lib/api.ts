@@ -4203,4 +4203,90 @@ export const api = {
       enabled_console_count: number;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #70 (UI sprint 61) ──
+  remoteprocCoprocessorAuditStatus: () =>
+    fetch("/api/remoteproc-coprocessor-audit").then(jsonOf<{
+      ok: boolean;
+      path_present: boolean;
+      remoteproc_count: number;
+      remoteprocs: Array<{
+        id: string;
+        state: string | null;
+        name: string | null;
+        firmware: string | null;
+        recovery: string | null;
+        crash_count: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  uioGpioUserlandAuditStatus: () =>
+    fetch("/api/uio-gpio-userland-audit").then(jsonOf<{
+      ok: boolean;
+      uio_present: boolean;
+      gpio_present: boolean;
+      uio_count: number;
+      uios: Array<{
+        id: string;
+        name: string | null;
+        version: string | null;
+        dev_node_present: boolean;
+        dev_node_mode: number | null;
+      }>;
+      gpio_chip_count: number;
+      gpio_chips: Array<{
+        id: string;
+        label: string | null;
+        base: string | null;
+        ngpio: string | null;
+      }>;
+      legacy_gpio_pin_count: number;
+      legacy_gpio_pins: Array<{
+        pin: number;
+        value: string | null;
+        direction: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  devcoredumpInventoryAuditStatus: () =>
+    fetch("/api/devcoredump-inventory-audit").then(jsonOf<{
+      ok: boolean;
+      capability_present: boolean;
+      global_disabled: number | null;
+      pending_count: number;
+      pending_dumps: Array<{
+        id: string;
+        failing_device: string | null;
+        data_present: boolean;
+        data_size: number | null;
+        disabled: number | null;
+        is_gpu: boolean;
+      }>;
+      per_driver_opt_outs: Array<{ module: string; disabled: string | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  cxlDaxMemoryAuditStatus: () =>
+    fetch("/api/cxl-dax-memory-audit").then(jsonOf<{
+      ok: boolean;
+      cxl_present: boolean;
+      dax_present: boolean;
+      nd_present: boolean;
+      cxl_decoder_count: number;
+      cxl_mem_count: number;
+      cxl_port_count: number;
+      dax_device_count: number;
+      nd_region_count: number;
+      cxl_decoders: Array<{ id: string; state: string | null; size: string | null }>;
+      dax_devices: Array<{
+        id: string;
+        size: number | null;
+        target_node: number | null;
+        align: number | null;
+      }>;
+      nd_regions: Array<{ id: string; size: number | null; set_cookie: string | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
