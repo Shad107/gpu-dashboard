@@ -3896,4 +3896,59 @@ export const api = {
       host_has_nvidia: boolean;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #65 (UI sprint 56) ──
+  cpuidleResidencyAuditStatus: () =>
+    fetch("/api/cpuidle-residency-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      state_count_per_cpu: number;
+      sample_cpu_states: Array<{
+        id: string; idx: number; name: string | null;
+        disable: number | null; residency: number | null;
+        time: number | null; usage: number | null;
+        above: number | null; below: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  cpufreqResidencyAuditStatus: () =>
+    fetch("/api/cpufreq-residency-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      sample_cpu_index: number | null;
+      sample_stats: {
+        time_in_state?: Array<[number, number]>;
+        total_trans?: number | null;
+      };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  efiRuntimeMapAuditStatus: () =>
+    fetch("/api/efi-runtime-map-audit").then(jsonOf<{
+      ok: boolean;
+      efi_present: boolean;
+      runtime_map_present: boolean;
+      entry_count: number;
+      entries_sample: Array<{
+        id: string; type: number | null;
+        num_pages: number | null;
+        attribute: number | null;
+        phys_addr: string | null; virt_addr: string | null;
+      }>;
+      permission_denied: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  devfreqEventAuditStatus: () =>
+    fetch("/api/devfreq-event-audit").then(jsonOf<{
+      ok: boolean;
+      event_class_present: boolean;
+      devfreq_class_present: boolean;
+      event_count: number;
+      events: Array<{ id: string; name: string | null;
+                       enable_count: number | null }>;
+      devfreq_devices: Array<{ id: string; governor: string | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

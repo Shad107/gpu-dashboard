@@ -2090,6 +2090,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #65 (UI sprint 56) ────────────────────────────────────────────
+  let cpuidleResidencyAuditData  = $state<Awaited<ReturnType<typeof api.cpuidleResidencyAuditStatus>>  | null>(null);
+  let cpufreqResidencyAuditData  = $state<Awaited<ReturnType<typeof api.cpufreqResidencyAuditStatus>>  | null>(null);
+  let efiRuntimeMapAuditData     = $state<Awaited<ReturnType<typeof api.efiRuntimeMapAuditStatus>>     | null>(null);
+  let devfreqEventAuditData      = $state<Awaited<ReturnType<typeof api.devfreqEventAuditStatus>>      | null>(null);
+  async function loadCpuidleResidencyAudit() {
+    try { cpuidleResidencyAuditData = await api.cpuidleResidencyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpufreqResidencyAudit() {
+    try { cpufreqResidencyAuditData = await api.cpufreqResidencyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadEfiRuntimeMapAudit() {
+    try { efiRuntimeMapAuditData = await api.efiRuntimeMapAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDevfreqEventAudit() {
+    try { devfreqEventAuditData = await api.devfreqEventAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2413,6 +2435,11 @@
       if (!firmwareEddMmcAuditData)     loadFirmwareEddMmcAudit();
       if (!devlinkSmartnicAuditData)    loadDevlinkSmartnicAudit();
       if (!procNsMountinfoAuditData)    loadProcNsMountinfoAudit();
+      // R&D #65 cards
+      if (!cpuidleResidencyAuditData)   loadCpuidleResidencyAudit();
+      if (!cpufreqResidencyAuditData)   loadCpufreqResidencyAudit();
+      if (!efiRuntimeMapAuditData)      loadEfiRuntimeMapAudit();
+      if (!devfreqEventAuditData)       loadDevfreqEventAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -11234,6 +11261,146 @@
                              border-radius: 4px; overflow-x: auto;">{procNsMountinfoAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(procNsMountinfoAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #65.1 cpuidle residency (UI sprint 56) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.idleres.title")}</h4>
+        <p class="muted">{i18n.t("integrations.idleres.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuidleResidencyAudit}>{i18n.t("integrations.idleres.refresh")}</button>
+          {#if cpuidleResidencyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['poll_dominant','c6_starved'].includes(cpuidleResidencyAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['governor_mispredict','state_disabled_asymmetry'].includes(cpuidleResidencyAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cpuidleResidencyAuditData.cpu_count} CPUs · {i18n.t("integrations.idleres.verdict")} : <b>{cpuidleResidencyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuidleResidencyAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['poll_dominant','c6_starved'].includes(cpuidleResidencyAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['governor_mispredict','state_disabled_asymmetry'].includes(cpuidleResidencyAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpuidleResidencyAuditData.verdict.reason}</p>
+            {#if cpuidleResidencyAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.idleres.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuidleResidencyAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuidleResidencyAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #65.2 cpufreq residency (UI sprint 56) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.freqres.title")}</h4>
+        <p class="muted">{i18n.t("integrations.freqres.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpufreqResidencyAudit}>{i18n.t("integrations.freqres.refresh")}</button>
+          {#if cpufreqResidencyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['pinned_at_min','pinned_at_max'].includes(cpufreqResidencyAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['transition_storm','boost_unreachable'].includes(cpufreqResidencyAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cpufreqResidencyAuditData.cpu_count} CPUs · {i18n.t("integrations.freqres.verdict")} : <b>{cpufreqResidencyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpufreqResidencyAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['pinned_at_min','pinned_at_max'].includes(cpufreqResidencyAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['transition_storm','boost_unreachable'].includes(cpufreqResidencyAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpufreqResidencyAuditData.verdict.reason}</p>
+            {#if cpufreqResidencyAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.freqres.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpufreqResidencyAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpufreqResidencyAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #65.3 EFI runtime-map (UI sprint 56) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.efirt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.efirt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadEfiRuntimeMapAudit}>{i18n.t("integrations.efirt.refresh")}</button>
+          {#if efiRuntimeMapAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['runtime_map_absent','runtime_pinned_large'].includes(efiRuntimeMapAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['kexec_no_efi_rt','requires_root'].includes(efiRuntimeMapAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {efiRuntimeMapAuditData.entry_count} entries · {i18n.t("integrations.efirt.verdict")} : <b>{efiRuntimeMapAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if efiRuntimeMapAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['runtime_map_absent','runtime_pinned_large'].includes(efiRuntimeMapAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['kexec_no_efi_rt','requires_root'].includes(efiRuntimeMapAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{efiRuntimeMapAuditData.verdict.reason}</p>
+            {#if efiRuntimeMapAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.efirt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{efiRuntimeMapAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(efiRuntimeMapAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #65.4 devfreq event PMU (UI sprint 56) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.devfreqevt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.devfreqevt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDevfreqEventAudit}>{i18n.t("integrations.devfreqevt.refresh")}</button>
+          {#if devfreqEventAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['event_disabled','event_orphaned_governor'].includes(devfreqEventAuditData.verdict.verdict) ? 'var(--warn)' :
+                             devfreqEventAuditData.verdict.verdict === 'class_absent' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {devfreqEventAuditData.event_count} events · {i18n.t("integrations.devfreqevt.verdict")} : <b>{devfreqEventAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if devfreqEventAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['event_disabled','event_orphaned_governor'].includes(devfreqEventAuditData.verdict.verdict) ? 'var(--warn)' :
+                        devfreqEventAuditData.verdict.verdict === 'class_absent' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{devfreqEventAuditData.verdict.reason}</p>
+            {#if devfreqEventAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.devfreqevt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{devfreqEventAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(devfreqEventAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
