@@ -344,3 +344,4 @@ from .nic_health import handle_nic_health_status  # noqa: F401,F811
 from .proc_io_accounting import handle_proc_io_status  # noqa: F401,F811
 from .cgroup_cpuio import handle_cgroup_cpuio_status  # noqa: F401,F811
 from .thp_audit import handle_thp_audit_status  # noqa: F401,F811
+from .buddyinfo_frag import handle_buddyinfo_status  # noqa: F401,F811
