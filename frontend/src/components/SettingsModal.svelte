@@ -2012,6 +2012,18 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #61 (UI sprint 52) ────────────────────────────────────────────
+  let regulatorAuditData         = $state<Awaited<ReturnType<typeof api.regulatorAuditStatus>>         | null>(null);
+  let alsaCodecDeepAuditData     = $state<Awaited<ReturnType<typeof api.alsaCodecDeepAuditStatus>>     | null>(null);
+  async function loadRegulatorAudit() {
+    try { regulatorAuditData = await api.regulatorAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAlsaCodecDeepAudit() {
+    try { alsaCodecDeepAuditData = await api.alsaCodecDeepAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2317,6 +2329,9 @@
       if (!pidRlimitsAuditData)         loadPidRlimitsAudit();
       // R&D #60 cards
       if (!virtGuestDetectAuditData)    loadVirtGuestDetectAudit();
+      // R&D #61 cards
+      if (!regulatorAuditData)          loadRegulatorAudit();
+      if (!alsaCodecDeepAuditData)      loadAlsaCodecDeepAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -10550,6 +10565,98 @@
                              border-radius: 4px; overflow-x: auto;">{virtGuestDetectAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(virtGuestDetectAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #61.3 Voltage regulator (UI sprint 52) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.regul.title")}</h4>
+        <p class="muted">{i18n.t("integrations.regul.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRegulatorAudit}>{i18n.t("integrations.regul.refresh")}</button>
+          {#if regulatorAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={regulatorAuditData.verdict.verdict === 'orphan' ? 'var(--warn)' :
+                             ['disabled_with_users','drifted_suspend_state'].includes(regulatorAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {regulatorAuditData.regulator_count} regulators · {i18n.t("integrations.regul.verdict")} : <b>{regulatorAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if regulatorAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        regulatorAuditData.verdict.verdict === 'orphan' ? 'var(--warn)' :
+                        ['disabled_with_users','drifted_suspend_state'].includes(regulatorAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if regulatorAuditData.regulators.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Regulators</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each regulatorAuditData.regulators as r}
+                    <li>{r.id} ({r.name ?? '?'}): users={r.num_users ?? '?'} µA={r.requested_microamps ?? '?'} runtime={r.runtime_status ?? '?'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{regulatorAuditData.verdict.reason}</p>
+            {#if regulatorAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.regul.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{regulatorAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(regulatorAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #61.4 ALSA codec deep (UI sprint 52) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.codec.title")}</h4>
+        <p class="muted">{i18n.t("integrations.codec.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadAlsaCodecDeepAudit}>{i18n.t("integrations.codec.refresh")}</button>
+          {#if alsaCodecDeepAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={alsaCodecDeepAuditData.verdict.verdict === 'codec_powered_when_idle' ? 'var(--warn)' :
+                             alsaCodecDeepAuditData.verdict.verdict === 'stuck_runtime' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {alsaCodecDeepAuditData.codec_count} codecs · {i18n.t("integrations.codec.verdict")} : <b>{alsaCodecDeepAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if alsaCodecDeepAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        alsaCodecDeepAuditData.verdict.verdict === 'codec_powered_when_idle' ? 'var(--warn)' :
+                        alsaCodecDeepAuditData.verdict.verdict === 'stuck_runtime' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if alsaCodecDeepAuditData.codecs.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Codecs</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each alsaCodecDeepAuditData.codecs as c}
+                    <li>card{c.card_index} {c.name ?? '?'}: power=<b
+                      style:color={c.power_setting && c.power_setting !== 'D3' && !alsaCodecDeepAuditData!.pcm_open_per_card[String(c.card_index)] ? 'var(--warn)' : 'inherit'}
+                    >{c.power_setting ?? '?'}</b>→{c.power_actual ?? '?'} · pcm_open={alsaCodecDeepAuditData.pcm_open_per_card[String(c.card_index)] ? 'yes' : 'no'} · pins={c.pins.length}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{alsaCodecDeepAuditData.verdict.reason}</p>
+            {#if alsaCodecDeepAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.codec.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{alsaCodecDeepAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(alsaCodecDeepAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

@@ -3669,4 +3669,39 @@ export const api = {
       nvidia_gpus: string[];
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #61 (UI sprint 52) ──
+  regulatorAuditStatus: () =>
+    fetch("/api/regulator-audit").then(jsonOf<{
+      ok: boolean;
+      regulator_count: number;
+      regulators: Array<{
+        id: string; name: string | null; type: string | null;
+        num_users: number | null;
+        requested_microamps: number | null;
+        suspend_mem_state: string | null;
+        suspend_disk_state: string | null;
+        suspend_standby_state: string | null;
+        runtime_status: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  alsaCodecDeepAuditStatus: () =>
+    fetch("/api/alsa-codec-deep-audit").then(jsonOf<{
+      ok: boolean;
+      codec_count: number;
+      codecs: Array<{
+        card_index: number;
+        codec_file: string;
+        name: string | null;
+        vendor_id: string | null;
+        subsystem_id: string | null;
+        power_setting: string | null;
+        power_actual: string | null;
+        pins: Array<{ jack: string; info: string }>;
+      }>;
+      pcm_open_per_card: Record<string, boolean>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
