@@ -1362,6 +1362,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_io_uring_runtime_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kvm-misc-audit":
+                # R&D #54.3 — KVM runtime + nested + perms
+                code, body = api.handle_kvm_misc_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
