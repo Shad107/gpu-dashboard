@@ -1367,6 +1367,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_kvm_misc_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/edac-ecc-audit":
+                # R&D #55.1 — DRAM ECC counters via EDAC
+                code, body = api.handle_edac_ecc_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

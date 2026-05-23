@@ -426,3 +426,4 @@ from .swap_tunables_audit import handle_swap_tunables_audit_status  # noqa: F401
 from .hugepages_audit import handle_hugepages_audit_status  # noqa: F401,F811
 from .io_uring_runtime_audit import handle_io_uring_runtime_audit_status  # noqa: F401,F811
 from .kvm_misc_audit import handle_kvm_misc_audit_status  # noqa: F401,F811
+from .edac_ecc_audit import handle_edac_ecc_audit_status  # noqa: F401,F811
