@@ -1647,6 +1647,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_uio_gpio_userland_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/devcoredump-inventory-audit":
+                # R&D #70.4 — /sys/class/devcoredump pending dumps
+                code, body = api.handle_devcoredump_inventory_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
