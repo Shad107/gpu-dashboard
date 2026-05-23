@@ -1646,6 +1646,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #43 (UI sprint 34) ────────────────────────────────────────────
+  let nicRingAuditData    = $state<Awaited<ReturnType<typeof api.nicRingAuditStatus>>    | null>(null);
+  let irqRatesAuditData   = $state<Awaited<ReturnType<typeof api.irqRatesAuditStatus>>   | null>(null);
+  let zoneinfoAuditData   = $state<Awaited<ReturnType<typeof api.zoneinfoAuditStatus>>   | null>(null);
+  let blockQueueAuditData = $state<Awaited<ReturnType<typeof api.blockQueueAuditStatus>> | null>(null);
+  async function loadNicRingAudit() {
+    try { nicRingAuditData = await api.nicRingAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIrqRatesAudit() {
+    try { irqRatesAuditData = await api.irqRatesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadZoneinfoAudit() {
+    try { zoneinfoAuditData = await api.zoneinfoAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBlockQueueAudit() {
+    try { blockQueueAuditData = await api.blockQueueAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1867,6 +1889,11 @@
       if (!coolingDevicesData)  loadCoolingDevices();
       if (!hybridCpuTopoData)   loadHybridCpuTopo();
       if (!fileLocksAuditData)  loadFileLocksAudit();
+      // R&D #43 cards
+      if (!nicRingAuditData)    loadNicRingAudit();
+      if (!irqRatesAuditData)   loadIrqRatesAudit();
+      if (!zoneinfoAuditData)   loadZoneinfoAudit();
+      if (!blockQueueAuditData) loadBlockQueueAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -7175,6 +7202,185 @@
                              border-radius: 4px; overflow-x: auto;">{fileLocksAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(fileLocksAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #43.4 NIC ring-buffer drops (UI sprint 34) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ring.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ring.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNicRingAudit}>{i18n.t("integrations.ring.refresh")}</button>
+          {#if nicRingAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['fifo_overrun','rx_drops_climbing','cable_or_duplex'].includes(nicRingAuditData.verdict.verdict) ? 'var(--warn)' :
+                             nicRingAuditData.verdict.verdict === 'tx_drops' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.ring.verdict")} : <b>{nicRingAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nicRingAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['fifo_overrun','rx_drops_climbing','cable_or_duplex'].includes(nicRingAuditData.verdict.verdict) ? 'var(--warn)' :
+                        nicRingAuditData.verdict.verdict === 'tx_drops' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Per-device counters</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each nicRingAuditData.devices as d}
+                  <li>{d.dev} ({d.operstate}): rx={d.rx_packets ?? '?'}/{d.rx_dropped ?? 0} dropped, fifo={d.rx_fifo_errors ?? 0}+{d.rx_missed_errors ?? 0}, crc={d.rx_crc_errors ?? 0}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{nicRingAuditData.verdict.reason}</p>
+            {#if nicRingAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ring.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{nicRingAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(nicRingAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #43.1 IRQ rates (UI sprint 34) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.irq.title")}</h4>
+        <p class="muted">{i18n.t("integrations.irq.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIrqRatesAudit}>{i18n.t("integrations.irq.refresh")}</button>
+          {#if irqRatesAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={irqRatesAuditData.verdict.verdict === 'cpu_pinned' ? 'var(--warn)' :
+                             irqRatesAuditData.verdict.verdict === 'softirq_imbalance' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {irqRatesAuditData.nonzero_irq_count} IRQs · {irqRatesAuditData.cpu_count} CPU · {i18n.t("integrations.irq.verdict")} : <b>{irqRatesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if irqRatesAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        irqRatesAuditData.verdict.verdict === 'cpu_pinned' ? 'var(--warn)' :
+                        irqRatesAuditData.verdict.verdict === 'softirq_imbalance' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Top IRQs by total</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px; max-height: 200px; overflow-y: auto;">
+                {#each irqRatesAuditData.top_irqs.slice(0, 15) as r}
+                  <li>IRQ {r.irq} ({r.device.substring(0, 50)}) total={r.total} hot=CPU{r.hot_cpu} ({(r.hot_share * 100).toFixed(0)}%)</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{irqRatesAuditData.verdict.reason}</p>
+            {#if irqRatesAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.irq.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{irqRatesAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(irqRatesAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #43.3 zoneinfo + vmstat (UI sprint 34) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.zi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.zi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadZoneinfoAudit}>{i18n.t("integrations.zi.refresh")}</button>
+          {#if zoneinfoAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['direct_reclaim_active','compaction_failures'].includes(zoneinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                             zoneinfoAuditData.verdict.verdict === 'zone_low' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {zoneinfoAuditData.zone_count} zones · {i18n.t("integrations.zi.verdict")} : <b>{zoneinfoAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if zoneinfoAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['direct_reclaim_active','compaction_failures'].includes(zoneinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                        zoneinfoAuditData.verdict.verdict === 'zone_low' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">pgsteal_kswapd=<b>{zoneinfoAuditData.vmstat.pgsteal_kswapd ?? '?'}</b></span>
+              <span class="kv">pgsteal_direct=<b
+                style:color={(zoneinfoAuditData.vmstat.pgsteal_direct ?? 0) > 0 ? 'var(--warn)' : 'inherit'}
+              >{zoneinfoAuditData.vmstat.pgsteal_direct ?? 0}</b></span>
+              <span class="kv">compact_ok=<b>{zoneinfoAuditData.vmstat.compact_success ?? 0}</b>/fail=<b>{zoneinfoAuditData.vmstat.compact_fail ?? 0}</b></span>
+            </div>
+            <details style="margin-top: 4px;">
+              <summary class="muted">Zone watermarks</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each zoneinfoAuditData.zones as z}
+                  <li>node {z.node}/{z.zone}: free=<b>{z.free ?? '?'}</b> low={z.low ?? '?'} high={z.high ?? '?'} managed={z.managed ?? '?'}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{zoneinfoAuditData.verdict.reason}</p>
+            {#if zoneinfoAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.zi.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{zoneinfoAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(zoneinfoAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #43.2 block queue (UI sprint 34) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bq.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bq.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBlockQueueAudit}>{i18n.t("integrations.bq.refresh")}</button>
+          {#if blockQueueAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['rotational_misdetect','scheduler_mismatch'].includes(blockQueueAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['readahead_too_low','wbt_throttling'].includes(blockQueueAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {blockQueueAuditData.devices.length} dev · {i18n.t("integrations.bq.verdict")} : <b>{blockQueueAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if blockQueueAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['rotational_misdetect','scheduler_mismatch'].includes(blockQueueAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['readahead_too_low','wbt_throttling'].includes(blockQueueAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Per-device knobs</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each blockQueueAuditData.devices as d}
+                  <li>{d.dev} ({d.model ?? '?'}): sched=<b>{d.scheduler ?? '?'}</b>, rot={d.rotational ?? '?'}, ra_kb={d.read_ahead_kb ?? '?'}, nr_req={d.nr_requests ?? '?'}, wbt={d.wbt_lat_usec ?? '?'} μs</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{blockQueueAuditData.verdict.reason}</p>
+            {#if blockQueueAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.bq.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{blockQueueAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(blockQueueAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

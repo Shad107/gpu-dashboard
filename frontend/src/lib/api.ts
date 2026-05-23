@@ -2709,4 +2709,72 @@ export const api = {
                           inode: number; pid_alive: boolean }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #43 (UI sprint 34) ──
+  nicRingAuditStatus: () =>
+    fetch("/api/nic-ring-audit").then(jsonOf<{
+      ok: boolean;
+      device_count?: number;
+      devices: Array<{
+        dev: string; operstate: string; carrier: number | null;
+        mtu: number | null;
+        rx_dropped?: number; rx_fifo_errors?: number;
+        rx_missed_errors?: number; rx_crc_errors?: number;
+        rx_frame_errors?: number; rx_packets?: number; rx_bytes?: number;
+        tx_dropped?: number; tx_fifo_errors?: number;
+        tx_packets?: number; tx_bytes?: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  irqRatesAuditStatus: () =>
+    fetch("/api/irq-rates-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      irq_row_count: number;
+      nonzero_irq_count: number;
+      top_irqs: Array<{
+        irq: string; counts: number[]; chip: string; device: string;
+        total: number; hot_cpu: number; hot_share: number;
+      }>;
+      softirqs: Array<{ type: string; counts: number[]; total: number }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  zoneinfoAuditStatus: () =>
+    fetch("/api/zoneinfo-audit").then(jsonOf<{
+      ok: boolean;
+      zone_count: number;
+      zones: Array<{
+        node: number; zone: string;
+        free?: number; min?: number; low?: number;
+        high?: number; managed?: number;
+        nr_free_pages?: number;
+      }>;
+      vmstat: Record<string, number>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  blockQueueAuditStatus: () =>
+    fetch("/api/block-queue-audit").then(jsonOf<{
+      ok: boolean;
+      device_count?: number;
+      devices: Array<{
+        dev: string; scheduler: string | null;
+        scheduler_available: string[];
+        nr_requests: number | null;
+        read_ahead_kb: number | null;
+        rotational: number | null;
+        nomerges: number | null; iostats: number | null;
+        rq_affinity: number | null;
+        max_sectors_kb: number | null;
+        max_hw_sectors_kb: number | null;
+        wbt_lat_usec: number | null;
+        write_cache: string | null;
+        logical_block_size: number | null;
+        physical_block_size: number | null;
+        model: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
