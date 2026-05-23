@@ -462,3 +462,4 @@ from .devlink_smartnic_audit import handle_devlink_smartnic_audit_status  # noqa
 from .proc_ns_mountinfo_audit import handle_proc_ns_mountinfo_audit_status  # noqa: F401,F811
 from .efi_runtime_map_audit import handle_efi_runtime_map_audit_status  # noqa: F401,F811
 from .devfreq_event_audit import handle_devfreq_event_audit_status  # noqa: F401,F811
+from .cpuidle_residency_audit import handle_cpuidle_residency_audit_status  # noqa: F401,F811

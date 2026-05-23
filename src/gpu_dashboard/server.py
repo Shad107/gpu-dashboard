@@ -1547,6 +1547,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_devfreq_event_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpuidle-residency-audit":
+                # R&D #65.1 — per-CPU per-state cpuidle residency
+                code, body = api.handle_cpuidle_residency_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
