@@ -2178,6 +2178,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #69 (UI sprint 60) ────────────────────────────────────────────
+  let nvmemInventoryAuditData                = $state<Awaited<ReturnType<typeof api.nvmemInventoryAuditStatus>>                | null>(null);
+  let damonCmaAuditData                      = $state<Awaited<ReturnType<typeof api.damonCmaAuditStatus>>                      | null>(null);
+  let kpageflagsAuditData                    = $state<Awaited<ReturnType<typeof api.kpageflagsAuditStatus>>                    | null>(null);
+  let procStaticKernelRegistryAuditData      = $state<Awaited<ReturnType<typeof api.procStaticKernelRegistryAuditStatus>>      | null>(null);
+  async function loadNvmemInventoryAudit() {
+    try { nvmemInventoryAuditData = await api.nvmemInventoryAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDamonCmaAudit() {
+    try { damonCmaAuditData = await api.damonCmaAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKpageflagsAudit() {
+    try { kpageflagsAuditData = await api.kpageflagsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcStaticKernelRegistryAudit() {
+    try { procStaticKernelRegistryAuditData = await api.procStaticKernelRegistryAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2521,6 +2543,11 @@
       if (!lruGenMglruAuditData)        loadLruGenMglruAudit();
       if (!fsSpecificTunablesAuditData) loadFsSpecificTunablesAudit();
       if (!dtMemmapFirmwareAuditData)   loadDtMemmapFirmwareAudit();
+      // R&D #69 cards
+      if (!nvmemInventoryAuditData)             loadNvmemInventoryAudit();
+      if (!damonCmaAuditData)                   loadDamonCmaAudit();
+      if (!kpageflagsAuditData)                 loadKpageflagsAudit();
+      if (!procStaticKernelRegistryAuditData)   loadProcStaticKernelRegistryAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -11912,6 +11939,154 @@
                              border-radius: 4px; overflow-x: auto;">{dtMemmapFirmwareAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(dtMemmapFirmwareAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #69.1 NVMEM inventory (UI sprint 60) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nvmem.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nvmem.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvmemInventoryAudit}>{i18n.t("integrations.nvmem.refresh")}</button>
+          {#if nvmemInventoryAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={nvmemInventoryAuditData.verdict.verdict === 'writable_nvmem' ? 'var(--err)' :
+                             nvmemInventoryAuditData.verdict.verdict === 'world_readable_secret_nvmem' ? 'var(--warn)' :
+                             nvmemInventoryAuditData.verdict.verdict === 'stale_or_unknown_provider' ? 'var(--accent)' :
+                             nvmemInventoryAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {nvmemInventoryAuditData.device_count} devs · {i18n.t("integrations.nvmem.verdict")} : <b>{nvmemInventoryAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nvmemInventoryAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        nvmemInventoryAuditData.verdict.verdict === 'writable_nvmem' ? 'var(--err)' :
+                        nvmemInventoryAuditData.verdict.verdict === 'world_readable_secret_nvmem' ? 'var(--warn)' :
+                        nvmemInventoryAuditData.verdict.verdict === 'stale_or_unknown_provider' ? 'var(--accent)' :
+                        nvmemInventoryAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{nvmemInventoryAuditData.verdict.reason}</p>
+            {#if nvmemInventoryAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nvmem.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{nvmemInventoryAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(nvmemInventoryAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #69.3 DAMON + CMA (UI sprint 60) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.damoncma.title")}</h4>
+        <p class="muted">{i18n.t("integrations.damoncma.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDamonCmaAudit}>{i18n.t("integrations.damoncma.refresh")}</button>
+          {#if damonCmaAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={damonCmaAuditData.verdict.verdict === 'cma_alloc_failing' ? 'var(--err)' :
+                             damonCmaAuditData.verdict.verdict === 'damon_scheme_quota_breached' ? 'var(--warn)' :
+                             damonCmaAuditData.verdict.verdict === 'damon_enabled_no_schemes' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              cma={damonCmaAuditData.cma_region_count} · damon={damonCmaAuditData.kdamond_count} · {i18n.t("integrations.damoncma.verdict")} : <b>{damonCmaAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if damonCmaAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        damonCmaAuditData.verdict.verdict === 'cma_alloc_failing' ? 'var(--err)' :
+                        damonCmaAuditData.verdict.verdict === 'damon_scheme_quota_breached' ? 'var(--warn)' :
+                        damonCmaAuditData.verdict.verdict === 'damon_enabled_no_schemes' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{damonCmaAuditData.verdict.reason}</p>
+            {#if damonCmaAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.damoncma.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{damonCmaAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(damonCmaAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #69.2 /proc/kpageflags (UI sprint 60) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kpageflags.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kpageflags.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKpageflagsAudit}>{i18n.t("integrations.kpageflags.refresh")}</button>
+          {#if kpageflagsAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={kpageflagsAuditData.verdict.verdict === 'excess_unevictable_or_hwpoison' ? 'var(--err)' :
+                             kpageflagsAuditData.verdict.verdict === 'high_compound_fragmentation' ? 'var(--warn)' :
+                             ['requires_root','kpageflags_unreadable_no_capsys'].includes(kpageflagsAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {kpageflagsAuditData.pages_sampled} pages · {i18n.t("integrations.kpageflags.verdict")} : <b>{kpageflagsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kpageflagsAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        kpageflagsAuditData.verdict.verdict === 'excess_unevictable_or_hwpoison' ? 'var(--err)' :
+                        kpageflagsAuditData.verdict.verdict === 'high_compound_fragmentation' ? 'var(--warn)' :
+                        ['requires_root','kpageflags_unreadable_no_capsys'].includes(kpageflagsAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{kpageflagsAuditData.verdict.reason}</p>
+            {#if kpageflagsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.kpageflags.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{kpageflagsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(kpageflagsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #69.4 /proc kernel registry (UI sprint 60) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.procregistry.title")}</h4>
+        <p class="muted">{i18n.t("integrations.procregistry.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcStaticKernelRegistryAudit}>{i18n.t("integrations.procregistry.refresh")}</button>
+          {#if procStaticKernelRegistryAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procStaticKernelRegistryAuditData.verdict.verdict === 'duplicate_or_orphan_major' ? 'var(--err)' :
+                             ['out_of_tree_tainting_module_loaded','missing_required_fs_for_gpu_stack','stale_console_misroute'].includes(procStaticKernelRegistryAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {procStaticKernelRegistryAuditData.module_count} mods ({procStaticKernelRegistryAuditData.tainting_module_count} OOT) · {i18n.t("integrations.procregistry.verdict")} : <b>{procStaticKernelRegistryAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procStaticKernelRegistryAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        procStaticKernelRegistryAuditData.verdict.verdict === 'duplicate_or_orphan_major' ? 'var(--err)' :
+                        ['out_of_tree_tainting_module_loaded','missing_required_fs_for_gpu_stack','stale_console_misroute'].includes(procStaticKernelRegistryAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{procStaticKernelRegistryAuditData.verdict.reason}</p>
+            {#if procStaticKernelRegistryAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.procregistry.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{procStaticKernelRegistryAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(procStaticKernelRegistryAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

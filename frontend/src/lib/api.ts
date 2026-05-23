@@ -4137,4 +4137,70 @@ export const api = {
       vmcoreinfo_bytes: number;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #69 (UI sprint 60) ──
+  nvmemInventoryAuditStatus: () =>
+    fetch("/api/nvmem-inventory-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      listable: boolean;
+      device_count: number;
+      devices: Array<{
+        id: string;
+        type: string | null;
+        force_ro: string | null;
+        nvmem_size: number | null;
+        nvmem_mode: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  damonCmaAuditStatus: () =>
+    fetch("/api/damon-cma-audit").then(jsonOf<{
+      ok: boolean;
+      cma_present: boolean;
+      damon_present: boolean;
+      cma_region_count: number;
+      cma_regions: Array<{
+        name: string;
+        count: number | null;
+        used: number | null;
+        nr_pages: number | null;
+        alloc_pages_success: number | null;
+        alloc_pages_fail: number | null;
+      }>;
+      kdamond_count: number;
+      kdamonds: Array<{
+        id: string;
+        scheme_count: number;
+        quota_breach_total: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  kpageflagsAuditStatus: () =>
+    fetch("/api/kpageflags-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      readable: boolean;
+      pages_sampled: number;
+      flag_counts: Record<string, number>;
+      unprivileged_userfaultfd: number | null;
+      block_dump: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  procStaticKernelRegistryAuditStatus: () =>
+    fetch("/api/proc-static-kernel-registry-audit").then(jsonOf<{
+      ok: boolean;
+      module_count: number;
+      tainting_module_count: number;
+      character_major_count: number;
+      block_major_count: number;
+      misc_count: number;
+      filesystems: string[];
+      console_count: number;
+      enabled_console_count: number;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
