@@ -1522,6 +1522,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_mei_hdcp_pxp_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/firmware-edd-mmc-audit":
+                # R&D #64.4 — EDD + MMC/eMMC wear
+                code, body = api.handle_firmware_edd_mmc_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

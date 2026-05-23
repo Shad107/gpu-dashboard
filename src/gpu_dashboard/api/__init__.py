@@ -457,3 +457,4 @@ from .leds_class_audit import handle_leds_class_audit_status  # noqa: F401,F811
 from .binfmt_misc_audit import handle_binfmt_misc_audit_status  # noqa: F401,F811
 from .ptp_clock_audit import handle_ptp_clock_audit_status  # noqa: F401,F811
 from .mei_hdcp_pxp_audit import handle_mei_hdcp_pxp_audit_status  # noqa: F401,F811
+from .firmware_edd_mmc_audit import handle_firmware_edd_mmc_audit_status  # noqa: F401,F811
