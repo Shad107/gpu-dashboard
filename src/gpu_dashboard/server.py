@@ -1327,6 +1327,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_module_integrity_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/psi-pressure-audit":
+                # R&D #53.1 — PSI pressure stall auditor
+                code, body = api.handle_psi_pressure_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
