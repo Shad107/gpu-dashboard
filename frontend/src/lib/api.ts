@@ -2832,4 +2832,54 @@ export const api = {
       requires_root: boolean;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #45 (UI sprint 36) ──
+  entropyAuditStatus: () =>
+    fetch("/api/entropy-audit").then(jsonOf<{
+      ok: boolean;
+      random: Record<string, number>;
+      hwrng: { available: boolean; current?: string | null;
+                available_list?: string[]; quality?: number };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  nfConntrackAuditStatus: () =>
+    fetch("/api/nf-conntrack-audit").then(jsonOf<{
+      ok: boolean;
+      sysctls: Record<string, number>;
+      stats: Record<string, number>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  sysvipcAuditStatus: () =>
+    fetch("/api/sysvipc-audit").then(jsonOf<{
+      ok: boolean;
+      shm_count?: number; sem_count?: number; msg_count?: number;
+      shm_total_bytes?: number;
+      top_shm?: Array<{
+        shmid?: number; size?: number; nattch?: number;
+        ctime?: number; uid?: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  mdraidHealthStatus: () =>
+    fetch("/api/mdraid-health").then(jsonOf<{
+      ok: boolean;
+      personalities?: string[];
+      array_count?: number;
+      arrays: Array<{
+        name: string; state: string; level: string;
+        members: string[]; marker: string;
+        resync: string | null;
+        sysfs?: {
+          array_state?: string | null;
+          sync_action?: string | null;
+          sync_speed?: number | null;
+          mismatch_cnt?: number | null;
+          degraded?: number | null;
+        };
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

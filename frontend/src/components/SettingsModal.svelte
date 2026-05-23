@@ -1690,6 +1690,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #45 (UI sprint 36) ────────────────────────────────────────────
+  let entropyAuditData      = $state<Awaited<ReturnType<typeof api.entropyAuditStatus>>      | null>(null);
+  let nfConntrackAuditData  = $state<Awaited<ReturnType<typeof api.nfConntrackAuditStatus>>  | null>(null);
+  let sysvipcAuditData      = $state<Awaited<ReturnType<typeof api.sysvipcAuditStatus>>      | null>(null);
+  let mdraidHealthData      = $state<Awaited<ReturnType<typeof api.mdraidHealthStatus>>      | null>(null);
+  async function loadEntropyAudit() {
+    try { entropyAuditData = await api.entropyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNfConntrackAudit() {
+    try { nfConntrackAuditData = await api.nfConntrackAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSysvipcAudit() {
+    try { sysvipcAuditData = await api.sysvipcAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadMdraidHealth() {
+    try { mdraidHealthData = await api.mdraidHealthStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1921,6 +1943,11 @@
       if (!diskIoLatencyData)     loadDiskIoLatency();
       if (!netProtoCountersData)  loadNetProtoCounters();
       if (!slabAuditData)         loadSlabAudit();
+      // R&D #45 cards
+      if (!entropyAuditData)      loadEntropyAudit();
+      if (!nfConntrackAuditData)  loadNfConntrackAudit();
+      if (!sysvipcAuditData)      loadSysvipcAudit();
+      if (!mdraidHealthData)      loadMdraidHealth();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -7582,6 +7609,167 @@
                              border-radius: 4px; overflow-x: auto;">{slabAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(slabAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #45.4 entropy + hwrng (UI sprint 36) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ent.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ent.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadEntropyAudit}>{i18n.t("integrations.ent.refresh")}</button>
+          {#if entropyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['no_hwrng','low_entropy'].includes(entropyAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.ent.verdict")} : <b>{entropyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if entropyAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['no_hwrng','low_entropy'].includes(entropyAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">entropy_avail=<b>{entropyAuditData.random.entropy_avail ?? '?'}</b></span>
+              <span class="kv">poolsize=<b>{entropyAuditData.random.poolsize ?? '?'}</b></span>
+              <span class="kv">hwrng=<b>{entropyAuditData.hwrng.current ?? '(none)'}</b></span>
+              {#if entropyAuditData.hwrng.available_list && entropyAuditData.hwrng.available_list.length > 0}
+                <span class="kv">available: {entropyAuditData.hwrng.available_list.join(', ')}</span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{entropyAuditData.verdict.reason}</p>
+            {#if entropyAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ent.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{entropyAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(entropyAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #45.1 conntrack (UI sprint 36) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ct.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ct.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNfConntrackAudit}>{i18n.t("integrations.ct.refresh")}</button>
+          {#if nfConntrackAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['insert_drops','table_saturated'].includes(nfConntrackAuditData.verdict.verdict) ? 'var(--warn)' :
+                             nfConntrackAuditData.verdict.verdict === 'time_wait_bloat' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.ct.verdict")} : <b>{nfConntrackAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nfConntrackAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['insert_drops','table_saturated'].includes(nfConntrackAuditData.verdict.verdict) ? 'var(--warn)' :
+                        nfConntrackAuditData.verdict.verdict === 'time_wait_bloat' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">count=<b>{nfConntrackAuditData.sysctls.nf_conntrack_count ?? '?'}</b>/{nfConntrackAuditData.sysctls.nf_conntrack_max ?? '?'}</span>
+              <span class="kv">tw_timeout=<b>{nfConntrackAuditData.sysctls.nf_conntrack_tcp_timeout_time_wait ?? '?'}s</b></span>
+              {#if nfConntrackAuditData.stats.insert_failed !== undefined}
+                <span class="kv">insert_failed=<b>{nfConntrackAuditData.stats.insert_failed}</b></span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{nfConntrackAuditData.verdict.reason}</p>
+            {#if nfConntrackAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ct.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{nfConntrackAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(nfConntrackAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #45.3 SysV IPC (UI sprint 36) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ipc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ipc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSysvipcAudit}>{i18n.t("integrations.ipc.refresh")}</button>
+          {#if sysvipcAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['stale_shm','sem_exhaustion','msg_queue_backlog'].includes(sysvipcAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {sysvipcAuditData.shm_count ?? 0} shm · {sysvipcAuditData.sem_count ?? 0} sem · {sysvipcAuditData.msg_count ?? 0} msg · {i18n.t("integrations.ipc.verdict")} : <b>{sysvipcAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sysvipcAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['stale_shm','sem_exhaustion','msg_queue_backlog'].includes(sysvipcAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            {#if sysvipcAuditData.shm_total_bytes !== undefined}
+              <p class="muted">shm total : {(sysvipcAuditData.shm_total_bytes / (1024*1024)).toFixed(1)} MB</p>
+            {/if}
+            <p style="margin: 4px 0;">{sysvipcAuditData.verdict.reason}</p>
+            {#if sysvipcAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ipc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{sysvipcAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(sysvipcAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #45.2 mdraid (UI sprint 36) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.md.title")}</h4>
+        <p class="muted">{i18n.t("integrations.md.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMdraidHealth}>{i18n.t("integrations.md.refresh")}</button>
+          {#if mdraidHealthData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['degraded','mismatch_present'].includes(mdraidHealthData.verdict.verdict) ? 'var(--warn)' :
+                             mdraidHealthData.verdict.verdict === 'resyncing' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {mdraidHealthData.array_count ?? 0} arrays · {i18n.t("integrations.md.verdict")} : <b>{mdraidHealthData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if mdraidHealthData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['degraded','mismatch_present'].includes(mdraidHealthData.verdict.verdict) ? 'var(--warn)' :
+                        mdraidHealthData.verdict.verdict === 'resyncing' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if mdraidHealthData.arrays.length > 0}
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each mdraidHealthData.arrays as a}
+                  <li>{a.name} ({a.level}): [{a.marker}], state={a.state}{a.resync ? ', resync active' : ''}</li>
+                {/each}
+              </ul>
+            {/if}
+            <p style="margin: 4px 0;">{mdraidHealthData.verdict.reason}</p>
+            {#if mdraidHealthData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.md.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{mdraidHealthData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(mdraidHealthData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
