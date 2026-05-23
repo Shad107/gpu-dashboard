@@ -902,6 +902,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_topology_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-smaps":
+                # R&D #31.2 — smaps_rollup residence breakdown
+                code, body = api.handle_proc_smaps_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
