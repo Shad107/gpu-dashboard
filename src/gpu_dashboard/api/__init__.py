@@ -325,3 +325,4 @@ from .nvrm_tail import handle_nvrm_tail_status  # noqa: F401,F811
 from .nvlink_health import handle_nvlink_health_status  # noqa: F401,F811
 from .kmod_params import handle_kmod_params_status  # noqa: F401,F811
 from .thermal_slowdown_kind import handle_thermal_slowdown_kind_status  # noqa: F401,F811
+from .d3cold_policy import handle_d3cold_policy_status  # noqa: F401,F811
