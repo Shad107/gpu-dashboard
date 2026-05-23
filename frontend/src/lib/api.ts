@@ -3400,4 +3400,63 @@ export const api = {
       debugfs_readable: boolean;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #55 (UI sprint 46) ──
+  edacEccAuditStatus: () =>
+    fetch("/api/edac-ecc-audit").then(jsonOf<{
+      ok: boolean;
+      edac_present: boolean;
+      controller_count?: number;
+      controllers: Array<{
+        id: string; ue_count: number | null; ce_count: number | null;
+        mc_name: string | null; size_mb: number | null;
+        dimms: Array<{ id: string; ue_count: number | null;
+                          ce_count: number | null;
+                          label: string | null;
+                          location: string | null;
+                          size: number | null }>;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  numaTopologyAuditStatus: () =>
+    fetch("/api/numa-topology-audit").then(jsonOf<{
+      ok: boolean;
+      node_count?: number;
+      nodes: Array<{ id: number; distance: string[];
+                      cpulist: string | null;
+                      numastat: Record<string, number> }>;
+      numa_balancing: number | null;
+      nvidia_gpus: Array<{ bdf: string; numa_node: number | null;
+                            local_cpulist: string | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  hwmonSensorsAuditStatus: () =>
+    fetch("/api/hwmon-sensors-audit").then(jsonOf<{
+      ok: boolean;
+      hwmon_present: boolean;
+      chip_count?: number;
+      chips: Array<{ id: string; name: string | null;
+                       fans: Record<string, { input?: number | null;
+                                                 alarm?: number | null }>;
+                       voltage_alarms: Record<string, { alarm?: number | null }>;
+                       pwms: Record<string, { duty?: number | null;
+                                                 enable?: number | null }> }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  efiBootOrderAuditStatus: () =>
+    fetch("/api/efi-boot-order-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      BootCurrent?: number | null;
+      BootOrder?: number[];
+      BootNext?: number | null;
+      BootEntries?: number[];
+      SecureBoot?: boolean | null;
+      dbx_present?: boolean;
+      varstore_total_bytes?: number;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

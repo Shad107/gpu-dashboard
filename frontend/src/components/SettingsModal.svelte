@@ -1900,6 +1900,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #55 (UI sprint 46) ────────────────────────────────────────────
+  let edacEccAuditData           = $state<Awaited<ReturnType<typeof api.edacEccAuditStatus>>           | null>(null);
+  let numaTopologyAuditData      = $state<Awaited<ReturnType<typeof api.numaTopologyAuditStatus>>      | null>(null);
+  let hwmonSensorsAuditData      = $state<Awaited<ReturnType<typeof api.hwmonSensorsAuditStatus>>      | null>(null);
+  let efiBootOrderAuditData      = $state<Awaited<ReturnType<typeof api.efiBootOrderAuditStatus>>      | null>(null);
+  async function loadEdacEccAudit() {
+    try { edacEccAuditData = await api.edacEccAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNumaTopologyAudit() {
+    try { numaTopologyAuditData = await api.numaTopologyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadHwmonSensorsAudit() {
+    try { hwmonSensorsAuditData = await api.hwmonSensorsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadEfiBootOrderAudit() {
+    try { efiBootOrderAuditData = await api.efiBootOrderAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2179,6 +2201,11 @@
       if (!hugepagesAuditData)          loadHugepagesAudit();
       if (!kvmMiscAuditData)            loadKvmMiscAudit();
       if (!ioUringRuntimeAuditData)     loadIoUringRuntimeAudit();
+      // R&D #55 cards
+      if (!edacEccAuditData)            loadEdacEccAudit();
+      if (!numaTopologyAuditData)       loadNumaTopologyAudit();
+      if (!hwmonSensorsAuditData)       loadHwmonSensorsAudit();
+      if (!efiBootOrderAuditData)       loadEfiBootOrderAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -9535,6 +9562,191 @@
                              border-radius: 4px; overflow-x: auto;">{ioUringRuntimeAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(ioUringRuntimeAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #55.1 EDAC ECC (UI sprint 46) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.edac.title")}</h4>
+        <p class="muted">{i18n.t("integrations.edac.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadEdacEccAudit}>{i18n.t("integrations.edac.refresh")}</button>
+          {#if edacEccAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['ue_present','ce_rising'].includes(edacEccAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['edac_absent','driver_missing'].includes(edacEccAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {edacEccAuditData.controller_count ?? 0} controllers · {i18n.t("integrations.edac.verdict")} : <b>{edacEccAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if edacEccAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['ue_present','ce_rising'].includes(edacEccAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['edac_absent','driver_missing'].includes(edacEccAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Controllers + DIMMs</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each edacEccAuditData.controllers as c}
+                  <li>{c.id} ({c.mc_name ?? '?'}): ce={c.ce_count ?? '?'} ue={c.ue_count ?? '?'}
+                    {#if c.dimms.length}
+                      <ul>
+                        {#each c.dimms as d}
+                          <li>{d.id} {d.label ?? ''}: ce={d.ce_count ?? '?'} ue={d.ue_count ?? '?'}</li>
+                        {/each}
+                      </ul>
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{edacEccAuditData.verdict.reason}</p>
+            {#if edacEccAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.edac.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{edacEccAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(edacEccAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #55.2 NUMA topology (UI sprint 46) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.numa.title")}</h4>
+        <p class="muted">{i18n.t("integrations.numa.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNumaTopologyAudit}>{i18n.t("integrations.numa.refresh")}</button>
+          {#if numaTopologyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['gpu_numa_unset','cross_node_memory'].includes(numaTopologyAuditData.verdict.verdict) ? 'var(--warn)' :
+                             numaTopologyAuditData.verdict.verdict === 'balancing_off_on_multi_node' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {numaTopologyAuditData.node_count ?? 0} nodes · {i18n.t("integrations.numa.verdict")} : <b>{numaTopologyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if numaTopologyAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['gpu_numa_unset','cross_node_memory'].includes(numaTopologyAuditData.verdict.verdict) ? 'var(--warn)' :
+                        numaTopologyAuditData.verdict.verdict === 'balancing_off_on_multi_node' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>numa_balancing = {numaTopologyAuditData.numa_balancing ?? '?'}</li>
+              {#each numaTopologyAuditData.nvidia_gpus as g}
+                <li>GPU {g.bdf}: numa_node=<b
+                  style:color={g.numa_node === -1 ? 'var(--warn)' : 'inherit'}
+                >{g.numa_node ?? '?'}</b> local_cpulist={g.local_cpulist ?? '?'}</li>
+              {/each}
+            </ul>
+            <p style="margin: 4px 0;">{numaTopologyAuditData.verdict.reason}</p>
+            {#if numaTopologyAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.numa.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{numaTopologyAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(numaTopologyAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #55.3 hwmon (UI sprint 46) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.hwmon.title")}</h4>
+        <p class="muted">{i18n.t("integrations.hwmon.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHwmonSensorsAudit}>{i18n.t("integrations.hwmon.refresh")}</button>
+          {#if hwmonSensorsAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['voltage_alarm','fan_stall'].includes(hwmonSensorsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['pwm_manual_override','sensor_missing'].includes(hwmonSensorsAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {hwmonSensorsAuditData.chip_count ?? 0} chips · {i18n.t("integrations.hwmon.verdict")} : <b>{hwmonSensorsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hwmonSensorsAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['voltage_alarm','fan_stall'].includes(hwmonSensorsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['pwm_manual_override','sensor_missing'].includes(hwmonSensorsAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Chips</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each hwmonSensorsAuditData.chips as c}
+                  <li>{c.id} ({c.name ?? '?'}): fans={Object.keys(c.fans).length} pwms={Object.keys(c.pwms).length} valarms={Object.keys(c.voltage_alarms).length}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{hwmonSensorsAuditData.verdict.reason}</p>
+            {#if hwmonSensorsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.hwmon.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{hwmonSensorsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(hwmonSensorsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #55.4 EFI boot order (UI sprint 46) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.efiboot.title")}</h4>
+        <p class="muted">{i18n.t("integrations.efiboot.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadEfiBootOrderAudit}>{i18n.t("integrations.efiboot.refresh")}</button>
+          {#if efiBootOrderAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['bootnext_pinned','varstore_near_full'].includes(efiBootOrderAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['dbx_absent_with_secureboot','bootorder_drift'].includes(efiBootOrderAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.efiboot.verdict")} : <b>{efiBootOrderAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if efiBootOrderAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['bootnext_pinned','varstore_near_full'].includes(efiBootOrderAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['dbx_absent_with_secureboot','bootorder_drift'].includes(efiBootOrderAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              {#if efiBootOrderAuditData.BootCurrent != null}
+                <li>BootCurrent=0x{efiBootOrderAuditData.BootCurrent.toString(16).padStart(4,'0').toUpperCase()}</li>
+              {/if}
+              {#if efiBootOrderAuditData.BootOrder?.length}
+                <li>BootOrder=[{efiBootOrderAuditData.BootOrder.map(v => '0x'+v.toString(16).padStart(4,'0').toUpperCase()).join(', ')}]</li>
+              {/if}
+              {#if efiBootOrderAuditData.BootNext != null}
+                <li>BootNext=<b style:color="var(--warn)">0x{efiBootOrderAuditData.BootNext.toString(16).padStart(4,'0').toUpperCase()}</b></li>
+              {/if}
+              <li>SecureBoot: {efiBootOrderAuditData.SecureBoot ? 'on' : 'off'} · dbx_present: {efiBootOrderAuditData.dbx_present ? 'yes' : 'no'}</li>
+              <li>varstore: {efiBootOrderAuditData.varstore_total_bytes != null ? (efiBootOrderAuditData.varstore_total_bytes / 1024).toFixed(1) + ' KiB' : '?'}</li>
+            </ul>
+            <p style="margin: 4px 0;">{efiBootOrderAuditData.verdict.reason}</p>
+            {#if efiBootOrderAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.efiboot.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{efiBootOrderAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(efiBootOrderAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
