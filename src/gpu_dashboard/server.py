@@ -1572,6 +1572,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_syscall_auxv_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/btf-bpf-audit":
+                # R&D #66.2 — /sys/kernel/btf + /sys/fs/bpf
+                code, body = api.handle_btf_bpf_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
