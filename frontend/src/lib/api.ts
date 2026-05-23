@@ -1619,4 +1619,65 @@ export const api = {
         mean_gpu_util_pct: number | null;
       }>;
     }>),
+
+  // ── R&D #25 (UI sprint 16) ─────────────────────────────────────────────
+  trimAuditStatus: () =>
+    fetch("/api/trim-audit").then(jsonOf<{
+      ok: boolean;
+      audit_count: number;
+      audits: Array<{
+        directory: string; mountpoint: string; device: string;
+        fstype: string;
+        has_discard_mount: boolean; on_ssd: boolean | null;
+      }>;
+      fstrim_timer: { enabled: string | null; active: string | null };
+      verdict: { verdict: "no_dirs" | "no_ssd" | "ok" | "no_trim";
+                  reason: string; recommendation: string };
+    }>),
+
+  throttleBitsStatus: () =>
+    fetch("/api/throttle-bits").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      any_critical?: boolean;
+      gpus: Array<{
+        index: number; name: string;
+        active_count: number;
+        bits: Array<{ field: string; label: string;
+                       severity: "info" | "warn" | "critical";
+                       meaning: string; active: boolean }>;
+        verdict: { verdict: string; severity: string; reason: string };
+      }>;
+    }>),
+
+  retiredPagesStatus: () =>
+    fetch("/api/retired-pages").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      supported: boolean;
+      worst_severity?: string;
+      total_entries?: number;
+      per_gpu: Array<{
+        uuid: string; sbe: number; dbe: number; total: number;
+        delta_sbe: number; delta_dbe: number;
+        first_seen: boolean;
+        verdict: { severity: string; label: string;
+                    reason: string; recommendation: string };
+      }>;
+    }>),
+
+  bugReportPrepStatus: () =>
+    fetch("/api/bug-report-prep").then(jsonOf<{
+      ok: boolean;
+      context_summary: {
+        kernel: string;
+        xid_event_count: number;
+        gsp_event_count: number;
+        gpu_count: number;
+        dkms_verdict?: string;
+        driver_flavor?: string;
+      };
+      template_text: string;
+      bug_report_command: string;
+    }>),
 };

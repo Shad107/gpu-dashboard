@@ -1244,6 +1244,28 @@
   let pcieAerData       = $state<Awaited<ReturnType<typeof api.pcieAerStatus>>         | null>(null);
   let memTempDriftData  = $state<Awaited<ReturnType<typeof api.memTempDriftStatus>>    | null>(null);
   let accountingData    = $state<Awaited<ReturnType<typeof api.accountingStatus>>      | null>(null);
+
+  // ── R&D #25 (UI sprint 16) ────────────────────────────────────────────
+  let trimAuditData     = $state<Awaited<ReturnType<typeof api.trimAuditStatus>>       | null>(null);
+  let throttleBitsData  = $state<Awaited<ReturnType<typeof api.throttleBitsStatus>>    | null>(null);
+  let retiredPagesData  = $state<Awaited<ReturnType<typeof api.retiredPagesStatus>>    | null>(null);
+  let bugRepPrepData    = $state<Awaited<ReturnType<typeof api.bugReportPrepStatus>>   | null>(null);
+  async function loadTrimAudit() {
+    try { trimAuditData = await api.trimAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadThrottleBits() {
+    try { throttleBitsData = await api.throttleBitsStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadRetiredPages() {
+    try { retiredPagesData = await api.retiredPagesStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBugRepPrep() {
+    try { bugRepPrepData = await api.bugReportPrepStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1374,6 +1396,11 @@
       if (!pcieAerData)        loadPcieAer();
       if (!memTempDriftData)   loadMemTempDrift();
       if (!accountingData)     loadAccounting();
+      // R&D #25 cards
+      if (!trimAuditData)      loadTrimAudit();
+      if (!throttleBitsData)   loadThrottleBits();
+      if (!retiredPagesData)   loadRetiredPages();
+      if (!bugRepPrepData)     loadBugRepPrep();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -4902,6 +4929,194 @@
               {/each}
             </tbody>
           </table>
+        {/if}
+      </div>
+
+      <!-- R&D #25.2 TRIM/discard auditor (UI sprint 16) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.trim.title")}</h4>
+        <p class="muted">{i18n.t("integrations.trim.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTrimAudit}>{i18n.t("integrations.trim.refresh")}</button>
+          {#if trimAuditData?.fstrim_timer}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={trimAuditData.fstrim_timer.active === 'active' ? 'var(--ok)' : 'var(--warn)'}>
+              {i18n.t("integrations.trim.timer")} :
+              <b>{trimAuditData.fstrim_timer.active ?? '—'} / {trimAuditData.fstrim_timer.enabled ?? '—'}</b>
+            </span>
+          {/if}
+        </div>
+        {#if trimAuditData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={trimAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        trimAuditData.verdict.verdict === 'no_trim' ? 'var(--warn)' :
+                        'var(--text-dim)'}>
+            <b>{i18n.t("integrations.trim.verdict")} : {trimAuditData.verdict.verdict}</b> — {trimAuditData.verdict.reason}
+          </p>
+          {#if trimAuditData.verdict.recommendation}
+            <div class="form-row" style="gap: 8px; margin-top: 6px;">
+              <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                            font-family: monospace; font-size: 0.85em;
+                            border-radius: 4px;">{trimAuditData.verdict.recommendation}</code>
+              <button class="btn btn-small"
+                      onclick={() => copyToClipboard(trimAuditData?.verdict?.recommendation ?? "")}>📋</button>
+            </div>
+          {/if}
+        {/if}
+        {#if trimAuditData?.audits && trimAuditData.audits.length > 0}
+          <table style="width:100%; font-size:0.85em; border-collapse: collapse; margin-top: 6px;">
+            <tbody>
+              {#each trimAuditData.audits as a}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.82em;">
+                    {a.directory.replace(/^\/home\/[^/]+/, "~")}
+                  </td>
+                  <td style="padding: 4px;">{a.fstype}</td>
+                  <td style="padding: 4px;"
+                      style:color={a.on_ssd ? 'var(--text-dim)' : 'var(--text-dim)'}>
+                    {a.on_ssd ? 'SSD' : 'HDD/NA'}
+                  </td>
+                  <td style="padding: 4px;"
+                      style:color={a.has_discard_mount ? 'var(--ok)' : 'var(--text-dim)'}>
+                    {a.has_discard_mount ? '✓ discard' : '— no discard'}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #25.5 Throttle bits decoder (UI sprint 16) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.tbits.title")}</h4>
+        <p class="muted">{i18n.t("integrations.tbits.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadThrottleBits}>{i18n.t("integrations.tbits.refresh")}</button>
+        </div>
+        {#if throttleBitsData?.gpus && throttleBitsData.gpus.length > 0}
+          {#each throttleBitsData.gpus as g}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          g.verdict.severity === 'critical' ? 'var(--warn)' :
+                          g.verdict.severity === 'warn' ? 'var(--accent)' :
+                          'var(--ok)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b>GPU{g.index} — {g.name}</b>
+                <span class="kv">{i18n.t("integrations.tbits.verdict")} :
+                  <b style:color={g.verdict.severity === 'critical' ? 'var(--warn)' :
+                                g.verdict.severity === 'warn' ? 'var(--accent)' :
+                                'var(--ok)'}>{g.verdict.verdict}</b>
+                </span>
+                <span class="kv">{i18n.t("integrations.tbits.active_count")} : <b>{g.active_count}</b></span>
+              </div>
+              <table style="width:100%; font-size:0.82em; border-collapse: collapse; margin-top: 4px;">
+                <tbody>
+                  {#each g.bits as bit}
+                    <tr style="border-bottom: 1px solid var(--border);">
+                      <td style="padding: 3px;"
+                          style:color={bit.active
+                            ? (bit.severity === 'critical' ? 'var(--warn)' :
+                               bit.severity === 'warn' ? 'var(--accent)' : 'var(--ok)')
+                            : 'var(--text-dim)'}>
+                        {bit.active ? '●' : '○'}
+                      </td>
+                      <td style="padding: 3px;">{bit.label}</td>
+                      <td style="padding: 3px; color: var(--text-dim);">{bit.severity}</td>
+                      <td style="padding: 3px; color: var(--text-dim); font-size: 0.85em;">{bit.meaning}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #25.1 Retired-page trend (UI sprint 16) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.retire.title")}</h4>
+        <p class="muted">{i18n.t("integrations.retire.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRetiredPages}>{i18n.t("integrations.retire.refresh")}</button>
+        </div>
+        {#if retiredPagesData && !retiredPagesData.supported}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.retire.unsupported")}</p>
+        {/if}
+        {#if retiredPagesData?.per_gpu && retiredPagesData.per_gpu.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 6px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">GPU UUID</th>
+                <th style="padding: 4px;">{i18n.t("integrations.retire.sbe")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.retire.dbe")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.retire.delta")}</th>
+                <th style="padding: 4px;">verdict</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each retiredPagesData.per_gpu as g}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.82em;">
+                    {g.uuid.slice(0, 16)}…
+                  </td>
+                  <td style="padding: 4px;">{g.sbe}</td>
+                  <td style="padding: 4px;"
+                      style:color={g.dbe > 0 ? 'var(--warn)' : 'var(--text-dim)'}>{g.dbe}</td>
+                  <td style="padding: 4px;">+{g.delta_sbe} / +{g.delta_dbe}</td>
+                  <td style="padding: 4px;"
+                      style:color={g.verdict.severity === 'critical' ? 'var(--warn)' :
+                                 g.verdict.severity === 'warn' ? 'var(--accent)' :
+                                 'var(--text-dim)'}>{g.verdict.label}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #25.3 NVIDIA bug-report prepper (UI sprint 16) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bugrep.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bugrep.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBugRepPrep}>{i18n.t("integrations.bugrep.refresh")}</button>
+          {#if bugRepPrepData?.template_text}
+            <button class="btn"
+                    onclick={() => copyToClipboard(bugRepPrepData?.template_text ?? "")}>
+              {i18n.t("integrations.bugrep.copy")}
+            </button>
+          {/if}
+        </div>
+        {#if bugRepPrepData?.context_summary}
+          <div class="form-row" style="gap: 14px; margin-top: 6px; flex-wrap: wrap;">
+            <span class="kv">kernel : <b>{bugRepPrepData.context_summary.kernel ?? '—'}</b></span>
+            <span class="kv">driver : <b>{bugRepPrepData.context_summary.driver_flavor ?? '—'}</b></span>
+            <span class="kv">GPUs : <b>{bugRepPrepData.context_summary.gpu_count}</b></span>
+            <span class="kv"
+                  style:color={bugRepPrepData.context_summary.xid_event_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              XID : <b>{bugRepPrepData.context_summary.xid_event_count}</b>
+            </span>
+            <span class="kv"
+                  style:color={bugRepPrepData.context_summary.gsp_event_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              GSP : <b>{bugRepPrepData.context_summary.gsp_event_count}</b>
+            </span>
+          </div>
+        {/if}
+        {#if bugRepPrepData?.bug_report_command}
+          <div class="form-row" style="gap: 8px; margin-top: 6px;">
+            <span class="muted">{i18n.t("integrations.bugrep.run_cmd")} :</span>
+            <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                          font-family: monospace; font-size: 0.85em;
+                          border-radius: 4px;">{bugRepPrepData.bug_report_command}</code>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(bugRepPrepData?.bug_report_command ?? "")}>📋</button>
+          </div>
+        {/if}
+        {#if bugRepPrepData?.template_text}
+          <pre style="margin-top: 6px; padding: 8px; background: var(--bg-2);
+                       font-family: monospace; font-size: 0.78em;
+                       max-height: 280px; overflow: auto; border-radius: 4px;">{bugRepPrepData.template_text}</pre>
         {/if}
       </div>
 
