@@ -1657,6 +1657,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cxl_dax_memory_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/usb-role-switch-audit":
+                # R&D #71.2 — /sys/class/usb_role + typec roles
+                code, body = api.handle_usb_role_switch_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

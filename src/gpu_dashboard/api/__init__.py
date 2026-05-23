@@ -484,3 +484,4 @@ from .remoteproc_coprocessor_audit import handle_remoteproc_coprocessor_audit_st
 from .uio_gpio_userland_audit import handle_uio_gpio_userland_audit_status  # noqa: F401,F811
 from .devcoredump_inventory_audit import handle_devcoredump_inventory_audit_status  # noqa: F401,F811
 from .cxl_dax_memory_audit import handle_cxl_dax_memory_audit_status  # noqa: F401,F811
+from .usb_role_switch_audit import handle_usb_role_switch_audit_status  # noqa: F401,F811
