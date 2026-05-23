@@ -433,3 +433,4 @@ from .hwmon_sensors_audit import handle_hwmon_sensors_audit_status  # noqa: F401
 from .sata_link_pm_audit import handle_sata_link_pm_audit_status  # noqa: F401,F811
 from .bdi_writeback_audit import handle_bdi_writeback_audit_status  # noqa: F401,F811
 from .proc_crypto_audit import handle_proc_crypto_audit_status  # noqa: F401,F811
+from .wakeup_sources_audit import handle_wakeup_sources_audit_status  # noqa: F401,F811
