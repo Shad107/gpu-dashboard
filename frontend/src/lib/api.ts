@@ -1378,4 +1378,75 @@ export const api = {
       }>;
       top_candidates: Array<{ path: string; size_mib: number; age_days: number }>;
     }>),
+
+  // ── R&D #22 (UI sprint 13) ─────────────────────────────────────────────
+  vramLeakStatus: () =>
+    fetch("/api/vram-leak").then(jsonOf<{
+      ok: boolean;
+      window_s: number;
+      process_count: number;
+      leaking_count: number;
+      growing_count: number;
+      processes: Array<{
+        pid: number; comm: string;
+        current_mib: number; sample_count: number;
+        verdict: {
+          verdict: "warming" | "stable" | "growing" | "leaking";
+          reason: string;
+          slope_mib_per_hour: number | null;
+          projected_oom_minutes: number | null;
+        };
+      }>;
+    }>),
+
+  gpuResetStatus: () =>
+    fetch("/api/gpu-reset").then(jsonOf<{
+      ok: boolean;
+      card_count: number;
+      cards: Array<{
+        card: string; bdf: string;
+        reset_count: number | null;
+        delta_resets: number;
+      }>;
+      kernel_events: Array<{ kind: string; line: string }>;
+      kernel_event_count: number;
+      total_delta_resets: number;
+      verdict: {
+        verdict: "clean" | "occasional" | "frequent" | "rma";
+        reason: string;
+        recommendation: string;
+      };
+    }>),
+
+  cudaInventoryStatus: () =>
+    fetch("/api/cuda-inventory").then(jsonOf<{
+      ok: boolean;
+      install_count: number;
+      collision_count: number;
+      toolkits: Array<{ path: string; version: string | null; source: string }>;
+      conda_envs: Array<{ path: string; version: string; source: string }>;
+      ld_library_path: Array<{ path: string; versions: string[]; source: string }>;
+      collisions: Array<{ kind: string; major?: string; majors?: string[];
+                            count?: number; paths?: string[] }>;
+      verdict: { verdict: "none" | "clean" | "duplicate" | "version_conflict";
+                  reason: string };
+    }>),
+
+  driverFlavorStatus: () =>
+    fetch("/api/driver-flavor").then(jsonOf<{
+      ok: boolean;
+      kernel_module_version: string | null;
+      flavor: "open" | "proprietary" | "unknown";
+      modinfo_license: string | string[] | null;
+      modinfo_filename: string | string[] | null;
+      gpus: Array<{
+        index: number; name: string; compute_cap: string;
+        arch: string; open_supported: boolean;
+      }>;
+      verdict: {
+        verdict: "ok" | "wrong_flavor" | "could_upgrade" | "mixed" | "unknown";
+        reason: string;
+        recommendation: string;
+      };
+    }>),
 };

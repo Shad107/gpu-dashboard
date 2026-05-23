@@ -1226,6 +1226,28 @@
   let persistenceData   = $state<Awaited<ReturnType<typeof api.persistenceModeStatus>> | null>(null);
   let gspStatusData     = $state<Awaited<ReturnType<typeof api.gspStatus>>             | null>(null);
   let sdCacheData       = $state<Awaited<ReturnType<typeof api.sdCacheJanitorStatus>>  | null>(null);
+
+  // ── R&D #22 (UI sprint 13) ────────────────────────────────────────────
+  let vramLeakData      = $state<Awaited<ReturnType<typeof api.vramLeakStatus>>        | null>(null);
+  let gpuResetData      = $state<Awaited<ReturnType<typeof api.gpuResetStatus>>        | null>(null);
+  let cudaInvData       = $state<Awaited<ReturnType<typeof api.cudaInventoryStatus>>   | null>(null);
+  let driverFlavorData  = $state<Awaited<ReturnType<typeof api.driverFlavorStatus>>    | null>(null);
+  async function loadVramLeak() {
+    try { vramLeakData = await api.vramLeakStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadGpuReset() {
+    try { gpuResetData = await api.gpuResetStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCudaInv() {
+    try { cudaInvData = await api.cudaInventoryStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDriverFlavor() {
+    try { driverFlavorData = await api.driverFlavorStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
   async function loadPstateAudit() {
     try { pstateAuditData = await api.pstateAuditStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1293,6 +1315,11 @@
       if (!persistenceData)    loadPersistence();
       if (!gspStatusData)      loadGspStatus();
       if (!sdCacheData)        loadSdCache();
+      // R&D #22 cards
+      if (!vramLeakData)       loadVramLeak();
+      if (!gpuResetData)       loadGpuReset();
+      if (!cudaInvData)        loadCudaInv();
+      if (!driverFlavorData)   loadDriverFlavor();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -4224,6 +4251,224 @@
                   <td style="padding: 4px; font-family: monospace;">{c.path.replace(/^\/home\/[^/]+/, "~")}</td>
                   <td style="padding: 4px;">{c.size_mib} MiB</td>
                   <td style="padding: 4px; color: var(--text-dim);">{c.age_days} d</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #22.3 VRAM leak detector (UI sprint 13) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.leak.title")}</h4>
+        <p class="muted">{i18n.t("integrations.leak.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVramLeak}>{i18n.t("integrations.leak.refresh")}</button>
+          {#if vramLeakData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.leak.window")} : <b>{Math.floor(vramLeakData.window_s / 60)} min</b>
+            </span>
+            <span class="kv"
+                  style:color={vramLeakData.leaking_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.leak.leaking")} : <b>{vramLeakData.leaking_count}</b>
+            </span>
+            <span class="kv">
+              {i18n.t("integrations.leak.growing")} : <b>{vramLeakData.growing_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vramLeakData?.processes && vramLeakData.processes.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">{i18n.t("integrations.leak.process")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.leak.current")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.leak.slope")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.leak.verdict")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.leak.oom_in")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each vramLeakData.processes as p}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{p.comm} <span class="muted">(pid {p.pid})</span></td>
+                  <td style="padding: 4px;">{p.current_mib} MiB</td>
+                  <td style="padding: 4px;">
+                    {p.verdict.slope_mib_per_hour !== null
+                      ? `${p.verdict.slope_mib_per_hour.toFixed(1)} MiB/h`
+                      : '—'}
+                  </td>
+                  <td style="padding: 4px;"
+                      style:color={p.verdict.verdict === 'leaking' ? 'var(--warn)' :
+                                 p.verdict.verdict === 'growing' ? 'var(--accent)' :
+                                 'var(--ok)'}>{p.verdict.verdict}</td>
+                  <td style="padding: 4px;">
+                    {p.verdict.projected_oom_minutes !== null
+                      ? `${Math.floor(p.verdict.projected_oom_minutes)} min`
+                      : '—'}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #22.1 GPU reset counter (UI sprint 13) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.reset.title")}</h4>
+        <p class="muted">{i18n.t("integrations.reset.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadGpuReset}>{i18n.t("integrations.reset.refresh")}</button>
+          {#if gpuResetData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={gpuResetData.total_delta_resets > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.reset.delta")} : <b>{gpuResetData.total_delta_resets}</b>
+            </span>
+            <span class="kv"
+                  style:color={gpuResetData.kernel_event_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.reset.events")} : <b>{gpuResetData.kernel_event_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if gpuResetData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={gpuResetData.verdict.verdict === 'clean' ? 'var(--ok)' :
+                        gpuResetData.verdict.verdict === 'rma' ? 'var(--warn)' :
+                        gpuResetData.verdict.verdict === 'frequent' ? 'var(--accent)' :
+                        'var(--text-dim)'}>
+            <b>{gpuResetData.verdict.verdict}</b> — {gpuResetData.verdict.reason}
+          </p>
+          {#if gpuResetData.verdict.recommendation}
+            <p class="muted">{i18n.t("integrations.reset.recovery")} :
+              <code style="font-family: monospace; font-size: 0.85em;">{gpuResetData.verdict.recommendation}</code>
+            </p>
+          {/if}
+        {/if}
+        {#if gpuResetData?.kernel_events && gpuResetData.kernel_events.length > 0}
+          <table style="width:100%; font-size:0.82em; border-collapse: collapse; margin-top: 6px;">
+            <tbody>
+              {#each gpuResetData.kernel_events.slice(-6).reverse() as e}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; color: var(--warn);">{e.kind}</td>
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">{e.line}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #22.5 CUDA toolkit inventory (UI sprint 13) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cudainv.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cudainv.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCudaInv}>{i18n.t("integrations.cudainv.refresh")}</button>
+          {#if cudaInvData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.cudainv.installs")} : <b>{cudaInvData.install_count}</b>
+            </span>
+            <span class="kv"
+                  style:color={cudaInvData.collision_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.cudainv.collisions")} : <b>{cudaInvData.collision_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cudaInvData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={cudaInvData.verdict.verdict === 'clean' ? 'var(--ok)' :
+                        cudaInvData.verdict.verdict === 'version_conflict' ? 'var(--warn)' :
+                        'var(--text-dim)'}>
+            <b>{cudaInvData.verdict.verdict}</b> — {cudaInvData.verdict.reason}
+          </p>
+        {/if}
+        {#if cudaInvData?.toolkits && cudaInvData.toolkits.length > 0}
+          <h5 style="margin: 8px 0 4px 0;">{i18n.t("integrations.cudainv.toolkits")}</h5>
+          <table style="width:100%; font-size:0.85em; border-collapse: collapse;">
+            <tbody>
+              {#each cudaInvData.toolkits as t}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace;">{t.path}</td>
+                  <td style="padding: 4px;">{t.version ?? '—'}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+        {#if cudaInvData?.conda_envs && cudaInvData.conda_envs.length > 0}
+          <h5 style="margin: 8px 0 4px 0;">{i18n.t("integrations.cudainv.conda")}</h5>
+          <table style="width:100%; font-size:0.85em; border-collapse: collapse;">
+            <tbody>
+              {#each cudaInvData.conda_envs as t}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace;">{t.source}</td>
+                  <td style="padding: 4px;">{t.version}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #22.2 Open vs proprietary driver advisor (UI sprint 13) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.flavor.title")}</h4>
+        <p class="muted">{i18n.t("integrations.flavor.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDriverFlavor}>{i18n.t("integrations.flavor.refresh")}</button>
+          {#if driverFlavorData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.flavor.version")} : <b>{driverFlavorData.kernel_module_version ?? '—'}</b>
+            </span>
+            <span class="kv">
+              {i18n.t("integrations.flavor.flavor")} :
+              <b style:color={driverFlavorData.flavor === 'open' ? 'var(--ok)' :
+                            driverFlavorData.flavor === 'proprietary' ? 'var(--accent)' :
+                            'var(--warn)'}>{driverFlavorData.flavor}</b>
+            </span>
+          {/if}
+        </div>
+        {#if driverFlavorData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={driverFlavorData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        driverFlavorData.verdict.verdict === 'wrong_flavor' ? 'var(--warn)' :
+                        driverFlavorData.verdict.verdict === 'could_upgrade' ? 'var(--accent)' :
+                        'var(--text-dim)'}>
+            <b>{driverFlavorData.verdict.verdict}</b> — {driverFlavorData.verdict.reason}
+          </p>
+          {#if driverFlavorData.verdict.recommendation}
+            <div class="form-row" style="gap: 8px; margin-top: 6px;">
+              <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                            font-family: monospace; font-size: 0.85em;
+                            border-radius: 4px;">{driverFlavorData.verdict.recommendation}</code>
+              <button class="btn btn-small"
+                      onclick={() => copyToClipboard(driverFlavorData?.verdict?.recommendation ?? "")}>📋</button>
+            </div>
+          {/if}
+        {/if}
+        {#if driverFlavorData?.gpus && driverFlavorData.gpus.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">{i18n.t("integrations.flavor.gpus")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.flavor.arch")}</th>
+                <th style="padding: 4px;">compute</th>
+                <th style="padding: 4px;">open</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each driverFlavorData.gpus as g}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{g.name}</td>
+                  <td style="padding: 4px;">{g.arch}</td>
+                  <td style="padding: 4px;">sm_{g.compute_cap.replace(".", "")}</td>
+                  <td style="padding: 4px;"
+                      style:color={g.open_supported ? 'var(--ok)' : 'var(--warn)'}>
+                    {g.open_supported
+                      ? i18n.t("integrations.flavor.open_ok")
+                      : i18n.t("integrations.flavor.open_no")}
+                  </td>
                 </tr>
               {/each}
             </tbody>
