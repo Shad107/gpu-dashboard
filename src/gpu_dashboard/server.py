@@ -1607,6 +1607,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_lru_gen_mglru_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/dt-memmap-firmware-audit":
+                # R&D #68.4 — devicetree/memmap/vmcoreinfo handoff
+                code, body = api.handle_dt_memmap_firmware_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
