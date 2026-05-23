@@ -907,6 +907,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_smaps_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hwmon-inventory":
+                # R&D #31.1 — hwmon NVMe + chipset parity
+                code, body = api.handle_hwmon_inventory_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
