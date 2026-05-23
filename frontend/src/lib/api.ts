@@ -2238,4 +2238,66 @@ export const api = {
       events: Array<{ message: string; target: string; timestamp_us: number }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #35 (UI sprint 26) ─────────────────────────────────────────────
+  cpuBoostStatus: () =>
+    fetch("/api/cpu-boost").then(jsonOf<{
+      ok: boolean;
+      mode: string;
+      boost: number | null;
+      no_turbo: number | null;
+      intel_status: string | null;
+      amd_status: string | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  netSysctlStatus: () =>
+    fetch("/api/net-sysctl").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      row_count?: number;
+      worst_severity?: string;
+      flagged_count?: number;
+      recipe?: string;
+      tcp_rmem?: [number, number, number] | null;
+      tcp_wmem?: [number, number, number] | null;
+      rows?: Array<{
+        name: string; value: number | null; severity: string;
+        reason: string; recommended: number | null;
+      }>;
+    }>),
+
+  smtAuditStatus: () =>
+    fetch("/api/smt-audit").then(jsonOf<{
+      ok: boolean;
+      smt_control: string | null;
+      smt_active: number | null;
+      possible_count: number;
+      online_count: number;
+      offline_cores: number[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  numaPlacementStatus: () =>
+    fetch("/api/numa-placement").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      worst_verdict?: string;
+      node_count?: number;
+      process_count?: number;
+      nodes?: Array<{
+        id: number;
+        cpu_list: string | null;
+        distance: number[];
+        mem_total_kb: number | null;
+        mem_free_kb: number | null;
+      }>;
+      processes?: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        per_node: Record<string, number>;
+      }>;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

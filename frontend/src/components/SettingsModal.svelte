@@ -1465,6 +1465,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #35 (UI sprint 26) ────────────────────────────────────────────
+  let cpuBoostData      = $state<Awaited<ReturnType<typeof api.cpuBoostStatus>>      | null>(null);
+  let netSysctlData     = $state<Awaited<ReturnType<typeof api.netSysctlStatus>>     | null>(null);
+  let smtAuditData      = $state<Awaited<ReturnType<typeof api.smtAuditStatus>>      | null>(null);
+  let numaPlacementData = $state<Awaited<ReturnType<typeof api.numaPlacementStatus>> | null>(null);
+  async function loadCpuBoost() {
+    try { cpuBoostData = await api.cpuBoostStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNetSysctl() {
+    try { netSysctlData = await api.netSysctlStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSmtAudit() {
+    try { smtAuditData = await api.smtAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNumaPlacement() {
+    try { numaPlacementData = await api.numaPlacementStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1645,6 +1667,11 @@
       if (!buddyinfoData)      loadBuddyinfo();
       if (!procSchedData)      loadProcSched();
       if (!oomdData)           loadOomd();
+      // R&D #35 cards
+      if (!cpuBoostData)       loadCpuBoost();
+      if (!netSysctlData)      loadNetSysctl();
+      if (!smtAuditData)       loadSmtAudit();
+      if (!numaPlacementData)  loadNumaPlacement();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6193,6 +6220,198 @@
               {/if}
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #35.1 CPU turbo/boost audit (UI sprint 26) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.boost.title")}</h4>
+        <p class="muted">{i18n.t("integrations.boost.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuBoost}>{i18n.t("integrations.boost.refresh")}</button>
+          {#if cpuBoostData?.ok && cpuBoostData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuBoostData.verdict.verdict === 'boost_disabled' ? 'var(--warn)' :
+                             ['missing','passive','unknown'].includes(cpuBoostData.verdict.verdict) ? 'var(--text-dim)' :
+                             'var(--accent)'}>
+              {i18n.t("integrations.boost.verdict")} : <b>{cpuBoostData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuBoostData?.ok && cpuBoostData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuBoostData.verdict.verdict === 'boost_disabled' ? 'var(--warn)' :
+                        ['missing','passive','unknown'].includes(cpuBoostData.verdict.verdict) ? 'var(--text-dim)' :
+                        'var(--accent)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">{i18n.t("integrations.boost.mode")} :
+                <b style="font-family: monospace;">{cpuBoostData.mode}</b>
+              </span>
+              {#if cpuBoostData.boost !== null}
+                <span class="kv">{i18n.t("integrations.boost.boost")} : <b>{cpuBoostData.boost}</b></span>
+              {/if}
+              {#if cpuBoostData.no_turbo !== null}
+                <span class="kv">{i18n.t("integrations.boost.no_turbo")} : <b>{cpuBoostData.no_turbo}</b></span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{cpuBoostData.verdict.reason}</p>
+            {#if cpuBoostData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.boost.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuBoostData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuBoostData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #35.2 LAN socket-buffer audit (UI sprint 26) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.netsysctl.title")}</h4>
+        <p class="muted">{i18n.t("integrations.netsysctl.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNetSysctl}>{i18n.t("integrations.netsysctl.refresh")}</button>
+          {#if netSysctlData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={netSysctlData.worst_severity === 'warn' ? 'var(--warn)' :
+                             netSysctlData.worst_severity === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.netsysctl.severity")} : <b>{netSysctlData.worst_severity}</b>
+              · <b>{netSysctlData.flagged_count}</b> {i18n.t("integrations.netsysctl.flagged")}
+            </span>
+          {/if}
+        </div>
+        {#if netSysctlData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.netsysctl.unavailable")}</p>
+        {/if}
+        {#if netSysctlData?.rows && netSysctlData.rows.length > 0}
+          {#each netSysctlData.rows as r}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          r.severity === 'warn' ? 'var(--warn)' :
+                          r.severity === 'unknown' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">net.{r.name.replace('/', '.')}</b>
+                <span class="kv">current : <b>{r.value ?? '—'}</b></span>
+                {#if r.recommended !== null}
+                  <span class="kv">recommended : <b>{r.recommended}</b></span>
+                {/if}
+                <span class="kv"><b>{r.severity}</b></span>
+              </div>
+              <p class="muted" style="margin: 4px 0;">{r.reason}</p>
+            </div>
+          {/each}
+        {/if}
+        {#if netSysctlData?.recipe}
+          <details style="margin-top: 8px;">
+            <summary class="muted">{i18n.t("integrations.netsysctl.recipe")}</summary>
+            <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                         border-radius: 4px; overflow-x: auto;">{netSysctlData.recipe}</pre>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(netSysctlData!.recipe!)}>📋 Copy</button>
+          </details>
+        {/if}
+      </div>
+
+      <!-- R&D #35.4 SMT / offline-core audit (UI sprint 26) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.smt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.smt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSmtAudit}>{i18n.t("integrations.smt.refresh")}</button>
+          {#if smtAuditData?.ok && smtAuditData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={smtAuditData.verdict.verdict === 'cores_offline' ? 'var(--warn)' :
+                             smtAuditData.verdict.verdict === 'smt_off' ? 'var(--accent)' :
+                             smtAuditData.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.smt.verdict")} : <b>{smtAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if smtAuditData?.ok && smtAuditData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        smtAuditData.verdict.verdict === 'cores_offline' ? 'var(--warn)' :
+                        ['smt_off','unknown'].includes(smtAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">{i18n.t("integrations.smt.control")} :
+                <b style="font-family: monospace;">{smtAuditData.smt_control ?? '—'}</b>
+              </span>
+              <span class="kv">{i18n.t("integrations.smt.online")} :
+                <b>{smtAuditData.online_count}/{smtAuditData.possible_count}</b>
+              </span>
+              {#if smtAuditData.offline_cores && smtAuditData.offline_cores.length > 0}
+                <span class="kv" style:color="var(--warn)">
+                  {i18n.t("integrations.smt.offline")} :
+                  <b>{smtAuditData.offline_cores.join(', ')}</b>
+                </span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{smtAuditData.verdict.reason}</p>
+            {#if smtAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.smt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{smtAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(smtAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #35.3 NUMA placement audit (UI sprint 26) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.numa.title")}</h4>
+        <p class="muted">{i18n.t("integrations.numa.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNumaPlacement}>{i18n.t("integrations.numa.refresh")}</button>
+          {#if numaPlacementData?.ok && numaPlacementData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={numaPlacementData.verdict.verdict === 'cross_node_split' ? 'var(--warn)' :
+                             numaPlacementData.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.numa.nodes")} : <b>{numaPlacementData.node_count}</b>
+              · {i18n.t("integrations.numa.procs")} : <b>{numaPlacementData.process_count}</b>
+              · <b>{numaPlacementData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if numaPlacementData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.numa.unavailable")}</p>
+        {/if}
+        {#if numaPlacementData?.ok && numaPlacementData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        numaPlacementData.verdict.verdict === 'cross_node_split' ? 'var(--warn)' :
+                        numaPlacementData.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if numaPlacementData.nodes && numaPlacementData.nodes.length > 0}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                {#each numaPlacementData.nodes as n}
+                  <span class="kv">node {n.id} · {n.cpu_list ?? '—'} · {n.mem_total_kb ? ((n.mem_total_kb / 1024 / 1024).toFixed(1) + ' GiB') : '—'}</span>
+                {/each}
+              </div>
+            {/if}
+            <p style="margin: 4px 0;">{numaPlacementData.verdict.reason}</p>
+            {#if numaPlacementData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.numa.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{numaPlacementData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(numaPlacementData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
         {/if}
       </div>
 
