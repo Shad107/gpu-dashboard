@@ -987,6 +987,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_smt_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/numa-placement":
+                # R&D #35.3 — NUMA placement auditor
+                code, body = api.handle_numa_placement_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
