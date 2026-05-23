@@ -1387,6 +1387,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hwmon_sensors_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sata-link-pm-audit":
+                # R&D #56.1 — SATA Aggressive Link PM
+                code, body = api.handle_sata_link_pm_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
