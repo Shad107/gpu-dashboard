@@ -439,3 +439,4 @@ from .backlight_pwm_audit import handle_backlight_pwm_audit_status  # noqa: F401
 from .loadavg_pressure_audit import handle_loadavg_pressure_audit_status  # noqa: F401,F811
 from .pagetypeinfo_audit import handle_pagetypeinfo_audit_status  # noqa: F401,F811
 from .cgroup_root_audit import handle_cgroup_root_audit_status  # noqa: F401,F811
+from .scsi_transport_audit import handle_scsi_transport_audit_status  # noqa: F401,F811
