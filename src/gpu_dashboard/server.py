@@ -972,6 +972,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_oomd_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpu-boost":
+                # R&D #35.1 — CPU turbo/boost runtime toggle audit
+                code, body = api.handle_cpu_boost_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
