@@ -1667,6 +1667,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_page_idle_tracking_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/edac-dimm-ce-trend-audit":
+                # R&D #71.4 — per-DIMM EDAC CE/UE trend
+                code, body = api.handle_edac_dimm_ce_trend_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
