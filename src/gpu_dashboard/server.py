@@ -1212,6 +1212,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_vfs_limits_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nvidia-rm-audit":
+                # R&D #47.3 — nvidia RM registry + capabilities
+                code, body = api.handle_nvidia_rm_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
