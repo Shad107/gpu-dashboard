@@ -406,3 +406,4 @@ from .journal_audit import handle_journal_audit_status  # noqa: F401,F811
 from .rtc_clock_audit import handle_rtc_clock_audit_status  # noqa: F401,F811
 from .tpm_audit import handle_tpm_audit_status  # noqa: F401,F811
 from .wmi_vendor_audit import handle_wmi_vendor_audit_status  # noqa: F401,F811
+from .kmsg_audit import handle_kmsg_audit_status  # noqa: F401,F811
