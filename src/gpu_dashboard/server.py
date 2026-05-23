@@ -1127,6 +1127,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cooling_devices_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hybrid-cpu-topo":
+                # R&D #42.2 — hybrid CPU cluster/die topology
+                code, body = api.handle_hybrid_cpu_topo_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

@@ -378,3 +378,4 @@ from .inotify_audit import handle_inotify_audit_status  # noqa: F401,F811
 from .zswap_zram_audit import handle_zswap_zram_audit_status  # noqa: F401,F811
 from .cpu_epb import handle_cpu_epb_status  # noqa: F401,F811
 from .cooling_devices import handle_cooling_devices_status  # noqa: F401,F811
+from .hybrid_cpu_topo import handle_hybrid_cpu_topo_status  # noqa: F401,F811
