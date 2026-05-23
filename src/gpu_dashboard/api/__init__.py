@@ -320,3 +320,4 @@ from .rebar_audit import handle_rebar_audit_status  # noqa: F401,F811
 from .cpu_rapl import handle_cpu_rapl_status  # noqa: F401,F811
 from .clock_gap import handle_clock_gap_status  # noqa: F401,F811
 from .pcie_rpm_audit import handle_pcie_rpm_audit_status  # noqa: F401,F811
+from .thermal_zones import handle_thermal_zones_status  # noqa: F401,F811
