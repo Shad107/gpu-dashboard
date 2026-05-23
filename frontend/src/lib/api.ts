@@ -2643,4 +2643,70 @@ export const api = {
       mem_total_gb: number | null;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #42 (UI sprint 33) ──
+  cpuEpbStatus: () =>
+    fetch("/api/cpu-epb").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      epb_exposed_count: number;
+      per_cpu: Array<{ cpu: number; epb: number | null; label: string | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  coolingDevicesStatus: () =>
+    fetch("/api/cooling-devices").then(jsonOf<{
+      ok: boolean;
+      cooling_device_count?: number;
+      thermal_zone_count?: number;
+      cooling_devices: Array<{
+        name: string; index: number; type: string | null;
+        cur_state: number | null; max_state: number | null;
+      }>;
+      thermal_zones: Array<{
+        zone: string; type: string | null; trip_count: number;
+        bindings: Array<{ cdev_slot: number; cdev_target: string | null;
+                            cdev_index: number | null;
+                            trip_point: number | null;
+                            weight: number | null }>;
+        cdevs_present_count: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  hybridCpuTopoStatus: () =>
+    fetch("/api/hybrid-cpu-topo").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      packages: number[];
+      dies: number[];
+      clusters: number[];
+      freq_tiers_khz: number[];
+      per_cpu: Array<{ cpu: number; package_id: number | null;
+                         die_id: number | null;
+                         cluster_id: number | null;
+                         core_id: number | null;
+                         max_freq_khz: number | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  fileLocksAuditStatus: () =>
+    fetch("/api/file-locks-audit").then(jsonOf<{
+      ok: boolean;
+      lock_count: number;
+      conflict_count: number;
+      orphan_count: number;
+      llm_lock_count: number;
+      conflicts: Array<{
+        inode_key: number[];
+        paths: string[];
+        is_llm: boolean;
+        writers: Array<{ pid: number; comm: string | null;
+                          access: string; path: string | null }>;
+      }>;
+      llm_locks: Array<{ pid: number; comm: string | null;
+                          access: string; path: string | null;
+                          inode: number; pid_alive: boolean }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

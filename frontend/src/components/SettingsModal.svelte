@@ -1624,6 +1624,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #42 (UI sprint 33) ────────────────────────────────────────────
+  let cpuEpbData          = $state<Awaited<ReturnType<typeof api.cpuEpbStatus>>          | null>(null);
+  let coolingDevicesData  = $state<Awaited<ReturnType<typeof api.coolingDevicesStatus>>  | null>(null);
+  let hybridCpuTopoData   = $state<Awaited<ReturnType<typeof api.hybridCpuTopoStatus>>   | null>(null);
+  let fileLocksAuditData  = $state<Awaited<ReturnType<typeof api.fileLocksAuditStatus>>  | null>(null);
+  async function loadCpuEpb() {
+    try { cpuEpbData = await api.cpuEpbStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCoolingDevices() {
+    try { coolingDevicesData = await api.coolingDevicesStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadHybridCpuTopo() {
+    try { hybridCpuTopoData = await api.hybridCpuTopoStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFileLocksAudit() {
+    try { fileLocksAuditData = await api.fileLocksAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1840,6 +1862,11 @@
       if (!edacRamEccData)      loadEdacRamEcc();
       if (!inotifyAuditData)    loadInotifyAudit();
       if (!zswapZramData)       loadZswapZram();
+      // R&D #42 cards
+      if (!cpuEpbData)          loadCpuEpb();
+      if (!coolingDevicesData)  loadCoolingDevices();
+      if (!hybridCpuTopoData)   loadHybridCpuTopo();
+      if (!fileLocksAuditData)  loadFileLocksAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6944,6 +6971,210 @@
                              border-radius: 4px; overflow-x: auto;">{zswapZramData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(zswapZramData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #42.4 CPU EPB (UI sprint 33) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.epb.title")}</h4>
+        <p class="muted">{i18n.t("integrations.epb.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuEpb}>{i18n.t("integrations.epb.refresh")}</button>
+          {#if cpuEpbData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuEpbData.verdict.verdict === 'uniform_powersave' ? 'var(--warn)' :
+                             cpuEpbData.verdict.verdict === 'mixed_across_cpus' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cpuEpbData.cpu_count} CPU · {cpuEpbData.epb_exposed_count} EPB · {i18n.t("integrations.epb.verdict")} : <b>{cpuEpbData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuEpbData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuEpbData.verdict.verdict === 'uniform_powersave' ? 'var(--warn)' :
+                        cpuEpbData.verdict.verdict === 'mixed_across_cpus' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpuEpbData.verdict.reason}</p>
+            {#if cpuEpbData.epb_exposed_count > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Per-CPU EPB</summary>
+                <div style="font-size: 0.85em; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px;">
+                  {#each cpuEpbData.per_cpu as c}
+                    {#if c.epb !== null}
+                      <span>cpu{c.cpu}: {c.epb} ({c.label})</span>
+                    {/if}
+                  {/each}
+                </div>
+              </details>
+            {/if}
+            {#if cpuEpbData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.epb.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuEpbData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuEpbData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #42.3 cooling devices (UI sprint 33) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cdev.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cdev.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCoolingDevices}>{i18n.t("integrations.cdev.refresh")}</button>
+          {#if coolingDevicesData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={coolingDevicesData.verdict.verdict === 'saturated_cdev' ? 'var(--warn)' :
+                             ['unbound_zone','no_cooling'].includes(coolingDevicesData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {coolingDevicesData.cooling_devices.length} cdev · {coolingDevicesData.thermal_zones.length} zone · {i18n.t("integrations.cdev.verdict")} : <b>{coolingDevicesData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if coolingDevicesData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        coolingDevicesData.verdict.verdict === 'saturated_cdev' ? 'var(--warn)' :
+                        ['unbound_zone','no_cooling'].includes(coolingDevicesData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{coolingDevicesData.verdict.reason}</p>
+            {#if coolingDevicesData.cooling_devices.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{coolingDevicesData.cooling_devices.length} cooling devices</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px; max-height: 200px; overflow-y: auto;">
+                  {#each coolingDevicesData.cooling_devices as cd}
+                    <li>{cd.name} ({cd.type ?? '?'}) cur=<b
+                      style:color={cd.cur_state !== null && cd.max_state !== null && cd.max_state > 0 && cd.cur_state >= cd.max_state ? 'var(--warn)' : 'inherit'}
+                    >{cd.cur_state ?? '?'}</b>/<b>{cd.max_state ?? '?'}</b></li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            {#if coolingDevicesData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cdev.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{coolingDevicesData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(coolingDevicesData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #42.2 hybrid CPU topology (UI sprint 33) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.hcpu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.hcpu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHybridCpuTopo}>{i18n.t("integrations.hcpu.refresh")}</button>
+          {#if hybridCpuTopoData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['p_e_hybrid','multi_ccd_or_multi_die','multi_cluster_uniform'].includes(hybridCpuTopoData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {hybridCpuTopoData.cpu_count} CPU · {i18n.t("integrations.hcpu.verdict")} : <b>{hybridCpuTopoData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hybridCpuTopoData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['p_e_hybrid','multi_ccd_or_multi_die','multi_cluster_uniform'].includes(hybridCpuTopoData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">packages=<b>{hybridCpuTopoData.packages.length}</b></span>
+              <span class="kv">dies=<b>{hybridCpuTopoData.dies.length}</b></span>
+              <span class="kv">clusters=<b>{hybridCpuTopoData.clusters.length}</b></span>
+              {#if hybridCpuTopoData.freq_tiers_khz.length > 0}
+                <span class="kv">tiers: {hybridCpuTopoData.freq_tiers_khz.map(f => (f/1000).toFixed(0) + ' MHz').join(' / ')}</span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{hybridCpuTopoData.verdict.reason}</p>
+            {#if hybridCpuTopoData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.hcpu.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{hybridCpuTopoData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(hybridCpuTopoData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #42.1 file locks (UI sprint 33) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.lock.title")}</h4>
+        <p class="muted">{i18n.t("integrations.lock.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFileLocksAudit}>{i18n.t("integrations.lock.refresh")}</button>
+          {#if fileLocksAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={fileLocksAuditData.verdict.verdict === 'contention_on_model' ? 'var(--warn)' :
+                             ['contention_general','orphan_lock'].includes(fileLocksAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {fileLocksAuditData.lock_count} locks · {i18n.t("integrations.lock.verdict")} : <b>{fileLocksAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fileLocksAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        fileLocksAuditData.verdict.verdict === 'contention_on_model' ? 'var(--warn)' :
+                        ['contention_general','orphan_lock'].includes(fileLocksAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">conflicts=<b
+                style:color={fileLocksAuditData.conflict_count > 0 ? 'var(--warn)' : 'inherit'}
+              >{fileLocksAuditData.conflict_count}</b></span>
+              <span class="kv">orphans=<b>{fileLocksAuditData.orphan_count}</b></span>
+              <span class="kv">llm locks=<b>{fileLocksAuditData.llm_lock_count}</b></span>
+            </div>
+            {#if fileLocksAuditData.conflicts.length > 0}
+              <details style="margin-top: 4px;" open>
+                <summary class="muted">Conflicts</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each fileLocksAuditData.conflicts as c}
+                    <li>inode {c.inode_key.join(':')}{c.is_llm ? ' (LLM)' : ''}:
+                      {#each c.writers as w}
+                        <span> pid {w.pid}({w.comm ?? '?'})</span>
+                      {/each}
+                      {#if c.paths.length > 0}
+                        <br/><code style="font-size: 0.85em;">{c.paths.join(', ')}</code>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            {#if fileLocksAuditData.llm_locks.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{fileLocksAuditData.llm_locks.length} LLM-pattern lock(s)</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each fileLocksAuditData.llm_locks as L}
+                    <li>{L.comm ?? '?'}(pid {L.pid}) {L.access}: {L.path ?? '?'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{fileLocksAuditData.verdict.reason}</p>
+            {#if fileLocksAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.lock.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{fileLocksAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(fileLocksAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
