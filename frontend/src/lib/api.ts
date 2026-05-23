@@ -1528,4 +1528,95 @@ export const api = {
         recommendation: string;
       }>;
     }>),
+
+  // ── R&D #24 (UI sprint 15) ─────────────────────────────────────────────
+  dkmsStatus: () =>
+    fetch("/api/dkms-status").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      running_kernel: string;
+      dkms_entries: Array<{
+        module: string; version: string | null;
+        kernel: string | null; arch: string | null;
+        state: string;
+      }>;
+      ko_present: boolean;
+      verdict: {
+        verdict: "ok" | "rebuild_needed" | "no_nvidia_dkms"
+                 | "dkms_missing" | "unknown";
+        reason: string;
+        recovery: string;
+      };
+    }>),
+
+  pcieAerStatus: () =>
+    fetch("/api/pcie-aer").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      devices: Array<{
+        bdf: string;
+        totals: { correctable: number; fatal: number; nonfatal: number };
+        delta: Record<string, Record<string, number>>;
+        first_seen: boolean;
+        verdict: {
+          verdict: "clean" | "low_correctable" | "high_correctable"
+                   | "non_fatal" | "fatal";
+          reason: string; recovery: string;
+        };
+      }>;
+      aggregate_delta: Record<string, Record<string, number>>;
+      verdict: {
+        verdict: "clean" | "low_correctable" | "high_correctable"
+                 | "non_fatal" | "fatal" | "no_gpus";
+        reason: string; recovery: string;
+      };
+    }>),
+
+  memTempDriftStatus: () =>
+    fetch("/api/mem-temp-drift").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      gpu_count?: number;
+      summary_verdict?: "ok" | "warming" | "improving"
+                       | "pad_degraded" | "urgent";
+      gpus: Array<{
+        uuid: string; name: string;
+        gpu_temp_c: number | null;
+        mem_temp_c: number | null;
+        delta_now: number | null;
+        drift: {
+          baseline_delta: number | null;
+          recent_delta: number | null;
+          drift_c: number | null;
+          sample_count: number;
+          baseline_sample_count?: number;
+          recent_sample_count?: number;
+        };
+        verdict: { verdict: string; reason: string };
+      }>;
+    }>),
+
+  accountingStatus: () =>
+    fetch("/api/accounting").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      accounting_mode: string | null;
+      enable_command?: string;
+      advisory?: string;
+      record_count?: number;
+      records?: Array<{
+        gpu_uuid: string; pid: number;
+        gpu_util_pct: number | null;
+        mem_util_pct: number | null;
+        max_memory_mib: number | null;
+        wall_time_ms: number | null;
+        observed_at?: number; first_seen_at?: number;
+      }>;
+      by_command?: Array<{
+        comm: string; count: number;
+        total_wall_ms: number;
+        max_memory_mib: number;
+        mean_gpu_util_pct: number | null;
+      }>;
+    }>),
 };

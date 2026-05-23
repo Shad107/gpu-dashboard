@@ -1238,6 +1238,28 @@
   let pcieAspmData      = $state<Awaited<ReturnType<typeof api.pcieAspmStatus>>        | null>(null);
   let fsAuditData       = $state<Awaited<ReturnType<typeof api.fsMountAuditStatus>>    | null>(null);
   let batchAdvisorData  = $state<Awaited<ReturnType<typeof api.batchAdvisorStatus>>    | null>(null);
+
+  // ── R&D #24 (UI sprint 15) ────────────────────────────────────────────
+  let dkmsStatusData    = $state<Awaited<ReturnType<typeof api.dkmsStatus>>            | null>(null);
+  let pcieAerData       = $state<Awaited<ReturnType<typeof api.pcieAerStatus>>         | null>(null);
+  let memTempDriftData  = $state<Awaited<ReturnType<typeof api.memTempDriftStatus>>    | null>(null);
+  let accountingData    = $state<Awaited<ReturnType<typeof api.accountingStatus>>      | null>(null);
+  async function loadDkmsStatus() {
+    try { dkmsStatusData = await api.dkmsStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPcieAer() {
+    try { pcieAerData = await api.pcieAerStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadMemTempDrift() {
+    try { memTempDriftData = await api.memTempDriftStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAccounting() {
+    try { accountingData = await api.accountingStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
   async function loadProcDeep() {
     try { procDeepData = await api.procDeepStateStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1347,6 +1369,11 @@
       if (!pcieAspmData)       loadPcieAspm();
       if (!fsAuditData)        loadFsAudit();
       if (!batchAdvisorData)   loadBatchAdvisor();
+      // R&D #24 cards
+      if (!dkmsStatusData)     loadDkmsStatus();
+      if (!pcieAerData)        loadPcieAer();
+      if (!memTempDriftData)   loadMemTempDrift();
+      if (!accountingData)     loadAccounting();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -4674,6 +4701,207 @@
               <p style="margin: 4px 0;">{adv.recommendation}</p>
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #24.3 DKMS rebuild status (UI sprint 15) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dkms.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dkms.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDkmsStatus}>{i18n.t("integrations.dkms.refresh")}</button>
+          {#if dkmsStatusData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.dkms.kernel")} :
+              <b style="font-family: monospace;">{dkmsStatusData.running_kernel}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dkmsStatusData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={dkmsStatusData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        dkmsStatusData.verdict.verdict === 'rebuild_needed' ? 'var(--warn)' :
+                        'var(--text-dim)'}>
+            <b>{i18n.t("integrations.dkms.verdict")} : {dkmsStatusData.verdict.verdict}</b> — {dkmsStatusData.verdict.reason}
+          </p>
+          {#if dkmsStatusData.verdict.recovery}
+            <div class="form-row" style="gap: 8px; margin-top: 6px;">
+              <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                            font-family: monospace; font-size: 0.85em;
+                            border-radius: 4px;">{dkmsStatusData.verdict.recovery}</code>
+              <button class="btn btn-small"
+                      onclick={() => copyToClipboard(dkmsStatusData?.verdict?.recovery ?? "")}>📋</button>
+            </div>
+          {/if}
+        {/if}
+        {#if dkmsStatusData?.dkms_entries && dkmsStatusData.dkms_entries.length > 0}
+          <table style="width:100%; font-size:0.85em; border-collapse: collapse; margin-top: 6px;">
+            <tbody>
+              {#each dkmsStatusData.dkms_entries as e}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{e.module}/{e.version ?? '—'}</td>
+                  <td style="padding: 4px; font-family: monospace;">{e.kernel ?? '—'}</td>
+                  <td style="padding: 4px;">{e.state}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #24.2 PCIe AER counter (UI sprint 15) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.aer.title")}</h4>
+        <p class="muted">{i18n.t("integrations.aer.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieAer}>{i18n.t("integrations.aer.refresh")}</button>
+        </div>
+        {#if pcieAerData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={pcieAerData.verdict.verdict === 'clean' ? 'var(--ok)' :
+                        pcieAerData.verdict.verdict === 'fatal' ? 'var(--warn)' :
+                        pcieAerData.verdict.verdict === 'non_fatal' ? 'var(--warn)' :
+                        pcieAerData.verdict.verdict === 'high_correctable' ? 'var(--accent)' :
+                        'var(--text-dim)'}>
+            <b>{i18n.t("integrations.aer.verdict")} : {pcieAerData.verdict.verdict}</b> — {pcieAerData.verdict.reason}
+          </p>
+          {#if pcieAerData.verdict.recovery}
+            <p class="muted">{i18n.t("integrations.aer.recovery")} :
+              <code style="font-family: monospace; font-size: 0.85em;">{pcieAerData.verdict.recovery}</code>
+            </p>
+          {/if}
+        {/if}
+        {#if pcieAerData?.devices && pcieAerData.devices.length > 0}
+          <table style="width:100%; font-size:0.85em; border-collapse: collapse; margin-top: 6px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">device</th>
+                <th style="padding: 4px;">cor</th>
+                <th style="padding: 4px;">non-fatal</th>
+                <th style="padding: 4px;">fatal</th>
+                <th style="padding: 4px;">verdict</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each pcieAerData.devices as d}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace;">{d.bdf}</td>
+                  <td style="padding: 4px;">{d.totals.correctable}</td>
+                  <td style="padding: 4px;">{d.totals.nonfatal}</td>
+                  <td style="padding: 4px;">{d.totals.fatal}</td>
+                  <td style="padding: 4px;"
+                      style:color={d.verdict.verdict === 'clean' ? 'var(--ok)' :
+                                 d.verdict.verdict === 'fatal' ? 'var(--warn)' :
+                                 'var(--accent)'}>{d.verdict.verdict}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #24.4 VRAM thermal-pad drift (UI sprint 15) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.memtemp.title")}</h4>
+        <p class="muted">{i18n.t("integrations.memtemp.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMemTempDrift}>{i18n.t("integrations.memtemp.refresh")}</button>
+          {#if memTempDriftData?.summary_verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={memTempDriftData.summary_verdict === 'urgent' ? 'var(--warn)' :
+                             memTempDriftData.summary_verdict === 'pad_degraded' ? 'var(--accent)' :
+                             memTempDriftData.summary_verdict === 'improving' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.memtemp.verdict")} :
+              <b>{memTempDriftData.summary_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if memTempDriftData?.gpus && memTempDriftData.gpus.length > 0}
+          {#each memTempDriftData.gpus as g}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          g.verdict.verdict === 'urgent' ? 'var(--warn)' :
+                          g.verdict.verdict === 'pad_degraded' ? 'var(--accent)' :
+                          'var(--ok)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b>{g.name}</b>
+                <span class="kv">GPU {g.gpu_temp_c}°C</span>
+                <span class="kv">VRAM {g.mem_temp_c}°C</span>
+                {#if g.delta_now !== null}
+                  <span class="kv">{i18n.t("integrations.memtemp.delta_now")} :
+                    <b>+{g.delta_now}°C</b>
+                  </span>
+                {/if}
+                {#if g.drift.drift_c !== null}
+                  <span class="kv"
+                        style:color={g.drift.drift_c > 5 ? 'var(--warn)' : 'var(--text-dim)'}>
+                    {i18n.t("integrations.memtemp.drift")} :
+                    <b>{g.drift.drift_c > 0 ? '+' : ''}{g.drift.drift_c}°C</b>
+                  </span>
+                {/if}
+                <span class="kv">{g.drift.sample_count} {i18n.t("integrations.memtemp.samples")}</span>
+              </div>
+              <p class="muted" style="margin: 4px 0;">{g.verdict.reason}</p>
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #24.1 NVML accounting harvester (UI sprint 15) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.acc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.acc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadAccounting}>{i18n.t("integrations.acc.refresh")}</button>
+          {#if accountingData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={accountingData.accounting_mode === 'Enabled' ? 'var(--ok)' : 'var(--warn)'}>
+              {i18n.t("integrations.acc.mode")} :
+              <b>{accountingData.accounting_mode ?? '—'}</b>
+            </span>
+            {#if accountingData.record_count !== undefined}
+              <span class="kv">{i18n.t("integrations.acc.record_count")} :
+                <b>{accountingData.record_count}</b>
+              </span>
+            {/if}
+          {/if}
+        </div>
+        {#if accountingData?.advisory}
+          <p class="muted" style="margin-top: 6px;">{accountingData.advisory}</p>
+        {/if}
+        {#if accountingData?.enable_command}
+          <div class="form-row" style="gap: 8px; margin-top: 6px;">
+            <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                          font-family: monospace; font-size: 0.85em;
+                          border-radius: 4px;">{accountingData.enable_command}</code>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(accountingData?.enable_command ?? "")}>📋</button>
+          </div>
+        {/if}
+        {#if accountingData?.by_command && accountingData.by_command.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">{i18n.t("integrations.acc.process")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.acc.runs")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.acc.peak_vram")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.acc.total_wall")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.acc.mean_util")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each accountingData.by_command as r}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{r.comm}</td>
+                  <td style="padding: 4px;">{r.count}</td>
+                  <td style="padding: 4px;">{r.max_memory_mib} MiB</td>
+                  <td style="padding: 4px;">{Math.floor(r.total_wall_ms / 1000)} s</td>
+                  <td style="padding: 4px;">{r.mean_gpu_util_pct ?? '—'}%</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
         {/if}
       </div>
 
