@@ -1247,6 +1247,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_usb_topology_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/journal-audit":
+                # R&D #48.4 — systemd journal config + storage
+                code, body = api.handle_journal_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

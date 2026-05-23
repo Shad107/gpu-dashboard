@@ -402,3 +402,4 @@ from .sched_audit import handle_sched_audit_status  # noqa: F401,F811
 from .dma_audit import handle_dma_audit_status  # noqa: F401,F811
 from .ftrace_audit import handle_ftrace_audit_status  # noqa: F401,F811
 from .usb_topology_audit import handle_usb_topology_audit_status  # noqa: F401,F811
+from .journal_audit import handle_journal_audit_status  # noqa: F401,F811
