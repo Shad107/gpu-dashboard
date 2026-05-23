@@ -1317,6 +1317,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ksm_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/i2c-smbus-audit":
+                # R&D #52.2 — I2C / SMBus / DDC auditor
+                code, body = api.handle_i2c_smbus_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
