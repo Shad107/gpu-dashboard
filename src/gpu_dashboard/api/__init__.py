@@ -415,3 +415,4 @@ from .power_supply_audit import handle_power_supply_audit_status  # noqa: F401,F
 from .typec_audit import handle_typec_audit_status  # noqa: F401,F811
 from .perf_pmu_audit import handle_perf_pmu_audit_status  # noqa: F401,F811
 from .iomem_pci_audit import handle_iomem_pci_audit_status  # noqa: F401,F811
+from .ksm_audit import handle_ksm_audit_status  # noqa: F401,F811
