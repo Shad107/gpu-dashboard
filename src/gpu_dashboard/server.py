@@ -1472,6 +1472,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_regulator_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/alsa-codec-deep-audit":
+                # R&D #61.4 — per-codec deep dump
+                code, body = api.handle_alsa_codec_deep_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
