@@ -388,3 +388,4 @@ from .watchdog_inventory import handle_watchdog_inventory_status  # noqa: F401,F
 from .net_proto_counters import handle_net_proto_counters_status  # noqa: F401,F811
 from .disk_io_latency import handle_disk_io_latency_status  # noqa: F401,F811
 from .slab_audit import handle_slab_audit_status  # noqa: F401,F811
+from .entropy_audit import handle_entropy_audit_status  # noqa: F401,F811
