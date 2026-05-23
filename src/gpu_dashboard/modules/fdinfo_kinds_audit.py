@@ -255,9 +255,10 @@ def classify(agg: dict, proc_present: bool) -> dict:
                               for k, v in sorted(
                                   all_kinds.items(),
                                   key=lambda kv: -kv[1])[:4])
+    summary_or_none = summary or "no anon_inode FDs"
     return {"verdict": "ok",
-            "reason": (f"{pid_count} PIDs ; {summary or 'no '
-                      f'anon_inode FDs'}."),
+            "reason": (f"{pid_count} PIDs ; "
+                      f"{summary_or_none}."),
             "recommendation": ""}
 
 
