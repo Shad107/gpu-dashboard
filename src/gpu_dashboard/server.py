@@ -1217,6 +1217,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_nvidia_rm_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/mce-audit":
+                # R&D #47.4 — MCE bank + CMCI auditor
+                code, body = api.handle_mce_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
