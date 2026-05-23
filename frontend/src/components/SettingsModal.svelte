@@ -1266,6 +1266,29 @@
     try { bugRepPrepData = await api.bugReportPrepStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
+
+  // ── R&D #26 (UI sprint 17) ────────────────────────────────────────────
+  let pcieWidthData     = $state<Awaited<ReturnType<typeof api.pcieWidthWatcherStatus>> | null>(null);
+  let cudaCtxLeakData   = $state<Awaited<ReturnType<typeof api.cudaCtxLeakStatus>>      | null>(null);
+  let procStaticData    = $state<Awaited<ReturnType<typeof api.procStaticAuditStatus>>  | null>(null);
+  let memBwGaugeData    = $state<Awaited<ReturnType<typeof api.memBwGaugeStatus>>       | null>(null);
+  async function loadPcieWidth() {
+    try { pcieWidthData = await api.pcieWidthWatcherStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCudaCtxLeak() {
+    try { cudaCtxLeakData = await api.cudaCtxLeakStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcStatic() {
+    try { procStaticData = await api.procStaticAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadMemBwGauge() {
+    try { memBwGaugeData = await api.memBwGaugeStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1401,6 +1424,11 @@
       if (!throttleBitsData)   loadThrottleBits();
       if (!retiredPagesData)   loadRetiredPages();
       if (!bugRepPrepData)     loadBugRepPrep();
+      // R&D #26 cards
+      if (!pcieWidthData)      loadPcieWidth();
+      if (!cudaCtxLeakData)    loadCudaCtxLeak();
+      if (!procStaticData)     loadProcStatic();
+      if (!memBwGaugeData)     loadMemBwGauge();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -5117,6 +5145,165 @@
           <pre style="margin-top: 6px; padding: 8px; background: var(--bg-2);
                        font-family: monospace; font-size: 0.78em;
                        max-height: 280px; overflow: auto; border-radius: 4px;">{bugRepPrepData.template_text}</pre>
+        {/if}
+      </div>
+
+      <!-- R&D #26.5 PCIe link-width watcher (UI sprint 17) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pwidth.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pwidth.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieWidth}>{i18n.t("integrations.pwidth.refresh")}</button>
+          {#if pcieWidthData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pcieWidthData.worst_verdict?.startsWith('downgraded') ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.pwidth.verdict")} : <b>{pcieWidthData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pcieWidthData?.summary_reason}
+          <p class="muted" style="margin-top: 6px;">{pcieWidthData.summary_reason}</p>
+        {/if}
+        {#if pcieWidthData?.devices && pcieWidthData.devices.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 6px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">device</th>
+                <th style="padding: 4px;">width</th>
+                <th style="padding: 4px;">gen</th>
+                <th style="padding: 4px;">verdict</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each pcieWidthData.devices as d}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">{d.bdf}</td>
+                  <td style="padding: 4px;">x{d.current_width ?? '?'} / x{d.max_width ?? '?'}</td>
+                  <td style="padding: 4px;">{d.current_gen ?? '?'} / {d.max_gen ?? '?'}</td>
+                  <td style="padding: 4px;"
+                      style:color={d.verdict.verdict === 'ok' ? 'var(--ok)' :
+                                 d.verdict.verdict.startsWith('downgraded') ? 'var(--warn)' :
+                                 'var(--text-dim)'}>{d.verdict.verdict}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #26.2 CUDA context-leak detector (UI sprint 17) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ctxleak.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ctxleak.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCudaCtxLeak}>{i18n.t("integrations.ctxleak.refresh")}</button>
+          {#if cudaCtxLeakData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.ctxleak.fd_holders")} : <b>{cudaCtxLeakData.fd_holder_count}</b>
+            </span>
+            <span class="kv">
+              {i18n.t("integrations.ctxleak.compute_pids")} : <b>{cudaCtxLeakData.compute_pid_count}</b>
+            </span>
+            <span class="kv"
+                  style:color={cudaCtxLeakData.leak_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.ctxleak.leaks")} : <b>{cudaCtxLeakData.leak_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cudaCtxLeakData?.verdict}
+          <p class="muted" style="margin-top: 6px;">{cudaCtxLeakData.verdict.reason}</p>
+        {/if}
+        {#if cudaCtxLeakData?.leaks && cudaCtxLeakData.leaks.length > 0}
+          <table style="width:100%; font-size:0.85em; border-collapse: collapse;">
+            <tbody>
+              {#each cudaCtxLeakData.leaks as l}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{l.comm} <span class="muted">(pid {l.pid})</span></td>
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.8em;">{l.devices.join(", ")}</td>
+                  <td style="padding: 4px;">
+                    <code style="font-family: monospace; font-size: 0.85em;">{l.kill_cmd}</code>
+                    <button class="btn btn-small"
+                            onclick={() => copyToClipboard(l.kill_cmd)}>📋</button>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #26.1 procfs static-asset auditor (UI sprint 17) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.staticaud.title")}</h4>
+        <p class="muted">{i18n.t("integrations.staticaud.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcStatic}>{i18n.t("integrations.staticaud.refresh")}</button>
+          {#if procStaticData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procStaticData.worst_severity === 'critical' ? 'var(--warn)' :
+                             procStaticData.worst_severity === 'warn' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.staticaud.verdict")} : <b>{procStaticData.worst_severity}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procStaticData?.cards && procStaticData.cards.length > 0}
+          {#each procStaticData.cards as c}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          c.verdict.severity === 'critical' ? 'var(--warn)' :
+                          c.verdict.severity === 'warn' ? 'var(--accent)' :
+                          'var(--ok)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{c.bdf}</b>
+                <span class="kv">vendor:device {c.vendor_device}</span>
+                <span class="kv">subsystem {c.subsystem}</span>
+                <span class="kv">IRQ {c.irq ?? '—'}</span>
+              </div>
+              <p class="muted" style="margin: 4px 0; font-size: 0.82em;">
+                {i18n.t("integrations.staticaud.fp")} :
+                <code style="font-family: monospace;">{c.fingerprint.slice(0, 16)}…</code>
+              </p>
+              <p style:color={c.verdict.severity === 'critical' ? 'var(--warn)' :
+                             c.verdict.severity === 'warn' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+                <b>{c.verdict.verdict}</b> — {c.verdict.reason}
+              </p>
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #26.8 mem-bw saturation gauge (UI sprint 17) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bwgauge.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bwgauge.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMemBwGauge}>{i18n.t("integrations.bwgauge.refresh")}</button>
+        </div>
+        {#if memBwGaugeData?.per_gpu && memBwGaugeData.per_gpu.length > 0}
+          {#each memBwGaugeData.per_gpu as g}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          g.verdict.verdict === 'bandwidth_bound' ? 'var(--accent)' :
+                          g.verdict.verdict === 'compute_bound' ? 'var(--accent)' :
+                          g.verdict.verdict === 'balanced' ? 'var(--ok)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b>GPU{g.index}</b>
+                <span class="kv">{i18n.t("integrations.bwgauge.gpu_util")} : <b>{g.gpu_util_mean}%</b></span>
+                <span class="kv">{i18n.t("integrations.bwgauge.mem_util")} : <b>{g.mem_util_mean}%</b></span>
+                {#if g.ratio_mem_over_gpu !== null}
+                  <span class="kv">{i18n.t("integrations.bwgauge.ratio")} : <b>{g.ratio_mem_over_gpu.toFixed(2)}</b></span>
+                {/if}
+                <span class="kv"><b>{g.verdict.verdict}</b></span>
+              </div>
+              <p class="muted" style="margin: 4px 0;">{g.verdict.reason}</p>
+              {#if g.verdict.recommendation}
+                <p style="margin: 4px 0; color: var(--accent);">{g.verdict.recommendation}</p>
+              {/if}
+            </div>
+          {/each}
         {/if}
       </div>
 

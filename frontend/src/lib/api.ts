@@ -1680,4 +1680,67 @@ export const api = {
       template_text: string;
       bug_report_command: string;
     }>),
+
+  // ── R&D #26 (UI sprint 17) ─────────────────────────────────────────────
+  pcieWidthWatcherStatus: () =>
+    fetch("/api/pcie-width-watcher").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      worst_verdict: string;
+      summary_reason?: string;
+      devices: Array<{
+        bdf: string;
+        current_width: number | null;
+        max_width: number | null;
+        current_speed_gts: number | null;
+        max_speed_gts: number | null;
+        current_gen: number | null;
+        max_gen: number | null;
+        verdict: { verdict: string; reason: string; recovery: string };
+      }>;
+    }>),
+
+  cudaCtxLeakStatus: () =>
+    fetch("/api/cuda-ctx-leak").then(jsonOf<{
+      ok: boolean;
+      fd_holder_count: number;
+      compute_pid_count: number;
+      leak_count: number;
+      leaks: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        devices: string[]; kill_cmd: string;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  procStaticAuditStatus: () =>
+    fetch("/api/proc-static-audit").then(jsonOf<{
+      ok: boolean;
+      card_count: number;
+      worst_severity: string;
+      cards: Array<{
+        bdf: string;
+        vendor_device: string;
+        subsystem: string;
+        irq: string | null;
+        fingerprint: string;
+        drift: Array<{ field: string; before?: any; after?: any }>;
+        verdict: { verdict: string; reason: string; severity: string };
+      }>;
+    }>),
+
+  memBwGaugeStatus: () =>
+    fetch("/api/mem-bw-gauge").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      total_samples?: number;
+      per_gpu: Array<{
+        index: number;
+        gpu_util_mean: number;
+        mem_util_mean: number;
+        ratio_mem_over_gpu: number | null;
+        sample_count: number;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
 };
