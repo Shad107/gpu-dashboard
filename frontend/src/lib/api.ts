@@ -1449,4 +1449,83 @@ export const api = {
         recommendation: string;
       };
     }>),
+
+  // ── R&D #23 (UI sprint 14) ─────────────────────────────────────────────
+  procDeepStateStatus: () =>
+    fetch("/api/proc-deep-state").then(jsonOf<{
+      ok: boolean;
+      gpu_count: number;
+      drift_count: number;
+      excluded_count: number;
+      gpus: Array<{
+        bdf: string; uuid: string;
+        model: string; video_bios: string; gpu_firmware: string;
+        dma_size: string; irq: string;
+        excluded: boolean;
+        first_seen: boolean;
+        drift: Array<{ field: string;
+                        before: string | null; after: string | null }>;
+      }>;
+      verdict: {
+        verdict: "no_gpus" | "clean" | "excluded" | "firmware_drift"
+                 | "vbios_drift" | "minor_drift";
+        reason: string;
+        severity: "info" | "warn" | "critical";
+      };
+    }>),
+
+  pcieAspmStatus: () =>
+    fetch("/api/pcie-aspm").then(jsonOf<{
+      ok: boolean;
+      policy: { active: string | null; options: string[]; raw: string } | null;
+      board: { vendor: string | null; name: string | null };
+      board_known_risky: boolean;
+      nvidia_pci_devs: Array<Record<string, any>>;
+      verdict: {
+        verdict: "ok" | "warn" | "risky" | "unknown";
+        reason: string;
+        recommendation: string;
+      };
+    }>),
+
+  fsMountAuditStatus: () =>
+    fetch("/api/fs-mount-audit").then(jsonOf<{
+      ok: boolean;
+      audit_count: number;
+      warn_count: number;
+      fail_count: number;
+      audits: Array<{
+        directory: string; mountpoint: string;
+        fstype: string; options: string[];
+        severity: "ok" | "warn" | "fail";
+        issues: Array<{ severity: string; label: string;
+                         recommendation: string }>;
+      }>;
+      verdict: { verdict: "no_dirs" | "ok" | "warn" | "fail";
+                  reason: string };
+    }>),
+
+  batchAdvisorStatus: () =>
+    fetch("/api/batch-advisor").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      vram: { total_mib: number; used_mib: number; free_mib: number } | null;
+      models: Array<{
+        id: string;
+        n_ctx_train: number | null;
+        n_params: number | null;
+        size_bytes: number | null;
+        n_embd: number | null;
+      }>;
+      target_batch?: number;
+      advisors: Array<{
+        model: string;
+        kv_per_token_bytes: number;
+        headroom_bytes: number;
+        headroom_mib: number;
+        max_ctx_at_batch: number;
+        max_batch_at_ctx_train: number;
+        recommendation: string;
+      }>;
+    }>),
 };

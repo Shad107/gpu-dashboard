@@ -1232,6 +1232,28 @@
   let gpuResetData      = $state<Awaited<ReturnType<typeof api.gpuResetStatus>>        | null>(null);
   let cudaInvData       = $state<Awaited<ReturnType<typeof api.cudaInventoryStatus>>   | null>(null);
   let driverFlavorData  = $state<Awaited<ReturnType<typeof api.driverFlavorStatus>>    | null>(null);
+
+  // ── R&D #23 (UI sprint 14) ────────────────────────────────────────────
+  let procDeepData      = $state<Awaited<ReturnType<typeof api.procDeepStateStatus>>   | null>(null);
+  let pcieAspmData      = $state<Awaited<ReturnType<typeof api.pcieAspmStatus>>        | null>(null);
+  let fsAuditData       = $state<Awaited<ReturnType<typeof api.fsMountAuditStatus>>    | null>(null);
+  let batchAdvisorData  = $state<Awaited<ReturnType<typeof api.batchAdvisorStatus>>    | null>(null);
+  async function loadProcDeep() {
+    try { procDeepData = await api.procDeepStateStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPcieAspm() {
+    try { pcieAspmData = await api.pcieAspmStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFsAudit() {
+    try { fsAuditData = await api.fsMountAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBatchAdvisor() {
+    try { batchAdvisorData = await api.batchAdvisorStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
   async function loadVramLeak() {
     try { vramLeakData = await api.vramLeakStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1320,6 +1342,11 @@
       if (!gpuResetData)       loadGpuReset();
       if (!cudaInvData)        loadCudaInv();
       if (!driverFlavorData)   loadDriverFlavor();
+      // R&D #23 cards
+      if (!procDeepData)       loadProcDeep();
+      if (!pcieAspmData)       loadPcieAspm();
+      if (!fsAuditData)        loadFsAudit();
+      if (!batchAdvisorData)   loadBatchAdvisor();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -4473,6 +4500,180 @@
               {/each}
             </tbody>
           </table>
+        {/if}
+      </div>
+
+      <!-- R&D #23.6 procfs deep-state (UI sprint 14) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.procdeep.title")}</h4>
+        <p class="muted">{i18n.t("integrations.procdeep.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcDeep}>{i18n.t("integrations.procdeep.refresh")}</button>
+          {#if procDeepData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procDeepData.drift_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.procdeep.drifters")} : <b>{procDeepData.drift_count}</b>
+            </span>
+            <span class="kv"
+                  style:color={procDeepData.excluded_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.procdeep.excluded")} : <b>{procDeepData.excluded_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procDeepData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={procDeepData.verdict.severity === 'critical' ? 'var(--warn)' :
+                        procDeepData.verdict.severity === 'warn' ? 'var(--accent)' :
+                        'var(--text-dim)'}>
+            <b>{i18n.t("integrations.procdeep.verdict")} : {procDeepData.verdict.verdict}</b> —
+            {procDeepData.verdict.reason}
+          </p>
+        {/if}
+        {#if procDeepData?.gpus && procDeepData.gpus.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <tbody>
+              {#each procDeepData.gpus as g}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{g.model}</td>
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">VBIOS {g.video_bios}</td>
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">GSP {g.gpu_firmware}</td>
+                  <td style="padding: 4px;"
+                      style:color={g.excluded ? 'var(--warn)' : 'var(--ok)'}>
+                    {g.excluded ? '⚠ excluded' : 'ok'}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #23.4 PCIe ASPM audit (UI sprint 14) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.aspm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.aspm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieAspm}>{i18n.t("integrations.aspm.refresh")}</button>
+          {#if pcieAspmData?.policy}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.aspm.policy")} : <b>{pcieAspmData.policy.active ?? '—'}</b>
+            </span>
+          {/if}
+          {#if pcieAspmData?.board?.name}
+            <span class="kv"
+                  style:color={pcieAspmData.board_known_risky ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.aspm.board")} : <b>{pcieAspmData.board.name}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pcieAspmData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={pcieAspmData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        pcieAspmData.verdict.verdict === 'risky' ? 'var(--warn)' :
+                        pcieAspmData.verdict.verdict === 'warn' ? 'var(--accent)' :
+                        'var(--text-dim)'}>
+            <b>{i18n.t("integrations.aspm.verdict")} : {pcieAspmData.verdict.verdict}</b> —
+            {pcieAspmData.verdict.reason}
+          </p>
+          {#if pcieAspmData.verdict.recommendation}
+            <div class="form-row" style="gap: 8px; margin-top: 6px;">
+              <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                            font-family: monospace; font-size: 0.85em;
+                            border-radius: 4px;">{pcieAspmData.verdict.recommendation}</code>
+              <button class="btn btn-small"
+                      onclick={() => copyToClipboard(pcieAspmData?.verdict?.recommendation ?? "")}>📋</button>
+            </div>
+          {/if}
+        {/if}
+      </div>
+
+      <!-- R&D #23.2 FS mount audit (UI sprint 14) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fsaudit.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fsaudit.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFsAudit}>{i18n.t("integrations.fsaudit.refresh")}</button>
+          {#if fsAuditData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.fsaudit.checked")} : <b>{fsAuditData.audit_count}</b>
+            </span>
+            <span class="kv"
+                  style:color={fsAuditData.warn_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.fsaudit.warn")} : <b>{fsAuditData.warn_count}</b>
+            </span>
+            {#if fsAuditData.fail_count > 0}
+              <span class="kv" style="color: var(--warn);">
+                {i18n.t("integrations.fsaudit.fail")} : <b>{fsAuditData.fail_count}</b>
+              </span>
+            {/if}
+          {/if}
+        </div>
+        {#if fsAuditData?.verdict}
+          <p class="muted" style="margin-top: 6px;">{fsAuditData.verdict.reason}</p>
+        {/if}
+        {#if fsAuditData?.audits && fsAuditData.audits.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <tbody>
+              {#each fsAuditData.audits as a}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.82em;">
+                    {a.directory.replace(/^\/home\/[^/]+/, "~")}
+                  </td>
+                  <td style="padding: 4px;">{a.fstype}</td>
+                  <td style="padding: 4px;"
+                      style:color={a.severity === 'ok' ? 'var(--ok)' :
+                                 a.severity === 'fail' ? 'var(--warn)' :
+                                 'var(--accent)'}>{a.severity}</td>
+                </tr>
+                {#if a.issues.length > 0}
+                  {#each a.issues as iss}
+                    <tr><td colspan="3" class="muted" style="padding: 2px 4px 6px 20px; font-size: 0.85em;">
+                      ⚠ {iss.label}: {iss.recommendation}
+                    </td></tr>
+                  {/each}
+                {/if}
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #23.1 Batch / ctx-length advisor (UI sprint 14) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.batch.title")}</h4>
+        <p class="muted">{i18n.t("integrations.batch.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBatchAdvisor}>{i18n.t("integrations.batch.refresh")}</button>
+          {#if batchAdvisorData?.vram}
+            <span class="kv" style="margin-left: 12px;">
+              free VRAM : <b>{batchAdvisorData.vram.free_mib} MiB</b>
+            </span>
+          {/if}
+        </div>
+        {#if batchAdvisorData && batchAdvisorData.advisors.length === 0}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.batch.no_advisors")}</p>
+        {/if}
+        {#if batchAdvisorData?.advisors && batchAdvisorData.advisors.length > 0}
+          {#each batchAdvisorData.advisors as adv}
+            <div style="margin-top: 10px; padding: 8px; border-left: 3px solid var(--border);">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{adv.model}</b>
+                <span class="kv">{i18n.t("integrations.batch.headroom")} :
+                  <b>{adv.headroom_mib} MiB</b>
+                </span>
+                <span class="kv">{i18n.t("integrations.batch.max_ctx")} :
+                  <b>{adv.max_ctx_at_batch}</b> tokens
+                </span>
+                <span class="kv">{i18n.t("integrations.batch.max_batch")} :
+                  <b>{adv.max_batch_at_ctx_train}</b>
+                </span>
+              </div>
+              <p class="muted" style="margin: 4px 0; font-size: 0.85em;">
+                {i18n.t("integrations.batch.kv_per_token")} : {Math.round(adv.kv_per_token_bytes / 1024)} KiB
+              </p>
+              <p style="margin: 4px 0;">{adv.recommendation}</p>
+            </div>
+          {/each}
         {/if}
       </div>
 
