@@ -1988,6 +1988,23 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #59 (UI sprint 50) ────────────────────────────────────────────
+  let dmiSmbiosAuditData         = $state<Awaited<ReturnType<typeof api.dmiSmbiosAuditStatus>>         | null>(null);
+  let iommuGroupsAuditData       = $state<Awaited<ReturnType<typeof api.iommuGroupsAuditStatus>>       | null>(null);
+  let pidRlimitsAuditData        = $state<Awaited<ReturnType<typeof api.pidRlimitsAuditStatus>>        | null>(null);
+  async function loadDmiSmbiosAudit() {
+    try { dmiSmbiosAuditData = await api.dmiSmbiosAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIommuGroupsAudit() {
+    try { iommuGroupsAuditData = await api.iommuGroupsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPidRlimitsAudit() {
+    try { pidRlimitsAuditData = await api.pidRlimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2287,6 +2304,10 @@
       if (!kernelBuildConfigAuditData)  loadKernelBuildConfigAudit();
       if (!scsiTransportAuditData)      loadScsiTransportAudit();
       if (!alsaCardsAuditData)          loadAlsaCardsAudit();
+      // R&D #59 cards
+      if (!dmiSmbiosAuditData)          loadDmiSmbiosAudit();
+      if (!iommuGroupsAuditData)        loadIommuGroupsAudit();
+      if (!pidRlimitsAuditData)         loadPidRlimitsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -10346,6 +10367,135 @@
                              border-radius: 4px; overflow-x: auto;">{alsaCardsAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(alsaCardsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #59.1 DMI / SMBIOS (UI sprint 50) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dmi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dmi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDmiSmbiosAudit}>{i18n.t("integrations.dmi.refresh")}</button>
+          {#if dmiSmbiosAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={dmiSmbiosAuditData.verdict.verdict === 'bios_stale_gt_3y' ? 'var(--warn)' :
+                             ['qemu_or_vm_detected','board_unknown','dmi_absent'].includes(dmiSmbiosAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              vm={dmiSmbiosAuditData.is_vm ? 'yes' : 'no'} · {i18n.t("integrations.dmi.verdict")} : <b>{dmiSmbiosAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dmiSmbiosAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        dmiSmbiosAuditData.verdict.verdict === 'bios_stale_gt_3y' ? 'var(--warn)' :
+                        ['qemu_or_vm_detected','board_unknown','dmi_absent'].includes(dmiSmbiosAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>vendor: {dmiSmbiosAuditData.dmi.sys_vendor ?? '?'}</li>
+              <li>product: {dmiSmbiosAuditData.dmi.product_name ?? '?'}</li>
+              <li>BIOS: {dmiSmbiosAuditData.dmi.bios_vendor ?? '?'} {dmiSmbiosAuditData.dmi.bios_version ?? ''} ({dmiSmbiosAuditData.dmi.bios_date ?? '?'})</li>
+              <li>board: {dmiSmbiosAuditData.dmi.board_vendor ?? '?'} {dmiSmbiosAuditData.dmi.board_name ?? ''}</li>
+            </ul>
+            <p style="margin: 4px 0;">{dmiSmbiosAuditData.verdict.reason}</p>
+            {#if dmiSmbiosAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dmi.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{dmiSmbiosAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(dmiSmbiosAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #59.2 IOMMU groups (UI sprint 50) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.iommu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.iommu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIommuGroupsAudit}>{i18n.t("integrations.iommu.refresh")}</button>
+          {#if iommuGroupsAuditData?.ok || iommuGroupsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={iommuGroupsAuditData?.verdict.verdict === 'gpu_shares_group_with_root_complex' ? 'var(--warn)' :
+                             ['iommu_disabled','passthrough_off'].includes(iommuGroupsAuditData?.verdict.verdict ?? '') ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {iommuGroupsAuditData?.group_count ?? 0} groups · {i18n.t("integrations.iommu.verdict")} : <b>{iommuGroupsAuditData?.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if iommuGroupsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        iommuGroupsAuditData.verdict.verdict === 'gpu_shares_group_with_root_complex' ? 'var(--warn)' :
+                        ['iommu_disabled','passthrough_off'].includes(iommuGroupsAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>cmdline iommu tokens: {iommuGroupsAuditData.iommu_cmdline_tokens.length ? iommuGroupsAuditData.iommu_cmdline_tokens.join(' ') : 'none'}</li>
+              {#each iommuGroupsAuditData.nvidia_gpus as g}
+                <li>NVIDIA GPU {g}: group {iommuGroupsAuditData.gpu_groups[g] ?? '?'}</li>
+              {/each}
+            </ul>
+            <p style="margin: 4px 0;">{iommuGroupsAuditData.verdict.reason}</p>
+            {#if iommuGroupsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.iommu.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{iommuGroupsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(iommuGroupsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #59.4 PID rlimits (UI sprint 50) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rlim.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rlim.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPidRlimitsAudit}>{i18n.t("integrations.rlim.refresh")}</button>
+          {#if pidRlimitsAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['memlock_too_low_for_mmap_lock','nofile_lt_4096','as_capped'].includes(pidRlimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             pidRlimitsAuditData.verdict.verdict === 'nproc_capped' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {pidRlimitsAuditData.candidate_count} candidates · {i18n.t("integrations.rlim.verdict")} : <b>{pidRlimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pidRlimitsAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['memlock_too_low_for_mmap_lock','nofile_lt_4096','as_capped'].includes(pidRlimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        pidRlimitsAuditData.verdict.verdict === 'nproc_capped' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Candidates</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each pidRlimitsAuditData.candidates as c}
+                  <li>{c.comm} (pid {c.pid}):
+                    memlock={c['Max locked memory']?.[0] ?? '?'} ·
+                    nofile={c['Max open files']?.[0] ?? '?'} ·
+                    AS={c['Max address space']?.[0] ?? '?'}
+                  </li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{pidRlimitsAuditData.verdict.reason}</p>
+            {#if pidRlimitsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.rlim.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{pidRlimitsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(pidRlimitsAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

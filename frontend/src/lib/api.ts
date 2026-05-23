@@ -3623,4 +3623,36 @@ export const api = {
       modules: Record<string, string>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #59 (UI sprint 50) ──
+  dmiSmbiosAuditStatus: () =>
+    fetch("/api/dmi-smbios-audit").then(jsonOf<{
+      ok: boolean;
+      dmi: Record<string, string | null>;
+      is_vm: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  iommuGroupsAuditStatus: () =>
+    fetch("/api/iommu-groups-audit").then(jsonOf<{
+      ok: boolean;
+      group_count: number;
+      groups_sample: Record<string, string[]>;
+      iommu_cmdline_tokens: string[];
+      nvidia_gpus: string[];
+      gpu_groups: Record<string, number>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  pidRlimitsAuditStatus: () =>
+    fetch("/api/pid-rlimits-audit").then(jsonOf<{
+      ok: boolean;
+      candidate_count: number;
+      candidates: Array<{ pid: number; comm: string;
+                            "Max locked memory": [string, string] | null;
+                            "Max open files": [string, string] | null;
+                            "Max processes": [string, string] | null;
+                            "Max address space": [string, string] | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
