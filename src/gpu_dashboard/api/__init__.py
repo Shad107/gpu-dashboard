@@ -480,3 +480,4 @@ from .nvmem_inventory_audit import handle_nvmem_inventory_audit_status  # noqa: 
 from .damon_cma_audit import handle_damon_cma_audit_status  # noqa: F401,F811
 from .proc_static_kernel_registry_audit import handle_proc_static_kernel_registry_audit_status  # noqa: F401,F811
 from .kpageflags_audit import handle_kpageflags_audit_status  # noqa: F401,F811
+from .remoteproc_coprocessor_audit import handle_remoteproc_coprocessor_audit_status  # noqa: F401,F811
