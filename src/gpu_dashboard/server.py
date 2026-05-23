@@ -1002,6 +1002,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_microcode_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hwp-epp":
+                # R&D #36.4 — HWP EPP string-mode audit
+                code, body = api.handle_hwp_epp_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
