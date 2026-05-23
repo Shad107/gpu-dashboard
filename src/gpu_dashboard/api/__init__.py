@@ -359,3 +359,4 @@ from .limits_audit import handle_limits_audit_status  # noqa: F401,F811
 from .cpu_vulns import handle_cpu_vulns_status  # noqa: F401,F811
 from .hw_watchdog import handle_hw_watchdog_status  # noqa: F401,F811
 from .gpu_cpu_affinity import handle_gpu_cpu_affinity_status  # noqa: F401,F811
+from .cpu_cache_topology import handle_cache_topology_status  # noqa: F401,F811

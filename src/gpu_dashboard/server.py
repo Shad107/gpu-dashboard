@@ -1032,6 +1032,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_gpu_cpu_affinity_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cache-topology":
+                # R&D #37.4 — L3 cache topology placement advisor
+                code, body = api.handle_cache_topology_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
