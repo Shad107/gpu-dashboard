@@ -727,6 +727,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cuda_inventory_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/driver-flavor":
+                # R&D #22.2 — Open vs proprietary driver advisor
+                code, body = api.handle_driver_flavor_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

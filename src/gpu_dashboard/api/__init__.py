@@ -298,3 +298,4 @@ from .sd_cache_janitor import handle_sd_cache_janitor_status  # noqa: F401,F811
 from .vram_leak import handle_vram_leak_status  # noqa: F401,F811
 from .gpu_reset import handle_gpu_reset_status  # noqa: F401,F811
 from .cuda_inventory import handle_cuda_inventory_status  # noqa: F401,F811
+from .driver_flavor import handle_driver_flavor_status  # noqa: F401,F811
