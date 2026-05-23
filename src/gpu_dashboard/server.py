@@ -707,6 +707,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_gsp_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sd-cache-janitor":
+                # R&D #21.5 — SD / ComfyUI cache janitor
+                code, body = api.handle_sd_cache_janitor_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

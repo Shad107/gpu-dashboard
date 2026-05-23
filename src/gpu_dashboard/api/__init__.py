@@ -294,3 +294,4 @@ from .vbios_drift import handle_vbios_drift_status, handle_vbios_drift_rebaselin
 from .pstate_audit import handle_pstate_audit_status  # noqa: F401,F811
 from .persistence_mode import handle_persistence_mode_status  # noqa: F401,F811
 from .gsp_status import handle_gsp_status  # noqa: F401,F811
+from .sd_cache_janitor import handle_sd_cache_janitor_status  # noqa: F401,F811
