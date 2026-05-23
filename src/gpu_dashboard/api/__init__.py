@@ -423,3 +423,4 @@ from .cpu_vulnerabilities_audit import handle_cpu_vulnerabilities_audit_status  
 from .rapl_power_cap_audit import handle_rapl_power_cap_audit_status  # noqa: F401,F811
 from .ima_integrity_audit import handle_ima_integrity_audit_status  # noqa: F401,F811
 from .swap_tunables_audit import handle_swap_tunables_audit_status  # noqa: F401,F811
+from .hugepages_audit import handle_hugepages_audit_status  # noqa: F401,F811
