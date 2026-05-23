@@ -1642,6 +1642,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_remoteproc_coprocessor_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/uio-gpio-userland-audit":
+                # R&D #70.3 — /sys/class/{uio,gpio} userland I/O
+                code, body = api.handle_uio_gpio_userland_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
