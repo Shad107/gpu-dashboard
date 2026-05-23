@@ -308,3 +308,4 @@ from .pcie_aer import handle_pcie_aer_status  # noqa: F401,F811
 from .mem_temp_drift import handle_mem_temp_drift_status  # noqa: F401,F811
 from .accounting import handle_accounting_status  # noqa: F401,F811
 from .trim_audit import handle_trim_audit_status  # noqa: F401,F811
+from .throttle_bits import handle_throttle_bits_status  # noqa: F401,F811

@@ -777,6 +777,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_trim_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/throttle-bits":
+                # R&D #25.5 — Per-bit throttle reason decoder
+                code, body = api.handle_throttle_bits_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
