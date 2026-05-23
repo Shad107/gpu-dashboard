@@ -1558,6 +1558,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #39 (UI sprint 30) ────────────────────────────────────────────
+  let cmdlineAuditData = $state<Awaited<ReturnType<typeof api.cmdlineAuditStatus>> | null>(null);
+  let coredumpData     = $state<Awaited<ReturnType<typeof api.coredumpStatus>>     | null>(null);
+  let hostClassData    = $state<Awaited<ReturnType<typeof api.hostClassStatus>>    | null>(null);
+  let sysctlDAuditData = $state<Awaited<ReturnType<typeof api.sysctlDAuditStatus>> | null>(null);
+  async function loadCmdlineAudit() {
+    try { cmdlineAuditData = await api.cmdlineAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCoredump() {
+    try { coredumpData = await api.coredumpStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadHostClass() {
+    try { hostClassData = await api.hostClassStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSysctlDAudit() {
+    try { sysctlDAuditData = await api.sysctlDAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1759,6 +1781,11 @@
       if (!gpuIrqAffinityData) loadGpuIrqAffinity();
       if (!modprobeAuditData)  loadModprobeAudit();
       if (!procMapsLibsData)   loadProcMapsLibs();
+      // R&D #39 cards
+      if (!cmdlineAuditData)   loadCmdlineAudit();
+      if (!coredumpData)       loadCoredump();
+      if (!hostClassData)      loadHostClass();
+      if (!sysctlDAuditData)   loadSysctlDAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6307,6 +6334,181 @@
               {/if}
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #39.1 cmdline audit (UI sprint 30) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cmd.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cmd.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCmdlineAudit}>{i18n.t("integrations.cmd.refresh")}</button>
+          {#if cmdlineAuditData?.ok && cmdlineAuditData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cmdlineAuditData.verdict.verdict === 'safety_disabled' ? 'var(--warn)' :
+                             ['perf_tuned','power_or_virt'].includes(cmdlineAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.cmd.verdict")} : <b>{cmdlineAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cmdlineAuditData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.cmd.unavailable")}</p>
+        {/if}
+        {#if cmdlineAuditData?.ok && cmdlineAuditData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cmdlineAuditData.verdict.verdict === 'safety_disabled' ? 'var(--warn)' :
+                        ['perf_tuned','power_or_virt'].includes(cmdlineAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if cmdlineAuditData.raw}
+              <p class="muted" style="margin: 4px 0; font-family: monospace; font-size: 0.85em; word-break: break-all;">{cmdlineAuditData.raw}</p>
+            {/if}
+            <p style="margin: 4px 0;">{cmdlineAuditData.verdict.reason}</p>
+            {#if cmdlineAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cmd.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cmdlineAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cmdlineAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #39.3 coredump readiness (UI sprint 30) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.core.title")}</h4>
+        <p class="muted">{i18n.t("integrations.core.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCoredump}>{i18n.t("integrations.core.refresh")}</button>
+          {#if coredumpData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['core_disabled','filter_too_low'].includes(coredumpData.verdict.verdict) ? 'var(--warn)' :
+                             coredumpData.verdict.verdict === 'relative_pattern' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.core.verdict")} : <b>{coredumpData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if coredumpData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['core_disabled','filter_too_low'].includes(coredumpData.verdict.verdict) ? 'var(--warn)' :
+                        coredumpData.verdict.verdict === 'relative_pattern' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">core_pattern : <b style="font-family: monospace;">{coredumpData.core_pattern || '—'}</b></span>
+              {#if coredumpData.processes && coredumpData.processes.length > 0}
+                {#each coredumpData.processes as p}
+                  <span class="kv">{p.comm} filter=<b>0x{(p.filter_value ?? 0).toString(16)}</b></span>
+                {/each}
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{coredumpData.verdict.reason}</p>
+            {#if coredumpData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.core.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{coredumpData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(coredumpData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #39.4 host class (UI sprint 30) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.host.title")}</h4>
+        <p class="muted">{i18n.t("integrations.host.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHostClass}>{i18n.t("integrations.host.refresh")}</button>
+          {#if hostClassData?.ok && hostClassData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={hostClassData.verdict.verdict === 'vm' ? 'var(--accent)' :
+                             ['laptop','server'].includes(hostClassData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.host.verdict")} : <b>{hostClassData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hostClassData?.ok && hostClassData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid var(--text-dim);">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              {#if hostClassData.chassis_kind}
+                <span class="kv">{i18n.t("integrations.host.chassis")} : <b>{hostClassData.chassis_kind}</b></span>
+              {/if}
+              {#if hostClassData.sys_vendor}
+                <span class="kv">{hostClassData.sys_vendor} {hostClassData.product_name ?? ''}</span>
+              {/if}
+              {#if hostClassData.virt?.is_virt}
+                <span class="kv">{i18n.t("integrations.host.virt")} : <b>{hostClassData.virt.platform ?? 'yes'}</b></span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{hostClassData.verdict.reason}</p>
+            {#if hostClassData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.host.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{hostClassData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(hostClassData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #39.2 sysctl.d drift (UI sprint 30) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sysd.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sysd.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSysctlDAudit}>{i18n.t("integrations.sysd.refresh")}</button>
+          {#if sysctlDAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={sysctlDAuditData.verdict.verdict === 'drift' ? 'var(--warn)' :
+                             sysctlDAuditData.verdict.verdict === 'no_config' ? 'var(--text-dim)' :
+                             'var(--text-dim)'}>
+              {sysctlDAuditData.on_disk_count} keys · {i18n.t("integrations.sysd.verdict")} : <b>{sysctlDAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sysctlDAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        sysctlDAuditData.verdict.verdict === 'drift' ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{sysctlDAuditData.verdict.reason}</p>
+            {#if sysctlDAuditData.drift_rows && sysctlDAuditData.drift_rows.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{sysctlDAuditData.drift_rows.length} drift row(s)</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each sysctlDAuditData.drift_rows as r}
+                    <li>
+                      <span style="font-family: monospace;">{r.key}</span>:
+                      on-disk=<b>{r.on_disk}</b>,
+                      runtime=<b style:color="var(--warn)">{r.runtime}</b>
+                    </li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            {#if sysctlDAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sysd.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{sysctlDAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(sysctlDAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
         {/if}
       </div>
 

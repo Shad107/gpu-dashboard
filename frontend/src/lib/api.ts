@@ -430,16 +430,6 @@ export const api = {
       error?: string;
     }>),
 
-  updateCheck: () =>
-    fetch("/api/update/check").then(jsonOf<{
-      ok: boolean;
-      error?: string;
-      current_sha?: string;
-      remote_sha?: string | null;
-      behind?: number | null;
-      last_remote_msg?: string | null;
-    }>),
-
   versionInfo: () =>
     fetch("/api/version").then(jsonOf<{
       ok: boolean;
@@ -2472,6 +2462,59 @@ export const api = {
                        deleted: boolean; is_nvidia: boolean }>;
         deleted_libs: string[];
       }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  // ── R&D #39 (UI sprint 30) ─────────────────────────────────────────────
+  cmdlineAuditStatus: () =>
+    fetch("/api/cmdline-audit").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      raw?: string;
+      flags?: Record<string, string | boolean>;
+      categories?: Record<string, Array<{ key: string; value: string | boolean }>>;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  coredumpStatus: () =>
+    fetch("/api/coredump").then(jsonOf<{
+      ok: boolean;
+      core_pattern: string;
+      core_uses_pid: boolean;
+      pattern_info: { kind: string; target: string;
+                       has_pid: boolean; has_exe: boolean };
+      process_count: number;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        filter: number | null;
+        filter_value: number | null;
+        filter_bits: Array<{ key: string; mask: number;
+                              description: string }>;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  hostClassStatus: () =>
+    fetch("/api/host-class").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      chassis_type?: number | null;
+      chassis_kind?: string;
+      sys_vendor?: string;
+      product_name?: string;
+      bios_vendor?: string;
+      virt?: { is_virt: boolean; platform: string | null };
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  sysctlDAuditStatus: () =>
+    fetch("/api/sysctl-d-audit").then(jsonOf<{
+      ok: boolean;
+      on_disk_count: number;
+      on_disk: Record<string, { value: string; files: string[] }>;
+      runtime: Record<string, string>;
+      drift_rows: Array<{ key: string; on_disk: string;
+                            runtime: string; files: string[] }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
 };
