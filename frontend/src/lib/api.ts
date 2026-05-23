@@ -2777,4 +2777,59 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #44 (UI sprint 35) ──
+  watchdogInventoryStatus: () =>
+    fetch("/api/watchdog-inventory").then(jsonOf<{
+      ok: boolean;
+      device_count?: number;
+      devices: Array<{
+        name: string; identity: string | null;
+        timeout: number | null; pretimeout: number | null;
+        bootstatus: number | null; state: string | null;
+        nowayout: number | null; fw_version: string | null;
+        bootstatus_bits: Array<{ key: string; mask: number;
+                                    description: string }>;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  diskIoLatencyStatus: () =>
+    fetch("/api/disk-io-latency").then(jsonOf<{
+      ok: boolean;
+      device_count?: number;
+      devices: Array<{
+        dev: string;
+        reads_completed: number; writes_completed: number;
+        read_ticks_ms: number; write_ticks_ms: number;
+        avg_read_wait_ms: number; avg_write_wait_ms: number;
+        ios_in_progress: number;
+        inflight_read: number; inflight_write: number;
+        inflight_total: number;
+        rotational: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  netProtoCountersStatus: () =>
+    fetch("/api/net-proto-counters").then(jsonOf<{
+      ok: boolean;
+      headline: Record<string, number | null>;
+      sockstat: Record<string, Record<string, number>>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  slabAuditStatus: () =>
+    fetch("/api/slab-audit").then(jsonOf<{
+      ok: boolean;
+      cache_count: number;
+      top_caches: Array<{
+        name: string;
+        objects?: number; object_size?: number;
+        slabs?: number; partial?: number; cpu_slabs?: number;
+        objs_per_slab?: number; resident_kb?: number;
+      }>;
+      requires_root: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

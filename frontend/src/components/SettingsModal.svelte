@@ -1668,6 +1668,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #44 (UI sprint 35) ────────────────────────────────────────────
+  let watchdogInventoryData = $state<Awaited<ReturnType<typeof api.watchdogInventoryStatus>> | null>(null);
+  let diskIoLatencyData     = $state<Awaited<ReturnType<typeof api.diskIoLatencyStatus>>     | null>(null);
+  let netProtoCountersData  = $state<Awaited<ReturnType<typeof api.netProtoCountersStatus>>  | null>(null);
+  let slabAuditData         = $state<Awaited<ReturnType<typeof api.slabAuditStatus>>         | null>(null);
+  async function loadWatchdogInventory() {
+    try { watchdogInventoryData = await api.watchdogInventoryStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDiskIoLatency() {
+    try { diskIoLatencyData = await api.diskIoLatencyStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNetProtoCounters() {
+    try { netProtoCountersData = await api.netProtoCountersStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSlabAudit() {
+    try { slabAuditData = await api.slabAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1894,6 +1916,11 @@
       if (!irqRatesAuditData)   loadIrqRatesAudit();
       if (!zoneinfoAuditData)   loadZoneinfoAudit();
       if (!blockQueueAuditData) loadBlockQueueAudit();
+      // R&D #44 cards
+      if (!watchdogInventoryData) loadWatchdogInventory();
+      if (!diskIoLatencyData)     loadDiskIoLatency();
+      if (!netProtoCountersData)  loadNetProtoCounters();
+      if (!slabAuditData)         loadSlabAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -7381,6 +7408,180 @@
                              border-radius: 4px; overflow-x: auto;">{blockQueueAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(blockQueueAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #44.3 watchdog inventory (UI sprint 35) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wd.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wd.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadWatchdogInventory}>{i18n.t("integrations.wd.refresh")}</button>
+          {#if watchdogInventoryData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={watchdogInventoryData.verdict.verdict === 'boot_due_to_watchdog' ? 'var(--warn)' :
+                             ['no_watchdog','multiple_watchdogs'].includes(watchdogInventoryData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {watchdogInventoryData.devices.length} dev · {i18n.t("integrations.wd.verdict")} : <b>{watchdogInventoryData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if watchdogInventoryData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        watchdogInventoryData.verdict.verdict === 'boot_due_to_watchdog' ? 'var(--warn)' :
+                        ['no_watchdog','multiple_watchdogs'].includes(watchdogInventoryData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if watchdogInventoryData.devices.length > 0}
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each watchdogInventoryData.devices as wd}
+                  <li>{wd.name} ({wd.identity ?? '?'}): timeout={wd.timeout ?? '?'}s, bootstatus=0x{(wd.bootstatus ?? 0).toString(16)}{#if wd.bootstatus_bits.length > 0} ({wd.bootstatus_bits.map(b => b.key).join(', ')}){/if}</li>
+                {/each}
+              </ul>
+            {/if}
+            <p style="margin: 4px 0;">{watchdogInventoryData.verdict.reason}</p>
+            {#if watchdogInventoryData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.wd.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{watchdogInventoryData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(watchdogInventoryData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #44.1 disk I/O latency (UI sprint 35) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dio.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dio.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDiskIoLatency}>{i18n.t("integrations.dio.refresh")}</button>
+          {#if diskIoLatencyData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['queue_saturated','read_stall','write_stall'].includes(diskIoLatencyData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {diskIoLatencyData.devices.length} dev · {i18n.t("integrations.dio.verdict")} : <b>{diskIoLatencyData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if diskIoLatencyData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['queue_saturated','read_stall','write_stall'].includes(diskIoLatencyData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              {#each diskIoLatencyData.devices as d}
+                <li>{d.dev}{d.rotational === 0 ? ' (SSD)' : d.rotational === 1 ? ' (HDD)' : ''}:
+                  reads={d.reads_completed} avg_rwait=<b style:color={d.avg_read_wait_ms >= 100 ? 'var(--warn)' : 'inherit'}>{d.avg_read_wait_ms.toFixed(2)}ms</b>,
+                  writes={d.writes_completed} avg_wwait=<b style:color={d.avg_write_wait_ms >= 500 ? 'var(--warn)' : 'inherit'}>{d.avg_write_wait_ms.toFixed(2)}ms</b>,
+                  inflight={d.inflight_total}</li>
+              {/each}
+            </ul>
+            <p style="margin: 4px 0;">{diskIoLatencyData.verdict.reason}</p>
+            {#if diskIoLatencyData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dio.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{diskIoLatencyData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(diskIoLatencyData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #44.4 net proto counters (UI sprint 35) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.npc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.npc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNetProtoCounters}>{i18n.t("integrations.npc.refresh")}</button>
+          {#if netProtoCountersData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={netProtoCountersData.verdict.verdict === 'listen_overflow' ? 'var(--warn)' :
+                             ['rcvbuf_errors','high_retrans','tcp_memory_pressure','backlog_drops'].includes(netProtoCountersData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.npc.verdict")} : <b>{netProtoCountersData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if netProtoCountersData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        netProtoCountersData.verdict.verdict === 'listen_overflow' ? 'var(--warn)' :
+                        ['rcvbuf_errors','high_retrans','tcp_memory_pressure','backlog_drops'].includes(netProtoCountersData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">retrans=<b>{netProtoCountersData.headline.tcp_retrans ?? 0}</b>/{netProtoCountersData.headline.tcp_out_segs ?? 0}</span>
+              <span class="kv">listen_overflows=<b
+                style:color={(netProtoCountersData.headline.tcp_listen_overflows ?? 0) > 0 ? 'var(--warn)' : 'inherit'}
+              >{netProtoCountersData.headline.tcp_listen_overflows ?? 0}</b></span>
+              <span class="kv">udp_rcvbuf_err=<b
+                style:color={(netProtoCountersData.headline.udp_rcvbuf_errors ?? 0) > 0 ? 'var(--warn)' : 'inherit'}
+              >{netProtoCountersData.headline.udp_rcvbuf_errors ?? 0}</b></span>
+              <span class="kv">tcp_mem_press=<b>{netProtoCountersData.headline.tcp_memory_pressures ?? 0}</b></span>
+              <span class="kv">tcp_inuse=<b>{netProtoCountersData.sockstat?.TCP?.inuse ?? 0}</b> tw=<b>{netProtoCountersData.sockstat?.TCP?.tw ?? 0}</b></span>
+            </div>
+            <p style="margin: 4px 0;">{netProtoCountersData.verdict.reason}</p>
+            {#if netProtoCountersData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.npc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{netProtoCountersData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(netProtoCountersData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #44.2 slab audit (UI sprint 35) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.slab.title")}</h4>
+        <p class="muted">{i18n.t("integrations.slab.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSlabAudit}>{i18n.t("integrations.slab.refresh")}</button>
+          {#if slabAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={slabAuditData.verdict.verdict === 'leak_suspect' ? 'var(--warn)' :
+                             ['fragmented','requires_root'].includes(slabAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {slabAuditData.cache_count} caches · {i18n.t("integrations.slab.verdict")} : <b>{slabAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if slabAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        slabAuditData.verdict.verdict === 'leak_suspect' ? 'var(--warn)' :
+                        ['fragmented','requires_root'].includes(slabAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if slabAuditData.top_caches.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Top caches by resident_kb</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px; max-height: 200px; overflow-y: auto;">
+                  {#each slabAuditData.top_caches.slice(0, 15) as c}
+                    <li>{c.name}: {c.resident_kb ?? 0} KB resident{c.objects !== undefined ? `, ${c.objects} objects` : ''}{c.slabs && c.partial !== undefined ? `, ${(c.partial / c.slabs * 100).toFixed(0)}% partial` : ''}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{slabAuditData.verdict.reason}</p>
+            {#if slabAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.slab.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{slabAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(slabAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
