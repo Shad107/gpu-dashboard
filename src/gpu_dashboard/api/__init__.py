@@ -357,3 +357,4 @@ from .hwp_epp import handle_hwp_epp_status  # noqa: F401,F811
 from .cpuidle_audit import handle_cpuidle_status  # noqa: F401,F811
 from .limits_audit import handle_limits_audit_status  # noqa: F401,F811
 from .cpu_vulns import handle_cpu_vulns_status  # noqa: F401,F811
+from .hw_watchdog import handle_hw_watchdog_status  # noqa: F401,F811

@@ -1022,6 +1022,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_vulns_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hw-watchdog":
+                # R&D #37.3 — hardware watchdog auditor
+                code, body = api.handle_hw_watchdog_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
