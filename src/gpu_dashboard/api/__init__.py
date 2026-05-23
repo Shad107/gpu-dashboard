@@ -477,3 +477,4 @@ from .lru_gen_mglru_audit import handle_lru_gen_mglru_audit_status  # noqa: F401
 from .dt_memmap_firmware_audit import handle_dt_memmap_firmware_audit_status  # noqa: F401,F811
 from .fs_specific_tunables_audit import handle_fs_specific_tunables_audit_status  # noqa: F401,F811
 from .nvmem_inventory_audit import handle_nvmem_inventory_audit_status  # noqa: F401,F811
+from .damon_cma_audit import handle_damon_cma_audit_status  # noqa: F401,F811

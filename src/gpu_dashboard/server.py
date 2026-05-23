@@ -1622,6 +1622,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_nvmem_inventory_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/damon-cma-audit":
+                # R&D #69.3 — DAMON kdamonds + CMA region health
+                code, body = api.handle_damon_cma_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
