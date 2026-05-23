@@ -2982,4 +2982,65 @@ export const api = {
       features_readable: boolean;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #48 (UI sprint 39) ──
+  dmaAuditStatus: () =>
+    fetch("/api/dma-audit").then(jsonOf<{
+      ok: boolean;
+      dma_engine_count?: number;
+      dma_engines: Array<{
+        name: string; bytes_transferred: number | null;
+        in_use: number | null; memcpy_count: number | null;
+      }>;
+      swiotlb: {
+        available: boolean; permission_error: boolean;
+        io_tlb_nslabs?: number; io_tlb_used?: number;
+        used_ratio?: number;
+      };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  ftraceAuditStatus: () =>
+    fetch("/api/ftrace-audit").then(jsonOf<{
+      ok: boolean;
+      state: {
+        available?: boolean;
+        current_tracer?: string;
+        tracing_on?: number;
+        kprobe_events?: string[];
+        uprobe_events?: string[];
+        set_event_count?: number;
+      };
+      requires_root: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  usbTopologyAuditStatus: () =>
+    fetch("/api/usb-topology-audit").then(jsonOf<{
+      ok: boolean;
+      device_count?: number;
+      non_root_count?: number;
+      total_power_ma?: number;
+      devices: Array<{
+        name: string; is_root_hub: boolean;
+        idVendor: string | null; idProduct: string | null;
+        manufacturer: string | null; product: string | null;
+        speed_mbps: number | null; version: string | null;
+        bMaxPower_mA: number | null; authorized: number | null;
+        power_control: string | null;
+        autosuspend_delay_ms: number | null;
+        bcdDevice: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  journalAuditStatus: () =>
+    fetch("/api/journal-audit").then(jsonOf<{
+      ok: boolean;
+      config: Record<string, string>;
+      journal_bytes: number;
+      journal_gib: number;
+      persistent_dir_exists: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

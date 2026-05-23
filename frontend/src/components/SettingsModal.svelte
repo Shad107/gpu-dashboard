@@ -1751,6 +1751,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #48 (UI sprint 39) ────────────────────────────────────────────
+  let dmaAuditData          = $state<Awaited<ReturnType<typeof api.dmaAuditStatus>>          | null>(null);
+  let ftraceAuditData       = $state<Awaited<ReturnType<typeof api.ftraceAuditStatus>>       | null>(null);
+  let usbTopologyAuditData  = $state<Awaited<ReturnType<typeof api.usbTopologyAuditStatus>>  | null>(null);
+  let journalAuditData      = $state<Awaited<ReturnType<typeof api.journalAuditStatus>>      | null>(null);
+  async function loadDmaAudit() {
+    try { dmaAuditData = await api.dmaAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFtraceAudit() {
+    try { ftraceAuditData = await api.ftraceAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadUsbTopologyAudit() {
+    try { usbTopologyAuditData = await api.usbTopologyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadJournalAudit() {
+    try { journalAuditData = await api.journalAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1996,6 +2018,11 @@
       if (!mceAuditData)          loadMceAudit();
       if (!acpiAuditData)         loadAcpiAudit();
       if (!schedAuditData)        loadSchedAudit();
+      // R&D #48 cards
+      if (!dmaAuditData)          loadDmaAudit();
+      if (!ftraceAuditData)       loadFtraceAudit();
+      if (!usbTopologyAuditData)  loadUsbTopologyAudit();
+      if (!journalAuditData)      loadJournalAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -8140,6 +8167,178 @@
                              border-radius: 4px; overflow-x: auto;">{schedAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(schedAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #48.3 DMA + SWIOTLB (UI sprint 39) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dma.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dma.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDmaAudit}>{i18n.t("integrations.dma.refresh")}</button>
+          {#if dmaAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={dmaAuditData.verdict.verdict === 'swiotlb_bounce_high' ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {dmaAuditData.dma_engines.length} engines · {i18n.t("integrations.dma.verdict")} : <b>{dmaAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dmaAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        dmaAuditData.verdict.verdict === 'swiotlb_bounce_high' ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            {#if dmaAuditData.swiotlb?.available}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <span class="kv">swiotlb_nslabs={dmaAuditData.swiotlb.io_tlb_nslabs ?? '?'}</span>
+                <span class="kv">swiotlb_used={dmaAuditData.swiotlb.io_tlb_used ?? 0}</span>
+                {#if dmaAuditData.swiotlb.used_ratio !== undefined}
+                  <span class="kv">used={(dmaAuditData.swiotlb.used_ratio * 100).toFixed(1)}%</span>
+                {/if}
+              </div>
+            {/if}
+            <p style="margin: 4px 0;">{dmaAuditData.verdict.reason}</p>
+            {#if dmaAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dma.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{dmaAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(dmaAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #48.1 ftrace audit (UI sprint 39) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ftr.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ftr.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFtraceAudit}>{i18n.t("integrations.ftr.refresh")}</button>
+          {#if ftraceAuditData?.ok || ftraceAuditData?.requires_root}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ftraceAuditData.verdict.verdict === 'tracer_left_on' ? 'var(--warn)' :
+                             ['orphan_kprobes','orphan_uprobes','events_enabled','requires_root'].includes(ftraceAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.ftr.verdict")} : <b>{ftraceAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ftraceAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ftraceAuditData.verdict.verdict === 'tracer_left_on' ? 'var(--warn)' :
+                        ['orphan_kprobes','orphan_uprobes','events_enabled','requires_root'].includes(ftraceAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if ftraceAuditData.state?.current_tracer}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <span class="kv">current_tracer=<b>{ftraceAuditData.state.current_tracer}</b></span>
+                <span class="kv">tracing_on=<b>{ftraceAuditData.state.tracing_on ?? '?'}</b></span>
+                {#if ftraceAuditData.state.kprobe_events}
+                  <span class="kv">kprobes=<b>{ftraceAuditData.state.kprobe_events.length}</b></span>
+                {/if}
+              </div>
+            {/if}
+            <p style="margin: 4px 0;">{ftraceAuditData.verdict.reason}</p>
+            {#if ftraceAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ftr.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ftraceAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ftraceAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #48.2 USB topology (UI sprint 39) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.usb.title")}</h4>
+        <p class="muted">{i18n.t("integrations.usb.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUsbTopologyAudit}>{i18n.t("integrations.usb.refresh")}</button>
+          {#if usbTopologyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={usbTopologyAuditData.verdict.verdict === 'power_budget_high' ? 'var(--warn)' :
+                             ['speed_negotiated_low','autosuspend_unfriendly'].includes(usbTopologyAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {usbTopologyAuditData.non_root_count ?? 0} dev · {usbTopologyAuditData.total_power_ma ?? 0} mA · {i18n.t("integrations.usb.verdict")} : <b>{usbTopologyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if usbTopologyAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        usbTopologyAuditData.verdict.verdict === 'power_budget_high' ? 'var(--warn)' :
+                        ['speed_negotiated_low','autosuspend_unfriendly'].includes(usbTopologyAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if usbTopologyAuditData.devices.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Non-root-hub devices</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each usbTopologyAuditData.devices.filter(d => !d.is_root_hub).slice(0, 10) as d}
+                    <li>{d.product ?? d.name}: {d.idVendor ?? '?'}:{d.idProduct ?? '?'}, speed={d.speed_mbps ?? '?'}Mbps, power={d.bMaxPower_mA ?? 0}mA</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{usbTopologyAuditData.verdict.reason}</p>
+            {#if usbTopologyAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.usb.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{usbTopologyAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(usbTopologyAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #48.4 journal audit (UI sprint 39) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.jr.title")}</h4>
+        <p class="muted">{i18n.t("integrations.jr.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadJournalAudit}>{i18n.t("integrations.jr.refresh")}</button>
+          {#if journalAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['storage_disabled','rate_limit_risky','oversized'].includes(journalAuditData.verdict.verdict) ? 'var(--warn)' :
+                             journalAuditData.verdict.verdict === 'no_persistent_storage' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {journalAuditData.journal_gib} GiB · {i18n.t("integrations.jr.verdict")} : <b>{journalAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if journalAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['storage_disabled','rate_limit_risky','oversized'].includes(journalAuditData.verdict.verdict) ? 'var(--warn)' :
+                        journalAuditData.verdict.verdict === 'no_persistent_storage' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">Storage=<b>{journalAuditData.config.Storage ?? 'auto'}</b></span>
+              <span class="kv">SystemMaxUse=<b>{journalAuditData.config.SystemMaxUse ?? 'unset'}</b></span>
+              <span class="kv">RateLimitBurst=<b>{journalAuditData.config.RateLimitBurst ?? 'default'}</b></span>
+              <span class="kv">size=<b>{journalAuditData.journal_gib} GiB</b></span>
+            </div>
+            <p style="margin: 4px 0;">{journalAuditData.verdict.reason}</p>
+            {#if journalAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.jr.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{journalAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(journalAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
