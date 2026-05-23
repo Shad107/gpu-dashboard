@@ -1966,6 +1966,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #58 (UI sprint 49) ────────────────────────────────────────────
+  let cgroupRootAuditData        = $state<Awaited<ReturnType<typeof api.cgroupRootAuditStatus>>        | null>(null);
+  let kernelBuildConfigAuditData = $state<Awaited<ReturnType<typeof api.kernelBuildConfigAuditStatus>> | null>(null);
+  let scsiTransportAuditData     = $state<Awaited<ReturnType<typeof api.scsiTransportAuditStatus>>     | null>(null);
+  let alsaCardsAuditData         = $state<Awaited<ReturnType<typeof api.alsaCardsAuditStatus>>         | null>(null);
+  async function loadCgroupRootAudit() {
+    try { cgroupRootAuditData = await api.cgroupRootAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKernelBuildConfigAudit() {
+    try { kernelBuildConfigAuditData = await api.kernelBuildConfigAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadScsiTransportAudit() {
+    try { scsiTransportAuditData = await api.scsiTransportAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAlsaCardsAudit() {
+    try { alsaCardsAuditData = await api.alsaCardsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2260,6 +2282,11 @@
       if (!pagetypeinfoAuditData)       loadPagetypeinfoAudit();
       if (!backlightPwmAuditData)       loadBacklightPwmAudit();
       if (!loadavgPressureAuditData)    loadLoadavgPressureAudit();
+      // R&D #58 cards
+      if (!cgroupRootAuditData)         loadCgroupRootAudit();
+      if (!kernelBuildConfigAuditData)  loadKernelBuildConfigAudit();
+      if (!scsiTransportAuditData)      loadScsiTransportAudit();
+      if (!alsaCardsAuditData)          loadAlsaCardsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -10137,6 +10164,188 @@
                              border-radius: 4px; overflow-x: auto;">{loadavgPressureAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(loadavgPressureAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #58.1 cgroup v2 root (UI sprint 49) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cgroot.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cgroot.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupRootAudit}>{i18n.t("integrations.cgroot.refresh")}</button>
+          {#if cgroupRootAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['hybrid_v1_v2','missing_controllers'].includes(cgroupRootAuditData.verdict.verdict) ? 'var(--warn)' :
+                             cgroupRootAuditData.verdict.verdict === 'deep_nesting' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cgroupRootAuditData.controllers.length} controllers · {i18n.t("integrations.cgroot.verdict")} : <b>{cgroupRootAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupRootAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['hybrid_v1_v2','missing_controllers'].includes(cgroupRootAuditData.verdict.verdict) ? 'var(--warn)' :
+                        cgroupRootAuditData.verdict.verdict === 'deep_nesting' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>controllers: {cgroupRootAuditData.controllers.join(', ')}</li>
+              <li>subtree_control: {cgroupRootAuditData.subtree_control.join(', ')}</li>
+              {#if cgroupRootAuditData.hybrid_v1_dirs.length}
+                <li style:color="var(--warn)">v1 dirs: {cgroupRootAuditData.hybrid_v1_dirs.join(', ')}</li>
+              {/if}
+              <li>own path: {cgroupRootAuditData.own_cgroup_path}</li>
+              <li>descendants: {cgroupRootAuditData.stat.nr_descendants ?? '?'} · dying: {cgroupRootAuditData.stat.nr_dying_descendants ?? '?'}</li>
+            </ul>
+            <p style="margin: 4px 0;">{cgroupRootAuditData.verdict.reason}</p>
+            {#if cgroupRootAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cgroot.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cgroupRootAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cgroupRootAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #58.2 Kernel build config (UI sprint 49) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kcfg.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kcfg.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKernelBuildConfigAudit}>{i18n.t("integrations.kcfg.refresh")}</button>
+          {#if kernelBuildConfigAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['debug_kernel_in_use','preempt_none_for_desktop'].includes(kernelBuildConfigAuditData.verdict.verdict) ? 'var(--warn)' :
+                             kernelBuildConfigAuditData.verdict.verdict === 'thp_madvise_default_mismatch' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {kernelBuildConfigAuditData.release} · {i18n.t("integrations.kcfg.verdict")} : <b>{kernelBuildConfigAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kernelBuildConfigAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['debug_kernel_in_use','preempt_none_for_desktop'].includes(kernelBuildConfigAuditData.verdict.verdict) ? 'var(--warn)' :
+                        kernelBuildConfigAuditData.verdict.verdict === 'thp_madvise_default_mismatch' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">CONFIG keys ({kernelBuildConfigAuditData.key_count})</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each Object.entries(kernelBuildConfigAuditData.interesting) as [k, v]}
+                  <li>{k}={v}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{kernelBuildConfigAuditData.verdict.reason}</p>
+            {#if kernelBuildConfigAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.kcfg.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{kernelBuildConfigAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(kernelBuildConfigAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #58.3 SCSI transport (UI sprint 49) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.scsi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.scsi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadScsiTransportAudit}>{i18n.t("integrations.scsi.refresh")}</button>
+          {#if scsiTransportAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={scsiTransportAuditData.verdict.verdict === 'write_cache_disabled' ? 'var(--warn)' :
+                             ['queue_depth_starved','device_offline'].includes(scsiTransportAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {scsiTransportAuditData.disk_count ?? 0} disks · {scsiTransportAuditData.device_count ?? 0} devs · {i18n.t("integrations.scsi.verdict")} : <b>{scsiTransportAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if scsiTransportAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        scsiTransportAuditData.verdict.verdict === 'write_cache_disabled' ? 'var(--warn)' :
+                        ['queue_depth_starved','device_offline'].includes(scsiTransportAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if scsiTransportAuditData.disks.length || scsiTransportAuditData.devices.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">SCSI disks + devices</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each scsiTransportAuditData.disks as d}
+                    <li>disk {d.id}: cache_type={d.cache_type ?? '?'} FUA={d.FUA ?? '?'}</li>
+                  {/each}
+                  {#each scsiTransportAuditData.devices as d}
+                    <li>dev {d.id}: queue_depth={d.queue_depth ?? '?'} state={d.state ?? '?'} type={d.type ?? '?'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{scsiTransportAuditData.verdict.reason}</p>
+            {#if scsiTransportAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.scsi.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{scsiTransportAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(scsiTransportAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #58.4 ALSA cards (UI sprint 49) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.alsa.title")}</h4>
+        <p class="muted">{i18n.t("integrations.alsa.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadAlsaCardsAudit}>{i18n.t("integrations.alsa.refresh")}</button>
+          {#if alsaCardsAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={alsaCardsAuditData.verdict.verdict === 'gpu_hda_runtime_pm_off' ? 'var(--warn)' :
+                             ['orphan_hdmi_audio','conflicting_codec_drivers'].includes(alsaCardsAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {alsaCardsAuditData.card_count ?? 0} cards · {i18n.t("integrations.alsa.verdict")} : <b>{alsaCardsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if alsaCardsAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        alsaCardsAuditData.verdict.verdict === 'gpu_hda_runtime_pm_off' ? 'var(--warn)' :
+                        ['orphan_hdmi_audio','conflicting_codec_drivers'].includes(alsaCardsAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if alsaCardsAuditData.cards.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Cards</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each alsaCardsAuditData.cards as c}
+                    <li>card{c.index} {c.id} ({c.name}): pm=<b
+                      style:color={c.id.toLowerCase().includes('nvidia') && c.power_control !== 'auto' ? 'var(--warn)' : 'inherit'}
+                    >{c.power_control ?? '?'}</b> · pcms={c.pcm_children.length}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{alsaCardsAuditData.verdict.reason}</p>
+            {#if alsaCardsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.alsa.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{alsaCardsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(alsaCardsAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

@@ -3567,4 +3567,60 @@ export const api = {
       sched_rt_period_us: number | null;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #58 (UI sprint 49) ──
+  cgroupRootAuditStatus: () =>
+    fetch("/api/cgroup-root-audit").then(jsonOf<{
+      ok: boolean;
+      controllers: string[];
+      subtree_control: string[];
+      hybrid_v1_dirs: string[];
+      own_cgroup_path: string;
+      stat: Record<string, number>;
+      max_depth: string;
+      max_descendants: string;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  kernelBuildConfigAuditStatus: () =>
+    fetch("/api/kernel-build-config-audit").then(jsonOf<{
+      ok: boolean;
+      release: string;
+      key_count: number;
+      interesting: Record<string, string>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  scsiTransportAuditStatus: () =>
+    fetch("/api/scsi-transport-audit").then(jsonOf<{
+      ok: boolean;
+      disk_count?: number;
+      disks: Array<{ id: string; cache_type: string | null;
+                      FUA: number | null;
+                      protection_type: number | null;
+                      manage_start_stop: number | null;
+                      allow_restart: number | null }>;
+      device_count?: number;
+      devices: Array<{ id: string; queue_depth: number | null;
+                        state: string | null; type: number | null;
+                        timeout: number | null;
+                        eh_timeout: number | null }>;
+      host_count?: number;
+      hosts: Array<{ id: string; use_blk_mq: number | null;
+                      can_queue: number | null;
+                      cmd_per_lun: number | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  alsaCardsAuditStatus: () =>
+    fetch("/api/alsa-cards-audit").then(jsonOf<{
+      ok: boolean;
+      card_count?: number;
+      cards: Array<{ index: number; id: string; driver: string;
+                      name: string;
+                      power_control: string | null;
+                      pcm_children: string[] }>;
+      modules: Record<string, string>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
