@@ -1297,6 +1297,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_power_supply_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/typec-audit":
+                # R&D #51.4 — USB-C alt-mode + PD contract
+                code, body = api.handle_typec_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
