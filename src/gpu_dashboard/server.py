@@ -912,6 +912,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hwmon_inventory_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/vm-sysctl":
+                # R&D #32.4 — VM sysctl LLM-rig sanity audit
+                code, body = api.handle_vm_sysctl_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
