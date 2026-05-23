@@ -3162,4 +3162,64 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #51 (UI sprint 42) ──
+  powerSupplyAuditStatus: () =>
+    fetch("/api/power-supply-audit").then(jsonOf<{
+      ok: boolean;
+      supply_count?: number;
+      supplies: Array<{
+        name: string; type: string | null; status?: string | null;
+        capacity?: number | null; cycle_count?: number | null;
+        charge_full?: number | null; charge_full_design?: number | null;
+        charge_control_end_threshold?: number | null;
+        online?: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  typecAuditStatus: () =>
+    fetch("/api/typec-audit").then(jsonOf<{
+      ok: boolean;
+      port_count?: number;
+      ports: Array<{
+        name: string; data_role?: string | null;
+        power_role?: string | null; preferred_role?: string | null;
+        usb_typec_revision?: string | null;
+        usb_power_delivery_revision?: string | null;
+        partner?: Record<string, unknown> | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  perfPmuAuditStatus: () =>
+    fetch("/api/perf-pmu-audit").then(jsonOf<{
+      ok: boolean;
+      pmu_count?: number;
+      pmus: Array<{
+        name: string; type: number | null;
+        nr_addr_filters: number | null;
+        event_count: number; format_count: number;
+        kind?: string;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  iomemPciAuditStatus: () =>
+    fetch("/api/iomem-pci-audit").then(jsonOf<{
+      ok: boolean;
+      iomem: {
+        region_count: number;
+        top_labels: Array<{ label: string; depth?: number }>;
+        masked: boolean;
+      };
+      pci_device_count?: number;
+      pci_devices: Array<{
+        bdf: string; vendor: string | null; device: string | null;
+        class: number | null; driver: string | null;
+        reset_method: string | null;
+        numa_node: number | null; enable: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

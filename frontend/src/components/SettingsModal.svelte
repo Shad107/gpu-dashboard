@@ -1817,6 +1817,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #51 (UI sprint 42) ────────────────────────────────────────────
+  let powerSupplyAuditData     = $state<Awaited<ReturnType<typeof api.powerSupplyAuditStatus>>     | null>(null);
+  let typecAuditData           = $state<Awaited<ReturnType<typeof api.typecAuditStatus>>           | null>(null);
+  let perfPmuAuditData         = $state<Awaited<ReturnType<typeof api.perfPmuAuditStatus>>         | null>(null);
+  let iomemPciAuditData        = $state<Awaited<ReturnType<typeof api.iomemPciAuditStatus>>        | null>(null);
+  async function loadPowerSupplyAudit() {
+    try { powerSupplyAuditData = await api.powerSupplyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadTypecAudit() {
+    try { typecAuditData = await api.typecAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPerfPmuAudit() {
+    try { perfPmuAuditData = await api.perfPmuAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIomemPciAudit() {
+    try { iomemPciAuditData = await api.iomemPciAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2077,6 +2099,11 @@
       if (!iioSensorAuditData)        loadIioSensorAudit();
       if (!drmAuditData)              loadDrmAudit();
       if (!cgroupMemeventsAuditData)  loadCgroupMemeventsAudit();
+      // R&D #51 cards
+      if (!powerSupplyAuditData)      loadPowerSupplyAudit();
+      if (!typecAuditData)            loadTypecAudit();
+      if (!perfPmuAuditData)          loadPerfPmuAudit();
+      if (!iomemPciAuditData)         loadIomemPciAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -8740,6 +8767,187 @@
                              border-radius: 4px; overflow-x: auto;">{cgroupMemeventsAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(cgroupMemeventsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #51.1 power supply (UI sprint 42) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.psu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.psu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPowerSupplyAudit}>{i18n.t("integrations.psu.refresh")}</button>
+          {#if powerSupplyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={powerSupplyAuditData.verdict.verdict === 'battery_degraded' ? 'var(--warn)' :
+                             ['no_ac','charge_threshold_unset'].includes(powerSupplyAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {powerSupplyAuditData.supply_count ?? 0} supplies · {i18n.t("integrations.psu.verdict")} : <b>{powerSupplyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if powerSupplyAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        powerSupplyAuditData.verdict.verdict === 'battery_degraded' ? 'var(--warn)' :
+                        ['no_ac','charge_threshold_unset'].includes(powerSupplyAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Supplies</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each powerSupplyAuditData.supplies as s}
+                  <li>{s.name} ({s.type ?? '?'}):
+                    {#if s.capacity != null}capacity={s.capacity}%{/if}
+                    {#if s.cycle_count != null} cycles={s.cycle_count}{/if}
+                    {#if s.online != null} online={s.online}{/if}
+                    {#if s.charge_full && s.charge_full_design}
+                      wear=<b>{((s.charge_full / s.charge_full_design) * 100).toFixed(0)}%</b>
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{powerSupplyAuditData.verdict.reason}</p>
+            {#if powerSupplyAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.psu.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{powerSupplyAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(powerSupplyAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #51.4 typec (UI sprint 42) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.typec.title")}</h4>
+        <p class="muted">{i18n.t("integrations.typec.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTypecAudit}>{i18n.t("integrations.typec.refresh")}</button>
+          {#if typecAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={typecAuditData.verdict.verdict === 'pd_no_contract' ? 'var(--warn)' :
+                             typecAuditData.verdict.verdict === 'alt_mode_active' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {typecAuditData.port_count ?? 0} ports · {i18n.t("integrations.typec.verdict")} : <b>{typecAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if typecAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        typecAuditData.verdict.verdict === 'pd_no_contract' ? 'var(--warn)' :
+                        typecAuditData.verdict.verdict === 'alt_mode_active' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Ports</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each typecAuditData.ports as p}
+                  <li>{p.name}: data={p.data_role ?? '?'} power={p.power_role ?? '?'}
+                    {#if p.usb_power_delivery_revision} pd={p.usb_power_delivery_revision}{/if}
+                  </li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{typecAuditData.verdict.reason}</p>
+            {#if typecAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.typec.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{typecAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(typecAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #51.3 perf PMU (UI sprint 42) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pmu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pmu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPerfPmuAudit}>{i18n.t("integrations.pmu.refresh")}</button>
+          {#if perfPmuAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={perfPmuAuditData.verdict.verdict === 'no_pmu' ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {perfPmuAuditData.pmu_count ?? 0} PMUs · {i18n.t("integrations.pmu.verdict")} : <b>{perfPmuAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if perfPmuAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        perfPmuAuditData.verdict.verdict === 'no_pmu' ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">PMUs (top by event count)</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each [...perfPmuAuditData.pmus].sort((a,b)=>b.event_count-a.event_count).slice(0, 12) as p}
+                  <li>{p.name} ({p.kind ?? '?'}): type={p.type ?? '?'} events={p.event_count} formats={p.format_count}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{perfPmuAuditData.verdict.reason}</p>
+            {#if perfPmuAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pmu.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{perfPmuAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(perfPmuAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #51.2 IOMEM + PCI (UI sprint 42) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.iomempci.title")}</h4>
+        <p class="muted">{i18n.t("integrations.iomempci.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIomemPciAudit}>{i18n.t("integrations.iomempci.refresh")}</button>
+          {#if iomemPciAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={iomemPciAuditData.verdict.verdict === 'unbound_device' ? 'var(--warn)' :
+                             ['reset_method_bus_only','iomem_masked'].includes(iomemPciAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {iomemPciAuditData.pci_device_count ?? 0} PCI · {iomemPciAuditData.iomem.region_count} iomem · {i18n.t("integrations.iomempci.verdict")} : <b>{iomemPciAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if iomemPciAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        iomemPciAuditData.verdict.verdict === 'unbound_device' ? 'var(--warn)' :
+                        ['reset_method_bus_only','iomem_masked'].includes(iomemPciAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">PCI devices (first 12)</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each iomemPciAuditData.pci_devices.slice(0, 12) as d}
+                  <li>{d.bdf}: driver=<b
+                    style:color={d.driver ? 'inherit' : 'var(--warn)'}
+                  >{d.driver ?? 'none'}</b> reset={d.reset_method ?? '?'}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{iomemPciAuditData.verdict.reason}</p>
+            {#if iomemPciAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.iomempci.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{iomemPciAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(iomemPciAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
