@@ -304,3 +304,4 @@ from .pcie_aspm import handle_pcie_aspm_status  # noqa: F401,F811
 from .fs_mount_audit import handle_fs_mount_audit_status  # noqa: F401,F811
 from .batch_advisor import handle_batch_advisor_status  # noqa: F401,F811
 from .dkms_status import handle_dkms_status  # noqa: F401,F811
+from .pcie_aer import handle_pcie_aer_status  # noqa: F401,F811

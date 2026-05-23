@@ -757,6 +757,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_dkms_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pcie-aer":
+                # R&D #24.2 — PCIe Advanced Error Reporting counter
+                code, body = api.handle_pcie_aer_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
