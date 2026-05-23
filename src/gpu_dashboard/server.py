@@ -797,6 +797,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_width_watcher_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cuda-ctx-leak":
+                # R&D #26.2 — zombie CUDA-FD detector
+                code, body = api.handle_cuda_ctx_leak_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
