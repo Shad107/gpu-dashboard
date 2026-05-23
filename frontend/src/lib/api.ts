@@ -4070,4 +4070,71 @@ export const api = {
       clocksource_available: string[];
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #68 (UI sprint 59) ──
+  pstoreCrashlogAuditStatus: () =>
+    fetch("/api/pstore-crashlog-audit").then(jsonOf<{
+      ok: boolean;
+      mounted: boolean;
+      backend: string | null;
+      directory_present: boolean;
+      permission_denied: boolean;
+      entry_count: number;
+      entries: Array<{ name: string; size: number | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  lruGenMglruAuditStatus: () =>
+    fetch("/api/lru-gen-mglru-audit").then(jsonOf<{
+      ok: boolean;
+      mglru_present: boolean;
+      enabled: number | null;
+      min_ttl_ms: number | null;
+      swap_used_kib: number;
+      psi_full_avg60: number | null;
+      debug_lru_gen_readable: boolean | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  fsSpecificTunablesAuditStatus: () =>
+    fetch("/api/fs-specific-tunables-audit").then(jsonOf<{
+      ok: boolean;
+      ext4_present: boolean;
+      xfs_present: boolean;
+      f2fs_present: boolean;
+      ext4_devices: Array<{
+        dev: string;
+        errors_count: number | null;
+        warning_count: number | null;
+        first_error_time: number | null;
+        lifetime_write_kbytes: number | null;
+      }>;
+      xfs_devices: Array<{
+        dev: string; stats_present: boolean;
+        metadata_corruption_counter: number;
+      }>;
+      f2fs_devices: Array<{
+        dev: string; features: string | null;
+        gc_idle: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  dtMemmapFirmwareAuditStatus: () =>
+    fetch("/api/dt-memmap-firmware-audit").then(jsonOf<{
+      ok: boolean;
+      arch: string;
+      devicetree_present: boolean;
+      memmap_entry_count: number;
+      memmap_sample: Array<{
+        id: string;
+        start: string | null;
+        end: string | null;
+        type: string | null;
+      }>;
+      vmcoreinfo_present: boolean;
+      vmcoreinfo_readable: boolean;
+      vmcoreinfo_bytes: number;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

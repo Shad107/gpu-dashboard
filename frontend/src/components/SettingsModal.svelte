@@ -2156,6 +2156,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #68 (UI sprint 59) ────────────────────────────────────────────
+  let pstoreCrashlogAuditData       = $state<Awaited<ReturnType<typeof api.pstoreCrashlogAuditStatus>>       | null>(null);
+  let lruGenMglruAuditData          = $state<Awaited<ReturnType<typeof api.lruGenMglruAuditStatus>>          | null>(null);
+  let fsSpecificTunablesAuditData   = $state<Awaited<ReturnType<typeof api.fsSpecificTunablesAuditStatus>>   | null>(null);
+  let dtMemmapFirmwareAuditData     = $state<Awaited<ReturnType<typeof api.dtMemmapFirmwareAuditStatus>>     | null>(null);
+  async function loadPstoreCrashlogAudit() {
+    try { pstoreCrashlogAuditData = await api.pstoreCrashlogAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadLruGenMglruAudit() {
+    try { lruGenMglruAuditData = await api.lruGenMglruAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFsSpecificTunablesAudit() {
+    try { fsSpecificTunablesAuditData = await api.fsSpecificTunablesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDtMemmapFirmwareAudit() {
+    try { dtMemmapFirmwareAuditData = await api.dtMemmapFirmwareAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2494,6 +2516,11 @@
       if (!vmallocinfoAuditData)        loadVmallocinfoAudit();
       if (!fdinfoKindsAuditData)        loadFdinfoKindsAudit();
       if (!timerListAuditData)          loadTimerListAudit();
+      // R&D #68 cards
+      if (!pstoreCrashlogAuditData)     loadPstoreCrashlogAudit();
+      if (!lruGenMglruAuditData)        loadLruGenMglruAudit();
+      if (!fsSpecificTunablesAuditData) loadFsSpecificTunablesAudit();
+      if (!dtMemmapFirmwareAuditData)   loadDtMemmapFirmwareAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -11739,6 +11766,152 @@
                              border-radius: 4px; overflow-x: auto;">{timerListAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(timerListAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #68.1 pstore crash logs (UI sprint 59) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pstore.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pstore.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPstoreCrashlogAudit}>{i18n.t("integrations.pstore.refresh")}</button>
+          {#if pstoreCrashlogAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pstoreCrashlogAuditData.verdict.verdict === 'stale_panic_logs_present' ? 'var(--err)' :
+                             pstoreCrashlogAuditData.verdict.verdict === 'pstore_backend_absent' ? 'var(--warn)' :
+                             pstoreCrashlogAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {pstoreCrashlogAuditData.backend ?? 'no-backend'} · {pstoreCrashlogAuditData.entry_count} entries · {i18n.t("integrations.pstore.verdict")} : <b>{pstoreCrashlogAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pstoreCrashlogAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pstoreCrashlogAuditData.verdict.verdict === 'stale_panic_logs_present' ? 'var(--err)' :
+                        pstoreCrashlogAuditData.verdict.verdict === 'pstore_backend_absent' ? 'var(--warn)' :
+                        pstoreCrashlogAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pstoreCrashlogAuditData.verdict.reason}</p>
+            {#if pstoreCrashlogAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pstore.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{pstoreCrashlogAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(pstoreCrashlogAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #68.2 MGLRU (UI sprint 59) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.mglru.title")}</h4>
+        <p class="muted">{i18n.t("integrations.mglru.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLruGenMglruAudit}>{i18n.t("integrations.mglru.refresh")}</button>
+          {#if lruGenMglruAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={lruGenMglruAuditData.verdict.verdict === 'mglru_disabled_with_swap_pressure' ? 'var(--err)' :
+                             lruGenMglruAuditData.verdict.verdict === 'min_ttl_too_low' ? 'var(--warn)' :
+                             lruGenMglruAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              enabled={lruGenMglruAuditData.enabled ?? '?'} · ttl={lruGenMglruAuditData.min_ttl_ms ?? '?'}ms · {i18n.t("integrations.mglru.verdict")} : <b>{lruGenMglruAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if lruGenMglruAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        lruGenMglruAuditData.verdict.verdict === 'mglru_disabled_with_swap_pressure' ? 'var(--err)' :
+                        lruGenMglruAuditData.verdict.verdict === 'min_ttl_too_low' ? 'var(--warn)' :
+                        lruGenMglruAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{lruGenMglruAuditData.verdict.reason}</p>
+            {#if lruGenMglruAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.mglru.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{lruGenMglruAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(lruGenMglruAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #68.3 per-FS tunables (UI sprint 59) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fsspec.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fsspec.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFsSpecificTunablesAudit}>{i18n.t("integrations.fsspec.refresh")}</button>
+          {#if fsSpecificTunablesAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['ext4_errors_logged','xfs_metadata_corruption_counter'].includes(fsSpecificTunablesAuditData.verdict.verdict) ? 'var(--err)' :
+                             fsSpecificTunablesAuditData.verdict.verdict === 'f2fs_gc_disabled' ? 'var(--warn)' :
+                             fsSpecificTunablesAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              ext4={fsSpecificTunablesAuditData.ext4_devices.length} xfs={fsSpecificTunablesAuditData.xfs_devices.length} f2fs={fsSpecificTunablesAuditData.f2fs_devices.length} · {i18n.t("integrations.fsspec.verdict")} : <b>{fsSpecificTunablesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fsSpecificTunablesAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['ext4_errors_logged','xfs_metadata_corruption_counter'].includes(fsSpecificTunablesAuditData.verdict.verdict) ? 'var(--err)' :
+                        fsSpecificTunablesAuditData.verdict.verdict === 'f2fs_gc_disabled' ? 'var(--warn)' :
+                        fsSpecificTunablesAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{fsSpecificTunablesAuditData.verdict.reason}</p>
+            {#if fsSpecificTunablesAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fsspec.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{fsSpecificTunablesAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(fsSpecificTunablesAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #68.4 devicetree + memmap + vmcoreinfo (UI sprint 59) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dtmem.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dtmem.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDtMemmapFirmwareAudit}>{i18n.t("integrations.dtmem.refresh")}</button>
+          {#if dtMemmapFirmwareAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={dtMemmapFirmwareAuditData.verdict.verdict === 'vmcoreinfo_unreadable' ? 'var(--err)' :
+                             ['efi_reserved_regions_zero','devicetree_present_on_x86'].includes(dtMemmapFirmwareAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {dtMemmapFirmwareAuditData.arch} · {dtMemmapFirmwareAuditData.memmap_entry_count} memmap · {i18n.t("integrations.dtmem.verdict")} : <b>{dtMemmapFirmwareAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dtMemmapFirmwareAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        dtMemmapFirmwareAuditData.verdict.verdict === 'vmcoreinfo_unreadable' ? 'var(--err)' :
+                        ['efi_reserved_regions_zero','devicetree_present_on_x86'].includes(dtMemmapFirmwareAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{dtMemmapFirmwareAuditData.verdict.reason}</p>
+            {#if dtMemmapFirmwareAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dtmem.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{dtMemmapFirmwareAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(dtMemmapFirmwareAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
