@@ -1397,6 +1397,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_bdi_writeback_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-crypto-audit":
+                # R&D #56.3 — /proc/crypto + FIPS + AES-NI
+                code, body = api.handle_proc_crypto_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
