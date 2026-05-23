@@ -410,3 +410,4 @@ from .kmsg_audit import handle_kmsg_audit_status  # noqa: F401,F811
 from .sock_pool_audit import handle_sock_pool_audit_status  # noqa: F401,F811
 from .iio_sensor_audit import handle_iio_sensor_audit_status  # noqa: F401,F811
 from .drm_audit import handle_drm_audit_status  # noqa: F401,F811
+from .cgroup_memevents_audit import handle_cgroup_memevents_audit_status  # noqa: F401,F811
