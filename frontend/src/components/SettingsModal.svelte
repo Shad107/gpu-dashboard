@@ -1377,6 +1377,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #31 (UI sprint 22) ────────────────────────────────────────────
+  let oomPriorityData    = $state<Awaited<ReturnType<typeof api.oomPriorityStatus>>    | null>(null);
+  let cpuTopologyData    = $state<Awaited<ReturnType<typeof api.cpuTopologyStatus>>    | null>(null);
+  let procSmapsData      = $state<Awaited<ReturnType<typeof api.procSmapsStatus>>      | null>(null);
+  let hwmonInventoryData = $state<Awaited<ReturnType<typeof api.hwmonInventoryStatus>> | null>(null);
+  async function loadOomPriority() {
+    try { oomPriorityData = await api.oomPriorityStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpuTopology() {
+    try { cpuTopologyData = await api.cpuTopologyStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcSmaps() {
+    try { procSmapsData = await api.procSmapsStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadHwmonInventory() {
+    try { hwmonInventoryData = await api.hwmonInventoryStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1537,6 +1559,11 @@
       if (!nvmeIoschedData)    loadNvmeIosched();
       if (!iommuGroupsData)    loadIommuGroups();
       if (!msiInventoryData)   loadMsiInventory();
+      // R&D #31 cards
+      if (!oomPriorityData)    loadOomPriority();
+      if (!cpuTopologyData)    loadCpuTopology();
+      if (!procSmapsData)      loadProcSmaps();
+      if (!hwmonInventoryData) loadHwmonInventory();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6085,6 +6112,212 @@
               {/if}
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #31.4 OOM-priority for inference daemons (UI sprint 22) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.oom.title")}</h4>
+        <p class="muted">{i18n.t("integrations.oom.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadOomPriority}>{i18n.t("integrations.oom.refresh")}</button>
+          {#if oomPriorityData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={oomPriorityData.worst_verdict === 'default' ? 'var(--warn)' :
+                             oomPriorityData.worst_verdict === 'hardened' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {oomPriorityData.process_count} procs · {i18n.t("integrations.oom.verdict")} : <b>{oomPriorityData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if oomPriorityData?.worst_verdict === 'no_llm_procs'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.oom.no_procs")}</p>
+        {/if}
+        {#if oomPriorityData?.processes && oomPriorityData.processes.length > 0}
+          {#each oomPriorityData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          p.verdict.verdict === 'default' ? 'var(--warn)' :
+                          p.verdict.verdict === 'hardened' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{p.comm}</b>
+                <span class="kv">pid <b>{p.pid}</b></span>
+                <span class="kv">{i18n.t("integrations.oom.score")} : <b>{p.oom_score ?? '—'}</b></span>
+                <span class="kv">{i18n.t("integrations.oom.adj")} : <b>{p.oom_score_adj ?? '—'}</b></span>
+                <span class="kv">{i18n.t("integrations.oom.rss")} : <b>{p.vm_rss_bytes ? (p.vm_rss_bytes / 1024**3).toFixed(1) + ' GiB' : '—'}</b></span>
+                <span class="kv"><b>{p.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{p.verdict.reason}</p>
+              {#if p.recipe}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.oom.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.recipe}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(p.recipe)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #31.3 CPU topology + governor advisor (UI sprint 22) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cpu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cpu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuTopology}>{i18n.t("integrations.cpu.refresh")}</button>
+          {#if cpuTopologyData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuTopologyData.verdict.verdict === 'powersave' ? 'var(--warn)' :
+                             cpuTopologyData.verdict.verdict === 'hybrid_unaware' ? 'var(--warn)' :
+                             cpuTopologyData.verdict.verdict === 'missing_cpufreq' ? 'var(--text-dim)' :
+                             'var(--accent)'}>
+              {i18n.t("integrations.cpu.verdict")} : <b>{cpuTopologyData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuTopologyData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuTopologyData.verdict.verdict === 'powersave' ||
+                        cpuTopologyData.verdict.verdict === 'hybrid_unaware' ? 'var(--warn)' :
+                        cpuTopologyData.verdict.verdict === 'missing_cpufreq' ? 'var(--text-dim)' :
+                        'var(--accent)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">{i18n.t("integrations.cpu.cpus")} : <b>{cpuTopologyData.cpu_count}</b></span>
+              <span class="kv">{i18n.t("integrations.cpu.cores")} : <b>{cpuTopologyData.physical_cores}</b></span>
+              <span class="kv">{i18n.t("integrations.cpu.smt")} : <b>{cpuTopologyData.smt_enabled ? 'on' : 'off'}</b></span>
+              {#if cpuTopologyData.hybrid}
+                <span class="kv" style:color="var(--warn)">{i18n.t("integrations.cpu.hybrid")} :
+                  <b>{cpuTopologyData.hybrid.p_cores.length}P + {cpuTopologyData.hybrid.e_cores.length}E</b>
+                </span>
+              {/if}
+              {#if cpuTopologyData.max_freq_mhz}
+                <span class="kv">{i18n.t("integrations.cpu.max_freq")} : <b>{cpuTopologyData.max_freq_mhz} MHz</b></span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{cpuTopologyData.verdict.reason}</p>
+            {#if cpuTopologyData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cpu.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuTopologyData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuTopologyData!.verdict.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #31.2 smaps_rollup residence breakdown (UI sprint 22) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.smaps.title")}</h4>
+        <p class="muted">{i18n.t("integrations.smaps.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcSmaps}>{i18n.t("integrations.smaps.refresh")}</button>
+          {#if procSmapsData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procSmapsData.worst_verdict === 'swapping' ? 'var(--warn)' :
+                             procSmapsData.worst_verdict === 'mmap_evicted' ? 'var(--warn)' :
+                             procSmapsData.worst_verdict === 'unreadable' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procSmapsData.process_count} procs · {i18n.t("integrations.smaps.verdict")} : <b>{procSmapsData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procSmapsData?.worst_verdict === 'no_llm_procs'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.smaps.no_procs")}</p>
+        {/if}
+        {#if procSmapsData?.processes && procSmapsData.processes.length > 0}
+          {#each procSmapsData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          p.verdict.verdict === 'swapping' ||
+                          p.verdict.verdict === 'mmap_evicted' ? 'var(--warn)' :
+                          p.verdict.verdict === 'unreadable' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{p.comm}</b>
+                <span class="kv">pid <b>{p.pid}</b></span>
+                <span class="kv">{i18n.t("integrations.smaps.rss")} : <b>{(p.rss_bytes / 1024**3).toFixed(1)} GiB</b></span>
+                <span class="kv">{i18n.t("integrations.smaps.file")} : <b>{(p.pss_file_bytes / 1024**3).toFixed(1)} GiB</b></span>
+                <span class="kv">{i18n.t("integrations.smaps.anon")} : <b>{(p.pss_anon_bytes / 1024**3).toFixed(1)} GiB</b></span>
+                {#if p.swap_bytes > 0}
+                  <span class="kv" style:color="var(--warn)">{i18n.t("integrations.smaps.swap")} :
+                    <b>{(p.swap_bytes / 1024**3).toFixed(1)} GiB</b>
+                  </span>
+                {/if}
+                <span class="kv"><b>{p.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{p.verdict.reason}</p>
+              {#if p.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.smaps.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(p.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #31.1 hwmon NVMe + chipset parity (UI sprint 22) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.hwmon.title")}</h4>
+        <p class="muted">{i18n.t("integrations.hwmon.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHwmonInventory}>{i18n.t("integrations.hwmon.refresh")}</button>
+          {#if hwmonInventoryData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={hwmonInventoryData.worst_verdict === 'cpu_hot' ||
+                              hwmonInventoryData.worst_verdict === 'chipset_hot' ||
+                              hwmonInventoryData.worst_verdict === 'nvme_hot' ? 'var(--warn)' :
+                             hwmonInventoryData.worst_verdict === 'no_hwmon' ? 'var(--text-dim)' :
+                             'var(--accent)'}>
+              {hwmonInventoryData.device_count} devices · {i18n.t("integrations.hwmon.verdict")} : <b>{hwmonInventoryData.worst_verdict}</b>
+            </span>
+            {#if hwmonInventoryData.max_temp_c !== null}
+              <span class="kv">{i18n.t("integrations.hwmon.max_temp")} : <b>{hwmonInventoryData.max_temp_c.toFixed(1)} °C</b></span>
+            {/if}
+          {/if}
+        </div>
+        {#if hwmonInventoryData?.worst_verdict === 'no_hwmon'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.hwmon.no_hwmon")}</p>
+        {/if}
+        {#if hwmonInventoryData?.devices && hwmonInventoryData.devices.length > 0}
+          {#each hwmonInventoryData.devices as d}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid var(--text-dim);">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{d.name} ({d.kind})</b>
+                {#each d.sensors as s}
+                  <span class="kv"
+                        style:color={s.value_c !== null && s.max_c !== null && s.value_c > s.max_c * 0.9 ? 'var(--warn)' : ''}>
+                    {s.label ?? `ch${s.channel}`} : <b>{s.value_c?.toFixed(1) ?? '—'} °C</b>
+                  </span>
+                {/each}
+                {#each d.fans as f}
+                  <span class="kv">{f.label ?? `fan${f.channel}`} : <b>{f.rpm ?? '—'} RPM</b></span>
+                {/each}
+              </div>
+            </div>
+          {/each}
+        {/if}
+        {#if hwmonInventoryData?.verdict?.recommendation}
+          <details style="margin-top: 8px;">
+            <summary class="muted">{i18n.t("integrations.hwmon.recommend")}</summary>
+            <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                         border-radius: 4px; overflow-x: auto;">{hwmonInventoryData.verdict.recommendation}</pre>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(hwmonInventoryData!.verdict!.recommendation)}>📋 Copy</button>
+          </details>
         {/if}
       </div>
 

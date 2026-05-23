@@ -1986,4 +1986,69 @@ export const api = {
         verdict: { verdict: string; reason: string; recommendation: string };
       }>;
     }>),
+
+  // ── R&D #31 (UI sprint 22) ─────────────────────────────────────────────
+  oomPriorityStatus: () =>
+    fetch("/api/oom-priority").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        oom_score: number | null;
+        oom_score_adj: number | null;
+        vm_rss_bytes: number | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+        recipe: string;
+      }>;
+    }>),
+
+  cpuTopologyStatus: () =>
+    fetch("/api/cpu-topology").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      physical_cores: number;
+      smt_enabled: boolean;
+      hybrid: { p_cores: number[]; e_cores: number[] } | null;
+      max_freq_mhz: number | null;
+      cpus: Array<{
+        id: number; core_id: number; package_id: number;
+        governor: string | null; max_freq_khz: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  procSmapsStatus: () =>
+    fetch("/api/proc-smaps").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      total_rss_bytes: number;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        rss_bytes: number; pss_bytes: number;
+        pss_anon_bytes: number; pss_file_bytes: number;
+        pss_shmem_bytes: number; anonymous_bytes: number;
+        swap_bytes: number;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  hwmonInventoryStatus: () =>
+    fetch("/api/hwmon-inventory").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      worst_verdict: string;
+      max_temp_c: number | null;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+      devices: Array<{
+        hwmon: string; name: string; kind: string;
+        sensors: Array<{
+          channel: number; label: string | null;
+          value_c: number | null; max_c: number | null;
+          kind: string;
+        }>;
+        fans: Array<{ channel: number; label: string | null; rpm: number | null }>;
+      }>;
+    }>),
 };
