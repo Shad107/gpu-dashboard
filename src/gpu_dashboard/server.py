@@ -1227,6 +1227,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_acpi_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sched-audit":
+                # R&D #47.1 — CFS runqueue-wait + features
+                code, body = api.handle_sched_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
