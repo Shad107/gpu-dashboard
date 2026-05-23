@@ -1632,6 +1632,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_static_kernel_registry_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kpageflags-audit":
+                # R&D #69.2 — /proc/kpageflags per-page flag audit
+                code, body = api.handle_kpageflags_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
