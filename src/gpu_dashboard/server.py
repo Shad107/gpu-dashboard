@@ -982,6 +982,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_net_sysctl_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/smt-audit":
+                # R&D #35.4 — SMT toggle + offline-core audit
+                code, body = api.handle_smt_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
