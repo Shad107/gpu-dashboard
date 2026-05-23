@@ -487,3 +487,4 @@ from .cxl_dax_memory_audit import handle_cxl_dax_memory_audit_status  # noqa: F4
 from .usb_role_switch_audit import handle_usb_role_switch_audit_status  # noqa: F401,F811
 from .page_idle_tracking_audit import handle_page_idle_tracking_audit_status  # noqa: F401,F811
 from .edac_dimm_ce_trend_audit import handle_edac_dimm_ce_trend_audit_status  # noqa: F401,F811
+from .ata_port_sata_audit import handle_ata_port_sata_audit_status  # noqa: F401,F811

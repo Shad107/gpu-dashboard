@@ -1672,6 +1672,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_edac_dimm_ce_trend_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ata-port-sata-audit":
+                # R&D #71.1 — /sys/class/ata_{port,link,device} SATA
+                code, body = api.handle_ata_port_sata_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
