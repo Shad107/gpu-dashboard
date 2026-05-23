@@ -1172,6 +1172,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_disk_io_latency_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/slab-audit":
+                # R&D #44.2 — SLUB slab-cache leak/fragmentation
+                code, body = api.handle_slab_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
