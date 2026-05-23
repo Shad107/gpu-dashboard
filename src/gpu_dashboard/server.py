@@ -1182,6 +1182,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_entropy_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nf-conntrack-audit":
+                # R&D #45.1 — netfilter conntrack auditor
+                code, body = api.handle_nf_conntrack_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
