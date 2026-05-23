@@ -337,3 +337,4 @@ from .proc_smaps import handle_proc_smaps_status  # noqa: F401,F811
 from .hwmon_inventory import handle_hwmon_inventory_status  # noqa: F401,F811
 from .vm_sysctl_audit import handle_vm_sysctl_status  # noqa: F401,F811
 from .psi_pressure import handle_psi_pressure_status  # noqa: F401,F811
+from .proc_wchan import handle_proc_wchan_status  # noqa: F401,F811

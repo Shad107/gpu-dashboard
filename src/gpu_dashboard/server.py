@@ -922,6 +922,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_psi_pressure_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-wchan":
+                # R&D #32.3 — wchan + stack inference-stuck debugger
+                code, body = api.handle_proc_wchan_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
