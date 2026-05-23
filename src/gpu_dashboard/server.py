@@ -1677,6 +1677,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ata_port_sata_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/fw-cfg-blob-audit":
+                # R&D #72.1 — /sys/firmware/qemu_fw_cfg entries
+                code, body = api.handle_fw_cfg_blob_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
