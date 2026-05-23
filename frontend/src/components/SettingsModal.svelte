@@ -1333,6 +1333,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #29 (UI sprint 20) ────────────────────────────────────────────
+  let kmodParamsData     = $state<Awaited<ReturnType<typeof api.kmodParamsStatus>>          | null>(null);
+  let d3coldPolicyData   = $state<Awaited<ReturnType<typeof api.d3coldPolicyStatus>>        | null>(null);
+  let thermalSlowdownData = $state<Awaited<ReturnType<typeof api.thermalSlowdownKindStatus>> | null>(null);
+  let rlimitAuditData    = $state<Awaited<ReturnType<typeof api.rlimitAuditStatus>>         | null>(null);
+  async function loadKmodParams() {
+    try { kmodParamsData = await api.kmodParamsStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadD3coldPolicy() {
+    try { d3coldPolicyData = await api.d3coldPolicyStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadThermalSlowdown() {
+    try { thermalSlowdownData = await api.thermalSlowdownKindStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadRlimitAudit() {
+    try { rlimitAuditData = await api.rlimitAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1483,6 +1505,11 @@
       if (!thermalZonesData)   loadThermalZones();
       if (!nvrmTailData)       loadNvrmTail();
       if (!nvlinkHealthData)   loadNvlinkHealth();
+      // R&D #29 cards
+      if (!kmodParamsData)     loadKmodParams();
+      if (!d3coldPolicyData)   loadD3coldPolicy();
+      if (!thermalSlowdownData) loadThermalSlowdown();
+      if (!rlimitAuditData)    loadRlimitAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -5690,6 +5717,180 @@
               {i18n.t("integrations.nvlink.fix")} : {nvlinkHealthData.verdict.recommendation}
             </p>
           {/if}
+        {/if}
+      </div>
+
+      <!-- R&D #29.1 nvidia kmod params (UI sprint 20) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kmod.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kmod.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKmodParams}>{i18n.t("integrations.kmod.refresh")}</button>
+          {#if kmodParamsData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.kmod.param_count")} : <b>{kmodParamsData.param_count ?? 0}</b>
+            </span>
+            <span class="kv"
+                  style:color={(kmodParamsData.footgun_count ?? 0) > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.kmod.footguns")} : <b>{kmodParamsData.footgun_count ?? 0}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kmodParamsData?.footguns && kmodParamsData.footguns.length > 0}
+          {#each kmodParamsData.footguns as f}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          f.severity === 'warn' ? 'var(--warn)' :
+                          f.severity === 'critical' ? 'var(--warn)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{f.param}</b>
+                <span class="kv">current : <b>{f.current}</b></span>
+                {#if f.recommended}
+                  <span class="kv">recommended : <b>{f.recommended}</b></span>
+                {/if}
+              </div>
+              <p class="muted" style="margin: 4px 0;">{f.advice}</p>
+              {#if f.recipe}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.kmod.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{f.recipe}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(f.recipe)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #29.3 D3cold policy (UI sprint 20) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.d3cold.title")}</h4>
+        <p class="muted">{i18n.t("integrations.d3cold.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadD3coldPolicy}>{i18n.t("integrations.d3cold.refresh")}</button>
+          {#if d3coldPolicyData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={d3coldPolicyData.worst_verdict.startsWith('mismatched') ? 'var(--warn)' :
+                             d3coldPolicyData.worst_verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.d3cold.verdict")} : <b>{d3coldPolicyData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if d3coldPolicyData?.cards && d3coldPolicyData.cards.length > 0}
+          {#each d3coldPolicyData.cards as c}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          c.verdict.verdict.startsWith('mismatched') ? 'var(--warn)' :
+                          c.verdict.verdict.startsWith('aligned') ? 'var(--ok)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{c.gpu_bdf}</b>
+                <span class="kv">control={c.gpu_control ?? '—'}</span>
+                <span class="kv">{i18n.t("integrations.d3cold.bridge")} :
+                  <b style="font-family: monospace;">{c.bridge_bdf ?? '—'}</b>
+                </span>
+                <span class="kv">d3cold_allowed={c.bridge_d3cold_allowed ?? '—'}</span>
+              </div>
+              <p style="margin: 4px 0;">{c.verdict.reason}</p>
+              {#if c.verdict.recommendation}
+                <p class="muted">{c.verdict.recommendation}</p>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #29.7 Thermal slowdown kind (UI sprint 20) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.tslow.title")}</h4>
+        <p class="muted">{i18n.t("integrations.tslow.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadThermalSlowdown}>{i18n.t("integrations.tslow.refresh")}</button>
+          {#if thermalSlowdownData?.any_critical}
+            <span class="kv" style="margin-left: 12px; color: var(--warn);">⚠ critical</span>
+          {/if}
+        </div>
+        {#if thermalSlowdownData?.gpus && thermalSlowdownData.gpus.length > 0}
+          {#each thermalSlowdownData.gpus as g}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          g.verdict.severity === 'critical' ? 'var(--warn)' :
+                          g.verdict.severity === 'warn' ? 'var(--accent)' :
+                          'var(--ok)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b>GPU{g.index} — {g.name}</b>
+                <span class="kv">GPU {g.gpu_temp_c ?? '—'}°C</span>
+                <span class="kv">VRAM {g.mem_temp_c ?? '—'}°C</span>
+                <span class="kv"><b>{g.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{g.verdict.reason}</p>
+              {#if g.verdict.recommendation}
+                <p style="margin: 4px 0; color: var(--accent);">
+                  {i18n.t("integrations.tslow.recommend")} : {g.verdict.recommendation}
+                </p>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #29.8 rlimit auditor (UI sprint 20) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rlimit.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rlimit.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRlimitAudit}>{i18n.t("integrations.rlimit.refresh")}</button>
+          {#if rlimitAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={rlimitAuditData.worst_verdict === 'severely_low' ? 'var(--warn)' :
+                             rlimitAuditData.worst_verdict === 'low_limit' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {rlimitAuditData.process_count} processes · worst : <b>{rlimitAuditData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if rlimitAuditData?.process_count === 0}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.rlimit.no_procs")}</p>
+        {/if}
+        {#if rlimitAuditData?.processes && rlimitAuditData.processes.length > 0}
+          {#each rlimitAuditData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          p.verdict.verdict === 'severely_low' ? 'var(--warn)' :
+                          p.verdict.verdict === 'low_limit' ? 'var(--accent)' :
+                          'var(--ok)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b>{p.comm} <span class="muted">(pid {p.pid})</span></b>
+                <span class="kv">{i18n.t("integrations.rlimit.memlock")} :
+                  <b>{p.memlock_bytes !== null
+                       ? (p.memlock_bytes > 1024 ** 3
+                          ? (p.memlock_bytes >= 2 ** 60 ? "∞" : `${Math.round(p.memlock_bytes / 1024 ** 3)} GiB`)
+                          : `${Math.round(p.memlock_bytes / 1024 ** 2)} MiB`)
+                       : '—'}</b>
+                </span>
+                <span class="kv">{i18n.t("integrations.rlimit.vm_lck")} :
+                  <b>{p.vm_lck_bytes !== null
+                       ? `${Math.round((p.vm_lck_bytes ?? 0) / 1024 ** 2)} MiB`
+                       : '—'}</b>
+                </span>
+                <span class="kv"><b>{p.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{p.verdict.reason}</p>
+              {#if p.recipe}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.rlimit.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.recipe}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(p.recipe)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
         {/if}
       </div>
 

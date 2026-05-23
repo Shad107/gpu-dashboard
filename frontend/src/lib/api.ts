@@ -1859,4 +1859,65 @@ export const api = {
       };
       statuses?: Record<string, Record<string, string>>;
     }>),
+
+  // ── R&D #29 (UI sprint 20) ─────────────────────────────────────────────
+  kmodParamsStatus: () =>
+    fetch("/api/kmod-params").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      param_count?: number;
+      footgun_count?: number;
+      worst_severity?: string;
+      params: Record<string, string>;
+      footguns: Array<{
+        param: string; current: string;
+        recommended: string | null;
+        severity: string; advice: string; recipe: string;
+      }>;
+    }>),
+
+  d3coldPolicyStatus: () =>
+    fetch("/api/d3cold-policy").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      worst_verdict: string;
+      cards: Array<{
+        gpu_bdf: string;
+        gpu_control: string | null;
+        bridge_bdf: string | null;
+        bridge_d3cold_allowed: string | null;
+        bridge_d3cold_delay_ms: string | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  thermalSlowdownKindStatus: () =>
+    fetch("/api/thermal-slowdown-kind").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      any_critical?: boolean;
+      gpus: Array<{
+        index: number; name: string;
+        gpu_temp_c: number | null;
+        mem_temp_c: number | null;
+        power_w: number | null;
+        verdict: { verdict: string; severity: string;
+                    reason: string; recommendation: string };
+      }>;
+    }>),
+
+  rlimitAuditStatus: () =>
+    fetch("/api/rlimit-audit").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      summary?: string;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        memlock_bytes: number | null;
+        vm_lck_bytes: number | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+        recipe: string;
+      }>;
+    }>),
 };
