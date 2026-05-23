@@ -1602,6 +1602,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pstore_crashlog_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/lru-gen-mglru-audit":
+                # R&D #68.2 — /sys/kernel/mm/lru_gen MGLRU reclaim
+                code, body = api.handle_lru_gen_mglru_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

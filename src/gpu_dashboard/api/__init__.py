@@ -473,3 +473,4 @@ from .vmallocinfo_audit import handle_vmallocinfo_audit_status  # noqa: F401,F81
 from .fdinfo_kinds_audit import handle_fdinfo_kinds_audit_status  # noqa: F401,F811
 from .timer_list_audit import handle_timer_list_audit_status  # noqa: F401,F811
 from .pstore_crashlog_audit import handle_pstore_crashlog_audit_status  # noqa: F401,F811
+from .lru_gen_mglru_audit import handle_lru_gen_mglru_audit_status  # noqa: F401,F811
