@@ -1157,6 +1157,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_block_queue_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/watchdog-inventory":
+                # R&D #44.3 — watchdog device enumeration
+                code, body = api.handle_watchdog_inventory_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

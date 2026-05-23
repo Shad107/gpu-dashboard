@@ -384,3 +384,4 @@ from .nic_ring_audit import handle_nic_ring_audit_status  # noqa: F401,F811
 from .irq_rates_audit import handle_irq_rates_audit_status  # noqa: F401,F811
 from .zoneinfo_audit import handle_zoneinfo_audit_status  # noqa: F401,F811
 from .block_queue_audit import handle_block_queue_audit_status  # noqa: F401,F811
+from .watchdog_inventory import handle_watchdog_inventory_status  # noqa: F401,F811
