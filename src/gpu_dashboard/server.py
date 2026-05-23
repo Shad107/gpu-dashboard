@@ -1417,6 +1417,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_backlight_pwm_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/loadavg-pressure-audit":
+                # R&D #57.4 — loadavg + procs_blocked + RT throttle
+                code, body = api.handle_loadavg_pressure_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
