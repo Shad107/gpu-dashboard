@@ -1347,6 +1347,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ima_integrity_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/swap-tunables-audit":
+                # R&D #54.2 — swap-pathway tunables
+                code, body = api.handle_swap_tunables_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
