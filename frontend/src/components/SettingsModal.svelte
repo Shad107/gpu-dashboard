@@ -1289,6 +1289,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #27 (UI sprint 18) ────────────────────────────────────────────
+  let pwrEnvDriftData   = $state<Awaited<ReturnType<typeof api.powerEnvelopeDriftStatus>> | null>(null);
+  let rebarAuditData    = $state<Awaited<ReturnType<typeof api.rebarAuditStatus>>        | null>(null);
+  let cpuRaplData       = $state<Awaited<ReturnType<typeof api.cpuRaplStatus>>           | null>(null);
+  let clockGapData      = $state<Awaited<ReturnType<typeof api.clockGapStatus>>          | null>(null);
+  async function loadPwrEnvDrift() {
+    try { pwrEnvDriftData = await api.powerEnvelopeDriftStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadRebarAudit() {
+    try { rebarAuditData = await api.rebarAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpuRapl() {
+    try { cpuRaplData = await api.cpuRaplStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadClockGap() {
+    try { clockGapData = await api.clockGapStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1429,6 +1451,11 @@
       if (!cudaCtxLeakData)    loadCudaCtxLeak();
       if (!procStaticData)     loadProcStatic();
       if (!memBwGaugeData)     loadMemBwGauge();
+      // R&D #27 cards
+      if (!pwrEnvDriftData)    loadPwrEnvDrift();
+      if (!rebarAuditData)     loadRebarAudit();
+      if (!cpuRaplData)        loadCpuRapl();
+      if (!clockGapData)       loadClockGap();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -5301,6 +5328,161 @@
               <p class="muted" style="margin: 4px 0;">{g.verdict.reason}</p>
               {#if g.verdict.recommendation}
                 <p style="margin: 4px 0; color: var(--accent);">{g.verdict.recommendation}</p>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #27.4 Power-envelope drift (UI sprint 18) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pwrenv.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pwrenv.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPwrEnvDrift}>{i18n.t("integrations.pwrenv.refresh")}</button>
+          {#if pwrEnvDriftData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pwrEnvDriftData.worst_severity === 'warn' ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.pwrenv.verdict")} : <b>{pwrEnvDriftData.worst_severity}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pwrEnvDriftData?.gpus && pwrEnvDriftData.gpus.length > 0}
+          {#each pwrEnvDriftData.gpus as g}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          g.verdict.severity === 'warn' ? 'var(--warn)' :
+                          g.verdict.severity === 'critical' ? 'var(--warn)' :
+                          'var(--ok)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b>{g.name}</b>
+                <span class="kv">{i18n.t("integrations.pwrenv.current")} : <b>{g.current_w ?? '—'} W</b></span>
+                <span class="kv">{i18n.t("integrations.pwrenv.baseline")} : <b>{g.baseline_w ?? '—'} W</b></span>
+                <span class="kv">{i18n.t("integrations.pwrenv.default")} : <b>{g.default_w ?? '—'} W</b></span>
+              </div>
+              <p style="margin: 4px 0;">{g.verdict.reason}</p>
+              {#if g.recovery_cmd}
+                <div class="form-row" style="gap: 8px;">
+                  <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                                font-family: monospace; font-size: 0.85em;
+                                border-radius: 4px;">{g.recovery_cmd}</code>
+                  <button class="btn btn-small" onclick={() => copyToClipboard(g.recovery_cmd)}>📋</button>
+                </div>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #27.1 ReBAR auditor (UI sprint 18) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rebar.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rebar.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRebarAudit}>{i18n.t("integrations.rebar.refresh")}</button>
+          {#if rebarAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={rebarAuditData.worst_verdict === 'rebar_off' ? 'var(--warn)' :
+                             rebarAuditData.worst_verdict === 'partial' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.rebar.verdict")} : <b>{rebarAuditData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if rebarAuditData?.cards && rebarAuditData.cards.length > 0}
+          {#each rebarAuditData.cards as c}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          c.verdict.verdict === 'rebar_on' ? 'var(--ok)' :
+                          c.verdict.verdict === 'partial' ? 'var(--accent)' :
+                          c.verdict.verdict === 'rebar_off' ? 'var(--warn)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{c.bdf}</b>
+                <span class="kv">{i18n.t("integrations.rebar.bar1_size")} : <b>{c.bar1_mib ?? '—'} MiB</b></span>
+                <span class="kv">{i18n.t("integrations.rebar.vram_total")} : <b>{c.total_vram_gib ?? '—'} GiB</b></span>
+                {#if c.verdict.bar1_pct_of_vram !== null}
+                  <span class="kv">{i18n.t("integrations.rebar.pct")} : <b>{c.verdict.bar1_pct_of_vram}%</b></span>
+                {/if}
+              </div>
+              <p style="margin: 4px 0;"
+                 style:color={c.verdict.verdict === 'rebar_on' ? 'var(--ok)' :
+                            c.verdict.verdict === 'rebar_off' ? 'var(--warn)' :
+                            'var(--text-dim)'}>
+                <b>{c.verdict.verdict}</b> — {c.verdict.reason}
+              </p>
+              {#if c.verdict.recommendation}
+                <p class="muted" style="margin: 4px 0;">
+                  <b>{i18n.t("integrations.rebar.uefi_hint")} :</b> {c.verdict.recommendation}
+                </p>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #27.3 CPU-RAPL harvester (UI sprint 18) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rapl.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rapl.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuRapl}>{i18n.t("integrations.rapl.refresh")}</button>
+          {#if cpuRaplData?.supported && cpuRaplData.total_watts !== null}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.rapl.total_w")} : <b>{cpuRaplData.total_watts} W</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuRaplData && !cpuRaplData.supported}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.rapl.not_supported")}</p>
+        {/if}
+        {#if cpuRaplData?.samples && cpuRaplData.samples.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 6px;">
+            <tbody>
+              {#each cpuRaplData.samples as s}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">{i18n.t("integrations.rapl.package")} : <b>{s.name}</b></td>
+                  <td style="padding: 4px;">{s.watts !== null ? `${s.watts} W` : (s.error ?? '—')}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #27.7 Clock-gap detector (UI sprint 18) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.clockgap.title")}</h4>
+        <p class="muted">{i18n.t("integrations.clockgap.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadClockGap}>{i18n.t("integrations.clockgap.refresh")}</button>
+          {#if clockGapData?.any_capped}
+            <span class="kv" style="margin-left: 12px; color: var(--warn);">⚠ at least one GPU capped</span>
+          {/if}
+        </div>
+        {#if clockGapData?.gpus && clockGapData.gpus.length > 0}
+          {#each clockGapData.gpus as g}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          g.verdict === 'applied' ? 'var(--ok)' :
+                          g.verdict === 'no_apps_clock' ? 'var(--text-dim)' :
+                          g.verdict.startsWith('capped_') ? 'var(--warn)' :
+                          'var(--accent)'};">
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap;">
+                <b>GPU{g.index} — {g.name}</b>
+                <span class="kv">{i18n.t("integrations.clockgap.applied")} : <b>{g.applied_clk ?? '—'} MHz</b></span>
+                <span class="kv">{i18n.t("integrations.clockgap.actual")} : <b>{g.current_clk ?? '—'} MHz</b></span>
+                {#if g.gap_mhz !== null}
+                  <span class="kv">{i18n.t("integrations.clockgap.gap")} : <b>{g.gap_mhz > 0 ? '+' : ''}{g.gap_mhz} MHz</b></span>
+                {/if}
+                <span class="kv"><b>{g.verdict}</b></span>
+              </div>
+              <p class="muted" style="margin: 4px 0;">{g.reason}</p>
+              {#if g.binding}
+                <p style="margin: 4px 0; font-size: 0.85em;">
+                  {i18n.t("integrations.clockgap.binding")} :
+                  <code style="font-family: monospace;">{g.binding}</code>
+                </p>
               {/if}
             </div>
           {/each}

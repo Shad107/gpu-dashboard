@@ -1743,4 +1743,67 @@ export const api = {
         verdict: { verdict: string; reason: string; recommendation: string };
       }>;
     }>),
+
+  // ── R&D #27 (UI sprint 18) ─────────────────────────────────────────────
+  powerEnvelopeDriftStatus: () =>
+    fetch("/api/power-envelope-drift").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      gpu_count?: number;
+      worst_severity?: string;
+      gpus: Array<{
+        uuid: string; name: string;
+        current_w: number | null;
+        default_w: number | null;
+        baseline_w: number | null;
+        verdict: { verdict: string; reason: string;
+                    severity: string; delta_w: number | null };
+        recovery_cmd: string;
+      }>;
+    }>),
+
+  rebarAuditStatus: () =>
+    fetch("/api/rebar-audit").then(jsonOf<{
+      ok: boolean;
+      card_count: number;
+      worst_verdict: string;
+      cards: Array<{
+        bdf: string;
+        bar1_bytes: number | null;
+        bar1_mib: number | null;
+        total_vram_bytes: number | null;
+        total_vram_gib: number | null;
+        verdict: { verdict: string; reason: string;
+                    recommendation: string;
+                    bar1_pct_of_vram: number | null };
+      }>;
+    }>),
+
+  cpuRaplStatus: () =>
+    fetch("/api/cpu-rapl").then(jsonOf<{
+      ok: boolean;
+      supported: boolean;
+      reason?: string;
+      total_watts: number | null;
+      package_count?: number;
+      samples: Array<{
+        name: string; watts: number | null; error?: string;
+      }>;
+    }>),
+
+  clockGapStatus: () =>
+    fetch("/api/clock-gap").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      any_capped?: boolean;
+      gpus: Array<{
+        index: number; name: string;
+        verdict: string; reason: string;
+        gap_mhz: number | null;
+        binding: string | null;
+        current_clk: number | null;
+        applied_clk: number | null;
+        max_clk: number | null;
+      }>;
+    }>),
 };
