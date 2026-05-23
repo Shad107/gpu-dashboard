@@ -431,3 +431,4 @@ from .efi_boot_order_audit import handle_efi_boot_order_audit_status  # noqa: F4
 from .numa_topology_audit import handle_numa_topology_audit_status  # noqa: F401,F811
 from .hwmon_sensors_audit import handle_hwmon_sensors_audit_status  # noqa: F401,F811
 from .sata_link_pm_audit import handle_sata_link_pm_audit_status  # noqa: F401,F811
+from .bdi_writeback_audit import handle_bdi_writeback_audit_status  # noqa: F401,F811
