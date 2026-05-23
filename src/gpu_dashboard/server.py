@@ -1257,6 +1257,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_rtc_clock_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/tpm-audit":
+                # R&D #49.2 — TPM 1.2/2.0 inventory + measured boot
+                code, body = api.handle_tpm_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
