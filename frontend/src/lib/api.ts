@@ -3459,4 +3459,57 @@ export const api = {
       varstore_total_bytes?: number;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #56 (UI sprint 47) ──
+  sataLinkPmAuditStatus: () =>
+    fetch("/api/sata-link-pm-audit").then(jsonOf<{
+      ok: boolean;
+      host_count?: number;
+      hosts: Array<{ id: string; policy: string | null }>;
+      link_count?: number;
+      links: Array<{ id: string; sata_spd: string | null;
+                      sata_spd_limit: string | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  bdiWritebackAuditStatus: () =>
+    fetch("/api/bdi-writeback-audit").then(jsonOf<{
+      ok: boolean;
+      bdi_count?: number;
+      bdis: Array<{ id: string; read_ahead_kb: number | null;
+                     max_ratio: number | null;
+                     min_ratio: number | null;
+                     stable_pages_required: number | null }>;
+      device_map: Record<string, { name: string; rotational: number | null;
+                                     is_nvme: boolean }>;
+      real_partitions: string[];
+      dirty_writeback_centisecs: number | null;
+      dirty_expire_centisecs: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  procCryptoAuditStatus: () =>
+    fetch("/api/proc-crypto-audit").then(jsonOf<{
+      ok: boolean;
+      entry_count?: number;
+      name_count?: number;
+      name_histogram: Record<string, number>;
+      fips_enabled: number | null;
+      cpu_has_aes_flag: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  wakeupSourcesAuditStatus: () =>
+    fetch("/api/wakeup-sources-audit").then(jsonOf<{
+      ok: boolean;
+      source_count?: number;
+      top_sources: Array<{ id: string; name: string | null;
+                            active_count: number | null;
+                            event_count: number | null;
+                            wakeup_count: number | null }>;
+      uptime_s: number | null;
+      wakeup_count: number | null;
+      debugfs_readable: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

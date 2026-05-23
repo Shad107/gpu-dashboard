@@ -1922,6 +1922,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #56 (UI sprint 47) ────────────────────────────────────────────
+  let sataLinkPmAuditData        = $state<Awaited<ReturnType<typeof api.sataLinkPmAuditStatus>>        | null>(null);
+  let bdiWritebackAuditData      = $state<Awaited<ReturnType<typeof api.bdiWritebackAuditStatus>>      | null>(null);
+  let procCryptoAuditData        = $state<Awaited<ReturnType<typeof api.procCryptoAuditStatus>>        | null>(null);
+  let wakeupSourcesAuditData     = $state<Awaited<ReturnType<typeof api.wakeupSourcesAuditStatus>>     | null>(null);
+  async function loadSataLinkPmAudit() {
+    try { sataLinkPmAuditData = await api.sataLinkPmAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBdiWritebackAudit() {
+    try { bdiWritebackAuditData = await api.bdiWritebackAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcCryptoAudit() {
+    try { procCryptoAuditData = await api.procCryptoAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadWakeupSourcesAudit() {
+    try { wakeupSourcesAuditData = await api.wakeupSourcesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2206,6 +2228,11 @@
       if (!numaTopologyAuditData)       loadNumaTopologyAudit();
       if (!hwmonSensorsAuditData)       loadHwmonSensorsAudit();
       if (!efiBootOrderAuditData)       loadEfiBootOrderAudit();
+      // R&D #56 cards
+      if (!sataLinkPmAuditData)         loadSataLinkPmAudit();
+      if (!bdiWritebackAuditData)       loadBdiWritebackAudit();
+      if (!procCryptoAuditData)         loadProcCryptoAudit();
+      if (!wakeupSourcesAuditData)      loadWakeupSourcesAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -9747,6 +9774,173 @@
                              border-radius: 4px; overflow-x: auto;">{efiBootOrderAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(efiBootOrderAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #56.1 SATA ALPM (UI sprint 47) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.satapm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.satapm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSataLinkPmAudit}>{i18n.t("integrations.satapm.refresh")}</button>
+          {#if sataLinkPmAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['min_power','med_power_with_dipm'].includes(sataLinkPmAuditData.verdict.verdict) ? 'var(--warn)' :
+                             sataLinkPmAuditData.verdict.verdict === 'medium_power' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {sataLinkPmAuditData.host_count ?? 0} hosts · {i18n.t("integrations.satapm.verdict")} : <b>{sataLinkPmAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sataLinkPmAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['min_power','med_power_with_dipm'].includes(sataLinkPmAuditData.verdict.verdict) ? 'var(--warn)' :
+                        sataLinkPmAuditData.verdict.verdict === 'medium_power' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Hosts</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each sataLinkPmAuditData.hosts as h}
+                  <li>{h.id}: policy={h.policy ?? 'n/a'}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{sataLinkPmAuditData.verdict.reason}</p>
+            {#if sataLinkPmAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.satapm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{sataLinkPmAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(sataLinkPmAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #56.2 BDI writeback (UI sprint 47) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bdi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bdi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBdiWritebackAudit}>{i18n.t("integrations.bdi.refresh")}</button>
+          {#if bdiWritebackAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={bdiWritebackAuditData.verdict.verdict === 'stuck_max_ratio_1' ? 'var(--warn)' :
+                             ['readahead_below_128k_on_nvme','writeback_centisecs_above_3000'].includes(bdiWritebackAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {bdiWritebackAuditData.bdi_count ?? 0} BDIs · {i18n.t("integrations.bdi.verdict")} : <b>{bdiWritebackAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if bdiWritebackAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        bdiWritebackAuditData.verdict.verdict === 'stuck_max_ratio_1' ? 'var(--warn)' :
+                        ['readahead_below_128k_on_nvme','writeback_centisecs_above_3000'].includes(bdiWritebackAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Real-device BDIs</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each bdiWritebackAuditData.bdis.filter(b => bdiWritebackAuditData!.device_map[b.id]) as b}
+                  <li>{b.id} ({bdiWritebackAuditData.device_map[b.id]?.name ?? '?'}): ra={b.read_ahead_kb}kb max_ratio={b.max_ratio}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">writeback_centisecs={bdiWritebackAuditData.dirty_writeback_centisecs} · expire_centisecs={bdiWritebackAuditData.dirty_expire_centisecs}</p>
+            <p style="margin: 4px 0;">{bdiWritebackAuditData.verdict.reason}</p>
+            {#if bdiWritebackAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.bdi.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{bdiWritebackAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(bdiWritebackAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #56.3 /proc/crypto (UI sprint 47) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.crypto.title")}</h4>
+        <p class="muted">{i18n.t("integrations.crypto.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcCryptoAudit}>{i18n.t("integrations.crypto.refresh")}</button>
+          {#if procCryptoAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['fips_mode_on','selftest_failed_entry','aesni_missing_but_aes_used'].includes(procCryptoAuditData.verdict.verdict) ? 'var(--warn)' :
+                             procCryptoAuditData.verdict.verdict === 'generic_only_aes' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procCryptoAuditData.entry_count ?? 0} entries · fips={procCryptoAuditData.fips_enabled ?? 'n/a'} · {i18n.t("integrations.crypto.verdict")} : <b>{procCryptoAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procCryptoAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['fips_mode_on','selftest_failed_entry','aesni_missing_but_aes_used'].includes(procCryptoAuditData.verdict.verdict) ? 'var(--warn)' :
+                        procCryptoAuditData.verdict.verdict === 'generic_only_aes' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">CPU AES-NI flag: {procCryptoAuditData.cpu_has_aes_flag ? 'yes' : 'no'} · {procCryptoAuditData.name_count ?? 0} distinct cipher name(s)</p>
+            <p style="margin: 4px 0;">{procCryptoAuditData.verdict.reason}</p>
+            {#if procCryptoAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.crypto.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{procCryptoAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(procCryptoAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #56.4 wakeup_sources (UI sprint 47) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wakeup.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wakeup.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadWakeupSourcesAudit}>{i18n.t("integrations.wakeup.refresh")}</button>
+          {#if wakeupSourcesAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['s2idle_wakeup_storm','gpe_chatter_above_1hz'].includes(wakeupSourcesAuditData.verdict.verdict) ? 'var(--warn)' :
+                             wakeupSourcesAuditData.verdict.verdict === 'usb_hub_chatty' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {wakeupSourcesAuditData.source_count ?? 0} sources · {i18n.t("integrations.wakeup.verdict")} : <b>{wakeupSourcesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if wakeupSourcesAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['s2idle_wakeup_storm','gpe_chatter_above_1hz'].includes(wakeupSourcesAuditData.verdict.verdict) ? 'var(--warn)' :
+                        wakeupSourcesAuditData.verdict.verdict === 'usb_hub_chatty' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Top 5 by event count</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each wakeupSourcesAuditData.top_sources as s}
+                  <li>{s.id} ({s.name ?? '?'}): events={s.event_count ?? '?'} active={s.active_count ?? '?'}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">uptime={wakeupSourcesAuditData.uptime_s != null ? (wakeupSourcesAuditData.uptime_s / 3600).toFixed(1) + ' h' : '?'} · debugfs={wakeupSourcesAuditData.debugfs_readable ? 'readable' : 'root-only'}</p>
+            <p style="margin: 4px 0;">{wakeupSourcesAuditData.verdict.reason}</p>
+            {#if wakeupSourcesAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.wakeup.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{wakeupSourcesAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(wakeupSourcesAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
