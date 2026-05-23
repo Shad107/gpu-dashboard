@@ -1357,6 +1357,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hugepages_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/io-uring-runtime-audit":
+                # R&D #54.4 — io_uring runtime gates
+                code, body = api.handle_io_uring_runtime_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
