@@ -1137,6 +1137,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_file_locks_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nic-ring-audit":
+                # R&D #43.4 — NIC ring-buffer drop + FIFO overrun
+                code, body = api.handle_nic_ring_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
