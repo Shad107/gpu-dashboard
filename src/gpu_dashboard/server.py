@@ -1332,6 +1332,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_psi_pressure_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpu-vulnerabilities-audit":
+                # R&D #53.2 — CPU vulnerabilities + SMT auditor
+                code, body = api.handle_cpu_vulnerabilities_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

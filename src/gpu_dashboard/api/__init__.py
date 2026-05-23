@@ -419,3 +419,4 @@ from .ksm_audit import handle_ksm_audit_status  # noqa: F401,F811
 from .i2c_smbus_audit import handle_i2c_smbus_audit_status  # noqa: F401,F811
 from .module_integrity_audit import handle_module_integrity_audit_status  # noqa: F401,F811
 from .psi_pressure_audit import handle_psi_pressure_audit_status  # noqa: F401,F811
+from .cpu_vulnerabilities_audit import handle_cpu_vulnerabilities_audit_status  # noqa: F401,F811
