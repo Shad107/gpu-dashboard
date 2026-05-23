@@ -1507,6 +1507,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_leds_class_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/binfmt-misc-audit":
+                # R&D #63.4 — binfmt_misc registrations
+                code, body = api.handle_binfmt_misc_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
