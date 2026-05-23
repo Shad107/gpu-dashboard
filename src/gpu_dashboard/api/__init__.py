@@ -427,3 +427,4 @@ from .hugepages_audit import handle_hugepages_audit_status  # noqa: F401,F811
 from .io_uring_runtime_audit import handle_io_uring_runtime_audit_status  # noqa: F401,F811
 from .kvm_misc_audit import handle_kvm_misc_audit_status  # noqa: F401,F811
 from .edac_ecc_audit import handle_edac_ecc_audit_status  # noqa: F401,F811
+from .efi_boot_order_audit import handle_efi_boot_order_audit_status  # noqa: F401,F811

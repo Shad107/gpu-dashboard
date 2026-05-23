@@ -1372,6 +1372,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_edac_ecc_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/efi-boot-order-audit":
+                # R&D #55.4 — EFI boot vars + dbx + varstore
+                code, body = api.handle_efi_boot_order_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
