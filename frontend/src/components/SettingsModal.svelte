@@ -1487,6 +1487,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #36 (UI sprint 27) ────────────────────────────────────────────
+  let kernelTaintData  = $state<Awaited<ReturnType<typeof api.kernelTaintStatus>>  | null>(null);
+  let cpuMicrocodeData = $state<Awaited<ReturnType<typeof api.cpuMicrocodeStatus>> | null>(null);
+  let hwpEppData       = $state<Awaited<ReturnType<typeof api.hwpEppStatus>>       | null>(null);
+  let cpuidleData      = $state<Awaited<ReturnType<typeof api.cpuidleStatus>>      | null>(null);
+  async function loadKernelTaint() {
+    try { kernelTaintData = await api.kernelTaintStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpuMicrocode() {
+    try { cpuMicrocodeData = await api.cpuMicrocodeStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadHwpEpp() {
+    try { hwpEppData = await api.hwpEppStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpuidle() {
+    try { cpuidleData = await api.cpuidleStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1672,6 +1694,11 @@
       if (!netSysctlData)      loadNetSysctl();
       if (!smtAuditData)       loadSmtAudit();
       if (!numaPlacementData)  loadNumaPlacement();
+      // R&D #36 cards
+      if (!kernelTaintData)    loadKernelTaint();
+      if (!cpuMicrocodeData)   loadCpuMicrocode();
+      if (!hwpEppData)         loadHwpEpp();
+      if (!cpuidleData)        loadCpuidle();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6220,6 +6247,201 @@
               {/if}
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #36.3 Kernel taint audit (UI sprint 27) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.taint.title")}</h4>
+        <p class="muted">{i18n.t("integrations.taint.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKernelTaint}>{i18n.t("integrations.taint.refresh")}</button>
+          {#if kernelTaintData?.ok && kernelTaintData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={kernelTaintData.verdict.verdict === 'hardware_errors' ? 'var(--warn)' :
+                             kernelTaintData.verdict.verdict === 'warnings' ? 'var(--accent)' :
+                             kernelTaintData.verdict.verdict === 'mixed' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.taint.value")} : <b>{kernelTaintData.value}</b>
+              · <b>{kernelTaintData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kernelTaintData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.taint.unavailable")}</p>
+        {/if}
+        {#if kernelTaintData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        kernelTaintData.verdict?.verdict === 'hardware_errors' ? 'var(--warn)' :
+                        ['warnings','mixed'].includes(kernelTaintData.verdict?.verdict ?? '') ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if kernelTaintData.flags && kernelTaintData.flags.length > 0}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                {#each kernelTaintData.flags as f}
+                  <span class="kv"><b style="font-family: monospace;">{f.code}</b> — {f.description}</span>
+                {/each}
+              </div>
+            {/if}
+            {#if kernelTaintData.uptime_seconds}
+              <p class="muted" style="margin: 4px 0;">
+                {i18n.t("integrations.taint.uptime")} :
+                <b>{(kernelTaintData.uptime_seconds / 3600).toFixed(1)} h</b>
+              </p>
+            {/if}
+            <p style="margin: 4px 0;">{kernelTaintData.verdict?.reason}</p>
+            {#if kernelTaintData.verdict?.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.taint.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{kernelTaintData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(kernelTaintData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #36.1 CPU microcode audit (UI sprint 27) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.uc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.uc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuMicrocode}>{i18n.t("integrations.uc.refresh")}</button>
+          {#if cpuMicrocodeData?.ok && cpuMicrocodeData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuMicrocodeData.verdict.verdict === 'drift' ? 'var(--warn)' :
+                             cpuMicrocodeData.verdict.verdict === 'missing' ? 'var(--text-dim)' :
+                             'var(--accent)'}>
+              {i18n.t("integrations.uc.verdict")} : <b>{cpuMicrocodeData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuMicrocodeData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuMicrocodeData.verdict?.verdict === 'drift' ? 'var(--warn)' :
+                        cpuMicrocodeData.verdict?.verdict === 'missing' ? 'var(--text-dim)' :
+                        'var(--accent)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              {#if cpuMicrocodeData.model_name}
+                <b style="font-family: monospace;">{cpuMicrocodeData.model_name}</b>
+              {/if}
+              <span class="kv">{i18n.t("integrations.uc.cpu")} : <b>{cpuMicrocodeData.cpu_count}</b></span>
+              <span class="kv">{i18n.t("integrations.uc.rev")} :
+                <b style="font-family: monospace;">{(cpuMicrocodeData.distinct_microcodes ?? []).join(', ') || '—'}</b>
+              </span>
+            </div>
+            <p style="margin: 4px 0;">{cpuMicrocodeData.verdict?.reason}</p>
+            {#if cpuMicrocodeData.verdict?.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.uc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuMicrocodeData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuMicrocodeData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #36.4 HWP EPP audit (UI sprint 27) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.epp.title")}</h4>
+        <p class="muted">{i18n.t("integrations.epp.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHwpEpp}>{i18n.t("integrations.epp.refresh")}</button>
+          {#if hwpEppData?.ok && hwpEppData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['power_save','drift'].includes(hwpEppData.verdict.verdict) ? 'var(--warn)' :
+                             ['default_mode','balanced'].includes(hwpEppData.verdict.verdict) ? 'var(--accent)' :
+                             ['missing','unknown'].includes(hwpEppData.verdict.verdict) ? 'var(--text-dim)' :
+                             'var(--accent)'}>
+              {hwpEppData.cpu_count} CPUs · {i18n.t("integrations.epp.verdict")} : <b>{hwpEppData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hwpEppData?.ok && hwpEppData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['power_save','drift'].includes(hwpEppData.verdict.verdict) ? 'var(--warn)' :
+                        ['default_mode','balanced'].includes(hwpEppData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if hwpEppData.distinct_prefs && hwpEppData.distinct_prefs.length > 0}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <span class="kv">{i18n.t("integrations.epp.distinct")} :
+                  <b style="font-family: monospace;">{hwpEppData.distinct_prefs.join(', ')}</b>
+                </span>
+                {#if hwpEppData.available && hwpEppData.available.length > 0}
+                  <span class="kv muted">available : {hwpEppData.available.join(' / ')}</span>
+                {/if}
+              </div>
+            {/if}
+            <p style="margin: 4px 0;">{hwpEppData.verdict.reason}</p>
+            {#if hwpEppData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.epp.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{hwpEppData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(hwpEppData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #36.2 cpuidle audit (UI sprint 27) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cpuidle.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cpuidle.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuidle}>{i18n.t("integrations.cpuidle.refresh")}</button>
+          {#if cpuidleData?.ok && cpuidleData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuidleData.verdict.verdict === 'deep_states_active' ? 'var(--warn)' :
+                             cpuidleData.verdict.verdict === 'balanced' ? 'var(--accent)' :
+                             ['disabled_driver','unknown'].includes(cpuidleData.verdict.verdict) ? 'var(--text-dim)' :
+                             'var(--accent)'}>
+              {i18n.t("integrations.cpuidle.verdict")} : <b>{cpuidleData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuidleData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.cpuidle.unavailable")}</p>
+        {/if}
+        {#if cpuidleData?.ok && cpuidleData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuidleData.verdict.verdict === 'deep_states_active' ? 'var(--warn)' :
+                        cpuidleData.verdict.verdict === 'balanced' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">{i18n.t("integrations.cpuidle.driver")} :
+                <b style="font-family: monospace;">{cpuidleData.driver ?? '—'}</b>
+              </span>
+              <span class="kv">{i18n.t("integrations.cpuidle.governor")} :
+                <b style="font-family: monospace;">{cpuidleData.governor ?? '—'}</b>
+              </span>
+              {#if cpuidleData.max_latency !== null && cpuidleData.max_latency !== undefined}
+                <span class="kv">{i18n.t("integrations.cpuidle.max_latency")} :
+                  <b>{cpuidleData.max_latency} µs</b>
+                </span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{cpuidleData.verdict.reason}</p>
+            {#if cpuidleData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cpuidle.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuidleData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuidleData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
         {/if}
       </div>
 

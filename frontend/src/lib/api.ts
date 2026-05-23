@@ -2300,4 +2300,59 @@ export const api = {
       }>;
       verdict?: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #36 (UI sprint 27) ─────────────────────────────────────────────
+  kernelTaintStatus: () =>
+    fetch("/api/kernel-taint").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      value?: number;
+      flags?: Array<{ bit: number; code: string; description: string }>;
+      uptime_seconds?: number | null;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  cpuMicrocodeStatus: () =>
+    fetch("/api/cpu-microcode").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      cpu_count?: number;
+      vendor_id?: string | null;
+      cpu_family?: string | null;
+      model?: string | null;
+      model_name?: string | null;
+      microcodes?: string[];
+      distinct_microcodes?: string[];
+      sys_microcode_version?: string | null;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  hwpEppStatus: () =>
+    fetch("/api/hwp-epp").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      prefs: string[];
+      distinct_prefs: string[];
+      available: string[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  cpuidleStatus: () =>
+    fetch("/api/cpuidle").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      driver?: string | null;
+      governor?: string | null;
+      available_governors?: string[];
+      max_latency?: number | null;
+      states?: Array<{
+        state: number; name: string; desc: string;
+        latency: number | null; residency: number | null;
+        disable: number; usage: number | null; time: number | null;
+      }>;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
