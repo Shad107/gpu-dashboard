@@ -446,3 +446,4 @@ from .dmi_smbios_audit import handle_dmi_smbios_audit_status  # noqa: F401,F811
 from .pid_rlimits_audit import handle_pid_rlimits_audit_status  # noqa: F401,F811
 from .iommu_groups_audit import handle_iommu_groups_audit_status  # noqa: F401,F811
 from .virt_guest_detect_audit import handle_virt_guest_detect_audit_status  # noqa: F401,F811
+from .regulator_audit import handle_regulator_audit_status  # noqa: F401,F811
