@@ -300,3 +300,4 @@ from .gpu_reset import handle_gpu_reset_status  # noqa: F401,F811
 from .cuda_inventory import handle_cuda_inventory_status  # noqa: F401,F811
 from .driver_flavor import handle_driver_flavor_status  # noqa: F401,F811
 from .proc_deep_state import handle_proc_deep_state_status  # noqa: F401,F811
+from .pcie_aspm import handle_pcie_aspm_status  # noqa: F401,F811

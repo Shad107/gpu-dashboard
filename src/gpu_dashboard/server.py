@@ -737,6 +737,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_deep_state_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pcie-aspm":
+                # R&D #23.4 — PCIe ASPM audit
+                code, body = api.handle_pcie_aspm_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
