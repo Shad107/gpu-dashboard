@@ -468,3 +468,4 @@ from .mtd_flash_audit import handle_mtd_flash_audit_status  # noqa: F401,F811
 from .spi_firmware_loader_audit import handle_spi_firmware_loader_audit_status  # noqa: F401,F811
 from .proc_syscall_auxv_audit import handle_proc_syscall_auxv_audit_status  # noqa: F401,F811
 from .btf_bpf_audit import handle_btf_bpf_audit_status  # noqa: F401,F811
+from .efi_esrt_audit import handle_efi_esrt_audit_status  # noqa: F401,F811

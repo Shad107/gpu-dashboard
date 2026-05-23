@@ -1577,6 +1577,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_btf_bpf_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/efi-esrt-audit":
+                # R&D #67.1 — /sys/firmware/efi/esrt (fwupd capsule)
+                code, body = api.handle_efi_esrt_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
