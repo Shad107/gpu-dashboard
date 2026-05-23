@@ -2113,4 +2113,74 @@ export const api = {
         verdict: { verdict: string; reason: string; recommendation: string };
       }>;
     }>),
+
+  // ── R&D #33 (UI sprint 24) ─────────────────────────────────────────────
+  clocksourceStatus: () =>
+    fetch("/api/clocksource").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      current?: string | null;
+      available?: string[];
+      virt?: string | null;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  nicHealthStatus: () =>
+    fetch("/api/nic-health").then(jsonOf<{
+      ok: boolean;
+      interface_count: number;
+      worst_verdict: string;
+      total_rx_bytes: number;
+      total_tx_bytes: number;
+      interfaces: Array<{
+        name: string;
+        carrier: string | null;
+        operstate: string | null;
+        speed: number | null;
+        rx_bytes: number | null;
+        tx_bytes: number | null;
+        rx_dropped: number | null;
+        tx_dropped: number | null;
+        rx_errors: number | null;
+        tx_errors: number | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  procIoStatus: () =>
+    fetch("/api/proc-io").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      total_read_bytes: number;
+      total_write_bytes: number;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        read_bytes: number;
+        write_bytes: number;
+        rchar: number | null;
+        wchar: number | null;
+        syscr: number | null;
+        syscw: number | null;
+        vm_rss_bytes: number | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  cgroupCpuioStatus: () =>
+    fetch("/api/cgroup-cpuio").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        cgroup_path: string | null;
+        cpu_weight: number | null;
+        io_weight: number | null;
+        cpu_max_quota: number | null;
+        cpu_max_period: number | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
 };

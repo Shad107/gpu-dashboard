@@ -1421,6 +1421,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #33 (UI sprint 24) ────────────────────────────────────────────
+  let clocksourceData   = $state<Awaited<ReturnType<typeof api.clocksourceStatus>>   | null>(null);
+  let nicHealthData     = $state<Awaited<ReturnType<typeof api.nicHealthStatus>>     | null>(null);
+  let procIoData        = $state<Awaited<ReturnType<typeof api.procIoStatus>>        | null>(null);
+  let cgroupCpuioData   = $state<Awaited<ReturnType<typeof api.cgroupCpuioStatus>>   | null>(null);
+  async function loadClocksource() {
+    try { clocksourceData = await api.clocksourceStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNicHealth() {
+    try { nicHealthData = await api.nicHealthStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcIo() {
+    try { procIoData = await api.procIoStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCgroupCpuio() {
+    try { cgroupCpuioData = await api.cgroupCpuioStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1591,6 +1613,11 @@
       if (!psiPressureData)    loadPsiPressure();
       if (!procWchanData)      loadProcWchan();
       if (!cgroupMemcapData)   loadCgroupMemcap();
+      // R&D #33 cards
+      if (!clocksourceData)    loadClocksource();
+      if (!nicHealthData)      loadNicHealth();
+      if (!procIoData)         loadProcIo();
+      if (!cgroupCpuioData)    loadCgroupCpuio();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6135,6 +6162,224 @@
                                border-radius: 4px; overflow-x: auto;">{c.verdict.recommendation}</pre>
                   <button class="btn btn-small"
                           onclick={() => copyToClipboard(c.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #33.4 clocksource audit (UI sprint 24) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.clock.title")}</h4>
+        <p class="muted">{i18n.t("integrations.clock.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadClocksource}>{i18n.t("integrations.clock.refresh")}</button>
+          {#if clocksourceData?.ok && clocksourceData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['hpet_active','low_res','suboptimal_virt'].includes(clocksourceData.verdict.verdict) ? 'var(--warn)' :
+                             clocksourceData.verdict.verdict === 'acceptable' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.clock.verdict")} : <b>{clocksourceData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if clocksourceData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.clock.unavailable")}</p>
+        {/if}
+        {#if clocksourceData?.ok && clocksourceData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['hpet_active','low_res','suboptimal_virt'].includes(clocksourceData.verdict.verdict) ? 'var(--warn)' :
+                        clocksourceData.verdict.verdict === 'acceptable' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">{i18n.t("integrations.clock.current")} :
+                <b style="font-family: monospace;">{clocksourceData.current ?? '—'}</b>
+              </span>
+              {#if clocksourceData.virt}
+                <span class="kv">{i18n.t("integrations.clock.virt")} : <b>{clocksourceData.virt}</b></span>
+              {/if}
+              {#if clocksourceData.available}
+                <span class="kv muted">available : {clocksourceData.available.join(' / ')}</span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{clocksourceData.verdict.reason}</p>
+            {#if clocksourceData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.clock.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{clocksourceData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(clocksourceData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #33.1 LAN NIC health (UI sprint 24) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nic.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nic.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNicHealth}>{i18n.t("integrations.nic.refresh")}</button>
+          {#if nicHealthData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['errors_present','link_down','drops_high'].includes(nicHealthData.worst_verdict) ? 'var(--warn)' :
+                             nicHealthData.worst_verdict === 'speed_low' ? 'var(--warn)' :
+                             nicHealthData.worst_verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {nicHealthData.interface_count} ifaces · {i18n.t("integrations.nic.verdict")} : <b>{nicHealthData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nicHealthData?.worst_verdict === 'no_nics'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.nic.no_nics")}</p>
+        {/if}
+        {#if nicHealthData?.interfaces && nicHealthData.interfaces.length > 0}
+          {#each nicHealthData.interfaces as iface}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          ['errors_present','link_down','drops_high','speed_low'].includes(iface.verdict.verdict) ? 'var(--warn)' :
+                          iface.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{iface.name}</b>
+                <span class="kv">{i18n.t("integrations.nic.carrier")} : <b>{iface.carrier === '1' ? 'up' : 'down'}</b></span>
+                {#if iface.speed !== null && iface.speed > 0}
+                  <span class="kv">{i18n.t("integrations.nic.speed")} : <b>{iface.speed} Mbps</b></span>
+                {/if}
+                {#if iface.rx_dropped !== null && iface.rx_dropped > 0}
+                  <span class="kv" style:color="var(--warn)">{i18n.t("integrations.nic.rx_dropped")} :
+                    <b>{iface.rx_dropped.toLocaleString()}</b>
+                  </span>
+                {/if}
+                {#if iface.tx_dropped !== null && iface.tx_dropped > 0}
+                  <span class="kv" style:color="var(--warn)">{i18n.t("integrations.nic.tx_dropped")} :
+                    <b>{iface.tx_dropped.toLocaleString()}</b>
+                  </span>
+                {/if}
+                <span class="kv"><b>{iface.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{iface.verdict.reason}</p>
+              {#if iface.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.nic.recommend")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{iface.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(iface.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #33.2 Per-daemon IO accounting (UI sprint 24) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.procio.title")}</h4>
+        <p class="muted">{i18n.t("integrations.procio.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcIo}>{i18n.t("integrations.procio.refresh")}</button>
+          {#if procIoData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procIoData.worst_verdict === 'reread_thrash' ? 'var(--warn)' :
+                             procIoData.worst_verdict === 'heavy_write' ? 'var(--warn)' :
+                             procIoData.worst_verdict === 'unreadable' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procIoData.process_count} procs · {i18n.t("integrations.procio.verdict")} : <b>{procIoData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procIoData?.worst_verdict === 'no_llm_procs'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.procio.no_procs")}</p>
+        {/if}
+        {#if procIoData?.processes && procIoData.processes.length > 0}
+          {#each procIoData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          ['reread_thrash','heavy_write'].includes(p.verdict.verdict) ? 'var(--warn)' :
+                          p.verdict.verdict === 'unreadable' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{p.comm}</b>
+                <span class="kv">pid <b>{p.pid}</b></span>
+                <span class="kv">{i18n.t("integrations.procio.read")} :
+                  <b>{(p.read_bytes / 1024**3).toFixed(1)} GiB</b>
+                </span>
+                <span class="kv">{i18n.t("integrations.procio.write")} :
+                  <b>{(p.write_bytes / 1024**3).toFixed(1)} GiB</b>
+                </span>
+                {#if p.vm_rss_bytes}
+                  <span class="kv">{i18n.t("integrations.procio.rss")} :
+                    <b>{(p.vm_rss_bytes / 1024**3).toFixed(1)} GiB</b>
+                  </span>
+                {/if}
+                <span class="kv"><b>{p.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{p.verdict.reason}</p>
+              {#if p.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.procio.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(p.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #33.6 cgroup CPU/IO priority (UI sprint 24) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cgcpuio.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cgcpuio.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupCpuio}>{i18n.t("integrations.cgcpuio.refresh")}</button>
+          {#if cgroupCpuioData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cgroupCpuioData.worst_verdict === 'cpu_quota_active' ? 'var(--warn)' :
+                             cgroupCpuioData.worst_verdict === 'default_weight' ? 'var(--accent)' :
+                             cgroupCpuioData.worst_verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cgroupCpuioData.process_count} procs · {i18n.t("integrations.cgcpuio.verdict")} : <b>{cgroupCpuioData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupCpuioData?.worst_verdict === 'no_llm_procs'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.cgcpuio.no_procs")}</p>
+        {/if}
+        {#if cgroupCpuioData?.processes && cgroupCpuioData.processes.length > 0}
+          {#each cgroupCpuioData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          p.verdict.verdict === 'cpu_quota_active' ? 'var(--warn)' :
+                          ['default_weight','unknown'].includes(p.verdict.verdict) ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{p.comm}</b>
+                <span class="kv">pid <b>{p.pid}</b></span>
+                <span class="kv">{i18n.t("integrations.cgcpuio.cpuw")} : <b>{p.cpu_weight ?? '—'}</b></span>
+                <span class="kv">{i18n.t("integrations.cgcpuio.iow")} : <b>{p.io_weight ?? '—'}</b></span>
+                {#if p.cpu_max_quota !== null && p.cpu_max_quota !== undefined}
+                  <span class="kv" style:color="var(--warn)">{i18n.t("integrations.cgcpuio.quota")} :
+                    <b>{((p.cpu_max_quota / (p.cpu_max_period ?? 100000)) * 100).toFixed(0)}%</b>
+                  </span>
+                {/if}
+                <span class="kv"><b>{p.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{p.verdict.reason}</p>
+              {#if p.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.cgcpuio.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(p.verdict.recommendation)}>📋 Copy</button>
                 </details>
               {/if}
             </div>
