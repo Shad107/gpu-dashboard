@@ -852,6 +852,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_nvlink_health_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kmod-params":
+                # R&D #29.1 — NVIDIA kmod parameter auditor
+                code, body = api.handle_kmod_params_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
