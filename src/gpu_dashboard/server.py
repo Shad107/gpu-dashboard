@@ -882,6 +882,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_nvme_iosched_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/iommu-groups":
+                # R&D #30.2 — IOMMU group + DMA-passthrough auditor
+                code, body = api.handle_iommu_groups_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
