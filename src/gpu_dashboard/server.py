@@ -722,6 +722,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_gpu_reset_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cuda-inventory":
+                # R&D #22.5 — CUDA toolkit inventory + collision detector
+                code, body = api.handle_cuda_inventory_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
