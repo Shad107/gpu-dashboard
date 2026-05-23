@@ -2183,4 +2183,59 @@ export const api = {
         verdict: { verdict: string; reason: string; recommendation: string };
       }>;
     }>),
+
+  // ── R&D #34 (UI sprint 25) ─────────────────────────────────────────────
+  thpAuditStatus: () =>
+    fetch("/api/thp-audit").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      enabled?: string | null;
+      defrag?: string | null;
+      khugepaged_scan_sleep_ms?: number | null;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  buddyinfoStatus: () =>
+    fetch("/api/buddyinfo").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      worst_verdict?: string;
+      total_thp_blocks?: number;
+      zones?: Array<{
+        node: number; zone: string;
+        counts: number[];
+        order9_pages: number; order10_pages: number;
+        total_free_mb: number;
+      }>;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  procSchedStatus: () =>
+    fetch("/api/proc-sched").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        voluntary_switches: number | null;
+        involuntary_switches: number | null;
+        nr_migrations: number | null;
+        nr_switches: number | null;
+        sum_exec_runtime_ms: number | null;
+        threads: number | null;
+        involuntary_ratio: number | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  oomdStatus: () =>
+    fetch("/api/oomd").then(jsonOf<{
+      ok: boolean;
+      state: string;
+      event_count: number;
+      events: Array<{ message: string; target: string; timestamp_us: number }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

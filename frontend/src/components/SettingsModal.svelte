@@ -1443,6 +1443,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #34 (UI sprint 25) ────────────────────────────────────────────
+  let thpAuditData    = $state<Awaited<ReturnType<typeof api.thpAuditStatus>>    | null>(null);
+  let buddyinfoData   = $state<Awaited<ReturnType<typeof api.buddyinfoStatus>>   | null>(null);
+  let procSchedData   = $state<Awaited<ReturnType<typeof api.procSchedStatus>>   | null>(null);
+  let oomdData        = $state<Awaited<ReturnType<typeof api.oomdStatus>>        | null>(null);
+  async function loadThpAudit() {
+    try { thpAuditData = await api.thpAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBuddyinfo() {
+    try { buddyinfoData = await api.buddyinfoStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcSched() {
+    try { procSchedData = await api.procSchedStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadOomd() {
+    try { oomdData = await api.oomdStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1618,6 +1640,11 @@
       if (!nicHealthData)      loadNicHealth();
       if (!procIoData)         loadProcIo();
       if (!cgroupCpuioData)    loadCgroupCpuio();
+      // R&D #34 cards
+      if (!thpAuditData)       loadThpAudit();
+      if (!buddyinfoData)      loadBuddyinfo();
+      if (!procSchedData)      loadProcSched();
+      if (!oomdData)           loadOomd();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6166,6 +6193,208 @@
               {/if}
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #34.1 Transparent Hugepage audit (UI sprint 25) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.thp.title")}</h4>
+        <p class="muted">{i18n.t("integrations.thp.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadThpAudit}>{i18n.t("integrations.thp.refresh")}</button>
+          {#if thpAuditData?.ok && thpAuditData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['disabled','aggressive_defrag'].includes(thpAuditData.verdict.verdict) ? 'var(--warn)' :
+                             thpAuditData.verdict.verdict === 'madvise_default' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.thp.verdict")} : <b>{thpAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if thpAuditData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.thp.unavailable")}</p>
+        {/if}
+        {#if thpAuditData?.ok && thpAuditData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['disabled','aggressive_defrag'].includes(thpAuditData.verdict.verdict) ? 'var(--warn)' :
+                        thpAuditData.verdict.verdict === 'madvise_default' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">{i18n.t("integrations.thp.enabled")} :
+                <b style="font-family: monospace;">{thpAuditData.enabled ?? '—'}</b>
+              </span>
+              <span class="kv">{i18n.t("integrations.thp.defrag")} :
+                <b style="font-family: monospace;">{thpAuditData.defrag ?? '—'}</b>
+              </span>
+              {#if thpAuditData.khugepaged_scan_sleep_ms}
+                <span class="kv muted">khugepaged_scan_sleep : {thpAuditData.khugepaged_scan_sleep_ms} ms</span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{thpAuditData.verdict.reason}</p>
+            {#if thpAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.thp.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{thpAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(thpAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #34.2 Memory fragmentation (UI sprint 25) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.buddy.title")}</h4>
+        <p class="muted">{i18n.t("integrations.buddy.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBuddyinfo}>{i18n.t("integrations.buddy.refresh")}</button>
+          {#if buddyinfoData?.ok && buddyinfoData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={buddyinfoData.verdict.verdict === 'fragmented_severe' ? 'var(--warn)' :
+                             buddyinfoData.verdict.verdict === 'fragmented_moderate' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.buddy.verdict")} : <b>{buddyinfoData.verdict.verdict}</b>
+            </span>
+            {#if buddyinfoData.total_thp_blocks !== undefined}
+              <span class="kv">{i18n.t("integrations.buddy.thp_blocks")} : <b>{buddyinfoData.total_thp_blocks}</b></span>
+            {/if}
+          {/if}
+        </div>
+        {#if buddyinfoData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.buddy.unavailable")}</p>
+        {/if}
+        {#if buddyinfoData?.zones && buddyinfoData.zones.length > 0}
+          {#each buddyinfoData.zones as z}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid var(--text-dim);">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">node {z.node} · {z.zone}</b>
+                <span class="kv">free : <b>{z.total_free_mb} MiB</b></span>
+                <span class="kv">order9 : <b>{z.order9_pages}</b></span>
+                <span class="kv">order10 : <b>{z.order10_pages}</b></span>
+              </div>
+            </div>
+          {/each}
+        {/if}
+        {#if buddyinfoData?.verdict?.recommendation}
+          <details style="margin-top: 8px;">
+            <summary class="muted">{i18n.t("integrations.buddy.recommend")}</summary>
+            <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                         border-radius: 4px; overflow-x: auto;">{buddyinfoData.verdict.recommendation}</pre>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(buddyinfoData!.verdict!.recommendation)}>📋 Copy</button>
+          </details>
+        {/if}
+      </div>
+
+      <!-- R&D #34.4 Per-daemon scheduler stats (UI sprint 25) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sched.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sched.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcSched}>{i18n.t("integrations.sched.refresh")}</button>
+          {#if procSchedData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['contended','severely_contended'].includes(procSchedData.worst_verdict) ? 'var(--warn)' :
+                             procSchedData.worst_verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procSchedData.process_count} procs · {i18n.t("integrations.sched.verdict")} : <b>{procSchedData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procSchedData?.worst_verdict === 'no_llm_procs'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.sched.no_procs")}</p>
+        {/if}
+        {#if procSchedData?.processes && procSchedData.processes.length > 0}
+          {#each procSchedData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          ['contended','severely_contended'].includes(p.verdict.verdict) ? 'var(--warn)' :
+                          p.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{p.comm}</b>
+                <span class="kv">pid <b>{p.pid}</b></span>
+                {#if p.involuntary_ratio !== null}
+                  <span class="kv">{i18n.t("integrations.sched.invol_ratio")} :
+                    <b>{(p.involuntary_ratio * 100).toFixed(0)}%</b>
+                  </span>
+                {/if}
+                {#if p.nr_migrations !== null}
+                  <span class="kv">{i18n.t("integrations.sched.migrations")} :
+                    <b>{p.nr_migrations.toLocaleString()}</b>
+                  </span>
+                {/if}
+                {#if p.threads}
+                  <span class="kv">{i18n.t("integrations.sched.threads")} : <b>{p.threads}</b></span>
+                {/if}
+                <span class="kv"><b>{p.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{p.verdict.reason}</p>
+              {#if p.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.sched.recommend")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{p.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(p.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #34.3 systemd-oomd correlator (UI sprint 25) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.oomd.title")}</h4>
+        <p class="muted">{i18n.t("integrations.oomd.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadOomd}>{i18n.t("integrations.oomd.refresh")}</button>
+          {#if oomdData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={oomdData.verdict.verdict === 'active_killed_llm' ? 'var(--warn)' :
+                             oomdData.verdict.verdict === 'active_killed_other' ? 'var(--accent)' :
+                             oomdData.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.oomd.state")} : <b>{oomdData.state}</b> · {oomdData.event_count} {i18n.t("integrations.oomd.events")} · <b>{oomdData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if oomdData?.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        oomdData.verdict.verdict === 'active_killed_llm' ? 'var(--warn)' :
+                        oomdData.verdict.verdict === 'active_killed_other' ? 'var(--accent)' :
+                        oomdData.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{oomdData.verdict.reason}</p>
+            {#if oomdData.events && oomdData.events.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">events ({oomdData.events.length})</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each oomdData.events as e}
+                    <li>
+                      <span style="font-family: monospace;">{e.target}</span>
+                      <span class="muted"> — {e.message.substring(0, 80)}...</span>
+                    </li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            {#if oomdData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.oomd.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{oomdData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(oomdData!.verdict.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
         {/if}
       </div>
 
