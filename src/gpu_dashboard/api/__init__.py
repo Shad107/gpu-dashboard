@@ -340,3 +340,4 @@ from .psi_pressure import handle_psi_pressure_status  # noqa: F401,F811
 from .proc_wchan import handle_proc_wchan_status  # noqa: F401,F811
 from .cgroup_memcap import handle_cgroup_memcap_status  # noqa: F401,F811
 from .clocksource_audit import handle_clocksource_status  # noqa: F401,F811
+from .nic_health import handle_nic_health_status  # noqa: F401,F811

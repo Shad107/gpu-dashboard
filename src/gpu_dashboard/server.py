@@ -937,6 +937,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_clocksource_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nic-health":
+                # R&D #33.1 — LAN NIC health correlator
+                code, body = api.handle_nic_health_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
