@@ -1487,6 +1487,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_mei_intel_me_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/memory-hotplug-audit":
+                # R&D #62.3 — memory hotplug blocks
+                code, body = api.handle_memory_hotplug_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

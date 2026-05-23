@@ -450,3 +450,4 @@ from .regulator_audit import handle_regulator_audit_status  # noqa: F401,F811
 from .alsa_codec_deep_audit import handle_alsa_codec_deep_audit_status  # noqa: F401,F811
 from .devfreq_audit import handle_devfreq_audit_status  # noqa: F401,F811
 from .mei_intel_me_audit import handle_mei_intel_me_audit_status  # noqa: F401,F811
+from .memory_hotplug_audit import handle_memory_hotplug_audit_status  # noqa: F401,F811
