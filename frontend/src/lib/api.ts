@@ -3043,4 +3043,69 @@ export const api = {
       persistent_dir_exists: boolean;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #49 (UI sprint 40) ──
+  rtcClockAuditStatus: () =>
+    fetch("/api/rtc-clock-audit").then(jsonOf<{
+      ok: boolean;
+      rtc_count?: number;
+      rtcs: Array<{
+        name: string; rtc_name: string | null;
+        since_epoch: number | null;
+        date: string | null; time: string | null;
+        hctosys: number | null; wakealarm: string | null;
+        max_user_freq: number | null;
+      }>;
+      pps_sources: string[];
+      system_epoch?: number;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  tpmAuditStatus: () =>
+    fetch("/api/tpm-audit").then(jsonOf<{
+      ok: boolean;
+      tpm_count?: number;
+      tpms: Array<{
+        name: string;
+        tpm_version_major: number | null;
+        active_locality: number | null;
+        firmware_path: string | null;
+        vendor_id_str: string | null;
+      }>;
+      measured_boot: { available: boolean;
+                         permission_error: boolean;
+                         size_bytes: number };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  wmiVendorAuditStatus: () =>
+    fetch("/api/wmi-vendor-audit").then(jsonOf<{
+      ok: boolean;
+      wmi_guid_count: number;
+      wmi_guids: string[];
+      vendor_drivers: Array<{
+        name: string;
+        charge_control_start_threshold?: number;
+        charge_control_end_threshold?: number;
+        fan_mode?: number;
+        cooling_method?: number;
+        battery_mode?: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  kmsgAuditStatus: () =>
+    fetch("/api/kmsg-audit").then(jsonOf<{
+      ok: boolean;
+      printk: Record<string, number>;
+      printk_ratelimit_sec: number | null;
+      printk_ratelimit_burst: number | null;
+      dmesg_restrict: number | null;
+      kmsg: {
+        available: boolean; permission_error: boolean;
+        records_read: number; suppressed_count: number;
+        by_level: Record<string, number>;
+      };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

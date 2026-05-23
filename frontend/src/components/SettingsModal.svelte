@@ -1773,6 +1773,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #49 (UI sprint 40) ────────────────────────────────────────────
+  let rtcClockAuditData    = $state<Awaited<ReturnType<typeof api.rtcClockAuditStatus>>    | null>(null);
+  let tpmAuditData         = $state<Awaited<ReturnType<typeof api.tpmAuditStatus>>         | null>(null);
+  let wmiVendorAuditData   = $state<Awaited<ReturnType<typeof api.wmiVendorAuditStatus>>   | null>(null);
+  let kmsgAuditData        = $state<Awaited<ReturnType<typeof api.kmsgAuditStatus>>        | null>(null);
+  async function loadRtcClockAudit() {
+    try { rtcClockAuditData = await api.rtcClockAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadTpmAudit() {
+    try { tpmAuditData = await api.tpmAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadWmiVendorAudit() {
+    try { wmiVendorAuditData = await api.wmiVendorAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKmsgAudit() {
+    try { kmsgAuditData = await api.kmsgAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2023,6 +2045,11 @@
       if (!ftraceAuditData)       loadFtraceAudit();
       if (!usbTopologyAuditData)  loadUsbTopologyAudit();
       if (!journalAuditData)      loadJournalAudit();
+      // R&D #49 cards
+      if (!rtcClockAuditData)     loadRtcClockAudit();
+      if (!tpmAuditData)          loadTpmAudit();
+      if (!wmiVendorAuditData)    loadWmiVendorAudit();
+      if (!kmsgAuditData)         loadKmsgAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -8339,6 +8366,179 @@
                              border-radius: 4px; overflow-x: auto;">{journalAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(journalAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #49.4 RTC clock (UI sprint 40) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rtc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rtc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRtcClockAudit}>{i18n.t("integrations.rtc.refresh")}</button>
+          {#if rtcClockAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={rtcClockAuditData.verdict.verdict === 'rtc_drift_high' ? 'var(--warn)' :
+                             rtcClockAuditData.verdict.verdict === 'hctosys_disabled' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {rtcClockAuditData.rtc_count ?? 0} RTC · {i18n.t("integrations.rtc.verdict")} : <b>{rtcClockAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if rtcClockAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        rtcClockAuditData.verdict.verdict === 'rtc_drift_high' ? 'var(--warn)' :
+                        rtcClockAuditData.verdict.verdict === 'hctosys_disabled' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#each rtcClockAuditData.rtcs as r}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <span class="kv">{r.name} ({r.rtc_name ?? '?'})</span>
+                <span class="kv">since_epoch={r.since_epoch ?? '?'}</span>
+                <span class="kv">hctosys=<b>{r.hctosys ?? '?'}</b></span>
+              </div>
+            {/each}
+            <p style="margin: 4px 0;">{rtcClockAuditData.verdict.reason}</p>
+            {#if rtcClockAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.rtc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{rtcClockAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(rtcClockAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #49.2 TPM (UI sprint 40) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.tpm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.tpm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTpmAudit}>{i18n.t("integrations.tpm.refresh")}</button>
+          {#if tpmAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={tpmAuditData.verdict.verdict === 'tpm1_legacy' ? 'var(--warn)' :
+                             tpmAuditData.verdict.verdict === 'measured_boot_missing' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {tpmAuditData.tpm_count ?? 0} TPM · {i18n.t("integrations.tpm.verdict")} : <b>{tpmAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if tpmAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        tpmAuditData.verdict.verdict === 'tpm1_legacy' ? 'var(--warn)' :
+                        tpmAuditData.verdict.verdict === 'measured_boot_missing' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if tpmAuditData.tpms.length > 0}
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each tpmAuditData.tpms as t}
+                  <li>{t.name}: TPM v<b>{t.tpm_version_major ?? '?'}</b>, locality={t.active_locality ?? '?'}</li>
+                {/each}
+              </ul>
+            {/if}
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">measured_boot=<b>{tpmAuditData.measured_boot.available ? `${tpmAuditData.measured_boot.size_bytes} B` : 'absent'}</b></span>
+            </div>
+            <p style="margin: 4px 0;">{tpmAuditData.verdict.reason}</p>
+            {#if tpmAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.tpm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{tpmAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(tpmAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #49.3 WMI + vendor (UI sprint 40) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wmi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wmi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadWmiVendorAudit}>{i18n.t("integrations.wmi.refresh")}</button>
+          {#if wmiVendorAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={wmiVendorAuditData.verdict.verdict === 'battery_threshold_unset' ? 'var(--warn)' :
+                             wmiVendorAuditData.verdict.verdict === 'vendor_driver_active' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {wmiVendorAuditData.wmi_guid_count} WMI · {wmiVendorAuditData.vendor_drivers.length} vendor · {i18n.t("integrations.wmi.verdict")} : <b>{wmiVendorAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if wmiVendorAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        wmiVendorAuditData.verdict.verdict === 'battery_threshold_unset' ? 'var(--warn)' :
+                        wmiVendorAuditData.verdict.verdict === 'vendor_driver_active' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if wmiVendorAuditData.vendor_drivers.length > 0}
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each wmiVendorAuditData.vendor_drivers as vd}
+                  <li>{vd.name}: charge=<b>{vd.charge_control_start_threshold ?? '?'}/{vd.charge_control_end_threshold ?? '?'}</b>, fan_mode={vd.fan_mode ?? '?'}</li>
+                {/each}
+              </ul>
+            {/if}
+            <p style="margin: 4px 0;">{wmiVendorAuditData.verdict.reason}</p>
+            {#if wmiVendorAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.wmi.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{wmiVendorAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(wmiVendorAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #49.1 kmsg (UI sprint 40) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kmsg.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kmsg.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKmsgAudit}>{i18n.t("integrations.kmsg.refresh")}</button>
+          {#if kmsgAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['ratelimit_drops','loud_kernel'].includes(kmsgAuditData.verdict.verdict) ? 'var(--warn)' :
+                             kmsgAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.kmsg.verdict")} : <b>{kmsgAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kmsgAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['ratelimit_drops','loud_kernel'].includes(kmsgAuditData.verdict.verdict) ? 'var(--warn)' :
+                        kmsgAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">console_loglevel=<b>{kmsgAuditData.printk.console_loglevel ?? '?'}</b></span>
+              <span class="kv">ratelimit_burst=<b>{kmsgAuditData.printk_ratelimit_burst ?? '?'}</b></span>
+              <span class="kv">dmesg_restrict=<b>{kmsgAuditData.dmesg_restrict ?? '?'}</b></span>
+              <span class="kv">kmsg_readable=<b>{kmsgAuditData.kmsg.available}</b></span>
+              {#if kmsgAuditData.kmsg.records_read > 0}
+                <span class="kv">records={kmsgAuditData.kmsg.records_read}</span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{kmsgAuditData.verdict.reason}</p>
+            {#if kmsgAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.kmsg.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{kmsgAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(kmsgAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
