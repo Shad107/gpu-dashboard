@@ -1234,4 +1234,75 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then(jsonOf<{ ok: boolean; ttft_ms?: number; error?: string }>),
+
+  // ── R&D #20 (UI sprint 11) ─────────────────────────────────────────────
+  suspendGuardStatus: () =>
+    fetch("/api/suspend-guard").then(jsonOf<{
+      ok: boolean;
+      compute_count: number;
+      compute_processes: Array<{ pid: number; name: string; vram_mib: number }>;
+      lid_state: "open" | "closed" | null;
+      logind_action: string | null;
+      verdict: { verdict: "safe" | "risky" | "blocked";
+                  reason: string; recommendation: string };
+      inhibit_snippet: string;
+    }>),
+
+  containerAuditStatus: () =>
+    fetch("/api/container-audit").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      docker_socket: string;
+      container_count: number;
+      cpu_fallback_count: number;
+      containers: Array<{
+        id: string; names: string[]; state: string;
+        verdict: "gpu_ok" | "cpu_fallback" | "partial" | "unknown";
+        reason: string;
+        has_gpu_devices: boolean;
+        has_runtime_nvidia: boolean;
+        visible_devices: string | null;
+        image: string;
+        runtime: string;
+      }>;
+    }>),
+
+  upsRuntimeStatus: () =>
+    fetch("/api/ups-runtime").then(jsonOf<{
+      ok: boolean;
+      ups_available: boolean;
+      on_battery: boolean;
+      low_battery: boolean;
+      reported_runtime_s: number | null;
+      adjusted_runtime_s: number | null;
+      gpu_total_power_w: number | null;
+      baseline_w: number;
+      capacity_wh: number;
+      verdict: {
+        verdict: "on_grid" | "safe" | "pause_jobs" | "shutdown_now";
+        reason: string;
+        safe_runtime_s: number | null;
+      };
+    }>),
+
+  vbiosDriftStatus: () =>
+    fetch("/api/vbios-drift").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      drift_count: number;
+      first_seen_count?: number;
+      gpus: Array<{
+        uuid: string; name: string; bdf: string;
+        current_vbios: string;
+        current_rom_sha256: string | null;
+        baseline_vbios: string | null;
+        baseline_rom_sha256: string | null;
+        drift: boolean;
+        reasons: string[];
+      }>;
+    }>),
+
+  vbiosDriftRebaseline: () =>
+    fetch("/api/vbios-drift/rebaseline", { method: "POST" })
+      .then(jsonOf<{ ok: boolean; baseline_size?: number }>),
 };

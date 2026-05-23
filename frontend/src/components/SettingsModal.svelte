@@ -1187,6 +1187,40 @@
     finally { warmupProbing = false; }
   }
 
+  // ── R&D #20 (UI sprint 11) ────────────────────────────────────────────
+  let suspendGuardData   = $state<Awaited<ReturnType<typeof api.suspendGuardStatus>>   | null>(null);
+  let containerAuditData = $state<Awaited<ReturnType<typeof api.containerAuditStatus>> | null>(null);
+  let upsRuntimeData     = $state<Awaited<ReturnType<typeof api.upsRuntimeStatus>>     | null>(null);
+  let vbiosDriftData     = $state<Awaited<ReturnType<typeof api.vbiosDriftStatus>>     | null>(null);
+  let vbiosRebaselining  = $state<boolean>(false);
+  async function loadSuspendGuard() {
+    try { suspendGuardData = await api.suspendGuardStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadContainerAudit() {
+    try { containerAuditData = await api.containerAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadUpsRuntime() {
+    try { upsRuntimeData = await api.upsRuntimeStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadVbiosDrift() {
+    try { vbiosDriftData = await api.vbiosDriftStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function rebaselineVbios() {
+    vbiosRebaselining = true;
+    try {
+      const r = await api.vbiosDriftRebaseline();
+      if (r.ok) {
+        toast.emit(`✓ Baseline reset (${r.baseline_size} GPUs)`, "ok");
+        await loadVbiosDrift();
+      } else { toast.emit("✗ rebaseline failed", "err"); }
+    } catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { vbiosRebaselining = false; }
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -1227,6 +1261,11 @@
       if (!mpsHealthData)     loadMpsHealth();
       if (!processNiceData)   loadProcessNice();
       if (!warmupData)        loadWarmup();
+      // R&D #20 cards
+      if (!suspendGuardData)   loadSuspendGuard();
+      if (!containerAuditData) loadContainerAudit();
+      if (!upsRuntimeData)     loadUpsRuntime();
+      if (!vbiosDriftData)     loadVbiosDrift();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -3769,6 +3808,192 @@
                 {/if}
               </div>
               <p class="muted" style="margin: 4px 0;">{m.recommendation}</p>
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #20.5 Suspend safety preflight (UI sprint 11) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.suspend.title")}</h4>
+        <p class="muted">{i18n.t("integrations.suspend.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSuspendGuard}>{i18n.t("integrations.suspend.refresh")}</button>
+          {#if suspendGuardData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.suspend.compute_count")} : <b>{suspendGuardData.compute_count}</b>
+            </span>
+            {#if suspendGuardData.lid_state}
+              <span class="kv">{i18n.t("integrations.suspend.lid_state")} : <b>{suspendGuardData.lid_state}</b></span>
+            {/if}
+          {/if}
+        </div>
+        {#if suspendGuardData}
+          <p style="margin-top: 8px;"
+             style:color={suspendGuardData.verdict.verdict === 'safe' ? 'var(--ok)' :
+                        suspendGuardData.verdict.verdict === 'blocked' ? 'var(--warn)' :
+                        'var(--accent)'}>
+            <b>{i18n.t("integrations.suspend.verdict")} : {suspendGuardData.verdict.verdict}</b> — {suspendGuardData.verdict.reason}
+          </p>
+          {#if suspendGuardData.verdict.recommendation}
+            <p class="muted" style="margin: 4px 0;">{suspendGuardData.verdict.recommendation}</p>
+          {/if}
+          <div class="form-row" style="gap: 8px; margin-top: 6px;">
+            <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                          font-family: monospace; font-size: 0.85em;
+                          border-radius: 4px;">
+              {suspendGuardData.inhibit_snippet}
+            </code>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(suspendGuardData?.inhibit_snippet ?? "")}>📋</button>
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #20.1 Container GPU audit (UI sprint 11) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.containers.title")}</h4>
+        <p class="muted">{i18n.t("integrations.containers.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadContainerAudit}>{i18n.t("integrations.containers.refresh")}</button>
+          {#if containerAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.containers.total")} : <b>{containerAuditData.container_count}</b>
+            </span>
+            <span class="kv"
+                  style:color={containerAuditData.cpu_fallback_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.containers.cpu_fallbacks")} : <b>{containerAuditData.cpu_fallback_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if containerAuditData && !containerAuditData.ok}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.containers.no_docker")}</p>
+        {/if}
+        {#if containerAuditData?.containers && containerAuditData.containers.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">name</th>
+                <th style="padding: 4px;">{i18n.t("integrations.containers.image")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.containers.runtime")}</th>
+                <th style="padding: 4px;">{i18n.t("integrations.containers.verdict")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each containerAuditData.containers as c}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">
+                    {(c.names[0] || c.id).replace(/^\//, "")}
+                  </td>
+                  <td style="padding: 4px;">{c.image}</td>
+                  <td style="padding: 4px;">{c.runtime}</td>
+                  <td style="padding: 4px;"
+                      style:color={c.verdict === 'gpu_ok' ? 'var(--ok)' :
+                                 c.verdict === 'cpu_fallback' ? 'var(--warn)' :
+                                 c.verdict === 'partial' ? 'var(--accent)' :
+                                 'var(--text-dim)'}>
+                    {c.verdict}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #20.7 UPS runtime estimator (UI sprint 11) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ups.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ups.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUpsRuntime}>{i18n.t("integrations.ups.refresh")}</button>
+          {#if upsRuntimeData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.ups.state")} :
+              <b>{upsRuntimeData.on_battery ? "on battery" : "on grid"}</b>
+              {#if upsRuntimeData.low_battery}
+                <span style="color: var(--warn);"> · LOW</span>
+              {/if}
+            </span>
+            {#if upsRuntimeData.gpu_total_power_w !== null}
+              <span class="kv">{i18n.t("integrations.ups.gpu_load")} : <b>{upsRuntimeData.gpu_total_power_w.toFixed(0)} W</b></span>
+            {/if}
+          {/if}
+        </div>
+        {#if upsRuntimeData && !upsRuntimeData.ups_available}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.ups.no_ups")}</p>
+        {/if}
+        {#if upsRuntimeData?.ups_available}
+          <div class="form-row" style="gap: 18px; margin-top: 6px; flex-wrap: wrap;">
+            {#if upsRuntimeData.reported_runtime_s !== null}
+              <span class="kv">{i18n.t("integrations.ups.reported")} :
+                <b>{Math.floor(upsRuntimeData.reported_runtime_s / 60)} min</b>
+              </span>
+            {/if}
+            {#if upsRuntimeData.adjusted_runtime_s !== null}
+              <span class="kv">{i18n.t("integrations.ups.adjusted")} :
+                <b>{Math.floor(upsRuntimeData.adjusted_runtime_s / 60)} min</b>
+              </span>
+            {/if}
+            {#if upsRuntimeData.verdict.safe_runtime_s !== null}
+              <span class="kv">{i18n.t("integrations.ups.safe")} :
+                <b>{Math.floor(upsRuntimeData.verdict.safe_runtime_s / 60)} min</b>
+              </span>
+            {/if}
+          </div>
+          <p style="margin-top: 8px;"
+             style:color={upsRuntimeData.verdict.verdict === 'on_grid' ? 'var(--text-dim)' :
+                        upsRuntimeData.verdict.verdict === 'safe' ? 'var(--ok)' :
+                        upsRuntimeData.verdict.verdict === 'pause_jobs' ? 'var(--accent)' :
+                        'var(--warn)'}>
+            <b>{i18n.t("integrations.ups.verdict")} : {upsRuntimeData.verdict.verdict}</b> — {upsRuntimeData.verdict.reason}
+          </p>
+        {/if}
+      </div>
+
+      <!-- R&D #20.2 VBIOS drift tracker (UI sprint 11) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vbios.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vbios.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVbiosDrift}>{i18n.t("integrations.vbios.refresh")}</button>
+          <button class="btn" onclick={rebaselineVbios} disabled={vbiosRebaselining}>
+            {vbiosRebaselining ? "…" : i18n.t("integrations.vbios.rebaseline_btn")}
+          </button>
+          {#if vbiosDriftData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={vbiosDriftData.drift_count > 0 ? 'var(--warn)' : 'var(--ok)'}>
+              {i18n.t("integrations.vbios.drift_count")} : <b>{vbiosDriftData.drift_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vbiosDriftData?.gpus && vbiosDriftData.gpus.length > 0}
+          {#each vbiosDriftData.gpus as g}
+            <div style="margin-top: 10px; padding: 8px;
+                        border-left: 3px solid {g.drift ? 'var(--warn)' : 'var(--ok)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b>{g.name}</b>
+                <span class="kv" style="font-family: monospace; font-size: 0.85em;">{g.bdf}</span>
+              </div>
+              <div class="form-row" style="gap: 14px; flex-wrap: wrap; margin-top: 4px;">
+                <span class="kv">{i18n.t("integrations.vbios.baseline")} :
+                  <b style="font-family: monospace;">{g.baseline_vbios ?? '—'}</b>
+                </span>
+                <span class="kv">{i18n.t("integrations.vbios.current")} :
+                  <b style="font-family: monospace;">{g.current_vbios}</b>
+                </span>
+                {#if g.current_rom_sha256}
+                  <span class="kv">{i18n.t("integrations.vbios.rom_hash")} :
+                    <code style="font-family: monospace; font-size: 0.8em;">
+                      {g.current_rom_sha256.slice(0, 12)}…
+                    </code>
+                  </span>
+                {/if}
+              </div>
+              <p class="muted" style="margin: 4px 0; font-size: 0.85em;"
+                 style:color={g.drift ? 'var(--warn)' : 'var(--text-dim)'}>
+                {g.reasons.join(", ")}
+              </p>
             </div>
           {/each}
         {/if}
