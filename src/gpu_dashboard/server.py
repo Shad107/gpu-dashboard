@@ -782,6 +782,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_throttle_bits_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/retired-pages":
+                # R&D #25.1 — retired-page / row-remap trend
+                code, body = api.handle_retired_pages_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
