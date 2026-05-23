@@ -1197,6 +1197,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_mdraid_health_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/keyring-audit":
+                # R&D #46.4 — kernel keyring quota auditor
+                code, body = api.handle_keyring_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
