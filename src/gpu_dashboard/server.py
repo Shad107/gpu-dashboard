@@ -1272,6 +1272,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_kmsg_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sock-pool-audit":
+                # R&D #50.4 — socket pool + TIME_WAIT
+                code, body = api.handle_sock_pool_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
