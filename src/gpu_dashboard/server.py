@@ -1202,6 +1202,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_keyring_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/security-posture":
+                # R&D #46.2 — LSM + lockdown + paranoia
+                code, body = api.handle_security_posture_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
