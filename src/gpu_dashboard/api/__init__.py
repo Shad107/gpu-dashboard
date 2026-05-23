@@ -348,3 +348,4 @@ from .buddyinfo_frag import handle_buddyinfo_status  # noqa: F401,F811
 from .proc_sched import handle_proc_sched_status  # noqa: F401,F811
 from .oomd_correlator import handle_oomd_status  # noqa: F401,F811
 from .cpu_boost import handle_cpu_boost_status  # noqa: F401,F811
+from .net_sysctl_audit import handle_net_sysctl_status  # noqa: F401,F811
