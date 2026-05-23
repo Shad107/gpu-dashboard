@@ -470,3 +470,4 @@ from .proc_syscall_auxv_audit import handle_proc_syscall_auxv_audit_status  # no
 from .btf_bpf_audit import handle_btf_bpf_audit_status  # noqa: F401,F811
 from .efi_esrt_audit import handle_efi_esrt_audit_status  # noqa: F401,F811
 from .vmallocinfo_audit import handle_vmallocinfo_audit_status  # noqa: F401,F811
+from .fdinfo_kinds_audit import handle_fdinfo_kinds_audit_status  # noqa: F401,F811
