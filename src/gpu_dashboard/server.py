@@ -702,6 +702,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_persistence_mode_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/gsp-status":
+                # R&D #21.3 — GSP-RM crash + fallback surfacer
+                code, body = api.handle_gsp_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

@@ -293,3 +293,4 @@ from .ups_runtime import handle_ups_runtime_status  # noqa: F401,F811
 from .vbios_drift import handle_vbios_drift_status, handle_vbios_drift_rebaseline  # noqa: F401,F811
 from .pstate_audit import handle_pstate_audit_status  # noqa: F401,F811
 from .persistence_mode import handle_persistence_mode_status  # noqa: F401,F811
+from .gsp_status import handle_gsp_status  # noqa: F401,F811
