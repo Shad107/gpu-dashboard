@@ -1662,6 +1662,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_usb_role_switch_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/page-idle-tracking-audit":
+                # R&D #71.3 — /sys/kernel/mm/page_idle bitmap
+                code, body = api.handle_page_idle_tracking_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
