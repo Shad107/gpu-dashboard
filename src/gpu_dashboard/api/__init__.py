@@ -478,3 +478,4 @@ from .dt_memmap_firmware_audit import handle_dt_memmap_firmware_audit_status  # 
 from .fs_specific_tunables_audit import handle_fs_specific_tunables_audit_status  # noqa: F401,F811
 from .nvmem_inventory_audit import handle_nvmem_inventory_audit_status  # noqa: F401,F811
 from .damon_cma_audit import handle_damon_cma_audit_status  # noqa: F401,F811
+from .proc_static_kernel_registry_audit import handle_proc_static_kernel_registry_audit_status  # noqa: F401,F811
