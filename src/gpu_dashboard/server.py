@@ -1152,6 +1152,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_zoneinfo_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/block-queue-audit":
+                # R&D #43.2 — block layer per-queue 15-knob audit
+                code, body = api.handle_block_queue_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
