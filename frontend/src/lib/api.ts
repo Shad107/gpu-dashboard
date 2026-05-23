@@ -3512,4 +3512,59 @@ export const api = {
       debugfs_readable: boolean;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #57 (UI sprint 48) ──
+  livepatchAuditStatus: () =>
+    fetch("/api/livepatch-audit").then(jsonOf<{
+      ok: boolean;
+      livepatch_present: boolean;
+      patch_count?: number;
+      patches: Array<{ name: string; enabled: number | null;
+                        transition: number | null;
+                        has_signature: boolean }>;
+      livepatch_replace: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  pagetypeinfoAuditStatus: () =>
+    fetch("/api/pagetypeinfo-audit").then(jsonOf<{
+      ok: boolean;
+      permission_denied: boolean;
+      free_page_rows: number;
+      block_rows: number;
+      extfrag_threshold: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  backlightPwmAuditStatus: () =>
+    fetch("/api/backlight-pwm-audit").then(jsonOf<{
+      ok: boolean;
+      backlight_count?: number;
+      backlights: Array<{ name: string; brightness: number | null;
+                            max_brightness: number | null;
+                            bl_power: number | null;
+                            actual_brightness: number | null;
+                            type: string | null }>;
+      pwm_chip_count?: number;
+      pwm_chips: Array<{ name: string; npwm: number | null;
+                          channels: Array<{ name: string;
+                                              enable: number | null;
+                                              period: number | null;
+                                              duty_cycle: number | null }> }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  loadavgPressureAuditStatus: () =>
+    fetch("/api/loadavg-pressure-audit").then(jsonOf<{
+      ok: boolean;
+      loadavg_1m: number | null;
+      loadavg_5m: number | null;
+      loadavg_15m: number | null;
+      procs_running: number | null;
+      procs_blocked: number | null;
+      nr_cpus: number;
+      sched_rt_runtime_us: number | null;
+      sched_rt_period_us: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

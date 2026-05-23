@@ -1944,6 +1944,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #57 (UI sprint 48) ────────────────────────────────────────────
+  let livepatchAuditData         = $state<Awaited<ReturnType<typeof api.livepatchAuditStatus>>         | null>(null);
+  let pagetypeinfoAuditData      = $state<Awaited<ReturnType<typeof api.pagetypeinfoAuditStatus>>      | null>(null);
+  let backlightPwmAuditData      = $state<Awaited<ReturnType<typeof api.backlightPwmAuditStatus>>      | null>(null);
+  let loadavgPressureAuditData   = $state<Awaited<ReturnType<typeof api.loadavgPressureAuditStatus>>   | null>(null);
+  async function loadLivepatchAudit() {
+    try { livepatchAuditData = await api.livepatchAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPagetypeinfoAudit() {
+    try { pagetypeinfoAuditData = await api.pagetypeinfoAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBacklightPwmAudit() {
+    try { backlightPwmAuditData = await api.backlightPwmAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadLoadavgPressureAudit() {
+    try { loadavgPressureAuditData = await api.loadavgPressureAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2233,6 +2255,11 @@
       if (!bdiWritebackAuditData)       loadBdiWritebackAudit();
       if (!procCryptoAuditData)         loadProcCryptoAudit();
       if (!wakeupSourcesAuditData)      loadWakeupSourcesAudit();
+      // R&D #57 cards
+      if (!livepatchAuditData)          loadLivepatchAudit();
+      if (!pagetypeinfoAuditData)       loadPagetypeinfoAudit();
+      if (!backlightPwmAuditData)       loadBacklightPwmAudit();
+      if (!loadavgPressureAuditData)    loadLoadavgPressureAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -9941,6 +9968,175 @@
                              border-radius: 4px; overflow-x: auto;">{wakeupSourcesAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(wakeupSourcesAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #57.1 Live patches (UI sprint 48) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.livepatch.title")}</h4>
+        <p class="muted">{i18n.t("integrations.livepatch.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLivepatchAudit}>{i18n.t("integrations.livepatch.refresh")}</button>
+          {#if livepatchAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['stuck_transition','unsigned_patch'].includes(livepatchAuditData.verdict.verdict) ? 'var(--warn)' :
+                             livepatchAuditData.verdict.verdict === 'disabled_patch' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {livepatchAuditData.patch_count ?? 0} patches · {i18n.t("integrations.livepatch.verdict")} : <b>{livepatchAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if livepatchAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['stuck_transition','unsigned_patch'].includes(livepatchAuditData.verdict.verdict) ? 'var(--warn)' :
+                        livepatchAuditData.verdict.verdict === 'disabled_patch' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if livepatchAuditData.patches.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Patches</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each livepatchAuditData.patches as p}
+                    <li>{p.name}: enabled={p.enabled ?? '?'} transition={p.transition ?? '?'} signed={p.has_signature ? 'yes' : 'no'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{livepatchAuditData.verdict.reason}</p>
+            {#if livepatchAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.livepatch.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{livepatchAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(livepatchAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #57.2 pagetypeinfo (UI sprint 48) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pageti.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pageti.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPagetypeinfoAudit}>{i18n.t("integrations.pageti.refresh")}</button>
+          {#if pagetypeinfoAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['unmovable_in_movable','high_order_starved'].includes(pagetypeinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['moderate_frag','requires_root'].includes(pagetypeinfoAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.pageti.verdict")} : <b>{pagetypeinfoAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pagetypeinfoAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['unmovable_in_movable','high_order_starved'].includes(pagetypeinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['moderate_frag','requires_root'].includes(pagetypeinfoAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">free_page_rows={pagetypeinfoAuditData.free_page_rows} · block_rows={pagetypeinfoAuditData.block_rows} · extfrag_threshold={pagetypeinfoAuditData.extfrag_threshold ?? '?'}</p>
+            <p style="margin: 4px 0;">{pagetypeinfoAuditData.verdict.reason}</p>
+            {#if pagetypeinfoAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pageti.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{pagetypeinfoAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(pagetypeinfoAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #57.3 Backlight + PWM (UI sprint 48) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.blpwm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.blpwm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBacklightPwmAudit}>{i18n.t("integrations.blpwm.refresh")}</button>
+          {#if backlightPwmAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['panel_blanked','backlight_zero'].includes(backlightPwmAuditData.verdict.verdict) ? 'var(--warn)' :
+                             backlightPwmAuditData.verdict.verdict === 'pwm_runaway' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {backlightPwmAuditData.backlight_count ?? 0} bl / {backlightPwmAuditData.pwm_chip_count ?? 0} pwm · {i18n.t("integrations.blpwm.verdict")} : <b>{backlightPwmAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if backlightPwmAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['panel_blanked','backlight_zero'].includes(backlightPwmAuditData.verdict.verdict) ? 'var(--warn)' :
+                        backlightPwmAuditData.verdict.verdict === 'pwm_runaway' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if backlightPwmAuditData.backlights.length || backlightPwmAuditData.pwm_chips.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Backlights + PWM chips</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each backlightPwmAuditData.backlights as b}
+                    <li>bl {b.name}: brightness={b.brightness}/{b.max_brightness} bl_power={b.bl_power} type={b.type ?? '?'}</li>
+                  {/each}
+                  {#each backlightPwmAuditData.pwm_chips as c}
+                    <li>pwm {c.name}: npwm={c.npwm} channels={c.channels.length}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{backlightPwmAuditData.verdict.reason}</p>
+            {#if backlightPwmAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.blpwm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{backlightPwmAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(backlightPwmAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #57.4 Loadavg pressure (UI sprint 48) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.loadavg.title")}</h4>
+        <p class="muted">{i18n.t("integrations.loadavg.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLoadavgPressureAudit}>{i18n.t("integrations.loadavg.refresh")}</button>
+          {#if loadavgPressureAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['rt_throttle_disabled','D_state_storm'].includes(loadavgPressureAuditData.verdict.verdict) ? 'var(--warn)' :
+                             loadavgPressureAuditData.verdict.verdict === 'overcommitted' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              la={loadavgPressureAuditData.loadavg_1m?.toFixed(2)} on {loadavgPressureAuditData.nr_cpus} CPUs · {i18n.t("integrations.loadavg.verdict")} : <b>{loadavgPressureAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if loadavgPressureAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['rt_throttle_disabled','D_state_storm'].includes(loadavgPressureAuditData.verdict.verdict) ? 'var(--warn)' :
+                        loadavgPressureAuditData.verdict.verdict === 'overcommitted' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>loadavg: {loadavgPressureAuditData.loadavg_1m?.toFixed(2)} / {loadavgPressureAuditData.loadavg_5m?.toFixed(2)} / {loadavgPressureAuditData.loadavg_15m?.toFixed(2)}</li>
+              <li>procs: running={loadavgPressureAuditData.procs_running} blocked={loadavgPressureAuditData.procs_blocked}</li>
+              <li>RT throttle: runtime={loadavgPressureAuditData.sched_rt_runtime_us ?? '?'} period={loadavgPressureAuditData.sched_rt_period_us ?? '?'}</li>
+            </ul>
+            <p style="margin: 4px 0;">{loadavgPressureAuditData.verdict.reason}</p>
+            {#if loadavgPressureAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.loadavg.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{loadavgPressureAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(loadavgPressureAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
