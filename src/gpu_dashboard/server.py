@@ -1497,6 +1497,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_task_affinity_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/rfkill-bluetooth-audit":
+                # R&D #63.1 — rfkill + Bluetooth power gates
+                code, body = api.handle_rfkill_bluetooth_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
