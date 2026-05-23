@@ -1355,6 +1355,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #30 (UI sprint 21) ────────────────────────────────────────────
+  let dmiBiosData      = $state<Awaited<ReturnType<typeof api.dmiBiosStatus>>      | null>(null);
+  let nvmeIoschedData  = $state<Awaited<ReturnType<typeof api.nvmeIoschedStatus>>  | null>(null);
+  let iommuGroupsData  = $state<Awaited<ReturnType<typeof api.iommuGroupsStatus>>  | null>(null);
+  let msiInventoryData = $state<Awaited<ReturnType<typeof api.msiInventoryStatus>> | null>(null);
+  async function loadDmiBios() {
+    try { dmiBiosData = await api.dmiBiosStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNvmeIosched() {
+    try { nvmeIoschedData = await api.nvmeIoschedStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIommuGroups() {
+    try { iommuGroupsData = await api.iommuGroupsStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadMsiInventory() {
+    try { msiInventoryData = await api.msiInventoryStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1510,6 +1532,11 @@
       if (!d3coldPolicyData)   loadD3coldPolicy();
       if (!thermalSlowdownData) loadThermalSlowdown();
       if (!rlimitAuditData)    loadRlimitAudit();
+      // R&D #30 cards
+      if (!dmiBiosData)        loadDmiBios();
+      if (!nvmeIoschedData)    loadNvmeIosched();
+      if (!iommuGroupsData)    loadIommuGroups();
+      if (!msiInventoryData)   loadMsiInventory();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -5887,6 +5914,219 @@
                                border-radius: 4px; overflow-x: auto;">{p.recipe}</pre>
                   <button class="btn btn-small"
                           onclick={() => copyToClipboard(p.recipe)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #30.5 DMI/BIOS revision tracker (UI sprint 21) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dmi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dmi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDmiBios}>{i18n.t("integrations.dmi.refresh")}</button>
+          {#if dmiBiosData?.ok && dmiBiosData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={dmiBiosData.verdict.verdict === 'outdated' ? 'var(--warn)' :
+                             dmiBiosData.verdict.verdict === 'up_to_date' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.dmi.verdict")} : <b>{dmiBiosData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dmiBiosData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.dmi.unavailable")} {dmiBiosData.reason ?? ''}</p>
+        {/if}
+        {#if dmiBiosData?.ok && dmiBiosData.dmi}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        dmiBiosData.verdict?.verdict === 'outdated' ? 'var(--warn)' :
+                        dmiBiosData.verdict?.verdict === 'up_to_date' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">{i18n.t("integrations.dmi.board")} :
+                <b>{dmiBiosData.dmi.board_name ?? dmiBiosData.dmi.product_name ?? '—'}</b>
+              </span>
+              <span class="kv">{i18n.t("integrations.dmi.bios")} :
+                <b style="font-family: monospace;">{dmiBiosData.dmi.bios_version ?? '—'}</b>
+              </span>
+              <span class="kv">{i18n.t("integrations.dmi.date")} :
+                <b>{dmiBiosData.bios_date_iso ?? dmiBiosData.dmi.bios_date ?? '—'}</b>
+              </span>
+              {#if dmiBiosData.drift && dmiBiosData.drift.status !== 'no_drift'}
+                <span class="kv" style:color="var(--warn)">{i18n.t("integrations.dmi.drift")} :
+                  <b>{dmiBiosData.drift.status}</b>
+                </span>
+              {/if}
+            </div>
+            {#if dmiBiosData.verdict}
+              <p style="margin: 4px 0;">{dmiBiosData.verdict.reason}</p>
+            {/if}
+            {#if dmiBiosData.verdict?.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dmi.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{dmiBiosData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(dmiBiosData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #30.3 NVMe I/O scheduler tuner (UI sprint 21) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nvme.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nvme.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvmeIosched}>{i18n.t("integrations.nvme.refresh")}</button>
+          {#if nvmeIoschedData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={nvmeIoschedData.worst_verdict === 'both_bad' ||
+                              nvmeIoschedData.worst_verdict === 'suboptimal_scheduler' ? 'var(--warn)' :
+                             nvmeIoschedData.worst_verdict === 'low_readahead' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {nvmeIoschedData.device_count} NVMe · {i18n.t("integrations.nvme.verdict")} : <b>{nvmeIoschedData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nvmeIoschedData?.worst_verdict === 'no_nvme'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.nvme.no_nvme")}</p>
+        {/if}
+        {#if nvmeIoschedData?.devices && nvmeIoschedData.devices.length > 0}
+          {#each nvmeIoschedData.devices as d}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          d.verdict.verdict === 'both_bad' ||
+                          d.verdict.verdict === 'suboptimal_scheduler' ? 'var(--warn)' :
+                          d.verdict.verdict === 'low_readahead' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{d.device}</b>
+                <span class="kv">{i18n.t("integrations.nvme.scheduler")} : <b>{d.scheduler ?? '—'}</b></span>
+                <span class="kv">{i18n.t("integrations.nvme.readahead")} : <b>{d.read_ahead_kb ?? '—'} KiB</b></span>
+                <span class="kv">{i18n.t("integrations.nvme.requests")} : <b>{d.nr_requests ?? '—'}</b></span>
+                <span class="kv"><b>{d.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{d.verdict.reason}</p>
+              {#if d.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.nvme.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{d.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(d.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #30.2 IOMMU group auditor (UI sprint 21) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.iommu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.iommu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIommuGroups}>{i18n.t("integrations.iommu.refresh")}</button>
+          {#if iommuGroupsData?.ok && iommuGroupsData.worst_verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={iommuGroupsData.worst_verdict === 'chipset_shared' ? 'var(--warn)' :
+                             iommuGroupsData.worst_verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {iommuGroupsData.device_count} GPU · {i18n.t("integrations.iommu.verdict")} : <b>{iommuGroupsData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if iommuGroupsData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.iommu.disabled")} {iommuGroupsData.reason ?? ''}</p>
+          {#if iommuGroupsData?.recommendation}
+            <details style="margin-top: 4px;">
+              <summary class="muted">{i18n.t("integrations.iommu.recipe")}</summary>
+              <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                           border-radius: 4px; overflow-x: auto;">{iommuGroupsData.recommendation}</pre>
+              <button class="btn btn-small"
+                      onclick={() => copyToClipboard(iommuGroupsData!.recommendation!)}>📋 Copy</button>
+            </details>
+          {/if}
+        {/if}
+        {#if iommuGroupsData?.cards && iommuGroupsData.cards.length > 0}
+          {#each iommuGroupsData.cards as c}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          c.verdict.verdict === 'chipset_shared' ? 'var(--warn)' :
+                          c.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{c.gpu_bdf}</b>
+                <span class="kv">{i18n.t("integrations.iommu.group")} : <b>{c.iommu_group ?? '—'}</b></span>
+                <span class="kv"><b>{c.verdict.verdict}</b></span>
+              </div>
+              {#if c.siblings && c.siblings.length > 0}
+                <p class="muted" style="margin: 4px 0;">
+                  {i18n.t("integrations.iommu.siblings")} :
+                  {#each c.siblings as s}
+                    <span class="kv" style="margin: 0 4px;">{s.bdf} ({s.kind})</span>
+                  {/each}
+                </p>
+              {/if}
+              <p style="margin: 4px 0;">{c.verdict.reason}</p>
+              {#if c.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.iommu.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{c.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(c.verdict.recommendation)}>📋 Copy</button>
+                </details>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #30.1 MSI-X vector inventory (UI sprint 21) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.msi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.msi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMsiInventory}>{i18n.t("integrations.msi.refresh")}</button>
+          {#if msiInventoryData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={msiInventoryData.worst_verdict === 'legacy_irq' ? 'var(--warn)' :
+                             msiInventoryData.worst_verdict === 'msi_active' ? 'var(--warn)' :
+                             msiInventoryData.worst_verdict === 'unknown' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {msiInventoryData.device_count} GPU · {i18n.t("integrations.msi.verdict")} : <b>{msiInventoryData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if msiInventoryData?.cards && msiInventoryData.cards.length > 0}
+          {#each msiInventoryData.cards as c}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          c.verdict.verdict === 'legacy_irq' ||
+                          c.verdict.verdict === 'msi_active' ? 'var(--warn)' :
+                          c.verdict.verdict === 'unknown' ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{c.gpu_bdf}</b>
+                <span class="kv">{i18n.t("integrations.msi.mode")} : <b>{c.mode}</b></span>
+                <span class="kv">{i18n.t("integrations.msi.vectors")} : <b>{c.vector_count}</b></span>
+                <span class="kv">{i18n.t("integrations.msi.interrupts")} : <b>{c.total_interrupts.toLocaleString()}</b></span>
+                <span class="kv"><b>{c.verdict.verdict}</b></span>
+              </div>
+              <p style="margin: 4px 0;">{c.verdict.reason}</p>
+              {#if c.verdict.recommendation}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">{i18n.t("integrations.msi.recipe")}</summary>
+                  <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                               border-radius: 4px; overflow-x: auto;">{c.verdict.recommendation}</pre>
+                  <button class="btn btn-small"
+                          onclick={() => copyToClipboard(c.verdict.recommendation)}>📋 Copy</button>
                 </details>
               {/if}
             </div>

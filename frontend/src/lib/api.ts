@@ -1920,4 +1920,70 @@ export const api = {
         recipe: string;
       }>;
     }>),
+
+  // ── R&D #30 (UI sprint 21) ─────────────────────────────────────────────
+  dmiBiosStatus: () =>
+    fetch("/api/dmi-bios").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      dmi?: Record<string, string | null>;
+      bios_date_iso?: string | null;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+      drift?: {
+        status: string;
+        from?: Record<string, string | null>;
+        to?: Record<string, string | null>;
+        reason?: string;
+      };
+      catalog_size?: number;
+    }>),
+
+  nvmeIoschedStatus: () =>
+    fetch("/api/nvme-iosched").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      worst_verdict: string;
+      devices: Array<{
+        device: string;
+        scheduler: string | null;
+        scheduler_raw: string | null;
+        read_ahead_kb: number | null;
+        nr_requests: number | null;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  iommuGroupsStatus: () =>
+    fetch("/api/iommu-groups").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      reason?: string;
+      recommendation?: string;
+      device_count?: number;
+      worst_verdict?: string;
+      cards?: Array<{
+        gpu_bdf: string;
+        iommu_group: number | null;
+        siblings: Array<{ bdf: string; kind: string }>;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
+
+  msiInventoryStatus: () =>
+    fetch("/api/msi-inventory").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      worst_verdict: string;
+      cards: Array<{
+        gpu_bdf: string;
+        vector_count: number;
+        vectors: number[];
+        legacy_irq: number | null;
+        mode: string;
+        controllers: string[];
+        total_interrupts: number;
+        verdict: { verdict: string; reason: string; recommendation: string };
+      }>;
+    }>),
 };
