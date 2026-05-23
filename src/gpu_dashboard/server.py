@@ -1597,6 +1597,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_timer_list_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pstore-crashlog-audit":
+                # R&D #68.1 — /sys/fs/pstore persistent crash logs
+                code, body = api.handle_pstore_crashlog_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
