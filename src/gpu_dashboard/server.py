@@ -1462,6 +1462,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_iommu_groups_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/virt-guest-detect-audit":
+                # R&D #60.4 — VM guest detection (qemu_fw_cfg + cpuinfo)
+                code, body = api.handle_virt_guest_detect_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
