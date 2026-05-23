@@ -400,3 +400,4 @@ from .mce_audit import handle_mce_audit_status  # noqa: F401,F811
 from .acpi_audit import handle_acpi_audit_status  # noqa: F401,F811
 from .sched_audit import handle_sched_audit_status  # noqa: F401,F811
 from .dma_audit import handle_dma_audit_status  # noqa: F401,F811
+from .ftrace_audit import handle_ftrace_audit_status  # noqa: F401,F811

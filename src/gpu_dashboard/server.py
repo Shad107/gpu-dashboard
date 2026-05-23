@@ -1237,6 +1237,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_dma_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ftrace-audit":
+                # R&D #48.1 — ftrace orphan + tracer-left-on
+                code, body = api.handle_ftrace_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
