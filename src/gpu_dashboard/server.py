@@ -802,6 +802,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cuda_ctx_leak_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-static-audit":
+                # R&D #26.1 — per-boot static PCI auditor
+                code, body = api.handle_proc_static_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

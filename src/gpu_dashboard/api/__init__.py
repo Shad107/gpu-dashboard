@@ -313,3 +313,4 @@ from .retired_pages import handle_retired_pages_status  # noqa: F401,F811
 from .bug_report_prep import handle_bug_report_prep_status  # noqa: F401,F811
 from .pcie_width_watcher import handle_pcie_width_watcher_status  # noqa: F401,F811
 from .cuda_ctx_leak import handle_cuda_ctx_leak_status  # noqa: F401,F811
+from .proc_static_audit import handle_proc_static_audit_status  # noqa: F401,F811
