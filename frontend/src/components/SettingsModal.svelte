@@ -1795,6 +1795,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #50 (UI sprint 41) ────────────────────────────────────────────
+  let sockPoolAuditData          = $state<Awaited<ReturnType<typeof api.sockPoolAuditStatus>>          | null>(null);
+  let iioSensorAuditData         = $state<Awaited<ReturnType<typeof api.iioSensorAuditStatus>>         | null>(null);
+  let drmAuditData               = $state<Awaited<ReturnType<typeof api.drmAuditStatus>>               | null>(null);
+  let cgroupMemeventsAuditData   = $state<Awaited<ReturnType<typeof api.cgroupMemeventsAuditStatus>>   | null>(null);
+  async function loadSockPoolAudit() {
+    try { sockPoolAuditData = await api.sockPoolAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIioSensorAudit() {
+    try { iioSensorAuditData = await api.iioSensorAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDrmAudit() {
+    try { drmAuditData = await api.drmAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCgroupMemeventsAudit() {
+    try { cgroupMemeventsAuditData = await api.cgroupMemeventsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2050,6 +2072,11 @@
       if (!tpmAuditData)          loadTpmAudit();
       if (!wmiVendorAuditData)    loadWmiVendorAudit();
       if (!kmsgAuditData)         loadKmsgAudit();
+      // R&D #50 cards
+      if (!sockPoolAuditData)         loadSockPoolAudit();
+      if (!iioSensorAuditData)        loadIioSensorAudit();
+      if (!drmAuditData)              loadDrmAudit();
+      if (!cgroupMemeventsAuditData)  loadCgroupMemeventsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -8539,6 +8566,180 @@
                              border-radius: 4px; overflow-x: auto;">{kmsgAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(kmsgAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #50.4 sock_pool (UI sprint 41) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sock.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sock.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSockPoolAudit}>{i18n.t("integrations.sock.refresh")}</button>
+          {#if sockPoolAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['time_wait_high','orphan_high'].includes(sockPoolAuditData.verdict.verdict) ? 'var(--warn)' :
+                             sockPoolAuditData.verdict.verdict === 'unix_backlog' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.sock.verdict")} : <b>{sockPoolAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sockPoolAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['time_wait_high','orphan_high'].includes(sockPoolAuditData.verdict.verdict) ? 'var(--warn)' :
+                        sockPoolAuditData.verdict.verdict === 'unix_backlog' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">TCP inuse=<b>{sockPoolAuditData.sockstat?.TCP?.inuse ?? 0}</b></span>
+              <span class="kv">tw=<b>{sockPoolAuditData.sockstat?.TCP?.tw ?? 0}</b></span>
+              <span class="kv">orphan=<b>{sockPoolAuditData.sockstat?.TCP?.orphan ?? 0}</b></span>
+              <span class="kv">unix=<b>{sockPoolAuditData.unix_socket_count}</b></span>
+              <span class="kv">tw_max={sockPoolAuditData.tcp_max_tw_buckets ?? '?'}</span>
+            </div>
+            <p style="margin: 4px 0;">{sockPoolAuditData.verdict.reason}</p>
+            {#if sockPoolAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sock.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{sockPoolAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(sockPoolAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #50.3 IIO sensors (UI sprint 41) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.iio.title")}</h4>
+        <p class="muted">{i18n.t("integrations.iio.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIioSensorAudit}>{i18n.t("integrations.iio.refresh")}</button>
+          {#if iioSensorAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={iioSensorAuditData.verdict.verdict === 'chassis_intrusion' ? 'var(--warn)' :
+                             iioSensorAuditData.verdict.verdict === 'sensor_inventory' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {iioSensorAuditData.device_count ?? 0} sensors · {i18n.t("integrations.iio.verdict")} : <b>{iioSensorAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if iioSensorAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        iioSensorAuditData.verdict.verdict === 'chassis_intrusion' ? 'var(--warn)' :
+                        iioSensorAuditData.verdict.verdict === 'sensor_inventory' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if iioSensorAuditData.devices.length > 0}
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each iioSensorAuditData.devices.slice(0, 8) as d}
+                  <li>{d.name} ({d.driver_name ?? '?'}, type=<b>{d.sensor_type ?? 'other'}</b>)</li>
+                {/each}
+              </ul>
+            {/if}
+            <p style="margin: 4px 0;">{iioSensorAuditData.verdict.reason}</p>
+            {#if iioSensorAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.iio.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{iioSensorAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(iioSensorAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #50.1 DRM (UI sprint 41) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.drm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.drm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDrmAudit}>{i18n.t("integrations.drm.refresh")}</button>
+          {#if drmAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={drmAuditData.verdict.verdict === 'connector_disconnected_active' ? 'var(--warn)' :
+                             drmAuditData.verdict.verdict === 'no_displays' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {drmAuditData.card_count ?? 0} cards · {drmAuditData.connector_count ?? 0} conn · {i18n.t("integrations.drm.verdict")} : <b>{drmAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if drmAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        drmAuditData.verdict.verdict === 'connector_disconnected_active' ? 'var(--warn)' :
+                        drmAuditData.verdict.verdict === 'no_displays' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Connectors</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each drmAuditData.connectors as c}
+                  <li>{c.name}: status=<b
+                    style:color={c.status === 'connected' ? 'var(--accent)' : 'inherit'}
+                  >{c.status ?? '?'}</b> enabled={c.enabled ?? '?'} modes={c.mode_count}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{drmAuditData.verdict.reason}</p>
+            {#if drmAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.drm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{drmAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(drmAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #50.2 cgroup memevents (UI sprint 41) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cmem.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cmem.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupMemeventsAudit}>{i18n.t("integrations.cmem.refresh")}</button>
+          {#if cgroupMemeventsAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cgroupMemeventsAuditData.verdict.verdict === 'oom_in_unit' ? 'var(--warn)' :
+                             ['swap_failures','high_pressure'].includes(cgroupMemeventsAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cgroupMemeventsAuditData.unit_count ?? 0} units · {i18n.t("integrations.cmem.verdict")} : <b>{cgroupMemeventsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupMemeventsAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cgroupMemeventsAuditData.verdict.verdict === 'oom_in_unit' ? 'var(--warn)' :
+                        ['swap_failures','high_pressure'].includes(cgroupMemeventsAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Top units by peak RSS</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each cgroupMemeventsAuditData.top_units.slice(0, 8) as u}
+                  <li>{u.path}: peak=<b>{u.peak_bytes ? (u.peak_bytes / 1024 / 1024 / 1024).toFixed(2) : '?'} GiB</b>
+                    {#if (u.events?.oom_kill ?? 0) > 0}<span style:color="var(--warn)">oom_kill={u.events.oom_kill}</span>{/if}
+                    {#if (u.events?.high ?? 0) > 0}<span style:color="var(--accent)">high={u.events.high}</span>{/if}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{cgroupMemeventsAuditData.verdict.reason}</p>
+            {#if cgroupMemeventsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cmem.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cgroupMemeventsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cgroupMemeventsAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

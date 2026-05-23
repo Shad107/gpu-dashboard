@@ -3108,4 +3108,58 @@ export const api = {
       };
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #50 (UI sprint 41) ──
+  sockPoolAuditStatus: () =>
+    fetch("/api/sock-pool-audit").then(jsonOf<{
+      ok: boolean;
+      sockstat: Record<string, Record<string, number>>;
+      sockstat6: Record<string, Record<string, number>>;
+      tcp_socket_count: number;
+      tcp6_socket_count: number;
+      unix_socket_count: number;
+      tcp_max_tw_buckets: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  iioSensorAuditStatus: () =>
+    fetch("/api/iio-sensor-audit").then(jsonOf<{
+      ok: boolean;
+      device_count?: number;
+      devices: Array<{
+        name: string; driver_name: string | null;
+        sampling_frequency: number | null;
+        sensor_type?: string;
+        [attr: string]: unknown;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  drmAuditStatus: () =>
+    fetch("/api/drm-audit").then(jsonOf<{
+      ok: boolean;
+      card_count?: number;
+      cards: string[];
+      connector_count?: number;
+      connectors: Array<{
+        name: string; status: string | null;
+        enabled: string | null; dpms: string | null;
+        modes: string[]; mode_count: number;
+        edid_bytes: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  cgroupMemeventsAuditStatus: () =>
+    fetch("/api/cgroup-memevents-audit").then(jsonOf<{
+      ok: boolean;
+      unit_count?: number;
+      top_units: Array<{
+        path: string;
+        events: Record<string, number>;
+        swap_events: Record<string, number>;
+        peak_bytes: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
