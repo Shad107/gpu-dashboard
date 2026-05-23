@@ -1602,6 +1602,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #41 (UI sprint 32) ────────────────────────────────────────────
+  let panicPolicyData    = $state<Awaited<ReturnType<typeof api.panicPolicyStatus>>    | null>(null);
+  let edacRamEccData     = $state<Awaited<ReturnType<typeof api.edacRamEccStatus>>     | null>(null);
+  let inotifyAuditData   = $state<Awaited<ReturnType<typeof api.inotifyAuditStatus>>   | null>(null);
+  let zswapZramData      = $state<Awaited<ReturnType<typeof api.zswapZramStatus>>      | null>(null);
+  async function loadPanicPolicy() {
+    try { panicPolicyData = await api.panicPolicyStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadEdacRamEcc() {
+    try { edacRamEccData = await api.edacRamEccStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadInotifyAudit() {
+    try { inotifyAuditData = await api.inotifyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadZswapZram() {
+    try { zswapZramData = await api.zswapZramStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1813,6 +1835,11 @@
       if (!vmTuningDeepData)    loadVmTuningDeep();
       if (!gpuPciBindData)      loadGpuPciBind();
       if (!nicQueueAffinityData) loadNicQueueAffinity();
+      // R&D #41 cards
+      if (!panicPolicyData)     loadPanicPolicy();
+      if (!edacRamEccData)      loadEdacRamEcc();
+      if (!inotifyAuditData)    loadInotifyAudit();
+      if (!zswapZramData)       loadZswapZram();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6721,6 +6748,202 @@
                              border-radius: 4px; overflow-x: auto;">{nicQueueAffinityData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(nicQueueAffinityData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #41.3 panic policy (UI sprint 32) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pan.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pan.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPanicPolicy}>{i18n.t("integrations.pan.refresh")}</button>
+          {#if panicPolicyData?.ok && panicPolicyData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['stuck_forever_on_panic','silent_on_hung_task'].includes(panicPolicyData.verdict.verdict) ? 'var(--warn)' :
+                             panicPolicyData.verdict.verdict === 'watchdog_disabled' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.pan.verdict")} : <b>{panicPolicyData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if panicPolicyData?.ok && panicPolicyData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['stuck_forever_on_panic','silent_on_hung_task'].includes(panicPolicyData.verdict.verdict) ? 'var(--warn)' :
+                        panicPolicyData.verdict.verdict === 'watchdog_disabled' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">panic=<b>{panicPolicyData.knobs.panic ?? '?'}</b></span>
+              <span class="kv">panic_on_oops=<b>{panicPolicyData.knobs.panic_on_oops ?? '?'}</b></span>
+              <span class="kv">hung_task_panic=<b>{panicPolicyData.knobs.hung_task_panic ?? '?'}</b></span>
+              <span class="kv">softlockup_panic=<b>{panicPolicyData.knobs.softlockup_panic ?? '?'}</b></span>
+              <span class="kv">nmi_watchdog=<b>{panicPolicyData.knobs.nmi_watchdog ?? '?'}</b></span>
+              {#if panicPolicyData.host_form_factor}
+                <span class="kv">host=<b>{panicPolicyData.host_form_factor}</b></span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{panicPolicyData.verdict.reason}</p>
+            {#if panicPolicyData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pan.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{panicPolicyData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(panicPolicyData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #41.2 EDAC RAM ECC (UI sprint 32) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ecc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ecc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadEdacRamEcc}>{i18n.t("integrations.ecc.refresh")}</button>
+          {#if edacRamEccData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={edacRamEccData.verdict.verdict === 'ue_present' ? 'var(--warn)' :
+                             edacRamEccData.verdict.verdict === 'ce_climbing' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.ecc.verdict")} : <b>{edacRamEccData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if edacRamEccData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        edacRamEccData.verdict.verdict === 'ue_present' ? 'var(--warn)' :
+                        edacRamEccData.verdict.verdict === 'ce_climbing' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">controllers=<b>{edacRamEccData.controllers.length}</b></span>
+              <span class="kv">ce_total=<b>{edacRamEccData.ce_total}</b></span>
+              <span class="kv">ue_total=<b
+                style:color={edacRamEccData.ue_total > 0 ? 'var(--warn)' : 'inherit'}
+              >{edacRamEccData.ue_total}</b></span>
+            </div>
+            {#if edacRamEccData.controllers.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">DIMM detail</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each edacRamEccData.controllers as c}
+                    {#each c.dimms as d}
+                      <li>{c.name}/{d.name} label=<b>{d.label ?? '?'}</b>
+                        size={d.size_mb ?? '?'}MB
+                        ce=<b>{d.ce_count}</b>
+                        ue=<b style:color={d.ue_count > 0 ? 'var(--warn)' : 'inherit'}>{d.ue_count}</b></li>
+                    {/each}
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{edacRamEccData.verdict.reason}</p>
+            {#if edacRamEccData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ecc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{edacRamEccData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(edacRamEccData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #41.4 inotify audit (UI sprint 32) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ino.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ino.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadInotifyAudit}>{i18n.t("integrations.ino.refresh")}</button>
+          {#if inotifyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['approaching_max_watches','instance_per_pid_high'].includes(inotifyAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {inotifyAuditData.process_count} watchers · {i18n.t("integrations.ino.verdict")} : <b>{inotifyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if inotifyAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['approaching_max_watches','instance_per_pid_high'].includes(inotifyAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">max_watches=<b>{inotifyAuditData.limits.max_user_watches ?? '?'}</b></span>
+              <span class="kv">max_instances=<b>{inotifyAuditData.limits.max_user_instances ?? '?'}</b></span>
+              {#each Object.entries(inotifyAuditData.by_uid) as [uid, agg]}
+                <span class="kv">uid={uid}: <b>{agg.watches}</b> watches / <b>{agg.instances}</b> inst</span>
+              {/each}
+            </div>
+            {#if inotifyAuditData.top_processes.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Top watchers</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each inotifyAuditData.top_processes.slice(0, 10) as p}
+                    <li>{p.comm}(pid {p.pid}) — <b>{p.inotify_watches}</b> watches, {p.inotify_instances} inst</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{inotifyAuditData.verdict.reason}</p>
+            {#if inotifyAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ino.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{inotifyAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(inotifyAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #41.1 zswap + zram (UI sprint 32) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.zsw.title")}</h4>
+        <p class="muted">{i18n.t("integrations.zsw.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadZswapZram}>{i18n.t("integrations.zsw.refresh")}</button>
+          {#if zswapZramData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['zswap_disabled_on_tight_box','legacy_compressor','pool_too_small'].includes(zswapZramData.verdict.verdict) ? 'var(--warn)' :
+                             zswapZramData.verdict.verdict === 'zram_idle_when_useful' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.zsw.verdict")} : <b>{zswapZramData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if zswapZramData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['zswap_disabled_on_tight_box','legacy_compressor','pool_too_small'].includes(zswapZramData.verdict.verdict) ? 'var(--warn)' :
+                        zswapZramData.verdict.verdict === 'zram_idle_when_useful' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">enabled=<b>{zswapZramData.zswap.enabled ? 'yes' : zswapZramData.zswap.enabled === false ? 'no' : '?'}</b></span>
+              <span class="kv">comp=<b>{zswapZramData.zswap.compressor ?? '?'}</b></span>
+              <span class="kv">pool=<b>{zswapZramData.zswap.zpool ?? '?'}</b></span>
+              <span class="kv">max_pool=<b>{zswapZramData.zswap.max_pool_percent ?? '?'}%</b></span>
+              <span class="kv">RAM={zswapZramData.mem_total_gb !== null ? (zswapZramData.mem_total_gb).toFixed(0) + ' GB' : '?'}</span>
+              <span class="kv">zram=<b>{zswapZramData.zram_devices.length}</b></span>
+              <span class="kv">swap=<b>{zswapZramData.swap_devices.length}</b></span>
+            </div>
+            <p style="margin: 4px 0;">{zswapZramData.verdict.reason}</p>
+            {#if zswapZramData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.zsw.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{zswapZramData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(zswapZramData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

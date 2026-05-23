@@ -2580,4 +2580,67 @@ export const api = {
       gpu_numa_cpus: number[];
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #41 (UI sprint 32) ──
+  panicPolicyStatus: () =>
+    fetch("/api/panic-policy").then(jsonOf<{
+      ok: boolean;
+      knobs: Record<string, number>;
+      host_form_factor: string | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  edacRamEccStatus: () =>
+    fetch("/api/edac-ram-ecc").then(jsonOf<{
+      ok: boolean;
+      controller_count?: number;
+      controllers: Array<{
+        name: string; driver: string | null;
+        ce_count: number; ue_count: number; size_mb: number | null;
+        dimms: Array<{
+          name: string; label: string | null;
+          size_mb: number | null; ce_count: number; ue_count: number;
+          mem_type: string | null; dev_type: string | null;
+        }>;
+      }>;
+      ce_total: number;
+      ue_total: number;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  inotifyAuditStatus: () =>
+    fetch("/api/inotify-audit").then(jsonOf<{
+      ok: boolean;
+      limits: Record<string, number>;
+      process_count: number;
+      by_uid: Record<string, { watches: number; instances: number;
+                                fanotify_watches: number;
+                                fanotify_instances: number;
+                                procs: number }>;
+      top_processes: Array<{
+        pid: number; comm: string; uid: number | null;
+        inotify_instances: number; inotify_watches: number;
+        fanotify_instances: number; fanotify_watches: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  zswapZramStatus: () =>
+    fetch("/api/zswap-zram").then(jsonOf<{
+      ok: boolean;
+      zswap: { available: boolean; enabled: boolean | null;
+                compressor: string | null; zpool: string | null;
+                max_pool_percent: number | null;
+                accept_threshold_percent: number | null };
+      zram_devices: Array<{ name: string; disksize: number | null;
+                              comp_algorithm: string | null;
+                              max_comp_streams: number | null;
+                              mm_stat_raw: string | null }>;
+      swap_devices: Array<{ path: string; type: string;
+                              size_kb: number | null;
+                              used_kb: number | null;
+                              priority: string }>;
+      mem_total_gb: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
