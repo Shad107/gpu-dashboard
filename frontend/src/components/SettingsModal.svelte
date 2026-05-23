@@ -2112,6 +2112,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #66 (UI sprint 57) ────────────────────────────────────────────
+  let mtdFlashAuditData               = $state<Awaited<ReturnType<typeof api.mtdFlashAuditStatus>>               | null>(null);
+  let spiFirmwareLoaderAuditData      = $state<Awaited<ReturnType<typeof api.spiFirmwareLoaderAuditStatus>>      | null>(null);
+  let procSyscallAuxvAuditData        = $state<Awaited<ReturnType<typeof api.procSyscallAuxvAuditStatus>>        | null>(null);
+  let btfBpfAuditData                 = $state<Awaited<ReturnType<typeof api.btfBpfAuditStatus>>                 | null>(null);
+  async function loadMtdFlashAudit() {
+    try { mtdFlashAuditData = await api.mtdFlashAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSpiFirmwareLoaderAudit() {
+    try { spiFirmwareLoaderAuditData = await api.spiFirmwareLoaderAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcSyscallAuxvAudit() {
+    try { procSyscallAuxvAuditData = await api.procSyscallAuxvAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBtfBpfAudit() {
+    try { btfBpfAuditData = await api.btfBpfAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2440,6 +2462,11 @@
       if (!cpufreqResidencyAuditData)   loadCpufreqResidencyAudit();
       if (!efiRuntimeMapAuditData)      loadEfiRuntimeMapAudit();
       if (!devfreqEventAuditData)       loadDevfreqEventAudit();
+      // R&D #66 cards
+      if (!mtdFlashAuditData)           loadMtdFlashAudit();
+      if (!spiFirmwareLoaderAuditData)  loadSpiFirmwareLoaderAudit();
+      if (!procSyscallAuxvAuditData)    loadProcSyscallAuxvAudit();
+      if (!btfBpfAuditData)             loadBtfBpfAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -11401,6 +11428,146 @@
                              border-radius: 4px; overflow-x: auto;">{devfreqEventAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(devfreqEventAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #66.1 MTD flash (UI sprint 57) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.mtdflash.title")}</h4>
+        <p class="muted">{i18n.t("integrations.mtdflash.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMtdFlashAudit}>{i18n.t("integrations.mtdflash.refresh")}</button>
+          {#if mtdFlashAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['nor_bad_blocks','write_protect_drift'].includes(mtdFlashAuditData.verdict.verdict) ? 'var(--warn)' :
+                             mtdFlashAuditData.verdict.verdict === 'unmapped_partition' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {mtdFlashAuditData.mtd_count} MTD · {i18n.t("integrations.mtdflash.verdict")} : <b>{mtdFlashAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if mtdFlashAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['nor_bad_blocks','write_protect_drift'].includes(mtdFlashAuditData.verdict.verdict) ? 'var(--warn)' :
+                        mtdFlashAuditData.verdict.verdict === 'unmapped_partition' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{mtdFlashAuditData.verdict.reason}</p>
+            {#if mtdFlashAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.mtdflash.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{mtdFlashAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(mtdFlashAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #66.4 SPI + firmware loader (UI sprint 57) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.spifw.title")}</h4>
+        <p class="muted">{i18n.t("integrations.spifw.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSpiFirmwareLoaderAudit}>{i18n.t("integrations.spifw.refresh")}</button>
+          {#if spiFirmwareLoaderAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={spiFirmwareLoaderAuditData.verdict.verdict === 'firmware_load_stuck' ? 'var(--warn)' :
+                             ['profiling_enabled','spi_no_master'].includes(spiFirmwareLoaderAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {spiFirmwareLoaderAuditData.spi_master_count} SPI · {spiFirmwareLoaderAuditData.firmware_request_count} fw · {i18n.t("integrations.spifw.verdict")} : <b>{spiFirmwareLoaderAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if spiFirmwareLoaderAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        spiFirmwareLoaderAuditData.verdict.verdict === 'firmware_load_stuck' ? 'var(--warn)' :
+                        ['profiling_enabled','spi_no_master'].includes(spiFirmwareLoaderAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{spiFirmwareLoaderAuditData.verdict.reason}</p>
+            {#if spiFirmwareLoaderAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.spifw.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{spiFirmwareLoaderAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(spiFirmwareLoaderAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #66.3 /proc/<pid> syscall + auxv + timerslack (UI sprint 57) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.procsysauxv.title")}</h4>
+        <p class="muted">{i18n.t("integrations.procsysauxv.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcSyscallAuxvAudit}>{i18n.t("integrations.procsysauxv.refresh")}</button>
+          {#if procSyscallAuxvAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procSyscallAuxvAuditData.verdict.verdict === 'syscall_hang_long' ? 'var(--warn)' :
+                             ['hwcap_drift','timerslack_battery_hostile'].includes(procSyscallAuxvAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procSyscallAuxvAuditData.sample_count} PIDs · {procSyscallAuxvAuditData.arch} · {i18n.t("integrations.procsysauxv.verdict")} : <b>{procSyscallAuxvAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procSyscallAuxvAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        procSyscallAuxvAuditData.verdict.verdict === 'syscall_hang_long' ? 'var(--warn)' :
+                        ['hwcap_drift','timerslack_battery_hostile'].includes(procSyscallAuxvAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{procSyscallAuxvAuditData.verdict.reason}</p>
+            {#if procSyscallAuxvAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.procsysauxv.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{procSyscallAuxvAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(procSyscallAuxvAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #66.2 BTF + BPF (UI sprint 57) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.btfbpf.title")}</h4>
+        <p class="muted">{i18n.t("integrations.btfbpf.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBtfBpfAudit}>{i18n.t("integrations.btfbpf.refresh")}</button>
+          {#if btfBpfAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['vmlinux_btf_missing','stale_btf'].includes(btfBpfAuditData.verdict.verdict) ? 'var(--err)' :
+                             btfBpfAuditData.verdict.verdict === 'module_btf_missing' ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {btfBpfAuditData.module_btf_count}/{btfBpfAuditData.loaded_module_count} mod BTF · {i18n.t("integrations.btfbpf.verdict")} : <b>{btfBpfAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if btfBpfAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['vmlinux_btf_missing','stale_btf'].includes(btfBpfAuditData.verdict.verdict) ? 'var(--err)' :
+                        btfBpfAuditData.verdict.verdict === 'module_btf_missing' ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{btfBpfAuditData.verdict.reason}</p>
+            {#if btfBpfAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.btfbpf.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{btfBpfAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(btfBpfAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

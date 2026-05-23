@@ -3951,4 +3951,59 @@ export const api = {
       devfreq_devices: Array<{ id: string; governor: string | null }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #66 (UI sprint 57) ──
+  mtdFlashAuditStatus: () =>
+    fetch("/api/mtd-flash-audit").then(jsonOf<{
+      ok: boolean;
+      mtd_count: number;
+      mtds: Array<{ id: string; name: string | null;
+                    size: number | null; erasesize: number | null;
+                    flags: number | null;
+                    bad_blocks: number | null;
+                    type: string | null }>;
+      proc_mtd_present: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  spiFirmwareLoaderAuditStatus: () =>
+    fetch("/api/spi-firmware-loader-audit").then(jsonOf<{
+      ok: boolean;
+      spi_master_count: number;
+      spi_masters: Array<{ id: string }>;
+      firmware_request_count: number;
+      firmware_requests: Array<{ name: string;
+                                   loading: number | null }>;
+      profiling: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  procSyscallAuxvAuditStatus: () =>
+    fetch("/api/proc-syscall-auxv-audit").then(jsonOf<{
+      ok: boolean;
+      sample_count: number;
+      samples: Array<{ pid: number; state: string | null;
+                          wchan: string | null;
+                          syscall: string | null;
+                          timerslack_ns: number | null }>;
+      own_pid: number;
+      own_hwcap: number | null;
+      own_hwcap2: number | null;
+      own_pagesz: number | null;
+      arch: string;
+      battery_discharging: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  btfBpfAuditStatus: () =>
+    fetch("/api/btf-bpf-audit").then(jsonOf<{
+      ok: boolean;
+      vmlinux_btf_bytes: number | null;
+      module_btf_count: number;
+      loaded_module_count: number;
+      module_btf_coverage: number | null;
+      bpf_pinfs: { present: boolean; readable: boolean;
+                     entries: number | null };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
