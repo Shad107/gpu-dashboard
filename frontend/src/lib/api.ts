@@ -2417,4 +2417,61 @@ export const api = {
                                 item: string; value: string }>;
       verdict?: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #38 (UI sprint 29) ─────────────────────────────────────────────
+  pcieAerTrendStatus: () =>
+    fetch("/api/pcie-aer-trend").then(jsonOf<{
+      ok: boolean;
+      gpu_count: number;
+      cards: Array<{
+        gpu_bdf: string;
+        correctable: Record<string, number>;
+        fatal: Record<string, number>;
+        nonfatal: Record<string, number>;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+      drift: { status: string;
+                deltas?: Record<string, Record<string, number>> };
+    }>),
+
+  gpuIrqAffinityStatus: () =>
+    fetch("/api/gpu-irq-affinity").then(jsonOf<{
+      ok: boolean;
+      gpu_count: number;
+      total_irqs: number;
+      cards: Array<{
+        gpu_bdf: string;
+        local_cpulist: string | null;
+        irqs: Array<{ irq: number; smp_list: string | null;
+                       effective: string | null }>;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  modprobeAuditStatus: () =>
+    fetch("/api/modprobe-audit").then(jsonOf<{
+      ok: boolean;
+      error?: string;
+      on_disk?: Record<string, { options: Record<string, string>;
+                                    files: string[] }>;
+      runtime?: Record<string, Record<string, string>>;
+      drift_rows?: Array<{ module: string; param: string;
+                            on_disk: string; runtime: string }>;
+      verdict?: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  procMapsLibsStatus: () =>
+    fetch("/api/proc-maps-libs").then(jsonOf<{
+      ok: boolean;
+      process_count: number;
+      worst_verdict: string;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        readable: boolean;
+        libs: Array<{ basename: string; path: string;
+                       deleted: boolean; is_nvidia: boolean }>;
+        deleted_libs: string[];
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

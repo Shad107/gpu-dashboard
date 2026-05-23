@@ -1536,6 +1536,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #38 (UI sprint 29) ────────────────────────────────────────────
+  let pcieAerTrendData   = $state<Awaited<ReturnType<typeof api.pcieAerTrendStatus>>   | null>(null);
+  let gpuIrqAffinityData = $state<Awaited<ReturnType<typeof api.gpuIrqAffinityStatus>> | null>(null);
+  let modprobeAuditData  = $state<Awaited<ReturnType<typeof api.modprobeAuditStatus>>  | null>(null);
+  let procMapsLibsData   = $state<Awaited<ReturnType<typeof api.procMapsLibsStatus>>   | null>(null);
+  async function loadPcieAerTrend() {
+    try { pcieAerTrendData = await api.pcieAerTrendStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadGpuIrqAffinity() {
+    try { gpuIrqAffinityData = await api.gpuIrqAffinityStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadModprobeAudit() {
+    try { modprobeAuditData = await api.modprobeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcMapsLibs() {
+    try { procMapsLibsData = await api.procMapsLibsStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1732,6 +1754,11 @@
       if (!gpuCpuAffinityData) loadGpuCpuAffinity();
       if (!cacheTopologyData)  loadCacheTopology();
       if (!limitsAuditData)    loadLimitsAudit();
+      // R&D #38 cards
+      if (!pcieAerTrendData)   loadPcieAerTrend();
+      if (!gpuIrqAffinityData) loadGpuIrqAffinity();
+      if (!modprobeAuditData)  loadModprobeAudit();
+      if (!procMapsLibsData)   loadProcMapsLibs();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6280,6 +6307,208 @@
               {/if}
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #38.1 PCIe AER trend (UI sprint 29) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.aer.title")}</h4>
+        <p class="muted">{i18n.t("integrations.aer.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieAerTrend}>{i18n.t("integrations.aer.refresh")}</button>
+          {#if pcieAerTrendData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['any_fatal','any_nonfatal','high_correctable'].includes(pcieAerTrendData.verdict.verdict) ? 'var(--warn)' :
+                             pcieAerTrendData.verdict.verdict === 'low_correctable' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {pcieAerTrendData.gpu_count} GPUs · {i18n.t("integrations.aer.verdict")} : <b>{pcieAerTrendData.verdict.verdict}</b>
+            </span>
+            {#if pcieAerTrendData.drift}
+              <span class="kv"
+                    style:color={pcieAerTrendData.drift.status === 'drift_detected' ? 'var(--warn)' : 'var(--text-dim)'}>
+                {i18n.t("integrations.aer.drift")} : <b>{pcieAerTrendData.drift.status}</b>
+              </span>
+            {/if}
+          {/if}
+        </div>
+        {#if pcieAerTrendData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['any_fatal','any_nonfatal','high_correctable'].includes(pcieAerTrendData.verdict.verdict) ? 'var(--warn)' :
+                        pcieAerTrendData.verdict.verdict === 'low_correctable' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pcieAerTrendData.verdict.reason}</p>
+            {#if pcieAerTrendData.drift?.deltas && Object.keys(pcieAerTrendData.drift.deltas).length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">deltas since baseline</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each Object.entries(pcieAerTrendData.drift.deltas) as [bdf, dmap]}
+                    <li><b>{bdf}</b>: {Object.entries(dmap).map(([k,v]) => `${k}=+${v}`).join(', ')}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            {#if pcieAerTrendData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.aer.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{pcieAerTrendData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(pcieAerTrendData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #38.4 GPU IRQ affinity (UI sprint 29) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.irqaff.title")}</h4>
+        <p class="muted">{i18n.t("integrations.irqaff.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadGpuIrqAffinity}>{i18n.t("integrations.irqaff.refresh")}</button>
+          {#if gpuIrqAffinityData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['cpu0_concentrated','mismatch_local'].includes(gpuIrqAffinityData.verdict.verdict) ? 'var(--warn)' :
+                             gpuIrqAffinityData.verdict.verdict === 'single_cpu_pin' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {gpuIrqAffinityData.gpu_count} GPUs · {gpuIrqAffinityData.total_irqs} {i18n.t("integrations.irqaff.irqs")} · <b>{gpuIrqAffinityData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if gpuIrqAffinityData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['cpu0_concentrated','mismatch_local'].includes(gpuIrqAffinityData.verdict.verdict) ? 'var(--warn)' :
+                        gpuIrqAffinityData.verdict.verdict === 'single_cpu_pin' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#each gpuIrqAffinityData.cards as c}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{c.gpu_bdf}</b>
+                <span class="kv">local : <b>{c.local_cpulist ?? '—'}</b></span>
+                {#each c.irqs as irq}
+                  <span class="kv">IRQ {irq.irq} → CPU {irq.effective ?? '—'}</span>
+                {/each}
+              </div>
+            {/each}
+            <p style="margin: 4px 0;">{gpuIrqAffinityData.verdict.reason}</p>
+            {#if gpuIrqAffinityData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.irqaff.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{gpuIrqAffinityData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(gpuIrqAffinityData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #38.2 modprobe drift (UI sprint 29) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.mprb.title")}</h4>
+        <p class="muted">{i18n.t("integrations.mprb.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadModprobeAudit}>{i18n.t("integrations.mprb.refresh")}</button>
+          {#if modprobeAuditData?.ok && modprobeAuditData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={modprobeAuditData.verdict.verdict === 'drift' ? 'var(--warn)' :
+                             modprobeAuditData.verdict.verdict === 'synced' ? 'var(--text-dim)' :
+                             'var(--accent)'}>
+              {i18n.t("integrations.mprb.verdict")} : <b>{modprobeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if modprobeAuditData?.ok === false}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.mprb.unavailable")}</p>
+        {/if}
+        {#if modprobeAuditData?.ok && modprobeAuditData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        modprobeAuditData.verdict.verdict === 'drift' ? 'var(--warn)' :
+                        modprobeAuditData.verdict.verdict === 'synced' ? 'var(--text-dim)' :
+                        'var(--accent)'};">
+            <p style="margin: 4px 0;">{modprobeAuditData.verdict.reason}</p>
+            {#if modprobeAuditData.drift_rows && modprobeAuditData.drift_rows.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{modprobeAuditData.drift_rows.length} drift row(s)</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each modprobeAuditData.drift_rows as r}
+                    <li>
+                      <span style="font-family: monospace;">{r.module}/{r.param}</span>:
+                      on-disk=<b>{r.on_disk}</b>, runtime=<b style:color="var(--warn)">{r.runtime}</b>
+                    </li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            {#if modprobeAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.mprb.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{modprobeAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(modprobeAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #38.3 /proc/<pid>/maps (deleted) shared libs (UI sprint 29) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.maps.title")}</h4>
+        <p class="muted">{i18n.t("integrations.maps.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcMapsLibs}>{i18n.t("integrations.maps.refresh")}</button>
+          {#if procMapsLibsData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procMapsLibsData.worst_verdict === 'deleted_libs' ? 'var(--warn)' :
+                             procMapsLibsData.worst_verdict === 'unreadable' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procMapsLibsData.process_count} procs · <b>{procMapsLibsData.worst_verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procMapsLibsData?.worst_verdict === 'no_llm_procs'}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.maps.no_procs")}</p>
+        {/if}
+        {#if procMapsLibsData?.processes && procMapsLibsData.processes.length > 0}
+          {#each procMapsLibsData.processes as p}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          p.deleted_libs.length > 0 ? 'var(--warn)' :
+                          !p.readable ? 'var(--accent)' :
+                          'var(--text-dim)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b style="font-family: monospace;">{p.comm}</b>
+                <span class="kv">pid <b>{p.pid}</b></span>
+                <span class="kv">libs: <b>{p.libs.length}</b></span>
+                {#if p.libs.length > 0}
+                  <span class="kv">nvidia: <b>{p.libs.filter(l => l.is_nvidia).length}</b></span>
+                {/if}
+                {#if p.deleted_libs.length > 0}
+                  <span class="kv" style:color="var(--warn)">(deleted): <b>{p.deleted_libs.length}</b></span>
+                {/if}
+                {#if !p.readable}
+                  <span class="kv muted">(maps unreadable)</span>
+                {/if}
+              </div>
+              {#if p.deleted_libs.length > 0}
+                <p style="margin: 4px 0;">{p.deleted_libs.join(', ')}</p>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+        {#if procMapsLibsData?.verdict?.recommendation}
+          <details style="margin-top: 4px;">
+            <summary class="muted">{i18n.t("integrations.maps.recommend")}</summary>
+            <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                         border-radius: 4px; overflow-x: auto;">{procMapsLibsData.verdict.recommendation}</pre>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboard(procMapsLibsData!.verdict!.recommendation)}>📋 Copy</button>
+          </details>
         {/if}
       </div>
 
