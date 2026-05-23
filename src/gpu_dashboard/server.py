@@ -1077,6 +1077,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sysctl_d_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ksm-advisor":
+                # R&D #40.2 — KSM hurts-LLM detector
+                code, body = api.handle_ksm_advisor_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

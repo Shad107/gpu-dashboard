@@ -368,3 +368,4 @@ from .cmdline_audit import handle_cmdline_audit_status  # noqa: F401,F811
 from .coredump_ready import handle_coredump_ready_status  # noqa: F401,F811
 from .host_class import handle_host_class_status  # noqa: F401,F811
 from .sysctl_d_audit import handle_sysctl_d_audit_status  # noqa: F401,F811
+from .ksm_advisor import handle_ksm_advisor_status  # noqa: F401,F811
