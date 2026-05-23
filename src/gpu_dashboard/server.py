@@ -1457,6 +1457,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pid_rlimits_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/iommu-groups-audit":
+                # R&D #59.2 — IOMMU groups + passthrough
+                code, body = api.handle_iommu_groups_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

@@ -444,3 +444,4 @@ from .alsa_cards_audit import handle_alsa_cards_audit_status  # noqa: F401,F811
 from .kernel_build_config_audit import handle_kernel_build_config_audit_status  # noqa: F401,F811
 from .dmi_smbios_audit import handle_dmi_smbios_audit_status  # noqa: F401,F811
 from .pid_rlimits_audit import handle_pid_rlimits_audit_status  # noqa: F401,F811
+from .iommu_groups_audit import handle_iommu_groups_audit_status  # noqa: F401,F811
