@@ -1087,6 +1087,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_vm_tuning_deep_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/gpu-pci-bind":
+                # R&D #40.1 — GPU PCIe driver-binding inventory
+                code, body = api.handle_gpu_pci_bind_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
