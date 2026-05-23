@@ -1477,6 +1477,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_alsa_codec_deep_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/devfreq-audit":
+                # R&D #62.1 — devfreq DVFS scaling
+                code, body = api.handle_devfreq_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
