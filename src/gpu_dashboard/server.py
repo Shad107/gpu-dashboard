@@ -1382,6 +1382,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_numa_topology_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hwmon-sensors-audit":
+                # R&D #55.3 — fans + voltages + PWM (hwmon)
+                code, body = api.handle_hwmon_sensors_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
