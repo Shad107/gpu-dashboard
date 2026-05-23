@@ -354,3 +354,4 @@ from .numa_placement import handle_numa_placement_status  # noqa: F401,F811
 from .kernel_taint import handle_kernel_taint_status  # noqa: F401,F811
 from .cpu_microcode import handle_cpu_microcode_status  # noqa: F401,F811
 from .hwp_epp import handle_hwp_epp_status  # noqa: F401,F811
+from .cpuidle_audit import handle_cpuidle_status  # noqa: F401,F811

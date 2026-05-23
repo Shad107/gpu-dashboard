@@ -1007,6 +1007,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hwp_epp_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpuidle":
+                # R&D #36.2 — cpuidle C-state exit-latency audit
+                code, body = api.handle_cpuidle_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
