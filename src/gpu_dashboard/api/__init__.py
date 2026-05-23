@@ -296,3 +296,4 @@ from .persistence_mode import handle_persistence_mode_status  # noqa: F401,F811
 from .gsp_status import handle_gsp_status  # noqa: F401,F811
 from .sd_cache_janitor import handle_sd_cache_janitor_status  # noqa: F401,F811
 from .vram_leak import handle_vram_leak_status  # noqa: F401,F811
+from .gpu_reset import handle_gpu_reset_status  # noqa: F401,F811
