@@ -2921,4 +2921,65 @@ export const api = {
       };
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #47 (UI sprint 38) ──
+  nvidiaRmAuditStatus: () =>
+    fetch("/api/nvidia-rm-audit").then(jsonOf<{
+      ok: boolean;
+      driver_present: boolean;
+      version_proc: string | null;
+      version_smi: string | null;
+      params: Record<string, string>;
+      capabilities: string[];
+      capability_count: number;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  mceAuditStatus: () =>
+    fetch("/api/mce-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      uniform_across_cpus: boolean;
+      cpu0_state: {
+        cpu?: number; check_interval?: number;
+        cmci_disabled?: number; ignore_ce?: number;
+        dont_log_ce?: number; monarch_timeout?: number;
+        tolerant?: number; print_all?: number;
+        banks?: Record<string, number>;
+      };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  acpiAuditStatus: () =>
+    fetch("/api/acpi-audit").then(jsonOf<{
+      ok: boolean;
+      platform_profile: {
+        current?: string | null;
+        choices?: string[];
+        pm_profile?: number;
+      };
+      wakeup_count: number;
+      wakeups_enabled: Array<{
+        device: string; s_state: string;
+        status: string; sysfs: string; enabled: boolean;
+      }>;
+      gpe_count: number;
+      top_gpes: Array<{ name: string; count: number; flag: string }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  schedAuditStatus: () =>
+    fetch("/api/sched-audit").then(jsonOf<{
+      ok: boolean;
+      schedstat_version: number | null;
+      cpu_count: number;
+      top_cpus_by_wait: Array<{
+        cpu: number; rq_cpu_time_ns: number;
+        run_delay_ns: number; pcount: number;
+        avg_wait_ns: number;
+      }>;
+      features: Record<string, boolean>;
+      features_readable: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

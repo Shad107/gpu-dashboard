@@ -1729,6 +1729,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #47 (UI sprint 38) ────────────────────────────────────────────
+  let nvidiaRmAuditData = $state<Awaited<ReturnType<typeof api.nvidiaRmAuditStatus>> | null>(null);
+  let mceAuditData      = $state<Awaited<ReturnType<typeof api.mceAuditStatus>>      | null>(null);
+  let acpiAuditData     = $state<Awaited<ReturnType<typeof api.acpiAuditStatus>>     | null>(null);
+  let schedAuditData    = $state<Awaited<ReturnType<typeof api.schedAuditStatus>>    | null>(null);
+  async function loadNvidiaRmAudit() {
+    try { nvidiaRmAuditData = await api.nvidiaRmAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadMceAudit() {
+    try { mceAuditData = await api.mceAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAcpiAudit() {
+    try { acpiAuditData = await api.acpiAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSchedAudit() {
+    try { schedAuditData = await api.schedAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1969,6 +1991,11 @@
       if (!keyringAuditData)      loadKeyringAudit();
       if (!securityPostureData)   loadSecurityPosture();
       if (!vfsLimitsAuditData)    loadVfsLimitsAudit();
+      // R&D #47 cards
+      if (!nvidiaRmAuditData)     loadNvidiaRmAudit();
+      if (!mceAuditData)          loadMceAudit();
+      if (!acpiAuditData)         loadAcpiAudit();
+      if (!schedAuditData)        loadSchedAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -7917,6 +7944,202 @@
                              border-radius: 4px; overflow-x: auto;">{vfsLimitsAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(vfsLimitsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #47.3 nvidia RM (UI sprint 38) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nv.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nv.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvidiaRmAudit}>{i18n.t("integrations.nv.refresh")}</button>
+          {#if nvidiaRmAuditData?.ok || nvidiaRmAuditData?.driver_present === false}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['driver_kmod_mismatch','caps_missing'].includes(nvidiaRmAuditData.verdict.verdict) ? 'var(--warn)' :
+                             nvidiaRmAuditData.verdict.verdict === 'no_nvidia_driver' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.nv.verdict")} : <b>{nvidiaRmAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nvidiaRmAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['driver_kmod_mismatch','caps_missing'].includes(nvidiaRmAuditData.verdict.verdict) ? 'var(--warn)' :
+                        nvidiaRmAuditData.verdict.verdict === 'no_nvidia_driver' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if nvidiaRmAuditData.driver_present}
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <span class="kv">version_proc=<b>{nvidiaRmAuditData.version_proc ?? '?'}</b></span>
+                {#if nvidiaRmAuditData.version_smi}
+                  <span class="kv">version_smi=<b>{nvidiaRmAuditData.version_smi}</b></span>
+                {/if}
+                <span class="kv">caps={nvidiaRmAuditData.capability_count}</span>
+              </div>
+              {#if nvidiaRmAuditData.capabilities.length > 0}
+                <details style="margin-top: 4px;">
+                  <summary class="muted">Capability paths</summary>
+                  <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                    {#each nvidiaRmAuditData.capabilities as cap}
+                      <li>{cap}</li>
+                    {/each}
+                  </ul>
+                </details>
+              {/if}
+            {/if}
+            <p style="margin: 4px 0;">{nvidiaRmAuditData.verdict.reason}</p>
+            {#if nvidiaRmAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nv.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{nvidiaRmAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(nvidiaRmAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #47.4 MCE audit (UI sprint 38) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.mce.title")}</h4>
+        <p class="muted">{i18n.t("integrations.mce.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMceAudit}>{i18n.t("integrations.mce.refresh")}</button>
+          {#if mceAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['ignore_ce_masked','tolerant_too_high'].includes(mceAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['cmci_disabled_intel','bank_silenced'].includes(mceAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {mceAuditData.cpu_count} CPU · {i18n.t("integrations.mce.verdict")} : <b>{mceAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if mceAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['ignore_ce_masked','tolerant_too_high'].includes(mceAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['cmci_disabled_intel','bank_silenced'].includes(mceAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">check_interval=<b>{mceAuditData.cpu0_state.check_interval ?? '?'}s</b></span>
+              <span class="kv">ignore_ce=<b>{mceAuditData.cpu0_state.ignore_ce ?? '?'}</b></span>
+              <span class="kv">cmci_disabled=<b>{mceAuditData.cpu0_state.cmci_disabled ?? '?'}</b></span>
+              {#if mceAuditData.cpu0_state.tolerant !== undefined}
+                <span class="kv">tolerant=<b>{mceAuditData.cpu0_state.tolerant}</b></span>
+              {/if}
+              <span class="kv">banks={mceAuditData.cpu0_state.banks ? Object.keys(mceAuditData.cpu0_state.banks).length : 0}</span>
+            </div>
+            <p style="margin: 4px 0;">{mceAuditData.verdict.reason}</p>
+            {#if mceAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.mce.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{mceAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(mceAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #47.2 ACPI audit (UI sprint 38) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.acpi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.acpi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadAcpiAudit}>{i18n.t("integrations.acpi.refresh")}</button>
+          {#if acpiAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['gpe_storm','pcie_root_wakeup','quiet_profile_on_workstation'].includes(acpiAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.acpi.verdict")} : <b>{acpiAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if acpiAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['gpe_storm','pcie_root_wakeup','quiet_profile_on_workstation'].includes(acpiAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">profile=<b>{acpiAuditData.platform_profile.current ?? 'absent'}</b></span>
+              <span class="kv">pm_profile=<b>{acpiAuditData.platform_profile.pm_profile ?? '?'}</b></span>
+              <span class="kv">wakeups={acpiAuditData.wakeup_count} (enabled={acpiAuditData.wakeups_enabled.length})</span>
+              <span class="kv">gpes={acpiAuditData.gpe_count}</span>
+            </div>
+            {#if acpiAuditData.top_gpes.length > 0}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Top GPEs by count</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each acpiAuditData.top_gpes.slice(0, 5) as g}
+                    <li>{g.name}: count={g.count}, flag={g.flag}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{acpiAuditData.verdict.reason}</p>
+            {#if acpiAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.acpi.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{acpiAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(acpiAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #47.1 sched audit (UI sprint 38) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sched.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sched.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSchedAudit}>{i18n.t("integrations.sched.refresh")}</button>
+          {#if schedAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={schedAuditData.verdict.verdict === 'runqueue_wait_pileup' ? 'var(--warn)' :
+                             schedAuditData.verdict.verdict === 'sched_feat_hostile' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {schedAuditData.cpu_count} CPU · {i18n.t("integrations.sched.verdict")} : <b>{schedAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if schedAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        schedAuditData.verdict.verdict === 'runqueue_wait_pileup' ? 'var(--warn)' :
+                        schedAuditData.verdict.verdict === 'sched_feat_hostile' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">schedstat v={schedAuditData.schedstat_version ?? '?'}</span>
+              <span class="kv">features_readable=<b>{schedAuditData.features_readable}</b></span>
+            </div>
+            <details style="margin-top: 4px;">
+              <summary class="muted">Top CPUs by avg runqueue-wait</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each schedAuditData.top_cpus_by_wait.slice(0, 8) as c}
+                  <li>cpu{c.cpu}: avg_wait=<b
+                    style:color={c.avg_wait_ns >= 100000 ? 'var(--warn)' : 'inherit'}
+                  >{(c.avg_wait_ns / 1000).toFixed(1)} µs</b> over {c.pcount} slices</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{schedAuditData.verdict.reason}</p>
+            {#if schedAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sched.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{schedAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(schedAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
