@@ -1122,6 +1122,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_epb_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cooling-devices":
+                # R&D #42.3 — thermal cooling-device inventory
+                code, body = api.handle_cooling_devices_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
