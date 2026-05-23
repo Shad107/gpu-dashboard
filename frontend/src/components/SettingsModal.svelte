@@ -2222,6 +2222,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #71 (UI sprint 62) ────────────────────────────────────────────
+  let usbRoleSwitchAuditData       = $state<Awaited<ReturnType<typeof api.usbRoleSwitchAuditStatus>>       | null>(null);
+  let pageIdleTrackingAuditData    = $state<Awaited<ReturnType<typeof api.pageIdleTrackingAuditStatus>>    | null>(null);
+  let edacDimmCeTrendAuditData     = $state<Awaited<ReturnType<typeof api.edacDimmCeTrendAuditStatus>>     | null>(null);
+  let ataPortSataAuditData         = $state<Awaited<ReturnType<typeof api.ataPortSataAuditStatus>>         | null>(null);
+  async function loadUsbRoleSwitchAudit() {
+    try { usbRoleSwitchAuditData = await api.usbRoleSwitchAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPageIdleTrackingAudit() {
+    try { pageIdleTrackingAuditData = await api.pageIdleTrackingAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadEdacDimmCeTrendAudit() {
+    try { edacDimmCeTrendAuditData = await api.edacDimmCeTrendAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAtaPortSataAudit() {
+    try { ataPortSataAuditData = await api.ataPortSataAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2575,6 +2597,11 @@
       if (!uioGpioUserlandAuditData)            loadUioGpioUserlandAudit();
       if (!devcoredumpInventoryAuditData)       loadDevcoredumpInventoryAudit();
       if (!cxlDaxMemoryAuditData)               loadCxlDaxMemoryAudit();
+      // R&D #71 cards
+      if (!usbRoleSwitchAuditData)              loadUsbRoleSwitchAudit();
+      if (!pageIdleTrackingAuditData)           loadPageIdleTrackingAudit();
+      if (!edacDimmCeTrendAuditData)            loadEdacDimmCeTrendAudit();
+      if (!ataPortSataAuditData)                loadAtaPortSataAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -12260,6 +12287,148 @@
                              border-radius: 4px; overflow-x: auto;">{cxlDaxMemoryAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(cxlDaxMemoryAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #71.2 USB role switch (UI sprint 62) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.usbrole.title")}</h4>
+        <p class="muted">{i18n.t("integrations.usbrole.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUsbRoleSwitchAudit}>{i18n.t("integrations.usbrole.refresh")}</button>
+          {#if usbRoleSwitchAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={usbRoleSwitchAuditData.verdict.verdict === 'role_stuck_device' ? 'var(--err)' :
+                             ['role_flapping','unexpected_host_role'].includes(usbRoleSwitchAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              usb={usbRoleSwitchAuditData.usb_role_count} · typec={usbRoleSwitchAuditData.typec_port_count} · {i18n.t("integrations.usbrole.verdict")} : <b>{usbRoleSwitchAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if usbRoleSwitchAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        usbRoleSwitchAuditData.verdict.verdict === 'role_stuck_device' ? 'var(--err)' :
+                        ['role_flapping','unexpected_host_role'].includes(usbRoleSwitchAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{usbRoleSwitchAuditData.verdict.reason}</p>
+            {#if usbRoleSwitchAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.usbrole.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{usbRoleSwitchAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(usbRoleSwitchAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #71.3 page_idle tracking (UI sprint 62) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pageidle.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pageidle.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPageIdleTrackingAudit}>{i18n.t("integrations.pageidle.refresh")}</button>
+          {#if pageIdleTrackingAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pageIdleTrackingAuditData.verdict.verdict === 'page_idle_disabled' ? 'var(--err)' :
+                             ['bitmap_unreadable','requires_root'].includes(pageIdleTrackingAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              page-cluster={pageIdleTrackingAuditData.page_cluster ?? '?'} · {i18n.t("integrations.pageidle.verdict")} : <b>{pageIdleTrackingAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pageIdleTrackingAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pageIdleTrackingAuditData.verdict.verdict === 'page_idle_disabled' ? 'var(--err)' :
+                        ['bitmap_unreadable','requires_root'].includes(pageIdleTrackingAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pageIdleTrackingAuditData.verdict.reason}</p>
+            {#if pageIdleTrackingAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pageidle.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{pageIdleTrackingAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(pageIdleTrackingAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #71.4 EDAC per-DIMM CE trend (UI sprint 62) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.edacdimm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.edacdimm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadEdacDimmCeTrendAudit}>{i18n.t("integrations.edacdimm.refresh")}</button>
+          {#if edacDimmCeTrendAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={edacDimmCeTrendAuditData.verdict.verdict === 'dimm_ue_present' ? 'var(--err)' :
+                             ['dimm_ce_rising','dimm_ce_nonzero_steady'].includes(edacDimmCeTrendAuditData.verdict.verdict) ? 'var(--warn)' :
+                             edacDimmCeTrendAuditData.verdict.verdict === 'edac_unsupported' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {edacDimmCeTrendAuditData.dimm_count} DIMMs · {i18n.t("integrations.edacdimm.verdict")} : <b>{edacDimmCeTrendAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if edacDimmCeTrendAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        edacDimmCeTrendAuditData.verdict.verdict === 'dimm_ue_present' ? 'var(--err)' :
+                        ['dimm_ce_rising','dimm_ce_nonzero_steady'].includes(edacDimmCeTrendAuditData.verdict.verdict) ? 'var(--warn)' :
+                        edacDimmCeTrendAuditData.verdict.verdict === 'edac_unsupported' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{edacDimmCeTrendAuditData.verdict.reason}</p>
+            {#if edacDimmCeTrendAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.edacdimm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{edacDimmCeTrendAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(edacDimmCeTrendAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #71.1 ATA + SATA links (UI sprint 62) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ataport.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ataport.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadAtaPortSataAudit}>{i18n.t("integrations.ataport.refresh")}</button>
+          {#if ataPortSataAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ataPortSataAuditData.verdict.verdict === 'link_renegotiated_down' ? 'var(--err)' :
+                             ['excessive_errors','spd_limit_capped'].includes(ataPortSataAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {ataPortSataAuditData.port_count} ports · {ataPortSataAuditData.device_count} devs · {i18n.t("integrations.ataport.verdict")} : <b>{ataPortSataAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ataPortSataAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ataPortSataAuditData.verdict.verdict === 'link_renegotiated_down' ? 'var(--err)' :
+                        ['excessive_errors','spd_limit_capped'].includes(ataPortSataAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{ataPortSataAuditData.verdict.reason}</p>
+            {#if ataPortSataAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ataport.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ataPortSataAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ataPortSataAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

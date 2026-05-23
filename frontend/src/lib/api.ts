@@ -4289,4 +4289,78 @@ export const api = {
       nd_regions: Array<{ id: string; size: number | null; set_cookie: string | null }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #71 (UI sprint 62) ──
+  usbRoleSwitchAuditStatus: () =>
+    fetch("/api/usb-role-switch-audit").then(jsonOf<{
+      ok: boolean;
+      usb_role_present: boolean;
+      typec_present: boolean;
+      intel_xhci_sw_present: boolean;
+      usb_role_count: number;
+      usb_roles: Array<{ id: string; role: string | null }>;
+      typec_port_count: number;
+      typec_ports: Array<{
+        id: string;
+        data_role: string | null;
+        power_role: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  pageIdleTrackingAuditStatus: () =>
+    fetch("/api/page-idle-tracking-audit").then(jsonOf<{
+      ok: boolean;
+      page_idle_present: boolean;
+      bitmap_present: boolean;
+      bitmap_readable: boolean | null;
+      kpagecount_present: boolean;
+      kpagecount_readable: boolean | null;
+      page_cluster: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  edacDimmCeTrendAuditStatus: () =>
+    fetch("/api/edac-dimm-ce-trend-audit").then(jsonOf<{
+      ok: boolean;
+      edac_present: boolean;
+      mc_count: number;
+      dimm_count: number;
+      dimms: Array<{
+        mc: string;
+        dimm: string;
+        label: string | null;
+        size_mb: number | null;
+        ce_count: number | null;
+        ue_count: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  ataPortSataAuditStatus: () =>
+    fetch("/api/ata-port-sata-audit").then(jsonOf<{
+      ok: boolean;
+      ata_present: boolean;
+      port_count: number;
+      link_count: number;
+      device_count: number;
+      ports: Array<{ id: string; port_no: number | null }>;
+      links: Array<{
+        id: string;
+        sata_spd_text: string | null;
+        sata_spd: number | null;
+        sata_spd_limit_text: string | null;
+        sata_spd_limit: number | null;
+        hw_sata_spd_limit_text: string | null;
+        hw_sata_spd_limit: number | null;
+      }>;
+      devices: Array<{
+        id: string;
+        class: string | null;
+        dma_mode: string | null;
+        xfer_mode: string | null;
+        spdn_cnt: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
