@@ -3704,4 +3704,64 @@ export const api = {
       pcm_open_per_card: Record<string, boolean>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #62 (UI sprint 53) ──
+  devfreqAuditStatus: () =>
+    fetch("/api/devfreq-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      devices: Array<{
+        name: string; governor: string | null;
+        cur_freq: number | null; min_freq: number | null;
+        max_freq: number | null;
+        available_governors: string[];
+        target_freq: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  meiIntelMeAuditStatus: () =>
+    fetch("/api/mei-intel-me-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      devices: Array<{
+        id: string; fw_status: string | null;
+        fw_ver: string | null; hbm_ver: string | null;
+        dev_state: string | null;
+        tx_queue_limit: string | null;
+      }>;
+      dev_nodes: string[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  memoryHotplugAuditStatus: () =>
+    fetch("/api/memory-hotplug-audit").then(jsonOf<{
+      ok: boolean;
+      sys_memory_present: boolean;
+      block_size_bytes: number | null;
+      block_count: number;
+      blocks_sample: Array<{
+        id: string; state: string | null;
+        valid_zones: string | null; removable: number | null;
+      }>;
+      mem_total_kib: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  procTaskAffinityAuditStatus: () =>
+    fetch("/api/proc-task-affinity-audit").then(jsonOf<{
+      ok: boolean;
+      candidate_count: number;
+      candidates: Array<{
+        pid: number; comm: string;
+        Cpus_allowed_list: string | null;
+        Mems_allowed_list: string | null;
+        voluntary_ctxt_switches: number | null;
+        nonvoluntary_ctxt_switches: number | null;
+      }>;
+      gpu_count: number;
+      gpus: Array<{ bdf: string; local_cpulist: string;
+                    numa_node: number | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

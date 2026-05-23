@@ -2024,6 +2024,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #62 (UI sprint 53) ────────────────────────────────────────────
+  let devfreqAuditData           = $state<Awaited<ReturnType<typeof api.devfreqAuditStatus>>           | null>(null);
+  let meiIntelMeAuditData        = $state<Awaited<ReturnType<typeof api.meiIntelMeAuditStatus>>        | null>(null);
+  let memoryHotplugAuditData     = $state<Awaited<ReturnType<typeof api.memoryHotplugAuditStatus>>     | null>(null);
+  let procTaskAffinityAuditData  = $state<Awaited<ReturnType<typeof api.procTaskAffinityAuditStatus>>  | null>(null);
+  async function loadDevfreqAudit() {
+    try { devfreqAuditData = await api.devfreqAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadMeiIntelMeAudit() {
+    try { meiIntelMeAuditData = await api.meiIntelMeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadMemoryHotplugAudit() {
+    try { memoryHotplugAuditData = await api.memoryHotplugAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcTaskAffinityAudit() {
+    try { procTaskAffinityAuditData = await api.procTaskAffinityAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2332,6 +2354,11 @@
       // R&D #61 cards
       if (!regulatorAuditData)          loadRegulatorAudit();
       if (!alsaCodecDeepAuditData)      loadAlsaCodecDeepAudit();
+      // R&D #62 cards
+      if (!devfreqAuditData)            loadDevfreqAudit();
+      if (!meiIntelMeAuditData)         loadMeiIntelMeAudit();
+      if (!memoryHotplugAuditData)      loadMemoryHotplugAudit();
+      if (!procTaskAffinityAuditData)   loadProcTaskAffinityAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -10657,6 +10684,183 @@
                              border-radius: 4px; overflow-x: auto;">{alsaCodecDeepAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(alsaCodecDeepAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #62.1 devfreq (UI sprint 53) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.devfreq.title")}</h4>
+        <p class="muted">{i18n.t("integrations.devfreq.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDevfreqAudit}>{i18n.t("integrations.devfreq.refresh")}</button>
+          {#if devfreqAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['stuck_min','stuck_max'].includes(devfreqAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['userspace_governor','pinned_perf'].includes(devfreqAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {devfreqAuditData.device_count} devs · {i18n.t("integrations.devfreq.verdict")} : <b>{devfreqAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if devfreqAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['stuck_min','stuck_max'].includes(devfreqAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['userspace_governor','pinned_perf'].includes(devfreqAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if devfreqAuditData.devices.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Devices</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each devfreqAuditData.devices as d}
+                    <li>{d.name}: gov={d.governor ?? '?'} cur={d.cur_freq ?? '?'} min/max={d.min_freq ?? '?'}/{d.max_freq ?? '?'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{devfreqAuditData.verdict.reason}</p>
+            {#if devfreqAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.devfreq.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{devfreqAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(devfreqAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #62.2 Intel ME / MEI (UI sprint 53) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.mei.title")}</h4>
+        <p class="muted">{i18n.t("integrations.mei.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMeiIntelMeAudit}>{i18n.t("integrations.mei.refresh")}</button>
+          {#if meiIntelMeAuditData?.ok || meiIntelMeAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={meiIntelMeAuditData?.verdict.verdict === 'me_recovery_mode' ? 'var(--warn)' :
+                             ['me_disabled_but_present','fw_status_error'].includes(meiIntelMeAuditData?.verdict.verdict ?? '') ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {meiIntelMeAuditData?.device_count ?? 0} mei · {i18n.t("integrations.mei.verdict")} : <b>{meiIntelMeAuditData?.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if meiIntelMeAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        meiIntelMeAuditData.verdict.verdict === 'me_recovery_mode' ? 'var(--warn)' :
+                        ['me_disabled_but_present','fw_status_error'].includes(meiIntelMeAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if meiIntelMeAuditData.devices.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">MEI devices</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each meiIntelMeAuditData.devices as d}
+                    <li>{d.id}: fw_ver={d.fw_ver ?? '?'} dev_state={d.dev_state ?? '?'} fw_status={d.fw_status ?? '?'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{meiIntelMeAuditData.verdict.reason}</p>
+            {#if meiIntelMeAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.mei.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{meiIntelMeAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(meiIntelMeAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #62.3 Memory hotplug (UI sprint 53) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.memhp.title")}</h4>
+        <p class="muted">{i18n.t("integrations.memhp.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMemoryHotplugAudit}>{i18n.t("integrations.memhp.refresh")}</button>
+          {#if memoryHotplugAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['offline_blocks_present','non_removable_in_movable'].includes(memoryHotplugAuditData.verdict.verdict) ? 'var(--warn)' :
+                             memoryHotplugAuditData.verdict.verdict === 'movable_only_zone_skew' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {memoryHotplugAuditData.block_count} blocks · {i18n.t("integrations.memhp.verdict")} : <b>{memoryHotplugAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if memoryHotplugAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['offline_blocks_present','non_removable_in_movable'].includes(memoryHotplugAuditData.verdict.verdict) ? 'var(--warn)' :
+                        memoryHotplugAuditData.verdict.verdict === 'movable_only_zone_skew' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>block_size: {memoryHotplugAuditData.block_size_bytes ?? '?'} bytes · MemTotal: {memoryHotplugAuditData.mem_total_kib != null ? (memoryHotplugAuditData.mem_total_kib / 1024 / 1024).toFixed(1) + ' GiB' : '?'}</li>
+              {#if memoryHotplugAuditData.blocks_sample.length}
+                <li>Sample blocks: {memoryHotplugAuditData.blocks_sample.slice(0, 3).map(b => b.id + '(' + b.state + ')').join(', ')}</li>
+              {/if}
+            </ul>
+            <p style="margin: 4px 0;">{memoryHotplugAuditData.verdict.reason}</p>
+            {#if memoryHotplugAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.memhp.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{memoryHotplugAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(memoryHotplugAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #62.4 Task affinity (UI sprint 53) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.taskaff.title")}</h4>
+        <p class="muted">{i18n.t("integrations.taskaff.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcTaskAffinityAudit}>{i18n.t("integrations.taskaff.refresh")}</button>
+          {#if procTaskAffinityAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['affinity_excludes_local_numa','mems_allowed_remote_only'].includes(procTaskAffinityAuditData.verdict.verdict) ? 'var(--warn)' :
+                             procTaskAffinityAuditData.verdict.verdict === 'narrow_cpuset_high_nvcs' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procTaskAffinityAuditData.candidate_count} candidates · {i18n.t("integrations.taskaff.verdict")} : <b>{procTaskAffinityAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procTaskAffinityAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['affinity_excludes_local_numa','mems_allowed_remote_only'].includes(procTaskAffinityAuditData.verdict.verdict) ? 'var(--warn)' :
+                        procTaskAffinityAuditData.verdict.verdict === 'narrow_cpuset_high_nvcs' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Candidates + GPUs</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each procTaskAffinityAuditData.candidates as c}
+                  <li>{c.comm} (pid {c.pid}): cpus={c.Cpus_allowed_list ?? '?'} mems={c.Mems_allowed_list ?? '?'} nvcs={c.nonvoluntary_ctxt_switches ?? '?'}</li>
+                {/each}
+                {#each procTaskAffinityAuditData.gpus as g}
+                  <li>GPU {g.bdf}: local_cpulist={g.local_cpulist} numa={g.numa_node}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{procTaskAffinityAuditData.verdict.reason}</p>
+            {#if procTaskAffinityAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.taskaff.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{procTaskAffinityAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(procTaskAffinityAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
