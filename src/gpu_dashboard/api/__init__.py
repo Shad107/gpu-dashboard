@@ -483,3 +483,4 @@ from .kpageflags_audit import handle_kpageflags_audit_status  # noqa: F401,F811
 from .remoteproc_coprocessor_audit import handle_remoteproc_coprocessor_audit_status  # noqa: F401,F811
 from .uio_gpio_userland_audit import handle_uio_gpio_userland_audit_status  # noqa: F401,F811
 from .devcoredump_inventory_audit import handle_devcoredump_inventory_audit_status  # noqa: F401,F811
+from .cxl_dax_memory_audit import handle_cxl_dax_memory_audit_status  # noqa: F401,F811
