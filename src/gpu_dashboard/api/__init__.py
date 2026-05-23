@@ -442,3 +442,4 @@ from .cgroup_root_audit import handle_cgroup_root_audit_status  # noqa: F401,F81
 from .scsi_transport_audit import handle_scsi_transport_audit_status  # noqa: F401,F811
 from .alsa_cards_audit import handle_alsa_cards_audit_status  # noqa: F401,F811
 from .kernel_build_config_audit import handle_kernel_build_config_audit_status  # noqa: F401,F811
+from .dmi_smbios_audit import handle_dmi_smbios_audit_status  # noqa: F401,F811

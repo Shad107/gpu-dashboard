@@ -1447,6 +1447,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_kernel_build_config_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/dmi-smbios-audit":
+                # R&D #59.1 — DMI / SMBIOS / BIOS-age
+                code, body = api.handle_dmi_smbios_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
