@@ -772,6 +772,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_accounting_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/trim-audit":
+                # R&D #25.2 — TRIM / discard auditor
+                code, body = api.handle_trim_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
