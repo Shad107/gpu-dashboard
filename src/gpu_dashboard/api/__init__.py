@@ -311,3 +311,4 @@ from .trim_audit import handle_trim_audit_status  # noqa: F401,F811
 from .throttle_bits import handle_throttle_bits_status  # noqa: F401,F811
 from .retired_pages import handle_retired_pages_status  # noqa: F401,F811
 from .bug_report_prep import handle_bug_report_prep_status  # noqa: F401,F811
+from .pcie_width_watcher import handle_pcie_width_watcher_status  # noqa: F401,F811

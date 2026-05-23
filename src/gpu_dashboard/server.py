@@ -792,6 +792,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_bug_report_prep_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pcie-width-watcher":
+                # R&D #26.5 — silent PCIe link-width downgrade watcher
+                code, body = api.handle_pcie_width_watcher_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
