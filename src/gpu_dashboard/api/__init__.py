@@ -315,3 +315,4 @@ from .pcie_width_watcher import handle_pcie_width_watcher_status  # noqa: F401,F
 from .cuda_ctx_leak import handle_cuda_ctx_leak_status  # noqa: F401,F811
 from .proc_static_audit import handle_proc_static_audit_status  # noqa: F401,F811
 from .mem_bw_gauge import handle_mem_bw_gauge_status  # noqa: F401,F811
+from .power_envelope_drift import handle_power_envelope_drift_status  # noqa: F401,F811
