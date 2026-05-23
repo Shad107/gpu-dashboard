@@ -2005,6 +2005,13 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #60 (UI sprint 51) ────────────────────────────────────────────
+  let virtGuestDetectAuditData   = $state<Awaited<ReturnType<typeof api.virtGuestDetectAuditStatus>>   | null>(null);
+  async function loadVirtGuestDetectAudit() {
+    try { virtGuestDetectAuditData = await api.virtGuestDetectAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2308,6 +2315,8 @@
       if (!dmiSmbiosAuditData)          loadDmiSmbiosAudit();
       if (!iommuGroupsAuditData)        loadIommuGroupsAudit();
       if (!pidRlimitsAuditData)         loadPidRlimitsAudit();
+      // R&D #60 cards
+      if (!virtGuestDetectAuditData)    loadVirtGuestDetectAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -10496,6 +10505,51 @@
                              border-radius: 4px; overflow-x: auto;">{pidRlimitsAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(pidRlimitsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #60.4 Virt guest detection (UI sprint 51) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.virt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.virt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVirtGuestDetectAudit}>{i18n.t("integrations.virt.refresh")}</button>
+          {#if virtGuestDetectAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={virtGuestDetectAuditData.verdict.verdict.startsWith('running_as_kvm_guest_with_nvidia') ? 'var(--warn)' :
+                             ['nested_virt_detected','running_as_guest_generic'].includes(virtGuestDetectAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.virt.verdict")} : <b>{virtGuestDetectAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if virtGuestDetectAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        virtGuestDetectAuditData.verdict.verdict.startsWith('running_as_kvm_guest_with_nvidia') ? 'var(--warn)' :
+                        ['nested_virt_detected','running_as_guest_generic'].includes(virtGuestDetectAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>qemu_fw_cfg: {virtGuestDetectAuditData.qemu_fw_cfg_present ? 'yes' : 'no'}
+                · cpu hypervisor flag: {virtGuestDetectAuditData.cpu_hypervisor_flag ? 'yes' : 'no'}
+                · xen: {virtGuestDetectAuditData.xen_type ?? 'no'}
+              </li>
+              <li>virtio devices: {virtGuestDetectAuditData.virtio_device_count} · kvm loaded: {virtGuestDetectAuditData.kvm_loaded ? 'yes' : 'no'}</li>
+              {#if virtGuestDetectAuditData.nvidia_gpus.length}
+                <li>NVIDIA GPUs on PCI bus: {virtGuestDetectAuditData.nvidia_gpus.join(', ')}</li>
+              {/if}
+            </ul>
+            <p style="margin: 4px 0;">{virtGuestDetectAuditData.verdict.reason}</p>
+            {#if virtGuestDetectAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.virt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{virtGuestDetectAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(virtGuestDetectAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

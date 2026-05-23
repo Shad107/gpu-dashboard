@@ -3655,4 +3655,18 @@ export const api = {
                             "Max address space": [string, string] | null }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #60 (UI sprint 51) ──
+  virtGuestDetectAuditStatus: () =>
+    fetch("/api/virt-guest-detect-audit").then(jsonOf<{
+      ok: boolean;
+      qemu_fw_cfg_present: boolean;
+      xen_type: string | null;
+      cpu_hypervisor_flag: boolean;
+      virtio_device_count: number;
+      virtio_devices: string[];
+      kvm_loaded: boolean;
+      nvidia_gpus: string[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
