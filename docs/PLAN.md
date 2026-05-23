@@ -3,7 +3,7 @@
 Plan vivant. Mis à jour à chaque cycle du loop autonome.
 Source de vérité pour : ce qui est fait, en cours, à venir.
 
-**Last updated** : 2026-05-22 13:46 (R&D #5 COMPLETE — 3/3 priority shipped)
+**Last updated** : 2026-05-23 (R&D #41 survey opened — 8 angles, top 4 picked)
 **Latest commit** : `<head>`
 **Tests** : 704+ passing · **CI** : ✅ green
 

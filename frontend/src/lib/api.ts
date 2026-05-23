@@ -2517,4 +2517,67 @@ export const api = {
                             runtime: string; files: string[] }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #40 (UI sprint 31) ──
+  ksmAdvisorStatus: () =>
+    fetch("/api/ksm-advisor").then(jsonOf<{
+      ok: boolean;
+      state: Record<string, number | string>;
+      process_count: number;
+      processes: Array<{
+        pid: number; comm: string; cmdline_short: string;
+        ksm_merging_pages: number | null;
+        ksm_rmap_items: number | null;
+      }>;
+      host_form_factor: string | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  vmTuningDeepStatus: () =>
+    fetch("/api/vm-tuning-deep").then(jsonOf<{
+      ok: boolean;
+      knobs: Record<string, number>;
+      swap_active: boolean;
+      mem_total_kb: number | null;
+      mem_available_kb: number | null;
+      mem_pressure: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  gpuPciBindStatus: () =>
+    fetch("/api/gpu-pci-bind").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      slot_count: number;
+      devices: Array<{
+        bdf: string; vendor: string; device_id: string;
+        class_int: number; function_role: string;
+        driver: string | null; enable: number | null;
+        driver_override: string | null;
+        numa_node: number | null; iommu_group: number | null;
+        power_control: string | null;
+      }>;
+      slots: Record<string, string[]>;
+      drivers_present: Record<string, boolean>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  nicQueueAffinityStatus: () =>
+    fetch("/api/nic-queue-affinity").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      devices: Array<{
+        dev: string; operstate: string; carrier: number | null;
+        rx_queue_count: number; tx_queue_count: number;
+        mtu: number | null; tx_queue_len: number | null;
+        rx_queues: Array<{ name: string; rps_cpus_hex: string;
+                            rps_cpus: number[];
+                            rps_flow_cnt: number | null }>;
+        tx_queues: Array<{ name: string; xps_cpus_hex: string;
+                            xps_cpus: number[];
+                            bql_limit: number | null }>;
+      }>;
+      gpu_numa_cpus: number[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

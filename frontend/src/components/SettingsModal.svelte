@@ -1580,6 +1580,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #40 (UI sprint 31) ────────────────────────────────────────────
+  let ksmAdvisorData     = $state<Awaited<ReturnType<typeof api.ksmAdvisorStatus>>     | null>(null);
+  let vmTuningDeepData   = $state<Awaited<ReturnType<typeof api.vmTuningDeepStatus>>   | null>(null);
+  let gpuPciBindData     = $state<Awaited<ReturnType<typeof api.gpuPciBindStatus>>     | null>(null);
+  let nicQueueAffinityData = $state<Awaited<ReturnType<typeof api.nicQueueAffinityStatus>> | null>(null);
+  async function loadKsmAdvisor() {
+    try { ksmAdvisorData = await api.ksmAdvisorStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadVmTuningDeep() {
+    try { vmTuningDeepData = await api.vmTuningDeepStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadGpuPciBind() {
+    try { gpuPciBindData = await api.gpuPciBindStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNicQueueAffinity() {
+    try { nicQueueAffinityData = await api.nicQueueAffinityStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -1786,6 +1808,11 @@
       if (!coredumpData)       loadCoredump();
       if (!hostClassData)      loadHostClass();
       if (!sysctlDAuditData)   loadSysctlDAudit();
+      // R&D #40 cards
+      if (!ksmAdvisorData)      loadKsmAdvisor();
+      if (!vmTuningDeepData)    loadVmTuningDeep();
+      if (!gpuPciBindData)      loadGpuPciBind();
+      if (!nicQueueAffinityData) loadNicQueueAffinity();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -6506,6 +6533,194 @@
                              border-radius: 4px; overflow-x: auto;">{sysctlDAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(sysctlDAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #40.2 KSM advisor (UI sprint 31) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ksm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ksm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKsmAdvisor}>{i18n.t("integrations.ksm.refresh")}</button>
+          {#if ksmAdvisorData?.ok && ksmAdvisorData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ksmAdvisorData.verdict.verdict === 'hurting_inference' ? 'var(--warn)' :
+                             ksmAdvisorData.verdict.verdict === 'running_no_dedup' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.ksm.verdict")} : <b>{ksmAdvisorData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ksmAdvisorData?.ok && ksmAdvisorData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ksmAdvisorData.verdict.verdict === 'hurting_inference' ? 'var(--warn)' :
+                        ksmAdvisorData.verdict.verdict === 'running_no_dedup' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              <span class="kv">run=<b>{ksmAdvisorData.state.run ?? '—'}</b></span>
+              <span class="kv">pages_sharing=<b>{ksmAdvisorData.state.pages_sharing ?? 0}</b></span>
+              <span class="kv">merge_across_nodes=<b>{ksmAdvisorData.state.merge_across_nodes ?? '—'}</b></span>
+              <span class="kv">{ksmAdvisorData.process_count} LLM proc(s)</span>
+            </div>
+            <p style="margin: 4px 0;">{ksmAdvisorData.verdict.reason}</p>
+            {#if ksmAdvisorData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ksm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ksmAdvisorData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ksmAdvisorData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #40.3 deeper VM tuning (UI sprint 31) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vmd.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vmd.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVmTuningDeep}>{i18n.t("integrations.vmd.refresh")}</button>
+          {#if vmTuningDeepData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['zone_reclaim_conflict','nvme_swap_readahead_waste','late_kswapd_wake'].includes(vmTuningDeepData.verdict.verdict) ? 'var(--warn)' :
+                             vmTuningDeepData.verdict.verdict === 'defaults_on_tight_box' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.vmd.verdict")} : <b>{vmTuningDeepData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vmTuningDeepData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['zone_reclaim_conflict','nvme_swap_readahead_waste','late_kswapd_wake'].includes(vmTuningDeepData.verdict.verdict) ? 'var(--warn)' :
+                        vmTuningDeepData.verdict.verdict === 'defaults_on_tight_box' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              {#each Object.entries(vmTuningDeepData.knobs) as [k, v]}
+                <span class="kv">{k}=<b>{v}</b></span>
+              {/each}
+              {#if vmTuningDeepData.swap_active}
+                <span class="kv" style:color="var(--warn)">swap active</span>
+              {/if}
+              {#if vmTuningDeepData.mem_pressure !== null}
+                <span class="kv">mem={(vmTuningDeepData.mem_pressure * 100).toFixed(0)}%</span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{vmTuningDeepData.verdict.reason}</p>
+            {#if vmTuningDeepData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.vmd.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{vmTuningDeepData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(vmTuningDeepData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #40.1 GPU PCIe driver-binding (UI sprint 31) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.gpb.title")}</h4>
+        <p class="muted">{i18n.t("integrations.gpb.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadGpuPciBind}>{i18n.t("integrations.gpb.refresh")}</button>
+          {#if gpuPciBindData?.ok && gpuPciBindData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['stuck_or_orphaned','mixed_function_bind'].includes(gpuPciBindData.verdict.verdict) ? 'var(--warn)' :
+                             gpuPciBindData.verdict.verdict === 'vfio_bound' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {gpuPciBindData.device_count} dev · {i18n.t("integrations.gpb.verdict")} : <b>{gpuPciBindData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if gpuPciBindData?.ok && gpuPciBindData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['stuck_or_orphaned','mixed_function_bind'].includes(gpuPciBindData.verdict.verdict) ? 'var(--warn)' :
+                        gpuPciBindData.verdict.verdict === 'vfio_bound' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <table style="font-size: 0.85em; margin: 4px 0; border-collapse: collapse;">
+              <thead><tr style="text-align: left;">
+                <th style="padding-right: 8px;">BDF</th>
+                <th style="padding-right: 8px;">Role</th>
+                <th style="padding-right: 8px;">Device</th>
+                <th style="padding-right: 8px;">Driver</th>
+                <th style="padding-right: 8px;">Enable</th>
+                <th>IOMMU</th>
+              </tr></thead>
+              <tbody>
+              {#each gpuPciBindData.devices as d}
+                <tr>
+                  <td style="font-family: monospace; padding-right: 8px;">{d.bdf}</td>
+                  <td style="padding-right: 8px;">{d.function_role}</td>
+                  <td style="padding-right: 8px;">{d.device_id}</td>
+                  <td style="padding-right: 8px;"><b>{d.driver ?? '—'}</b></td>
+                  <td style="padding-right: 8px;">{d.enable ?? '—'}</td>
+                  <td>{d.iommu_group ?? '—'}</td>
+                </tr>
+              {/each}
+              </tbody>
+            </table>
+            <p style="margin: 4px 0;">{gpuPciBindData.verdict.reason}</p>
+            {#if gpuPciBindData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.gpb.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{gpuPciBindData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(gpuPciBindData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #40.4 NIC queue affinity (UI sprint 31) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nic.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nic.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNicQueueAffinity}>{i18n.t("integrations.nic.refresh")}</button>
+          {#if nicQueueAffinityData?.ok && nicQueueAffinityData.verdict}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['rps_misaligned_with_gpu_numa','multi_queue_no_rps','xps_single_cpu_bottleneck'].includes(nicQueueAffinityData.verdict.verdict) ? 'var(--warn)' :
+                             nicQueueAffinityData.verdict.verdict === 'rfs_disabled' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.nic.verdict")} : <b>{nicQueueAffinityData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nicQueueAffinityData?.ok && nicQueueAffinityData.verdict}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['rps_misaligned_with_gpu_numa','multi_queue_no_rps','xps_single_cpu_bottleneck'].includes(nicQueueAffinityData.verdict.verdict) ? 'var(--warn)' :
+                        nicQueueAffinityData.verdict.verdict === 'rfs_disabled' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+              {#each nicQueueAffinityData.devices as d}
+                <span class="kv">{d.dev}({d.operstate})
+                  rx=<b>{d.rx_queue_count}</b> tx=<b>{d.tx_queue_count}</b></span>
+              {/each}
+              {#if nicQueueAffinityData.gpu_numa_cpus.length > 0}
+                <span class="kv">GPU NUMA cores : {nicQueueAffinityData.gpu_numa_cpus.length}</span>
+              {/if}
+            </div>
+            <p style="margin: 4px 0;">{nicQueueAffinityData.verdict.reason}</p>
+            {#if nicQueueAffinityData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nic.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{nicQueueAffinityData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(nicQueueAffinityData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
