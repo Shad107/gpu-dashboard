@@ -1102,6 +1102,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_panic_policy_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/edac-ram-ecc":
+                # R&D #41.2 — EDAC RAM ECC + DIMM-label auditor
+                code, body = api.handle_edac_ram_ecc_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
