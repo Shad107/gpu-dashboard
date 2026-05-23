@@ -435,3 +435,4 @@ from .bdi_writeback_audit import handle_bdi_writeback_audit_status  # noqa: F401
 from .proc_crypto_audit import handle_proc_crypto_audit_status  # noqa: F401,F811
 from .wakeup_sources_audit import handle_wakeup_sources_audit_status  # noqa: F401,F811
 from .livepatch_audit import handle_livepatch_audit_status  # noqa: F401,F811
+from .backlight_pwm_audit import handle_backlight_pwm_audit_status  # noqa: F401,F811
