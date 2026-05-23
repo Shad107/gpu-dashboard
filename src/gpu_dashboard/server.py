@@ -1232,6 +1232,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sched_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/dma-audit":
+                # R&D #48.3 — DMA engine + SWIOTLB
+                code, body = api.handle_dma_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
