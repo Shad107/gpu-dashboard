@@ -1612,6 +1612,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_dt_memmap_firmware_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/fs-specific-tunables-audit":
+                # R&D #68.3 — ext4/xfs/f2fs per-FS error counters
+                code, body = api.handle_fs_specific_tunables_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
