@@ -1132,6 +1132,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hybrid_cpu_topo_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/file-locks-audit":
+                # R&D #42.1 — /proc/locks model-file contention
+                code, body = api.handle_file_locks_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
