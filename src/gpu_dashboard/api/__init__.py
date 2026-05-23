@@ -316,3 +316,4 @@ from .cuda_ctx_leak import handle_cuda_ctx_leak_status  # noqa: F401,F811
 from .proc_static_audit import handle_proc_static_audit_status  # noqa: F401,F811
 from .mem_bw_gauge import handle_mem_bw_gauge_status  # noqa: F401,F811
 from .power_envelope_drift import handle_power_envelope_drift_status  # noqa: F401,F811
+from .rebar_audit import handle_rebar_audit_status  # noqa: F401,F811
