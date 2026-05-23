@@ -1221,6 +1221,28 @@
     finally { vbiosRebaselining = false; }
   }
 
+  // ── R&D #21 (UI sprint 12) ────────────────────────────────────────────
+  let pstateAuditData   = $state<Awaited<ReturnType<typeof api.pstateAuditStatus>>     | null>(null);
+  let persistenceData   = $state<Awaited<ReturnType<typeof api.persistenceModeStatus>> | null>(null);
+  let gspStatusData     = $state<Awaited<ReturnType<typeof api.gspStatus>>             | null>(null);
+  let sdCacheData       = $state<Awaited<ReturnType<typeof api.sdCacheJanitorStatus>>  | null>(null);
+  async function loadPstateAudit() {
+    try { pstateAuditData = await api.pstateAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPersistence() {
+    try { persistenceData = await api.persistenceModeStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadGspStatus() {
+    try { gspStatusData = await api.gspStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSdCache() {
+    try { sdCacheData = await api.sdCacheJanitorStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   // Auto-load each card the first time the section is opened
   $effect(() => {
     if (modal.open && modal.section === "integrations") {
@@ -1266,6 +1288,11 @@
       if (!containerAuditData) loadContainerAudit();
       if (!upsRuntimeData)     loadUpsRuntime();
       if (!vbiosDriftData)     loadVbiosDrift();
+      // R&D #21 cards
+      if (!pstateAuditData)    loadPstateAudit();
+      if (!persistenceData)    loadPersistence();
+      if (!gspStatusData)      loadGspStatus();
+      if (!sdCacheData)        loadSdCache();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -3996,6 +4023,211 @@
               </p>
             </div>
           {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #21.1 P-state pinning advisor (UI sprint 12) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pstate.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pstate.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPstateAudit}>{i18n.t("integrations.pstate.refresh")}</button>
+          {#if pstateAuditData?.downshift_count !== undefined}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pstateAuditData.downshift_count > 0 ? 'var(--warn)' : 'var(--ok)'}>
+              {i18n.t("integrations.pstate.downshift_count")} : <b>{pstateAuditData.downshift_count}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pstateAuditData?.gpus && pstateAuditData.gpus.length > 0}
+          {#each pstateAuditData.gpus as g}
+            <div style="margin-top: 8px; padding: 8px;
+                        border-left: 3px solid {
+                          g.verdict.verdict === 'silent_downshift' ? 'var(--warn)' :
+                          g.verdict.verdict === 'clock_locked' ? 'var(--accent)' :
+                          'var(--ok)'};">
+              <div class="form-row" style="gap: 12px; flex-wrap: wrap;">
+                <b>GPU{g.index}</b>
+                {#if g.pstate !== null}
+                  <span class="kv" style="font-family: monospace;">P{g.pstate}</span>
+                {/if}
+                <span class="kv">{i18n.t("integrations.pstate.util")} : {g.util_pct ?? '—'}%</span>
+                <span class="kv">{i18n.t("integrations.pstate.clock")} : {g.clock_mhz ?? '—'} MHz</span>
+              </div>
+              <p style="margin: 4px 0;">
+                <b>{i18n.t("integrations.pstate.verdict")} : {g.verdict.verdict}</b> — {g.verdict.reason}
+              </p>
+              {#if g.verdict.advisory}
+                <code style="font-family: monospace; font-size: 0.85em;
+                              background: var(--bg-2); padding: 4px 8px;
+                              border-radius: 4px;">
+                  {g.verdict.advisory}
+                </code>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(g.verdict.advisory)}>📋</button>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- R&D #21.2 nvidia-persistenced check (UI sprint 12) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.persistence.title")}</h4>
+        <p class="muted">{i18n.t("integrations.persistence.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPersistence}>{i18n.t("integrations.persistence.refresh")}</button>
+          {#if persistenceData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={persistenceData.daemon_running ? 'var(--ok)' : 'var(--warn)'}>
+              {i18n.t("integrations.persistence.daemon")} :
+              {persistenceData.daemon_running
+                ? i18n.t("integrations.persistence.daemon_up")
+                : i18n.t("integrations.persistence.daemon_off")}
+            </span>
+          {/if}
+        </div>
+        {#if persistenceData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={persistenceData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        persistenceData.verdict.verdict === 'off' ? 'var(--warn)' :
+                        'var(--accent)'}>
+            <b>{persistenceData.verdict.verdict}</b> — {persistenceData.verdict.reason}
+          </p>
+          {#if persistenceData.verdict.advisory}
+            <div class="form-row" style="gap: 8px; margin-top: 6px;">
+              <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                            font-family: monospace; font-size: 0.85em;
+                            border-radius: 4px;">{persistenceData.verdict.advisory}</code>
+              <button class="btn btn-small"
+                      onclick={() => copyToClipboard(persistenceData?.verdict?.advisory ?? "")}>📋</button>
+            </div>
+          {/if}
+        {/if}
+        {#if persistenceData?.gpus && persistenceData.gpus.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <tbody>
+              {#each persistenceData.gpus as g}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px;">GPU{g.index} {g.name}</td>
+                  <td style="padding: 4px;"
+                      style:color={g.enabled ? 'var(--ok)' : 'var(--warn)'}>{g.raw}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #21.3 GSP-RM surfacer (UI sprint 12) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.gsp.title")}</h4>
+        <p class="muted">{i18n.t("integrations.gsp.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadGspStatus}>{i18n.t("integrations.gsp.refresh")}</button>
+          {#if gspStatusData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={gspStatusData.event_count > 0 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.gsp.event_count")} : <b>{gspStatusData.event_count}</b>
+            </span>
+            <span class="kv">{i18n.t("integrations.gsp.in_use")} :
+              <b>{gspStatusData.verdict.gsp_in_use ? '✓' : '—'}</b>
+            </span>
+          {/if}
+        </div>
+        {#if gspStatusData?.verdict}
+          <p style="margin-top: 6px;"
+             style:color={gspStatusData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        gspStatusData.verdict.verdict === 'crashed' ? 'var(--warn)' :
+                        gspStatusData.verdict.verdict === 'fallback' ? 'var(--accent)' :
+                        'var(--text-dim)'}>
+            <b>{i18n.t("integrations.gsp.verdict")} : {gspStatusData.verdict.verdict}</b> — {gspStatusData.verdict.reason}
+          </p>
+          {#if gspStatusData.verdict.recovery}
+            <div class="form-row" style="gap: 8px; margin-top: 6px;">
+              <code style="flex: 1; padding: 6px 10px; background: var(--bg-2);
+                            font-family: monospace; font-size: 0.85em;
+                            border-radius: 4px;">{gspStatusData.verdict.recovery}</code>
+              <button class="btn btn-small"
+                      onclick={() => copyToClipboard(gspStatusData?.verdict?.recovery ?? "")}>📋</button>
+            </div>
+          {/if}
+        {/if}
+        {#if gspStatusData?.gsp_events && gspStatusData.gsp_events.length > 0}
+          <h5 style="margin: 10px 0 4px 0;">{i18n.t("integrations.gsp.recent")}
+            ({gspStatusData.gsp_events.length} of {gspStatusData.event_count})</h5>
+          <table style="width:100%; font-size:0.82em; border-collapse: collapse;">
+            <tbody>
+              {#each gspStatusData.gsp_events.slice(-6).reverse() as e}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; color: var(--warn);">{e.kind}</td>
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.85em;">{e.line}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+
+      <!-- R&D #21.5 SD / ComfyUI cache janitor (UI sprint 12) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sdcache.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sdcache.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSdCache}>{i18n.t("integrations.sdcache.refresh")}</button>
+          {#if sdCacheData}
+            <span class="kv" style="margin-left: 12px;">
+              {i18n.t("integrations.sdcache.total")} :
+              <b>{sdCacheData.total_gib} GiB</b>
+            </span>
+            <span class="kv"
+                  style:color={sdCacheData.cold_gib > 5 ? 'var(--warn)' : 'var(--text-dim)'}>
+              {i18n.t("integrations.sdcache.cold", { days: String(sdCacheData.cold_age_days) })} :
+              <b>{sdCacheData.cold_gib} GiB</b>
+            </span>
+          {/if}
+        </div>
+        {#if sdCacheData && sdCacheData.scanned_count === 0}
+          <p class="muted" style="margin-top: 6px;">{i18n.t("integrations.sdcache.no_dirs")}</p>
+        {/if}
+        {#if sdCacheData?.per_dir && sdCacheData.per_dir.length > 0}
+          <table style="width:100%; font-size:0.88em; border-collapse: collapse; margin-top: 8px;">
+            <thead>
+              <tr style="text-align:left; color: var(--text-dim); border-bottom: 1px solid var(--border);">
+                <th style="padding: 4px;">path</th>
+                <th style="padding: 4px;">total</th>
+                <th style="padding: 4px;">cold</th>
+                <th style="padding: 4px;">files</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each sdCacheData.per_dir as d}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace; font-size: 0.82em;">{d.path.replace(/^\/home\/[^/]+/, "~")}</td>
+                  <td style="padding: 4px;">{(d.total_mib / 1024).toFixed(2)} GiB</td>
+                  <td style="padding: 4px;"
+                      style:color={d.cold_mib > 1024 ? 'var(--warn)' : 'var(--text-dim)'}>
+                    {(d.cold_mib / 1024).toFixed(2)} GiB
+                  </td>
+                  <td style="padding: 4px;">{d.file_count}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+        {#if sdCacheData?.top_candidates && sdCacheData.top_candidates.length > 0}
+          <h5 style="margin: 10px 0 4px 0;">{i18n.t("integrations.sdcache.top_candidates")}</h5>
+          <table style="width:100%; font-size:0.82em; border-collapse: collapse;">
+            <tbody>
+              {#each sdCacheData.top_candidates.slice(0, 10) as c}
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 4px; font-family: monospace;">{c.path.replace(/^\/home\/[^/]+/, "~")}</td>
+                  <td style="padding: 4px;">{c.size_mib} MiB</td>
+                  <td style="padding: 4px; color: var(--text-dim);">{c.age_days} d</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
         {/if}
       </div>
 

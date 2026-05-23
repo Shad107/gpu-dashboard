@@ -1305,4 +1305,77 @@ export const api = {
   vbiosDriftRebaseline: () =>
     fetch("/api/vbios-drift/rebaseline", { method: "POST" })
       .then(jsonOf<{ ok: boolean; baseline_size?: number }>),
+
+  // ── R&D #21 (UI sprint 12) ─────────────────────────────────────────────
+  pstateAuditStatus: () =>
+    fetch("/api/pstate-audit").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      downshift_count?: number;
+      gpus: Array<{
+        index: number; name: string;
+        pstate: number | null;
+        util_pct: number | null;
+        clock_mhz: number | null;
+        clock_max_mhz: number | null;
+        power_w: number | null;
+        power_limit_w: number | null;
+        clock_locked: boolean;
+        verdict: {
+          verdict: "ok" | "silent_downshift" | "power_save_idle"
+                   | "clock_locked" | "unknown";
+          reason: string;
+          advisory: string;
+        };
+      }>;
+    }>),
+
+  persistenceModeStatus: () =>
+    fetch("/api/persistence-mode").then(jsonOf<{
+      ok: boolean;
+      reason?: string;
+      daemon_running: boolean;
+      daemon_socket?: string;
+      daemon_pid?: number | null;
+      gpus: Array<{ index: number; name: string;
+                     enabled: boolean; raw: string }>;
+      verdict?: { verdict: "ok" | "partial" | "off"
+                            | "off_with_manual" | "unknown";
+                   reason: string; advisory: string };
+    }>),
+
+  gspStatus: () =>
+    fetch("/api/gsp-status").then(jsonOf<{
+      ok: boolean;
+      gpus: Array<{ index: number; name: string;
+                     gsp_firmware_version: string }>;
+      gsp_events: Array<{ kind: string; line: string }>;
+      event_count: number;
+      verdict: {
+        verdict: "ok" | "warn" | "fallback" | "crashed" | "unknown";
+        reason: string;
+        recovery: string;
+        gsp_in_use: boolean;
+      };
+    }>),
+
+  sdCacheJanitorStatus: () =>
+    fetch("/api/sd-cache-janitor").then(jsonOf<{
+      ok: boolean;
+      scanned_dirs: string[];
+      scanned_count: number;
+      total_bytes: number;
+      total_gib: number;
+      cold_bytes: number;
+      cold_gib: number;
+      cold_age_days: number;
+      per_dir: Array<{
+        path: string;
+        total_mib: number; cold_mib: number;
+        file_count: number; cold_count: number;
+        oldest_ts: number | null;
+        sample_old_files: Array<{ path: string; size_mib: number; age_days: number }>;
+      }>;
+      top_candidates: Array<{ path: string; size_mib: number; age_days: number }>;
+    }>),
 };
