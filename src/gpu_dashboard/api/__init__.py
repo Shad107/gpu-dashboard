@@ -455,3 +455,4 @@ from .proc_task_affinity_audit import handle_proc_task_affinity_audit_status  # 
 from .rfkill_bluetooth_audit import handle_rfkill_bluetooth_audit_status  # noqa: F401,F811
 from .leds_class_audit import handle_leds_class_audit_status  # noqa: F401,F811
 from .binfmt_misc_audit import handle_binfmt_misc_audit_status  # noqa: F401,F811
+from .ptp_clock_audit import handle_ptp_clock_audit_status  # noqa: F401,F811
