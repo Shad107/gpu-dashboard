@@ -1342,6 +1342,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_rapl_power_cap_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ima-integrity-audit":
+                # R&D #53.3 — IMA / EVM / SecureBoot auditor
+                code, body = api.handle_ima_integrity_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
