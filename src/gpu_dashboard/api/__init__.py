@@ -381,3 +381,4 @@ from .cooling_devices import handle_cooling_devices_status  # noqa: F401,F811
 from .hybrid_cpu_topo import handle_hybrid_cpu_topo_status  # noqa: F401,F811
 from .file_locks_audit import handle_file_locks_audit_status  # noqa: F401,F811
 from .nic_ring_audit import handle_nic_ring_audit_status  # noqa: F401,F811
+from .irq_rates_audit import handle_irq_rates_audit_status  # noqa: F401,F811
