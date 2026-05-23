@@ -1307,6 +1307,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_perf_pmu_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/iomem-pci-audit":
+                # R&D #51.2 — IOMEM + PCI BAR + reset method auditor
+                code, body = api.handle_iomem_pci_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
