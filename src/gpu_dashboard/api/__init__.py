@@ -411,3 +411,4 @@ from .sock_pool_audit import handle_sock_pool_audit_status  # noqa: F401,F811
 from .iio_sensor_audit import handle_iio_sensor_audit_status  # noqa: F401,F811
 from .drm_audit import handle_drm_audit_status  # noqa: F401,F811
 from .cgroup_memevents_audit import handle_cgroup_memevents_audit_status  # noqa: F401,F811
+from .power_supply_audit import handle_power_supply_audit_status  # noqa: F401,F811
