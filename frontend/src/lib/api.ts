@@ -3267,4 +3267,69 @@ export const api = {
       nvidia_runtime_version: string | null;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #53 (UI sprint 44) ──
+  psiPressureAuditStatus: () =>
+    fetch("/api/psi-pressure-audit").then(jsonOf<{
+      ok: boolean;
+      pressure: {
+        available: boolean;
+        cpu?: { some?: { avg10: number; avg60: number; avg300: number; total: number } };
+        memory?: { some?: { avg10: number; avg60: number; avg300: number; total: number };
+                   full?: { avg10: number; avg60: number; avg300: number; total: number } };
+        io?: { some?: { avg10: number; avg60: number; avg300: number; total: number };
+               full?: { avg10: number; avg60: number; avg300: number; total: number } };
+      };
+      sched_schedstats: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  cpuVulnerabilitiesAuditStatus: () =>
+    fetch("/api/cpu-vulnerabilities-audit").then(jsonOf<{
+      ok: boolean;
+      vuln_count?: number;
+      vulnerabilities: Record<string, string>;
+      smt: { active: string | null; control: string | null };
+      cmdline_off_tokens: string[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  imaIntegrityAuditStatus: () =>
+    fetch("/api/ima-integrity-audit").then(jsonOf<{
+      ok: boolean;
+      ima: {
+        available: boolean;
+        runtime_measurements_count?: number | null;
+        violations?: number | null;
+        policy_readable?: boolean;
+        policy_lines?: number | null;
+        permission_denied?: boolean;
+      };
+      evm: { available: boolean; armed?: boolean | null;
+             raw?: string | null; permission_denied?: boolean };
+      secureboot: { present: boolean; enabled: boolean | null };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  raplPowerCapAuditStatus: () =>
+    fetch("/api/rapl-power-cap-audit").then(jsonOf<{
+      ok: boolean;
+      zone_count?: number;
+      zones: Array<{
+        id: string; name: string | null; enabled: number | null;
+        constraint_0_power_limit_uw: number | null;
+        constraint_0_time_window_us: number | null;
+        constraint_1_power_limit_uw: number | null;
+        max_power_range_uw: number | null;
+      }>;
+      cpu_count?: number;
+      governor_histogram: Record<string, number>;
+      turbo: {
+        cpufreq_boost: number | null;
+        intel_pstate_no_turbo?: number | null;
+        intel_pstate_max_perf_pct?: number | null;
+        intel_pstate_energy_efficiency?: number | null;
+      };
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

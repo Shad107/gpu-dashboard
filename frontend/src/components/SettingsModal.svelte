@@ -1856,6 +1856,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #53 (UI sprint 44) ────────────────────────────────────────────
+  let psiPressureAuditData       = $state<Awaited<ReturnType<typeof api.psiPressureAuditStatus>>       | null>(null);
+  let cpuVulnerabilitiesAuditData= $state<Awaited<ReturnType<typeof api.cpuVulnerabilitiesAuditStatus>>| null>(null);
+  let imaIntegrityAuditData      = $state<Awaited<ReturnType<typeof api.imaIntegrityAuditStatus>>      | null>(null);
+  let raplPowerCapAuditData      = $state<Awaited<ReturnType<typeof api.raplPowerCapAuditStatus>>      | null>(null);
+  async function loadPsiPressureAudit() {
+    try { psiPressureAuditData = await api.psiPressureAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpuVulnerabilitiesAudit() {
+    try { cpuVulnerabilitiesAuditData = await api.cpuVulnerabilitiesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadImaIntegrityAudit() {
+    try { imaIntegrityAuditData = await api.imaIntegrityAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadRaplPowerCapAudit() {
+    try { raplPowerCapAuditData = await api.raplPowerCapAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2125,6 +2147,11 @@
       if (!ksmAuditData)              loadKsmAudit();
       if (!i2cSmbusAuditData)         loadI2cSmbusAudit();
       if (!moduleIntegrityAuditData)  loadModuleIntegrityAudit();
+      // R&D #53 cards
+      if (!psiPressureAuditData)        loadPsiPressureAudit();
+      if (!cpuVulnerabilitiesAuditData) loadCpuVulnerabilitiesAudit();
+      if (!imaIntegrityAuditData)       loadImaIntegrityAudit();
+      if (!raplPowerCapAuditData)       loadRaplPowerCapAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -9110,6 +9137,197 @@
                              border-radius: 4px; overflow-x: auto;">{moduleIntegrityAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(moduleIntegrityAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #53.1 PSI pressure (UI sprint 44) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.psi.title")}</h4>
+        <p class="muted">{i18n.t("integrations.psi.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPsiPressureAudit}>{i18n.t("integrations.psi.refresh")}</button>
+          {#if psiPressureAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['memory_full_stall_high','psi_disabled'].includes(psiPressureAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['io_some_stall_high','cpu_some_stall_elevated'].includes(psiPressureAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.psi.verdict")} : <b>{psiPressureAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if psiPressureAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['memory_full_stall_high','psi_disabled'].includes(psiPressureAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['io_some_stall_high','cpu_some_stall_elevated'].includes(psiPressureAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">avg10 / avg60 / avg300</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#if psiPressureAuditData.pressure.cpu?.some}
+                  <li>cpu.some: {psiPressureAuditData.pressure.cpu.some.avg10.toFixed(2)}% / {psiPressureAuditData.pressure.cpu.some.avg60.toFixed(2)}% / {psiPressureAuditData.pressure.cpu.some.avg300.toFixed(2)}%</li>
+                {/if}
+                {#if psiPressureAuditData.pressure.memory?.full}
+                  <li>memory.full: {psiPressureAuditData.pressure.memory.full.avg10.toFixed(2)}% / {psiPressureAuditData.pressure.memory.full.avg60.toFixed(2)}% / {psiPressureAuditData.pressure.memory.full.avg300.toFixed(2)}%</li>
+                {/if}
+                {#if psiPressureAuditData.pressure.io?.some}
+                  <li>io.some: {psiPressureAuditData.pressure.io.some.avg10.toFixed(2)}% / {psiPressureAuditData.pressure.io.some.avg60.toFixed(2)}% / {psiPressureAuditData.pressure.io.some.avg300.toFixed(2)}%</li>
+                {/if}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{psiPressureAuditData.verdict.reason}</p>
+            {#if psiPressureAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.psi.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{psiPressureAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(psiPressureAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #53.2 CPU vulnerabilities (UI sprint 44) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cpuvuln.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cpuvuln.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuVulnerabilitiesAudit}>{i18n.t("integrations.cpuvuln.refresh")}</button>
+          {#if cpuVulnerabilitiesAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['vulnerable_unmitigated','mitigation_disabled_via_cmdline','smt_forced_on_with_vuln'].includes(cpuVulnerabilitiesAuditData.verdict.verdict) ? 'var(--warn)' :
+                             cpuVulnerabilitiesAuditData.verdict.verdict === 'partial_mitigation' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cpuVulnerabilitiesAuditData.vuln_count ?? 0} tracked · {i18n.t("integrations.cpuvuln.verdict")} : <b>{cpuVulnerabilitiesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuVulnerabilitiesAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['vulnerable_unmitigated','mitigation_disabled_via_cmdline','smt_forced_on_with_vuln'].includes(cpuVulnerabilitiesAuditData.verdict.verdict) ? 'var(--warn)' :
+                        cpuVulnerabilitiesAuditData.verdict.verdict === 'partial_mitigation' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Vulnerabilities</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each Object.entries(cpuVulnerabilitiesAuditData.vulnerabilities) as [vname, vstate]}
+                  <li>{vname}: <span style:color={vstate.startsWith('Vulnerable') ? 'var(--warn)' : (vstate.startsWith('Mitigation') ? 'var(--accent)' : 'inherit')}>{vstate}</span></li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">SMT active={cpuVulnerabilitiesAuditData.smt.active ?? '?'} · cmdline-off={cpuVulnerabilitiesAuditData.cmdline_off_tokens.join(',') || 'none'}</p>
+            <p style="margin: 4px 0;">{cpuVulnerabilitiesAuditData.verdict.reason}</p>
+            {#if cpuVulnerabilitiesAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cpuvuln.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuVulnerabilitiesAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuVulnerabilitiesAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #53.3 IMA / SecureBoot (UI sprint 44) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ima.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ima.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadImaIntegrityAudit}>{i18n.t("integrations.ima.refresh")}</button>
+          {#if imaIntegrityAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['evm_disabled_secureboot_on','ima_violations_nonzero'].includes(imaIntegrityAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['ima_no_policy_loaded','measurement_log_stagnant','requires_root'].includes(imaIntegrityAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.ima.verdict")} : <b>{imaIntegrityAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if imaIntegrityAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['evm_disabled_secureboot_on','ima_violations_nonzero'].includes(imaIntegrityAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['ima_no_policy_loaded','measurement_log_stagnant','requires_root'].includes(imaIntegrityAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+              <li>SecureBoot: {imaIntegrityAuditData.secureboot.present ? (imaIntegrityAuditData.secureboot.enabled ? 'enabled' : 'disabled') : 'absent'}</li>
+              <li>IMA: {imaIntegrityAuditData.ima.available ? 'available' : 'absent'}
+                {#if imaIntegrityAuditData.ima.violations != null} · violations={imaIntegrityAuditData.ima.violations}{/if}
+                {#if imaIntegrityAuditData.ima.runtime_measurements_count != null} · measurements={imaIntegrityAuditData.ima.runtime_measurements_count}{/if}
+              </li>
+              <li>EVM: {imaIntegrityAuditData.evm.available ? (imaIntegrityAuditData.evm.armed ? 'armed' : 'off') : 'absent'}</li>
+            </ul>
+            <p style="margin: 4px 0;">{imaIntegrityAuditData.verdict.reason}</p>
+            {#if imaIntegrityAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ima.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{imaIntegrityAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(imaIntegrityAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #53.4 RAPL + cpufreq (UI sprint 44) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rapl.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rapl.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRaplPowerCapAudit}>{i18n.t("integrations.rapl.refresh")}</button>
+          {#if raplPowerCapAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={raplPowerCapAuditData.verdict.verdict === 'pl1_below_tdp_throttling' ? 'var(--warn)' :
+                             ['governor_powersave_mixed','turbo_disabled_silently','psys_cap_active'].includes(raplPowerCapAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {raplPowerCapAuditData.zone_count ?? 0} RAPL · {raplPowerCapAuditData.cpu_count ?? 0} CPUs · {i18n.t("integrations.rapl.verdict")} : <b>{raplPowerCapAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if raplPowerCapAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        raplPowerCapAuditData.verdict.verdict === 'pl1_below_tdp_throttling' ? 'var(--warn)' :
+                        ['governor_powersave_mixed','turbo_disabled_silently','psys_cap_active'].includes(raplPowerCapAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">RAPL zones + governors</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each raplPowerCapAuditData.zones as z}
+                  <li>{z.id} ({z.name ?? '?'}):
+                    {#if z.constraint_0_power_limit_uw} PL1={(z.constraint_0_power_limit_uw/1e6).toFixed(1)}W{/if}
+                    {#if z.max_power_range_uw} / max={(z.max_power_range_uw/1e6).toFixed(1)}W{/if}
+                  </li>
+                {/each}
+                {#each Object.entries(raplPowerCapAuditData.governor_histogram) as [gov, n]}
+                  <li>governor: {gov} × {n}</li>
+                {/each}
+                {#if raplPowerCapAuditData.turbo.intel_pstate_no_turbo != null}
+                  <li>intel_pstate.no_turbo = {raplPowerCapAuditData.turbo.intel_pstate_no_turbo}</li>
+                {/if}
+                {#if raplPowerCapAuditData.turbo.cpufreq_boost != null}
+                  <li>cpufreq.boost = {raplPowerCapAuditData.turbo.cpufreq_boost}</li>
+                {/if}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{raplPowerCapAuditData.verdict.reason}</p>
+            {#if raplPowerCapAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.rapl.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{raplPowerCapAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(raplPowerCapAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
