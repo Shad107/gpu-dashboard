@@ -1517,6 +1517,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ptp_clock_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/mei-hdcp-pxp-audit":
+                # R&D #64.2 — MEI HDCP + PXP subclasses
+                code, body = api.handle_mei_hdcp_pxp_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
