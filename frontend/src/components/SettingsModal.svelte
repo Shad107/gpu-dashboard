@@ -2046,6 +2046,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #63 (UI sprint 54) ────────────────────────────────────────────
+  let rfkillBluetoothAuditData   = $state<Awaited<ReturnType<typeof api.rfkillBluetoothAuditStatus>>   | null>(null);
+  let ledsClassAuditData         = $state<Awaited<ReturnType<typeof api.ledsClassAuditStatus>>         | null>(null);
+  let binfmtMiscAuditData        = $state<Awaited<ReturnType<typeof api.binfmtMiscAuditStatus>>        | null>(null);
+  let ptpClockAuditData          = $state<Awaited<ReturnType<typeof api.ptpClockAuditStatus>>          | null>(null);
+  async function loadRfkillBluetoothAudit() {
+    try { rfkillBluetoothAuditData = await api.rfkillBluetoothAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadLedsClassAudit() {
+    try { ledsClassAuditData = await api.ledsClassAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBinfmtMiscAudit() {
+    try { binfmtMiscAuditData = await api.binfmtMiscAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPtpClockAudit() {
+    try { ptpClockAuditData = await api.ptpClockAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2359,6 +2381,11 @@
       if (!meiIntelMeAuditData)         loadMeiIntelMeAudit();
       if (!memoryHotplugAuditData)      loadMemoryHotplugAudit();
       if (!procTaskAffinityAuditData)   loadProcTaskAffinityAudit();
+      // R&D #63 cards
+      if (!rfkillBluetoothAuditData)    loadRfkillBluetoothAudit();
+      if (!ledsClassAuditData)          loadLedsClassAudit();
+      if (!binfmtMiscAuditData)         loadBinfmtMiscAudit();
+      if (!ptpClockAuditData)           loadPtpClockAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -10861,6 +10888,176 @@
                              border-radius: 4px; overflow-x: auto;">{procTaskAffinityAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(procTaskAffinityAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #63.1 rfkill + Bluetooth (UI sprint 54) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rfkill.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rfkill.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRfkillBluetoothAudit}>{i18n.t("integrations.rfkill.refresh")}</button>
+          {#if rfkillBluetoothAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={rfkillBluetoothAuditData.verdict.verdict === 'hw_kill_blocks' ? 'var(--warn)' :
+                             ['soft_block_stuck','bt_autosuspend_churn'].includes(rfkillBluetoothAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {rfkillBluetoothAuditData.rfkill_count} rfkill / {rfkillBluetoothAuditData.bluetooth_count} BT · {i18n.t("integrations.rfkill.verdict")} : <b>{rfkillBluetoothAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if rfkillBluetoothAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        rfkillBluetoothAuditData.verdict.verdict === 'hw_kill_blocks' ? 'var(--warn)' :
+                        ['soft_block_stuck','bt_autosuspend_churn'].includes(rfkillBluetoothAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{rfkillBluetoothAuditData.verdict.reason}</p>
+            {#if rfkillBluetoothAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.rfkill.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{rfkillBluetoothAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(rfkillBluetoothAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #63.3 LEDs (UI sprint 54) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.leds.title")}</h4>
+        <p class="muted">{i18n.t("integrations.leds.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLedsClassAudit}>{i18n.t("integrations.leds.refresh")}</button>
+          {#if ledsClassAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ledsClassAuditData.verdict.verdict === 'led_stuck_on' ? 'var(--warn)' :
+                             ['led_flap','led_orphan'].includes(ledsClassAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {ledsClassAuditData.led_count} LEDs · {i18n.t("integrations.leds.verdict")} : <b>{ledsClassAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ledsClassAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ledsClassAuditData.verdict.verdict === 'led_stuck_on' ? 'var(--warn)' :
+                        ['led_flap','led_orphan'].includes(ledsClassAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if ledsClassAuditData.leds.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">LEDs</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each ledsClassAuditData.leds as l}
+                    <li>{l.id}: trigger={l.active_trigger ?? '?'} brightness={l.brightness ?? '?'}/{l.max_brightness ?? '?'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{ledsClassAuditData.verdict.reason}</p>
+            {#if ledsClassAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.leds.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ledsClassAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ledsClassAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #63.4 binfmt_misc (UI sprint 54) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.binfmt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.binfmt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBinfmtMiscAudit}>{i18n.t("integrations.binfmt.refresh")}</button>
+          {#if binfmtMiscAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={binfmtMiscAuditData.verdict.verdict === 'qemu_user_interp_stale' ? 'var(--warn)' :
+                             ['duplicate_registration','globally_disabled_with_buildx'].includes(binfmtMiscAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              status={binfmtMiscAuditData.status_text ?? 'n/a'} · {binfmtMiscAuditData.registration_count ?? 0} regs · {i18n.t("integrations.binfmt.verdict")} : <b>{binfmtMiscAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if binfmtMiscAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        binfmtMiscAuditData.verdict.verdict === 'qemu_user_interp_stale' ? 'var(--warn)' :
+                        ['duplicate_registration','globally_disabled_with_buildx'].includes(binfmtMiscAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if binfmtMiscAuditData.registrations?.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">Registrations</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each binfmtMiscAuditData.registrations as r}
+                    <li>{r.name}: enabled={r.enabled ? 'yes' : 'no'} interpreter={r.interpreter ?? '?'} flags={r.flags ?? '-'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{binfmtMiscAuditData.verdict.reason}</p>
+            {#if binfmtMiscAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.binfmt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{binfmtMiscAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(binfmtMiscAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #63.2 PTP clocks (UI sprint 54) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ptp.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ptp.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPtpClockAudit}>{i18n.t("integrations.ptp.refresh")}</button>
+          {#if ptpClockAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ptpClockAuditData.verdict.verdict === 'max_adjustment_zero' ? 'var(--warn)' :
+                             ptpClockAuditData.verdict.verdict === 'phc_unused' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {ptpClockAuditData.phc_count} PHCs · {i18n.t("integrations.ptp.verdict")} : <b>{ptpClockAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ptpClockAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ptpClockAuditData.verdict.verdict === 'max_adjustment_zero' ? 'var(--warn)' :
+                        ptpClockAuditData.verdict.verdict === 'phc_unused' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            {#if ptpClockAuditData.phcs.length}
+              <details style="margin-top: 4px;">
+                <summary class="muted">PHCs</summary>
+                <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                  {#each ptpClockAuditData.phcs as p}
+                    <li>{p.id} ({p.clock_name ?? '?'}): max_adj={p.max_adjustment ?? '?'} pins={p.n_pins ?? '?'} pps={p.pps_available ?? '?'}</li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
+            <p style="margin: 4px 0;">{ptpClockAuditData.verdict.reason}</p>
+            {#if ptpClockAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ptp.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ptpClockAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ptpClockAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

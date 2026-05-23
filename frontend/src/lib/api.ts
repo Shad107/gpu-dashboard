@@ -3764,4 +3764,71 @@ export const api = {
                     numa_node: number | null }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #63 (UI sprint 54) ──
+  rfkillBluetoothAuditStatus: () =>
+    fetch("/api/rfkill-bluetooth-audit").then(jsonOf<{
+      ok: boolean;
+      rfkill_count: number;
+      rfkills: Array<{
+        id: string; name: string | null; type: string | null;
+        state: number | null; soft: number | null;
+        hard: number | null; persistent: number | null;
+      }>;
+      bluetooth_count: number;
+      bluetooths: Array<{
+        id: string; address: string | null; type: string | null;
+        power_control: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  ledsClassAuditStatus: () =>
+    fetch("/api/leds-class-audit").then(jsonOf<{
+      ok: boolean;
+      led_count: number;
+      leds: Array<{
+        id: string; trigger_raw: string | null;
+        active_trigger: string | null;
+        brightness: number | null;
+        max_brightness: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  binfmtMiscAuditStatus: () =>
+    fetch("/api/binfmt-misc-audit").then(jsonOf<{
+      ok: boolean;
+      binfmt_present: boolean;
+      status_text?: string;
+      registration_count?: number;
+      registrations?: Array<{
+        name: string;
+        enabled: boolean | null;
+        interpreter: string | null;
+        flags: string | null;
+        offset: number | null;
+        magic: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  ptpClockAuditStatus: () =>
+    fetch("/api/ptp-clock-audit").then(jsonOf<{
+      ok: boolean;
+      sys_ptp_present: boolean;
+      phc_count: number;
+      phcs: Array<{
+        id: string; clock_name: string | null;
+        max_adjustment: number | null;
+        n_alarm: number | null;
+        n_ext_ts: number | null;
+        n_per_out: number | null;
+        n_pins: number | null;
+        pps_available: number | null;
+      }>;
+      dev_perms: Array<{ name: string; mode: number;
+                          uid: number; gid: number }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
