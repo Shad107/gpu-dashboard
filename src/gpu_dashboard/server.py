@@ -877,6 +877,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_dmi_bios_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nvme-iosched":
+                # R&D #30.3 — NVMe I/O scheduler tuner
+                code, body = api.handle_nvme_iosched_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
