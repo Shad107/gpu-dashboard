@@ -1337,6 +1337,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_vulnerabilities_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/rapl-power-cap-audit":
+                # R&D #53.4 — RAPL + cpufreq throttling auditor
+                code, body = api.handle_rapl_power_cap_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
