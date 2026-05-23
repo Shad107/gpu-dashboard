@@ -3831,4 +3831,69 @@ export const api = {
                           uid: number; gid: number }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #64 (UI sprint 55) ──
+  meiHdcpPxpAuditStatus: () =>
+    fetch("/api/mei-hdcp-pxp-audit").then(jsonOf<{
+      ok: boolean;
+      hdcp_count: number;
+      hdcp_clients: Array<{ id: string; state: string | null;
+                             fw_status: string | null;
+                             fw_ver: string | null;
+                             hbm_ver: string | null }>;
+      pxp_count: number;
+      pxp_clients: Array<{ id: string; state: string | null;
+                            fw_status: string | null;
+                            fw_ver: string | null;
+                            hbm_ver: string | null }>;
+      intel_display_gpus: string[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  firmwareEddMmcAuditStatus: () =>
+    fetch("/api/firmware-edd-mmc-audit").then(jsonOf<{
+      ok: boolean;
+      edd_count: number;
+      edd_entries: Array<{
+        id: string; mbr_signature: string | null;
+        host_bus: string | null; interface: string | null;
+      }>;
+      mmc_count: number;
+      mmc_devices: Array<{
+        id: string; type: string | null; name: string | null;
+        manfid: string | null; oemid: string | null;
+        serial: string | null; life_time: string | null;
+      }>;
+      mmc_host_count: number;
+      mmc_hosts: Array<{ id: string; clock: number | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  devlinkSmartnicAuditStatus: () =>
+    fetch("/api/devlink-smartnic-audit").then(jsonOf<{
+      ok: boolean;
+      link_count: number;
+      status_histogram: Record<string, number>;
+      links_sample: Array<{
+        id: string; status: string | null;
+        runtime_pm: number | null;
+        auto_remove_on: string | null;
+        sync_state_only: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  procNsMountinfoAuditStatus: () =>
+    fetch("/api/proc-ns-mountinfo-audit").then(jsonOf<{
+      ok: boolean;
+      self_ns: Record<string, string | null>;
+      candidate_count: number;
+      candidates: Array<{
+        pid: number; comm: string;
+        ns: Record<string, string | null>;
+        has_nvidia: boolean;
+      }>;
+      host_has_nvidia: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

@@ -2068,6 +2068,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #64 (UI sprint 55) ────────────────────────────────────────────
+  let meiHdcpPxpAuditData        = $state<Awaited<ReturnType<typeof api.meiHdcpPxpAuditStatus>>        | null>(null);
+  let firmwareEddMmcAuditData    = $state<Awaited<ReturnType<typeof api.firmwareEddMmcAuditStatus>>    | null>(null);
+  let devlinkSmartnicAuditData   = $state<Awaited<ReturnType<typeof api.devlinkSmartnicAuditStatus>>   | null>(null);
+  let procNsMountinfoAuditData   = $state<Awaited<ReturnType<typeof api.procNsMountinfoAuditStatus>>   | null>(null);
+  async function loadMeiHdcpPxpAudit() {
+    try { meiHdcpPxpAuditData = await api.meiHdcpPxpAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFirmwareEddMmcAudit() {
+    try { firmwareEddMmcAuditData = await api.firmwareEddMmcAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDevlinkSmartnicAudit() {
+    try { devlinkSmartnicAuditData = await api.devlinkSmartnicAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcNsMountinfoAudit() {
+    try { procNsMountinfoAuditData = await api.procNsMountinfoAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2386,6 +2408,11 @@
       if (!ledsClassAuditData)          loadLedsClassAudit();
       if (!binfmtMiscAuditData)         loadBinfmtMiscAudit();
       if (!ptpClockAuditData)           loadPtpClockAudit();
+      // R&D #64 cards
+      if (!meiHdcpPxpAuditData)         loadMeiHdcpPxpAudit();
+      if (!firmwareEddMmcAuditData)     loadFirmwareEddMmcAudit();
+      if (!devlinkSmartnicAuditData)    loadDevlinkSmartnicAudit();
+      if (!procNsMountinfoAuditData)    loadProcNsMountinfoAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -11058,6 +11085,155 @@
                              border-radius: 4px; overflow-x: auto;">{ptpClockAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(ptpClockAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #64.2 MEI HDCP/PXP (UI sprint 55) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.mei2.title")}</h4>
+        <p class="muted">{i18n.t("integrations.mei2.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMeiHdcpPxpAudit}>{i18n.t("integrations.mei2.refresh")}</button>
+          {#if meiHdcpPxpAuditData?.ok || meiHdcpPxpAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={meiHdcpPxpAuditData?.verdict.verdict === 'pxp_disabled_with_gpu' ? 'var(--warn)' :
+                             ['hdcp_fw_mismatch','subclasses_no_consumer'].includes(meiHdcpPxpAuditData?.verdict.verdict ?? '') ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              hdcp={meiHdcpPxpAuditData?.hdcp_count ?? 0} pxp={meiHdcpPxpAuditData?.pxp_count ?? 0} · {i18n.t("integrations.mei2.verdict")} : <b>{meiHdcpPxpAuditData?.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if meiHdcpPxpAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        meiHdcpPxpAuditData.verdict.verdict === 'pxp_disabled_with_gpu' ? 'var(--warn)' :
+                        ['hdcp_fw_mismatch','subclasses_no_consumer'].includes(meiHdcpPxpAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{meiHdcpPxpAuditData.verdict.reason}</p>
+            {#if meiHdcpPxpAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.mei2.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{meiHdcpPxpAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(meiHdcpPxpAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #64.4 EDD + MMC (UI sprint 55) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.eddmmc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.eddmmc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFirmwareEddMmcAudit}>{i18n.t("integrations.eddmmc.refresh")}</button>
+          {#if firmwareEddMmcAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={firmwareEddMmcAuditData.verdict.verdict === 'emmc_wear_imminent' ? 'var(--warn)' :
+                             ['edd_mbr_drift','mmc_clock_legacy'].includes(firmwareEddMmcAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              edd={firmwareEddMmcAuditData.edd_count} mmc={firmwareEddMmcAuditData.mmc_count} · {i18n.t("integrations.eddmmc.verdict")} : <b>{firmwareEddMmcAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if firmwareEddMmcAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        firmwareEddMmcAuditData.verdict.verdict === 'emmc_wear_imminent' ? 'var(--warn)' :
+                        ['edd_mbr_drift','mmc_clock_legacy'].includes(firmwareEddMmcAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{firmwareEddMmcAuditData.verdict.reason}</p>
+            {#if firmwareEddMmcAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.eddmmc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{firmwareEddMmcAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(firmwareEddMmcAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #64.1 devlink (UI sprint 55) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.devlink.title")}</h4>
+        <p class="muted">{i18n.t("integrations.devlink.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDevlinkSmartnicAudit}>{i18n.t("integrations.devlink.refresh")}</button>
+          {#if devlinkSmartnicAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={devlinkSmartnicAuditData.verdict.verdict === 'supplier_not_ready' ? 'var(--warn)' :
+                             ['consumer_unbinding','dormant_links_present'].includes(devlinkSmartnicAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {devlinkSmartnicAuditData.link_count} links · {i18n.t("integrations.devlink.verdict")} : <b>{devlinkSmartnicAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if devlinkSmartnicAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        devlinkSmartnicAuditData.verdict.verdict === 'supplier_not_ready' ? 'var(--warn)' :
+                        ['consumer_unbinding','dormant_links_present'].includes(devlinkSmartnicAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">Status histogram: {Object.entries(devlinkSmartnicAuditData.status_histogram).map(([k, v]) => k + '=' + v).join(', ')}</p>
+            <p style="margin: 4px 0;">{devlinkSmartnicAuditData.verdict.reason}</p>
+            {#if devlinkSmartnicAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.devlink.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{devlinkSmartnicAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(devlinkSmartnicAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #64.3 proc_ns_mountinfo (UI sprint 55) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.procns.title")}</h4>
+        <p class="muted">{i18n.t("integrations.procns.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcNsMountinfoAudit}>{i18n.t("integrations.procns.refresh")}</button>
+          {#if procNsMountinfoAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['cuda_pid_in_different_mnt_ns','netns_split_for_nccl'].includes(procNsMountinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                             procNsMountinfoAuditData.verdict.verdict === 'nvidia_uvm_hidden_by_bind' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {procNsMountinfoAuditData.candidate_count} candidates · {i18n.t("integrations.procns.verdict")} : <b>{procNsMountinfoAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procNsMountinfoAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['cuda_pid_in_different_mnt_ns','netns_split_for_nccl'].includes(procNsMountinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                        procNsMountinfoAuditData.verdict.verdict === 'nvidia_uvm_hidden_by_bind' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <details style="margin-top: 4px;">
+              <summary class="muted">Candidates + namespaces</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;">
+                {#each procNsMountinfoAuditData.candidates as c}
+                  <li>{c.comm} (pid {c.pid}): mnt={c.ns.mnt ?? '?'} net={c.ns.net ?? '?'} has_nvidia={c.has_nvidia ? 'yes' : 'no'}</li>
+                {/each}
+              </ul>
+            </details>
+            <p style="margin: 4px 0;">{procNsMountinfoAuditData.verdict.reason}</p>
+            {#if procNsMountinfoAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.procns.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{procNsMountinfoAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(procNsMountinfoAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
