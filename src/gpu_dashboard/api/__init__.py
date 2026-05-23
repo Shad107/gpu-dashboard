@@ -327,3 +327,4 @@ from .kmod_params import handle_kmod_params_status  # noqa: F401,F811
 from .thermal_slowdown_kind import handle_thermal_slowdown_kind_status  # noqa: F401,F811
 from .d3cold_policy import handle_d3cold_policy_status  # noqa: F401,F811
 from .rlimit_audit import handle_rlimit_audit_status  # noqa: F401,F811
+from .dmi_bios import handle_dmi_bios_status  # noqa: F401,F811

@@ -872,6 +872,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_rlimit_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/dmi-bios":
+                # R&D #30.5 — DMI/BIOS revision tracker
+                code, body = api.handle_dmi_bios_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
