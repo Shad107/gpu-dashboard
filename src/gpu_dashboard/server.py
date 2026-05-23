@@ -1302,6 +1302,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_typec_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/perf-pmu-audit":
+                # R&D #51.3 — perf PMU inventory
+                code, body = api.handle_perf_pmu_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
