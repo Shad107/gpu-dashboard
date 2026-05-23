@@ -732,6 +732,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_driver_flavor_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-deep-state":
+                # R&D #23.6 — /proc/driver/nvidia/gpus deep-state diff
+                code, body = api.handle_proc_deep_state_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
