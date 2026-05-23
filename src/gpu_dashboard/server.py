@@ -1107,6 +1107,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_edac_ram_ecc_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/inotify-audit":
+                # R&D #41.4 — inotify/fanotify watch auditor
+                code, body = api.handle_inotify_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

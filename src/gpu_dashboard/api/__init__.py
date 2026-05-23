@@ -374,3 +374,4 @@ from .gpu_pci_bind import handle_gpu_pci_bind_status  # noqa: F401,F811
 from .nic_queue_affinity import handle_nic_queue_affinity_status  # noqa: F401,F811
 from .panic_policy import handle_panic_policy_status  # noqa: F401,F811
 from .edac_ram_ecc import handle_edac_ram_ecc_status  # noqa: F401,F811
+from .inotify_audit import handle_inotify_audit_status  # noqa: F401,F811
