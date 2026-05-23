@@ -330,3 +330,4 @@ from .rlimit_audit import handle_rlimit_audit_status  # noqa: F401,F811
 from .dmi_bios import handle_dmi_bios_status  # noqa: F401,F811
 from .nvme_iosched import handle_nvme_iosched_status  # noqa: F401,F811
 from .iommu_groups import handle_iommu_groups_status  # noqa: F401,F811
+from .msi_inventory import handle_msi_inventory_status  # noqa: F401,F811

@@ -887,6 +887,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_iommu_groups_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/msi-inventory":
+                # R&D #30.1 — MSI-X vector inventory
+                code, body = api.handle_msi_inventory_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
