@@ -1277,6 +1277,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sock_pool_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/iio-sensor-audit":
+                # R&D #50.3 — IIO sensor inventory
+                code, body = api.handle_iio_sensor_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
