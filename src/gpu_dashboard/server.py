@@ -967,6 +967,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_sched_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/oomd":
+                # R&D #34.3 — systemd-oomd kill-event correlator
+                code, body = api.handle_oomd_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
