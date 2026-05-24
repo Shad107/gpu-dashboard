@@ -1862,6 +1862,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_bpf_program_inventory_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cgroup-io-stat-audit":
+                # R&D #81.3 — per-cgroup io.stat + io.pressure
+                code, body = api.handle_cgroup_io_stat_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
