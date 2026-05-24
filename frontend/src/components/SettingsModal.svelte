@@ -2481,6 +2481,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #83 (UI sprint 74) ────────────────────────────────────────────
+  let blockIntegrityAuditData         = $state<Awaited<ReturnType<typeof api.blockIntegrityAuditStatus>>         | null>(null);
+  let clkSummaryAuditData             = $state<Awaited<ReturnType<typeof api.clkSummaryAuditStatus>>             | null>(null);
+  let nfsdStatsAuditData              = $state<Awaited<ReturnType<typeof api.nfsdStatsAuditStatus>>              | null>(null);
+  let driDebugfsAuditData             = $state<Awaited<ReturnType<typeof api.driDebugfsAuditStatus>>             | null>(null);
+  async function loadBlockIntegrityAudit() {
+    try { blockIntegrityAuditData = await api.blockIntegrityAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadClkSummaryAudit() {
+    try { clkSummaryAuditData = await api.clkSummaryAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNfsdStatsAudit() {
+    try { nfsdStatsAuditData = await api.nfsdStatsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDriDebugfsAudit() {
+    try { driDebugfsAuditData = await api.driDebugfsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2893,6 +2915,11 @@
       if (!cpuDmaLatencyQosAuditData)           loadCpuDmaLatencyQosAudit();
       if (!rcuExpeditedAuditData)               loadRcuExpeditedAudit();
       if (!pageOwnerFragAuditData)              loadPageOwnerFragAudit();
+      // R&D #83 cards
+      if (!blockIntegrityAuditData)             loadBlockIntegrityAudit();
+      if (!clkSummaryAuditData)                 loadClkSummaryAudit();
+      if (!nfsdStatsAuditData)                  loadNfsdStatsAudit();
+      if (!driDebugfsAuditData)                 loadDriDebugfsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -14461,6 +14488,188 @@
                     ? "# page_owner is on but not being collected — remove from cmdline\nsudo nano /etc/default/grub\n# Remove 'page_owner=on' from GRUB_CMDLINE_LINUX_DEFAULT\nsudo update-grub\nsudo reboot"
                   : pageOwnerFragAuditData.verdict.verdict === 'requires_root'
                     ? "# /sys/kernel/debug is mode-700 — re-run dashboard as root\nsudo systemctl restart gpu-dashboard.service\n# Or one-shot inspection :\nsudo cat /sys/kernel/debug/extfrag/extfrag_index"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #83.1 Block integrity (T10-PI) (UI sprint 74) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.blockintegrity.title")}</h4>
+        <p class="muted">{i18n.t("integrations.blockintegrity.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBlockIntegrityAudit}>{i18n.t("integrations.blockintegrity.refresh")}</button>
+          {#if blockIntegrityAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={blockIntegrityAuditData.verdict.verdict === 'integrity_disabled_on_capable' ? 'var(--err)' :
+                             blockIntegrityAuditData.verdict.verdict === 'integrity_unused' ? 'var(--warn)' :
+                             blockIntegrityAuditData.verdict.verdict === 'asymmetric_protection' ? 'var(--accent)' :
+                             blockIntegrityAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {blockIntegrityAuditData.device_count} dev · {blockIntegrityAuditData.capable_count} PI-capable · {i18n.t("integrations.blockintegrity.verdict")} : <b>{blockIntegrityAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if blockIntegrityAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        blockIntegrityAuditData.verdict.verdict === 'integrity_disabled_on_capable' ? 'var(--err)' :
+                        blockIntegrityAuditData.verdict.verdict === 'integrity_unused' ? 'var(--warn)' :
+                        blockIntegrityAuditData.verdict.verdict === 'asymmetric_protection' ? 'var(--accent)' :
+                        blockIntegrityAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{blockIntegrityAuditData.verdict.reason}</p>
+            {#if blockIntegrityAuditData.verdict.verdict !== 'ok' && blockIntegrityAuditData.verdict.verdict !== 'n/a'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.blockintegrity.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  blockIntegrityAuditData.verdict.verdict === 'integrity_disabled_on_capable'
+                    ? "# Enable kernel-side CRC verification on PI-capable drive\nfor dev in /sys/block/*/integrity/read_verify; do\n  if [ \"$(cat $(dirname $dev)/format)\" != \"none\" ]; then\n    echo 1 | sudo tee $dev\n  fi\ndone\n# Persist via udev rule (varies by distro)"
+                  : blockIntegrityAuditData.verdict.verdict === 'integrity_unused'
+                    ? "# PI hardware sitting unused — to arm it requires a low-level\n# format (DESTRUCTIVE). Backup first, then:\nsudo nvme id-ns /dev/nvme0n1 -H | grep 'LBA Format'\n# Pick an LBA format with metadata-size > 0 (PI variant):\nsudo nvme format /dev/nvme0n1 --lbaf=<N> --pi=1\n# WARNING: this erases the namespace"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #83.2 clk_summary (UI sprint 74) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.clksummary.title")}</h4>
+        <p class="muted">{i18n.t("integrations.clksummary.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadClkSummaryAudit}>{i18n.t("integrations.clksummary.refresh")}</button>
+          {#if clkSummaryAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={clkSummaryAuditData.verdict.verdict === 'orphan_clock_enabled' ? 'var(--err)' :
+                             clkSummaryAuditData.verdict.verdict === 'unused_clock_enabled' ? 'var(--warn)' :
+                             clkSummaryAuditData.verdict.verdict === 'prepare_enable_drift' ? 'var(--accent)' :
+                             clkSummaryAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {clkSummaryAuditData.clock_count} clock(s) · {i18n.t("integrations.clksummary.verdict")} : <b>{clkSummaryAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if clkSummaryAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        clkSummaryAuditData.verdict.verdict === 'orphan_clock_enabled' ? 'var(--err)' :
+                        clkSummaryAuditData.verdict.verdict === 'unused_clock_enabled' ? 'var(--warn)' :
+                        clkSummaryAuditData.verdict.verdict === 'prepare_enable_drift' ? 'var(--accent)' :
+                        clkSummaryAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{clkSummaryAuditData.verdict.reason}</p>
+            {#if clkSummaryAuditData.verdict.verdict !== 'ok' && clkSummaryAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.clksummary.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  clkSummaryAuditData.verdict.verdict === 'orphan_clock_enabled'
+                    ? "# Orphan clocks left enabled — inspect tree as root\nsudo cat /sys/kernel/debug/clk/clk_summary | head -100\n# Look for lines with 'deviceless' or 'no_consumer' AND enable > 0\n# Most fixes are driver bugs ; the kernel won't let you disable\n# a clock from sysfs.  File a kernel/driver bug with the trace."
+                  : clkSummaryAuditData.verdict.verdict === 'unused_clock_enabled'
+                    ? "# Top-level clocks left enabled with no consumer — drifting\n# Same as orphan: read-only inspection, driver-side fix needed\nsudo cat /sys/kernel/debug/clk/clk_summary | grep deviceless | head -20"
+                  : clkSummaryAuditData.verdict.verdict === 'prepare_enable_drift'
+                    ? "# prepare > enable significantly — clk framework half-state\nsudo cat /sys/kernel/debug/clk/clk_summary | awk 'NR > 3 && $3 > $2 + 1' | head -20\n# Usually indicates a driver init path that called clk_prepare\n# without matching clk_enable.  Driver bug ; report upstream."
+                  : clkSummaryAuditData.verdict.verdict === 'requires_root'
+                    ? "# debugfs mode-700 — re-run dashboard as root for clock inventory\nsudo systemctl restart gpu-dashboard.service\nsudo cat /sys/kernel/debug/clk/clk_summary | head"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #83.3 nfsd stats (UI sprint 74) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nfsd.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nfsd.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNfsdStatsAudit}>{i18n.t("integrations.nfsd.refresh")}</button>
+          {#if nfsdStatsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={nfsdStatsAuditData.verdict.verdict === 'reply_cache_overflow' ? 'var(--err)' :
+                             nfsdStatsAuditData.verdict.verdict === 'threads_starved' ? 'var(--warn)' :
+                             nfsdStatsAuditData.verdict.verdict === 'thread_count_low' ? 'var(--accent)' :
+                             nfsdStatsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              threads={nfsdStatsAuditData.threads ?? 0} · {nfsdStatsAuditData.pool_count} pool(s) · {i18n.t("integrations.nfsd.verdict")} : <b>{nfsdStatsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nfsdStatsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        nfsdStatsAuditData.verdict.verdict === 'reply_cache_overflow' ? 'var(--err)' :
+                        nfsdStatsAuditData.verdict.verdict === 'threads_starved' ? 'var(--warn)' :
+                        nfsdStatsAuditData.verdict.verdict === 'thread_count_low' ? 'var(--accent)' :
+                        nfsdStatsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{nfsdStatsAuditData.verdict.reason}</p>
+            {#if nfsdStatsAuditData.verdict.verdict !== 'ok' && nfsdStatsAuditData.verdict.verdict !== 'n/a'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nfsd.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  nfsdStatsAuditData.verdict.verdict === 'reply_cache_overflow'
+                    ? "# DRC overflowing — bump max entries\necho 65536 | sudo tee /proc/fs/nfsd/max_drc_entries 2>/dev/null\n# Or raise via /etc/nfs.conf [nfsd] section :\n#   max-cached-replies = 65536\nsudo systemctl restart nfs-server"
+                  : nfsdStatsAuditData.verdict.verdict === 'threads_starved'
+                    ? "# Threads saturated — raise the count\n# Inspect current load :\ncat /proc/fs/nfsd/pool_stats\ncat /proc/fs/nfsd/threads\n# Bump (e.g., to 2x CPUs) :\necho $(( $(nproc) * 2 )) | sudo tee /proc/fs/nfsd/threads\n# Persist via /etc/nfs.conf : [nfsd] threads=N"
+                  : nfsdStatsAuditData.verdict.verdict === 'thread_count_low'
+                    ? "# nfsd thread count too low for the CPU count\necho $(nproc) | sudo tee /proc/fs/nfsd/threads\n# Persist :\nsudo sed -i 's/^# *threads=.*/threads='$(nproc)'/' /etc/nfs.conf\nsudo systemctl restart nfs-server"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #83.4 DRI debugfs (UI sprint 74) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dridebugfs.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dridebugfs.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDriDebugfsAudit}>{i18n.t("integrations.dridebugfs.refresh")}</button>
+          {#if driDebugfsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={driDebugfsAuditData.verdict.verdict === 'orphaned_gem_handles' ? 'var(--err)' :
+                             driDebugfsAuditData.verdict.verdict === 'zombie_drm_clients' ? 'var(--warn)' :
+                             driDebugfsAuditData.verdict.verdict === 'multiple_master_clients' ? 'var(--accent)' :
+                             driDebugfsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {driDebugfsAuditData.minor_count} minor(s) · {i18n.t("integrations.dridebugfs.verdict")} : <b>{driDebugfsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if driDebugfsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        driDebugfsAuditData.verdict.verdict === 'orphaned_gem_handles' ? 'var(--err)' :
+                        driDebugfsAuditData.verdict.verdict === 'zombie_drm_clients' ? 'var(--warn)' :
+                        driDebugfsAuditData.verdict.verdict === 'multiple_master_clients' ? 'var(--accent)' :
+                        driDebugfsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{driDebugfsAuditData.verdict.reason}</p>
+            {#if driDebugfsAuditData.verdict.verdict !== 'ok' && driDebugfsAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dridebugfs.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  driDebugfsAuditData.verdict.verdict === 'orphaned_gem_handles'
+                    ? "# Renderer leaked GEM handles — inspect and reboot the renderer\nsudo cat /sys/kernel/debug/dri/0/clients\nsudo cat /sys/kernel/debug/dri/0/gem_names | wc -l\n# If a Wayland compositor:\nsystemctl --user restart gnome-shell.service  2>/dev/null || \\\n  systemctl --user restart plasma-kwin-x11.service"
+                  : driDebugfsAuditData.verdict.verdict === 'zombie_drm_clients'
+                    ? "# Zombie DRM clients — kernel holds context for dead PIDs\nsudo cat /sys/kernel/debug/dri/0/clients\n# Only kernel-side fix is to rmmod + modprobe the GPU driver,\n# which logs everyone out of their desktop session.\n# Plan downtime ; a reboot is usually simpler."
+                  : driDebugfsAuditData.verdict.verdict === 'multiple_master_clients'
+                    ? "# > 1 master client — two compositors fighting for KMS\nsudo cat /sys/kernel/debug/dri/0/clients\n# Identify and stop the duplicate (Xorg + Wayland running in parallel?)\nps -ef | grep -iE 'xorg|wayland|sway|hyprland'"
+                  : driDebugfsAuditData.verdict.verdict === 'requires_root'
+                    ? "# debugfs mode-700 — re-run dashboard as root\nsudo systemctl restart gpu-dashboard.service"
                   : ""
                 }</pre>
               </details>

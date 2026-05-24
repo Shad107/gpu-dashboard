@@ -4925,4 +4925,55 @@ export const api = {
       thp_defrag: string | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #83 (UI sprint 74) ──
+  blockIntegrityAuditStatus: () =>
+    fetch("/api/block-integrity-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      capable_count: number;
+      devices: Array<{
+        device: string;
+        capable: number | null;
+        format: string | null;
+        read_verify: number | null;
+        write_generate: number | null;
+        tag_size: number | null;
+        protection_interval_bytes: number | null;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  clkSummaryAuditStatus: () =>
+    fetch("/api/clk-summary-audit").then(jsonOf<{
+      ok: boolean;
+      clock_count: number;
+      read_state: string;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  nfsdStatsAuditStatus: () =>
+    fetch("/api/nfsd-stats-audit").then(jsonOf<{
+      ok: boolean;
+      nfsd_present: boolean;
+      threads: number | null;
+      pool_count: number;
+      cpu_count: number;
+      reply_cache: Record<string, number>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  driDebugfsAuditStatus: () =>
+    fetch("/api/dri-debugfs-audit").then(jsonOf<{
+      ok: boolean;
+      minor_count: number;
+      read_state: string;
+      minors: Array<{
+        id: string;
+        name: string;
+        client_count: number;
+        gem_count: number;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
