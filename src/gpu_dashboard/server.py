@@ -1992,6 +1992,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_interrupt_skew_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/userspace-hardening-sysctls-audit":
+                # R&D #88.1 — ASLR/protected_*/suid_dumpable posture
+                code, body = api.handle_userspace_hardening_sysctls_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
