@@ -2007,6 +2007,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_iommu_reserved_regions_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/timer-migration-nohz-drift-audit":
+                # R&D #88.4 — timer_migration × nohz_full × rcu_nocbs
+                code, body = api.handle_timer_migration_nohz_drift_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

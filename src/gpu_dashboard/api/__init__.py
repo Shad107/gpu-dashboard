@@ -554,3 +554,4 @@ from .interrupt_skew_audit import handle_interrupt_skew_audit_status  # noqa: F4
 from .userspace_hardening_sysctls_audit import handle_userspace_hardening_sysctls_audit_status  # noqa: F401,F811
 from .suspend_mode_selector_audit import handle_suspend_mode_selector_audit_status  # noqa: F401,F811
 from .iommu_reserved_regions_audit import handle_iommu_reserved_regions_audit_status  # noqa: F401,F811
+from .timer_migration_nohz_drift_audit import handle_timer_migration_nohz_drift_audit_status  # noqa: F401,F811
