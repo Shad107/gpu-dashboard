@@ -5139,4 +5139,44 @@ export const api = {
       cpu_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #87 (UI sprint 78) ──
+  usbAuthorizedDefaultAuditStatus: () =>
+    fetch("/api/usb-authorized-default-audit").then(jsonOf<{
+      ok: boolean;
+      hub_count: number;
+      usbguard_present: boolean;
+      hubs: Array<{
+        name: string;
+        authorized_default: string;
+        interface_authorized_default: string;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  procLocksContentionAuditStatus: () =>
+    fetch("/api/proc-locks-contention-audit").then(jsonOf<{
+      ok: boolean;
+      total: number;
+      blocked: number;
+      blocked_pids: Array<{ pid: number; comm: string }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cpuSmtControlAuditStatus: () =>
+    fetch("/api/cpu-smt-control-audit").then(jsonOf<{
+      ok: boolean;
+      smt_control: string;
+      smt_active: string;
+      vulns_inspected: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  interruptSkewAuditStatus: () =>
+    fetch("/api/interrupt-skew-audit").then(jsonOf<{
+      ok: boolean;
+      irq_count: number;
+      mismatch_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

@@ -2569,6 +2569,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #87 (UI sprint 78) ────────────────────────────────────────────
+  let usbAuthorizedDefaultAuditData       = $state<Awaited<ReturnType<typeof api.usbAuthorizedDefaultAuditStatus>>       | null>(null);
+  let procLocksContentionAuditData        = $state<Awaited<ReturnType<typeof api.procLocksContentionAuditStatus>>        | null>(null);
+  let cpuSmtControlAuditData              = $state<Awaited<ReturnType<typeof api.cpuSmtControlAuditStatus>>              | null>(null);
+  let interruptSkewAuditData              = $state<Awaited<ReturnType<typeof api.interruptSkewAuditStatus>>              | null>(null);
+  async function loadUsbAuthorizedDefaultAudit() {
+    try { usbAuthorizedDefaultAuditData = await api.usbAuthorizedDefaultAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcLocksContentionAudit() {
+    try { procLocksContentionAuditData = await api.procLocksContentionAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpuSmtControlAudit() {
+    try { cpuSmtControlAuditData = await api.cpuSmtControlAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadInterruptSkewAudit() {
+    try { interruptSkewAuditData = await api.interruptSkewAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3001,6 +3023,11 @@
       if (!thunderboltUsb4AuditData)            loadThunderboltUsb4Audit();
       if (!nvmeControllerStateAuditData)        loadNvmeControllerStateAudit();
       if (!workqueueCpumaskAuditData)           loadWorkqueueCpumaskAudit();
+      // R&D #87 cards
+      if (!usbAuthorizedDefaultAuditData)       loadUsbAuthorizedDefaultAudit();
+      if (!procLocksContentionAuditData)        loadProcLocksContentionAudit();
+      if (!cpuSmtControlAuditData)              loadCpuSmtControlAudit();
+      if (!interruptSkewAuditData)              loadInterruptSkewAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -15281,6 +15308,174 @@
                     ? "# Multiple unbound WQs pinned to CPU 0 only — let kernel spread\nfor wq in /sys/devices/virtual/workqueue/*/; do\n  echo \"$(basename $wq): cpumask=$(cat $wq/cpumask)\"\ndone\n# Reset to global mask :\necho fff | sudo tee /sys/devices/virtual/workqueue/<wq>/cpumask"
                   : workqueueCpumaskAuditData.verdict.verdict === 'nice_drift'
                     ? "# A WQ has non-zero nice value — informational tweak\nfor wq in /sys/devices/virtual/workqueue/*/; do\n  n=$(cat $wq/nice 2>/dev/null)\n  [ -n \"$n\" ] && [ \"$n\" != 0 ] && echo \"$(basename $wq): nice=$n\"\ndone"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #87.1 USB per-hub authorization (UI sprint 78) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.usbauth.title")}</h4>
+        <p class="muted">{i18n.t("integrations.usbauth.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUsbAuthorizedDefaultAudit}>{i18n.t("integrations.usbauth.refresh")}</button>
+          {#if usbAuthorizedDefaultAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={usbAuthorizedDefaultAuditData.verdict.verdict === 'usb_default_authorized_no_guard' ? 'var(--err)' :
+                             usbAuthorizedDefaultAuditData.verdict.verdict === 'usb_mixed_authorization' ? 'var(--warn)' :
+                             usbAuthorizedDefaultAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {usbAuthorizedDefaultAuditData.hub_count} hub(s) · usbguard={usbAuthorizedDefaultAuditData.usbguard_present ? 'yes' : 'no'} · {i18n.t("integrations.usbauth.verdict")} : <b>{usbAuthorizedDefaultAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if usbAuthorizedDefaultAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        usbAuthorizedDefaultAuditData.verdict.verdict === 'usb_default_authorized_no_guard' ? 'var(--err)' :
+                        usbAuthorizedDefaultAuditData.verdict.verdict === 'usb_mixed_authorization' ? 'var(--warn)' :
+                        usbAuthorizedDefaultAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{usbAuthorizedDefaultAuditData.verdict.reason}</p>
+            {#if usbAuthorizedDefaultAuditData.verdict.verdict !== 'ok' && usbAuthorizedDefaultAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.usbauth.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  usbAuthorizedDefaultAuditData.verdict.verdict === 'usb_default_authorized_no_guard'
+                    ? "# Every USB hub auto-authorizes new devices, with no USBGuard daemon\n# Option A — install USBGuard (recommended) :\nsudo apt install usbguard   # or: sudo dnf install usbguard\nsudo usbguard generate-policy > /tmp/rules.conf\nsudo install -m 600 /tmp/rules.conf /etc/usbguard/rules.conf\nsudo systemctl enable --now usbguard\n# Option B — flip authorized_default=0 on each root hub :\nfor h in /sys/bus/usb/devices/usb*; do\n  echo 0 | sudo tee \"$h/authorized_default\"\ndone\n# Then approve each device manually : echo 1 | sudo tee <devpath>/authorized"
+                  : usbAuthorizedDefaultAuditData.verdict.verdict === 'usb_mixed_authorization'
+                    ? "# Inconsistent authorized_default across hubs — normalize\nfor h in /sys/bus/usb/devices/usb*; do\n  echo \"$(basename $h): authorized_default=$(cat $h/authorized_default)\"\ndone\n# Set them all the same (1 = open, 0 = closed) :\nfor h in /sys/bus/usb/devices/usb*; do\n  echo 0 | sudo tee \"$h/authorized_default\"\ndone"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #87.2 /proc/locks contention (UI sprint 78) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.proclocks.title")}</h4>
+        <p class="muted">{i18n.t("integrations.proclocks.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcLocksContentionAudit}>{i18n.t("integrations.proclocks.refresh")}</button>
+          {#if procLocksContentionAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procLocksContentionAuditData.verdict.verdict === 'lock_blocked_long_chain' ? 'var(--err)' :
+                             procLocksContentionAuditData.verdict.verdict === 'lock_blocked_any' ? 'var(--warn)' :
+                             procLocksContentionAuditData.verdict.verdict === 'many_locks' ? 'var(--accent)' :
+                             procLocksContentionAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {procLocksContentionAuditData.total} lock(s) · {procLocksContentionAuditData.blocked} blocked · {i18n.t("integrations.proclocks.verdict")} : <b>{procLocksContentionAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procLocksContentionAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        procLocksContentionAuditData.verdict.verdict === 'lock_blocked_long_chain' ? 'var(--err)' :
+                        procLocksContentionAuditData.verdict.verdict === 'lock_blocked_any' ? 'var(--warn)' :
+                        procLocksContentionAuditData.verdict.verdict === 'many_locks' ? 'var(--accent)' :
+                        procLocksContentionAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{procLocksContentionAuditData.verdict.reason}</p>
+            {#if procLocksContentionAuditData.verdict.verdict !== 'ok' && procLocksContentionAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.proclocks.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  procLocksContentionAuditData.verdict.verdict === 'lock_blocked_long_chain'
+                    ? "# Long lock chain — find the holder, then the inode\nawk '$2 == \"->\" {print}' /proc/locks\n# Resolve the inode 'maj:min:inum' on the right to a path :\nsudo find / -inum <inum> -xdev 2>/dev/null | head\n# Inspect the holders + waiters comms :\nfor pid in $(awk '/->/{print $5}' /proc/locks); do\n  echo \"$pid: $(cat /proc/$pid/comm 2>/dev/null)\"\ndone\n# If a stuck process is the holder, consider SIGTERM ; otherwise\n# escalate to the application (mail spool, DB, etc)."
+                  : procLocksContentionAuditData.verdict.verdict === 'lock_blocked_any'
+                    ? "# Some BLOCKED waiters — watch for chains forming\nawk '$2 == \"->\" {print}' /proc/locks\n# Snapshot waiter comms (likely culprits: dovecot, postgres, etc.) :\nfor pid in $(awk '/->/{print $5}' /proc/locks); do\n  echo \"$pid: $(cat /proc/$pid/comm 2>/dev/null)\"\ndone\n# Re-run in 30s to confirm transient vs. growing."
+                  : procLocksContentionAuditData.verdict.verdict === 'many_locks'
+                    ? "# High total lock count — informational\nwc -l /proc/locks\n# Bucket by holder comm :\nawk '!/->/{print $5}' /proc/locks | while read pid; do\n  cat /proc/$pid/comm 2>/dev/null\ndone | sort | uniq -c | sort -rn | head"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #87.3 CPU SMT control vs vulns (UI sprint 78) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.smtcontrol.title")}</h4>
+        <p class="muted">{i18n.t("integrations.smtcontrol.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuSmtControlAudit}>{i18n.t("integrations.smtcontrol.refresh")}</button>
+          {#if cpuSmtControlAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuSmtControlAuditData.verdict.verdict === 'smt_off_still_vulnerable' ? 'var(--warn)' :
+                             cpuSmtControlAuditData.verdict.verdict === 'smt_off_over_mitigated' ? 'var(--accent)' :
+                             cpuSmtControlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              smt={cpuSmtControlAuditData.smt_control || '?'}/active={cpuSmtControlAuditData.smt_active || '?'} · {cpuSmtControlAuditData.vulns_inspected} vuln(s) · {i18n.t("integrations.smtcontrol.verdict")} : <b>{cpuSmtControlAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuSmtControlAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuSmtControlAuditData.verdict.verdict === 'smt_off_still_vulnerable' ? 'var(--warn)' :
+                        cpuSmtControlAuditData.verdict.verdict === 'smt_off_over_mitigated' ? 'var(--accent)' :
+                        cpuSmtControlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpuSmtControlAuditData.verdict.reason}</p>
+            {#if cpuSmtControlAuditData.verdict.verdict !== 'ok' && cpuSmtControlAuditData.verdict.verdict !== 'requires_root' && cpuSmtControlAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.smtcontrol.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cpuSmtControlAuditData.verdict.verdict === 'smt_off_still_vulnerable'
+                    ? "# SMT disabled but kernel still reports SMT vulnerable\n# Read the offenders :\ngrep -H . /sys/devices/system/cpu/vulnerabilities/* | grep -iE 'smt vulnerable|smt host state unknown'\n# Update kernel + microcode :\nsudo apt update && sudo apt install --only-upgrade linux-image-generic intel-microcode\n# (Or amd64-microcode on AMD.) Reboot, then re-check this card."
+                  : cpuSmtControlAuditData.verdict.verdict === 'smt_off_over_mitigated'
+                    ? "# SMT disabled with NO active SMT-relevant vulnerability — pure perf tax\n# Confirm none of these report 'Vulnerable' :\ngrep -H . /sys/devices/system/cpu/vulnerabilities/{l1tf,mds,taa,mmio_stale_data,spectre_v2,spec_store_bypass,srbds}\n# If clean, re-enable SMT for the next boot :\nsudo sed -i 's/ nosmt//; s/mitigations=auto,nosmt/mitigations=auto/' /etc/default/grub\nsudo update-grub\n# Or runtime (verify with /proc/cpuinfo afterward) :\necho on | sudo tee /sys/devices/system/cpu/smt/control"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #87.4 IRQ affinity_hint drift (UI sprint 78) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.irqskew.title")}</h4>
+        <p class="muted">{i18n.t("integrations.irqskew.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadInterruptSkewAudit}>{i18n.t("integrations.irqskew.refresh")}</button>
+          {#if interruptSkewAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={interruptSkewAuditData.verdict.verdict === 'affinity_hint_widely_overridden' ? 'var(--warn)' :
+                             interruptSkewAuditData.verdict.verdict === 'affinity_hint_mismatch' ? 'var(--accent)' :
+                             interruptSkewAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {interruptSkewAuditData.irq_count} IRQ · {interruptSkewAuditData.mismatch_count} drifted · {i18n.t("integrations.irqskew.verdict")} : <b>{interruptSkewAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if interruptSkewAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        interruptSkewAuditData.verdict.verdict === 'affinity_hint_widely_overridden' ? 'var(--warn)' :
+                        interruptSkewAuditData.verdict.verdict === 'affinity_hint_mismatch' ? 'var(--accent)' :
+                        interruptSkewAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{interruptSkewAuditData.verdict.reason}</p>
+            {#if interruptSkewAuditData.verdict.verdict !== 'ok' && interruptSkewAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.irqskew.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  interruptSkewAuditData.verdict.verdict === 'affinity_hint_widely_overridden'
+                    ? "# irqbalance (or admin) overrode many driver affinity hints\n# Inspect : for each IRQ, hint vs actual\nfor irq in /proc/irq/[0-9]*; do\n  n=$(basename $irq)\n  h=$(cat $irq/affinity_hint 2>/dev/null)\n  a=$(cat $irq/smp_affinity_list 2>/dev/null)\n  [ \"$h\" != \"00000000\" ] && echo \"IRQ $n: hint=$h smp=$a\"\ndone | head -20\n# Option A — apply driver hints :\nfor irq in /proc/irq/[0-9]*; do\n  h=$(cat $irq/affinity_hint 2>/dev/null)\n  [ -n \"$h\" ] && [ \"$h\" != \"00000000\" ] && echo $h | sudo tee $irq/smp_affinity >/dev/null\ndone\n# Option B — let irqbalance honor hints :\necho 'IRQBALANCE_ARGS=\"--hintpolicy=subset\"' | sudo tee -a /etc/default/irqbalance\nsudo systemctl restart irqbalance"
+                  : interruptSkewAuditData.verdict.verdict === 'affinity_hint_mismatch'
+                    ? "# A handful of IRQs drift from their driver hint — informational\nfor irq in /proc/irq/[0-9]*; do\n  n=$(basename $irq)\n  h=$(cat $irq/affinity_hint 2>/dev/null)\n  a=$(cat $irq/smp_affinity_list 2>/dev/null)\n  [ -n \"$h\" ] && [ \"$h\" != \"00000000\" ] && echo \"IRQ $n: hint=$h smp=$a\"\ndone | head\n# To realign one specific IRQ :\necho <hint-hex> | sudo tee /proc/irq/<N>/smp_affinity"
                   : ""
                 }</pre>
               </details>
