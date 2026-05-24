@@ -529,3 +529,4 @@ from .cgroup_io_stat_audit import handle_cgroup_io_stat_audit_status  # noqa: F4
 from .thermal_trip_drift_audit import handle_thermal_trip_drift_audit_status  # noqa: F401,F811
 from .sysrq_mask_audit import handle_sysrq_mask_audit_status  # noqa: F401,F811
 from .cpu_dma_latency_qos_audit import handle_cpu_dma_latency_qos_audit_status  # noqa: F401,F811
+from .rcu_expedited_audit import handle_rcu_expedited_audit_status  # noqa: F401,F811

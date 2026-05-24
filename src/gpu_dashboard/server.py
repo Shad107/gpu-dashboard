@@ -1882,6 +1882,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_dma_latency_qos_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/rcu-expedited-audit":
+                # R&D #82.3 — RCU expedited / isolation coherence
+                code, body = api.handle_rcu_expedited_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
