@@ -1932,6 +1932,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_tty_serial_console_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/dynamic-debug-audit":
+                # R&D #85.1 — kernel dyndbg call-site inventory
+                code, body = api.handle_dynamic_debug_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

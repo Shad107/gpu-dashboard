@@ -539,3 +539,4 @@ from .suspend_stats_audit import handle_suspend_stats_audit_status  # noqa: F401
 from .loop_device_audit import handle_loop_device_audit_status  # noqa: F401,F811
 from .kernel_module_params_drift_audit import handle_kernel_module_params_drift_audit_status  # noqa: F401,F811
 from .tty_serial_console_audit import handle_tty_serial_console_audit_status  # noqa: F401,F811
+from .dynamic_debug_audit import handle_dynamic_debug_audit_status  # noqa: F401,F811
