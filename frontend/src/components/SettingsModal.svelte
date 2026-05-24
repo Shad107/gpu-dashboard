@@ -2525,6 +2525,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #85 (UI sprint 76) ────────────────────────────────────────────
+  let dynamicDebugAuditData               = $state<Awaited<ReturnType<typeof api.dynamicDebugAuditStatus>>               | null>(null);
+  let extconStateAuditData                = $state<Awaited<ReturnType<typeof api.extconStateAuditStatus>>                | null>(null);
+  let unixSocketInventoryAuditData        = $state<Awaited<ReturnType<typeof api.unixSocketInventoryAuditStatus>>        | null>(null);
+  let schedFeaturesDebugfsAuditData       = $state<Awaited<ReturnType<typeof api.schedFeaturesDebugfsAuditStatus>>       | null>(null);
+  async function loadDynamicDebugAudit() {
+    try { dynamicDebugAuditData = await api.dynamicDebugAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadExtconStateAudit() {
+    try { extconStateAuditData = await api.extconStateAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadUnixSocketInventoryAudit() {
+    try { unixSocketInventoryAuditData = await api.unixSocketInventoryAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSchedFeaturesDebugfsAudit() {
+    try { schedFeaturesDebugfsAuditData = await api.schedFeaturesDebugfsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2947,6 +2969,11 @@
       if (!loopDeviceAuditData)                 loadLoopDeviceAudit();
       if (!kernelModuleParamsDriftAuditData)    loadKernelModuleParamsDriftAudit();
       if (!ttySerialConsoleAuditData)           loadTtySerialConsoleAudit();
+      // R&D #85 cards
+      if (!dynamicDebugAuditData)               loadDynamicDebugAudit();
+      if (!extconStateAuditData)                loadExtconStateAudit();
+      if (!unixSocketInventoryAuditData)        loadUnixSocketInventoryAudit();
+      if (!schedFeaturesDebugfsAuditData)       loadSchedFeaturesDebugfsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -14873,6 +14900,180 @@
                     ? "# USB-serial dongle stuck in error state — re-bind\nfor d in /sys/class/tty/ttyUSB*; do\n  if [ \"$(cat $d/device/power/runtime_status 2>/dev/null)\" = error ]; then\n    echo \"reset $(basename $d)\"\n    n=$(basename $d)\n    # Unbind+rebind via the parent USB device path\n    echo $(readlink -f $d/device | xargs basename) | sudo tee /sys/bus/usb/drivers/usb/unbind\n    echo $(readlink -f $d/device | xargs basename) | sudo tee /sys/bus/usb/drivers/usb/bind\n  fi\ndone"
                   : ttySerialConsoleAuditData.verdict.verdict === 'usb_serial_unstable_names'
                     ? "# Multiple USB-serial dongles — pin names with udev\nls -la /sys/class/tty/ttyUSB*\n# Get a stable identifier:\nudevadm info -q property -n /dev/ttyUSB0 | grep -E 'ID_SERIAL_SHORT|ID_VENDOR_ID|ID_MODEL_ID'\n# Then write /etc/udev/rules.d/99-usb-serial.rules :\n# SUBSYSTEM==\"tty\",ATTRS{idVendor}==\"XXXX\",ATTRS{idProduct}==\"XXXX\",ATTRS{serial}==\"YYYY\",SYMLINK+=\"my_ups\""
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #85.1 Dynamic debug (UI sprint 76) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dyndbg.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dyndbg.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDynamicDebugAudit}>{i18n.t("integrations.dyndbg.refresh")}</button>
+          {#if dynamicDebugAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={dynamicDebugAuditData.verdict.verdict === 'many_dyndbg_sites_enabled' ? 'var(--warn)' :
+                             dynamicDebugAuditData.verdict.verdict === 'some_dyndbg_sites_enabled' ? 'var(--accent)' :
+                             dynamicDebugAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {dynamicDebugAuditData.enabled_sites}/{dynamicDebugAuditData.total_sites} enabled · {i18n.t("integrations.dyndbg.verdict")} : <b>{dynamicDebugAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dynamicDebugAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        dynamicDebugAuditData.verdict.verdict === 'many_dyndbg_sites_enabled' ? 'var(--warn)' :
+                        dynamicDebugAuditData.verdict.verdict === 'some_dyndbg_sites_enabled' ? 'var(--accent)' :
+                        dynamicDebugAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{dynamicDebugAuditData.verdict.reason}</p>
+            {#if dynamicDebugAuditData.verdict.verdict !== 'ok' && dynamicDebugAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dyndbg.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  dynamicDebugAuditData.verdict.verdict === 'many_dyndbg_sites_enabled'
+                    ? "# Many dyndbg sites enabled — find them and clear\nsudo grep -v '=_$' /sys/kernel/debug/dynamic_debug/control | head -50\n# Disable all dyndbg sites at once (root):\necho '-p' | sudo tee /sys/kernel/debug/dynamic_debug/control\n# Or selectively, e.g. all of usbcore:\necho 'module usbcore -p' | sudo tee /sys/kernel/debug/dynamic_debug/control\n# Check /etc/default/grub for stale dyndbg= boot args"
+                  : dynamicDebugAuditData.verdict.verdict === 'some_dyndbg_sites_enabled'
+                    ? "# Targeted dyndbg session active — list enabled sites\nsudo grep -v '=_$' /sys/kernel/debug/dynamic_debug/control\n# Clear when done :\necho '-p' | sudo tee /sys/kernel/debug/dynamic_debug/control"
+                  : dynamicDebugAuditData.verdict.verdict === 'requires_root'
+                    ? "# debugfs mode-700 — re-run dashboard as root for the inventory\nsudo systemctl restart gpu-dashboard.service"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #85.2 Extcon state (UI sprint 76) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.extcon.title")}</h4>
+        <p class="muted">{i18n.t("integrations.extcon.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadExtconStateAudit}>{i18n.t("integrations.extcon.refresh")}</button>
+          {#if extconStateAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={extconStateAuditData.verdict.verdict === 'stuck_extcon_state' ? 'var(--err)' :
+                             extconStateAuditData.verdict.verdict === 'multiple_connectors_asserted' ? 'var(--accent)' :
+                             extconStateAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {extconStateAuditData.device_count} extcon dev · {i18n.t("integrations.extcon.verdict")} : <b>{extconStateAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if extconStateAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        extconStateAuditData.verdict.verdict === 'stuck_extcon_state' ? 'var(--err)' :
+                        extconStateAuditData.verdict.verdict === 'multiple_connectors_asserted' ? 'var(--accent)' :
+                        extconStateAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{extconStateAuditData.verdict.reason}</p>
+            {#if extconStateAuditData.verdict.verdict !== 'ok' && extconStateAuditData.verdict.verdict !== 'n/a' && extconStateAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.extcon.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  extconStateAuditData.verdict.verdict === 'stuck_extcon_state'
+                    ? "# Inspect extcon device state files directly\nfor d in /sys/class/extcon/extcon*; do\n  echo \"== $(basename $d) name=$(cat $d/name) ==\"\n  cat $d/state 2>/dev/null\n  for c in $d/cable.*; do\n    [ -d $c ] && echo \"  cable $(cat $c/name): $(cat $c/state)\"\n  done\ndone\n# A stuck cable usually requires a driver re-bind:\necho $(readlink -f /sys/class/extcon/extcon0/device | xargs basename) | \\\n  sudo tee /sys/bus/<bus>/drivers/<driver>/unbind"
+                  : extconStateAuditData.verdict.verdict === 'multiple_connectors_asserted'
+                    ? "# Two mutually-exclusive connectors on the same mux\nfor d in /sys/class/extcon/extcon*; do\n  for c in $d/cable.*; do\n    [ -d $c ] && echo \"$(basename $d) $(cat $c/name) = $(cat $c/state)\"\n  done\ndone\n# Unplug all displays then plug the intended one only ; check kernel\n# log :  sudo dmesg --since '1 minute ago' | grep -iE 'extcon|usb|dp'"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #85.3 Unix socket inventory (UI sprint 76) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.unixsock.title")}</h4>
+        <p class="muted">{i18n.t("integrations.unixsock.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUnixSocketInventoryAudit}>{i18n.t("integrations.unixsock.refresh")}</button>
+          {#if unixSocketInventoryAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={unixSocketInventoryAuditData.verdict.verdict === 'unix_socket_leak' ? 'var(--err)' :
+                             unixSocketInventoryAuditData.verdict.verdict === 'unix_socket_growth' ? 'var(--warn)' :
+                             unixSocketInventoryAuditData.verdict.verdict === 'many_unix_sockets' ? 'var(--accent)' :
+                             unixSocketInventoryAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {unixSocketInventoryAuditData.total} total · {unixSocketInventoryAuditData.abstract} abs · {unixSocketInventoryAuditData.listening} listening · {i18n.t("integrations.unixsock.verdict")} : <b>{unixSocketInventoryAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if unixSocketInventoryAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        unixSocketInventoryAuditData.verdict.verdict === 'unix_socket_leak' ? 'var(--err)' :
+                        unixSocketInventoryAuditData.verdict.verdict === 'unix_socket_growth' ? 'var(--warn)' :
+                        unixSocketInventoryAuditData.verdict.verdict === 'many_unix_sockets' ? 'var(--accent)' :
+                        unixSocketInventoryAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{unixSocketInventoryAuditData.verdict.reason}</p>
+            {#if unixSocketInventoryAuditData.verdict.verdict !== 'ok' && unixSocketInventoryAuditData.verdict.verdict !== 'unknown' && unixSocketInventoryAuditData.verdict.verdict !== 'many_unix_sockets'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.unixsock.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  unixSocketInventoryAuditData.verdict.verdict === 'unix_socket_leak'
+                    ? "# Unix socket leak — abstract sockets dominate\n# Find the offender process:\nsudo ss -xa -p | awk '/@/ {print $NF}' | sort | uniq -c | sort -rn | head -20\n# Top user-mode candidates: Jupyter, Ray, CUDA MPS, dbus-daemon,\n# pulseaudio/pipewire — restart the noisiest one :\nsudo systemctl restart <unit>"
+                  : unixSocketInventoryAuditData.verdict.verdict === 'unix_socket_growth'
+                    ? "# Abstract socket count growing — capture baseline\nawk 'NR > 1 {if ($NF ~ /^@/) abs++} END {print abs}' /proc/net/unix\n# Compare again in 10 minutes ; if still climbing,\n# `lsof -U` (root) tracks per-process socket count"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #85.4 Sched features debugfs (UI sprint 76) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.schedfeat.title")}</h4>
+        <p class="muted">{i18n.t("integrations.schedfeat.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSchedFeaturesDebugfsAudit}>{i18n.t("integrations.schedfeat.refresh")}</button>
+          {#if schedFeaturesDebugfsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={schedFeaturesDebugfsAuditData.verdict.verdict === 'critical_sched_flags_off' ? 'var(--err)' :
+                             schedFeaturesDebugfsAuditData.verdict.verdict === 'sched_tuning_drifted' ? 'var(--warn)' :
+                             schedFeaturesDebugfsAuditData.verdict.verdict === 'one_flag_non_default' ? 'var(--accent)' :
+                             schedFeaturesDebugfsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {schedFeaturesDebugfsAuditData.feature_count} feat · {schedFeaturesDebugfsAuditData.tuning_count} knob · {i18n.t("integrations.schedfeat.verdict")} : <b>{schedFeaturesDebugfsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if schedFeaturesDebugfsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        schedFeaturesDebugfsAuditData.verdict.verdict === 'critical_sched_flags_off' ? 'var(--err)' :
+                        schedFeaturesDebugfsAuditData.verdict.verdict === 'sched_tuning_drifted' ? 'var(--warn)' :
+                        schedFeaturesDebugfsAuditData.verdict.verdict === 'one_flag_non_default' ? 'var(--accent)' :
+                        schedFeaturesDebugfsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{schedFeaturesDebugfsAuditData.verdict.reason}</p>
+            {#if schedFeaturesDebugfsAuditData.verdict.verdict !== 'ok' && schedFeaturesDebugfsAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.schedfeat.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  schedFeaturesDebugfsAuditData.verdict.verdict === 'critical_sched_flags_off'
+                    ? "# Critical sched flag disabled — restore the kernel default\necho HRTICK | sudo tee /sys/kernel/debug/sched/features\necho START_DEBIT | sudo tee /sys/kernel/debug/sched/features\n# Check /etc/sysfs.conf or systemd 'tuned' / 'cpupower' configs for\n# the persistent override that flipped the flag"
+                  : schedFeaturesDebugfsAuditData.verdict.verdict === 'sched_tuning_drifted'
+                    ? "# CFS tuning knob drifted > 50% from kernel default\n# Reset to kernel defaults :\necho 6000000  | sudo tee /sys/kernel/debug/sched/latency_ns\necho 750000   | sudo tee /sys/kernel/debug/sched/min_granularity_ns\necho 1000000  | sudo tee /sys/kernel/debug/sched/wakeup_granularity_ns\necho 500000   | sudo tee /sys/kernel/debug/sched/migration_cost_ns\n# Audit /etc/sysctl.d/ and systemd units for the persistent tweak"
+                  : schedFeaturesDebugfsAuditData.verdict.verdict === 'one_flag_non_default'
+                    ? "# A tracked sched flag is off — verify it's intentional\nsudo cat /sys/kernel/debug/sched/features\n# If it was a gaming-guide tweak you no longer want :\necho GENTLE_FAIR_SLEEPERS | sudo tee /sys/kernel/debug/sched/features\n# (replace flag name with the disabled one shown above)"
+                  : schedFeaturesDebugfsAuditData.verdict.verdict === 'requires_root'
+                    ? "# debugfs mode-700 — re-run dashboard as root\nsudo systemctl restart gpu-dashboard.service\n# Or one-shot :\nsudo cat /sys/kernel/debug/sched/features"
                   : ""
                 }</pre>
               </details>

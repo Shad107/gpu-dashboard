@@ -5030,4 +5030,52 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #85 (UI sprint 76) ──
+  dynamicDebugAuditStatus: () =>
+    fetch("/api/dynamic-debug-audit").then(jsonOf<{
+      ok: boolean;
+      read_state: string;
+      total_sites: number;
+      enabled_sites: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  extconStateAuditStatus: () =>
+    fetch("/api/extcon-state-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      devices: Array<{
+        node: string;
+        label: string;
+        cables: Array<{
+          name: string;
+          value: string;
+          asserted: boolean;
+          invalid?: boolean;
+        }>;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  unixSocketInventoryAuditStatus: () =>
+    fetch("/api/unix-socket-inventory-audit").then(jsonOf<{
+      ok: boolean;
+      total: number;
+      abstract: number;
+      named: number;
+      unnamed: number;
+      listening: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  schedFeaturesDebugfsAuditStatus: () =>
+    fetch("/api/sched-features-debugfs-audit").then(jsonOf<{
+      ok: boolean;
+      read_state: string;
+      feature_count: number;
+      tuning_count: number;
+      tunings: Record<string, number>;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
