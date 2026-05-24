@@ -1872,6 +1872,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_thermal_trip_drift_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sysrq-mask-audit":
+                # R&D #82.1 — SysRq + kexec hardening posture
+                code, body = api.handle_sysrq_mask_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
