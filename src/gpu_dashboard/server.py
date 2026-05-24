@@ -1842,6 +1842,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_snmp6_icmp_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/btrfs-allocator-audit":
+                # R&D #80.3 — btrfs chunk allocator pressure
+                code, body = api.handle_btrfs_allocator_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

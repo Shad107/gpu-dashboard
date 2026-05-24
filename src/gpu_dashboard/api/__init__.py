@@ -521,3 +521,4 @@ from .fb_vtconsole_audit import handle_fb_vtconsole_audit_status  # noqa: F401,F
 from .sched_tunables_audit import handle_sched_tunables_audit_status  # noqa: F401,F811
 from .arp_neighbor_audit import handle_arp_neighbor_audit_status  # noqa: F401,F811
 from .snmp6_icmp_audit import handle_snmp6_icmp_audit_status  # noqa: F401,F811
+from .btrfs_allocator_audit import handle_btrfs_allocator_audit_status  # noqa: F401,F811
