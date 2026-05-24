@@ -512,3 +512,4 @@ from .cpu_thermal_throttle_counters_audit import handle_cpu_thermal_throttle_cou
 from .pci_sriov_posture_audit import handle_pci_sriov_posture_audit_status  # noqa: F401,F811
 from .cpu_cppc_audit import handle_cpu_cppc_audit_status  # noqa: F401,F811
 from .pcie_aer_fleet_audit import handle_pcie_aer_fleet_audit_status  # noqa: F401,F811
+from .net_iface_counters_audit import handle_net_iface_counters_audit_status  # noqa: F401,F811

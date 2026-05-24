@@ -1797,6 +1797,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_aer_fleet_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/net-iface-counters-audit":
+                # R&D #78.1 — per-iface NIC error counters
+                code, body = api.handle_net_iface_counters_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
