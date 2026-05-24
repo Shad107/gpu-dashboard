@@ -5217,4 +5217,38 @@ export const api = {
       cmdline_rcu_nocbs: number[];
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #89 (UI sprint 80) ──
+  tcpCongestionControlAuditStatus: () =>
+    fetch("/api/tcp-congestion-control-audit").then(jsonOf<{
+      ok: boolean;
+      current_cc: string;
+      available_cc: string[];
+      tcp_fastopen: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  namespaceLimitsAuditStatus: () =>
+    fetch("/api/namespace-limits-audit").then(jsonOf<{
+      ok: boolean;
+      limits: Record<string, number>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  sysvipcLimitsAuditStatus: () =>
+    fetch("/api/sysvipc-limits-audit").then(jsonOf<{
+      ok: boolean;
+      limits: Record<string, number | null>;
+      mem_total: number | null;
+      page_size: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  pcieLinkSpeedDriftAuditStatus: () =>
+    fetch("/api/pcie-link-speed-drift-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      linked_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

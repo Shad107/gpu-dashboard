@@ -2613,6 +2613,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #89 (UI sprint 80) ────────────────────────────────────────────
+  let tcpCongestionControlAuditData       = $state<Awaited<ReturnType<typeof api.tcpCongestionControlAuditStatus>>       | null>(null);
+  let namespaceLimitsAuditData            = $state<Awaited<ReturnType<typeof api.namespaceLimitsAuditStatus>>            | null>(null);
+  let sysvipcLimitsAuditData              = $state<Awaited<ReturnType<typeof api.sysvipcLimitsAuditStatus>>              | null>(null);
+  let pcieLinkSpeedDriftAuditData         = $state<Awaited<ReturnType<typeof api.pcieLinkSpeedDriftAuditStatus>>         | null>(null);
+  async function loadTcpCongestionControlAudit() {
+    try { tcpCongestionControlAuditData = await api.tcpCongestionControlAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNamespaceLimitsAudit() {
+    try { namespaceLimitsAuditData = await api.namespaceLimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSysvipcLimitsAudit() {
+    try { sysvipcLimitsAuditData = await api.sysvipcLimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPcieLinkSpeedDriftAudit() {
+    try { pcieLinkSpeedDriftAuditData = await api.pcieLinkSpeedDriftAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3055,6 +3077,11 @@
       if (!suspendModeSelectorAuditData)        loadSuspendModeSelectorAudit();
       if (!iommuReservedRegionsAuditData)       loadIommuReservedRegionsAudit();
       if (!timerMigrationNohzDriftAuditData)    loadTimerMigrationNohzDriftAudit();
+      // R&D #89 cards
+      if (!tcpCongestionControlAuditData)       loadTcpCongestionControlAudit();
+      if (!namespaceLimitsAuditData)            loadNamespaceLimitsAudit();
+      if (!sysvipcLimitsAuditData)              loadSysvipcLimitsAudit();
+      if (!pcieLinkSpeedDriftAuditData)         loadPcieLinkSpeedDriftAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -15687,6 +15714,176 @@
                     ? "# timer_migration off with no nohz_full/isolcpus/rcu_nocbs — pure overhead\necho 1 | sudo tee /proc/sys/kernel/timer_migration\n# Persist :\nsudo sed -i '/kernel.timer_migration/d' /etc/sysctl.d/*\necho 'kernel.timer_migration = 1' | sudo tee /etc/sysctl.d/99-default.conf\nsudo sysctl --system"
                   : timerMigrationNohzDriftAuditData.verdict.verdict === 'rcu_nocbs_mismatch_nohz_full'
                     ? "# rcu_nocbs and nohz_full cmdline masks differ — align them\ncat /proc/cmdline | tr ' ' '\\n' | grep -E 'nohz_full|rcu_nocbs'\n# Edit GRUB so both lists match (e.g. both = 4-7) :\nsudo sed -i 's/nohz_full=[^ ]*/nohz_full=4-7/; s/rcu_nocbs=[^ ]*/rcu_nocbs=4-7/' /etc/default/grub\nsudo update-grub && sudo reboot"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #89.1 TCP congestion control (UI sprint 80) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.tcpcc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.tcpcc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTcpCongestionControlAudit}>{i18n.t("integrations.tcpcc.refresh")}</button>
+          {#if tcpCongestionControlAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={tcpCongestionControlAuditData.verdict.verdict === 'bbr_available_unused' ? 'var(--warn)' :
+                             tcpCongestionControlAuditData.verdict.verdict === 'tfo_off' ? 'var(--accent)' :
+                             tcpCongestionControlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              cc={tcpCongestionControlAuditData.current_cc || '?'} · tfo={tcpCongestionControlAuditData.tcp_fastopen ?? '?'} · {i18n.t("integrations.tcpcc.verdict")} : <b>{tcpCongestionControlAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if tcpCongestionControlAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        tcpCongestionControlAuditData.verdict.verdict === 'bbr_available_unused' ? 'var(--warn)' :
+                        tcpCongestionControlAuditData.verdict.verdict === 'tfo_off' ? 'var(--accent)' :
+                        tcpCongestionControlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{tcpCongestionControlAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(tcpCongestionControlAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.tcpcc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  tcpCongestionControlAuditData.verdict.verdict === 'bbr_available_unused'
+                    ? "# bbr available but not active — switch\necho bbr | sudo tee /proc/sys/net/ipv4/tcp_congestion_control\n# Persist via sysctl :\necho 'net.ipv4.tcp_congestion_control = bbr' | sudo tee /etc/sysctl.d/99-bbr.conf\nsudo sysctl --system\n# Verify :\nss -nti | head | grep -i bbr"
+                  : tcpCongestionControlAuditData.verdict.verdict === 'tfo_off'
+                    ? "# TCP Fast Open explicitly disabled — re-enable\necho 3 | sudo tee /proc/sys/net/ipv4/tcp_fastopen\n# 1 = client, 2 = server, 3 = both. Persist :\necho 'net.ipv4.tcp_fastopen = 3' | sudo tee /etc/sysctl.d/99-tfo.conf\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #89.2 Namespace caps (UI sprint 80) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nslimits.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nslimits.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNamespaceLimitsAudit}>{i18n.t("integrations.nslimits.refresh")}</button>
+          {#if namespaceLimitsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={namespaceLimitsAuditData.verdict.verdict === 'user_ns_disabled' ? 'var(--warn)' :
+                             namespaceLimitsAuditData.verdict.verdict === 'ns_caps_aggressive' ? 'var(--accent)' :
+                             namespaceLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.nslimits.verdict")} : <b>{namespaceLimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if namespaceLimitsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        namespaceLimitsAuditData.verdict.verdict === 'user_ns_disabled' ? 'var(--warn)' :
+                        namespaceLimitsAuditData.verdict.verdict === 'ns_caps_aggressive' ? 'var(--accent)' :
+                        namespaceLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{namespaceLimitsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(namespaceLimitsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nslimits.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  namespaceLimitsAuditData.verdict.verdict === 'user_ns_disabled'
+                    ? "# max_user_namespaces=0 — re-enable for rootless containers\necho 15000 | sudo tee /proc/sys/user/max_user_namespaces\n# Persist :\necho 'user.max_user_namespaces = 15000' | sudo tee /etc/sysctl.d/99-ns.conf\nsudo sysctl --system\n# Verify podman works :\npodman info | grep -i 'rootless'"
+                  : namespaceLimitsAuditData.verdict.verdict === 'ns_caps_aggressive'
+                    ? "# Multiple NS types capped to 0 — intentional?\ngrep -H . /proc/sys/user/max_*_namespaces\n# Restore distro defaults (uncomment what you want enabled) :\n# echo 15000 | sudo tee /proc/sys/user/max_pid_namespaces\n# echo 15000 | sudo tee /proc/sys/user/max_net_namespaces\n# echo 15000 | sudo tee /proc/sys/user/max_mnt_namespaces"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #89.3 SysV IPC limits (UI sprint 80) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sysvipc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sysvipc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSysvipcLimitsAudit}>{i18n.t("integrations.sysvipc.refresh")}</button>
+          {#if sysvipcLimitsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={sysvipcLimitsAuditData.verdict.verdict === 'shmmax_zero' ? 'var(--err)' :
+                             ['shmall_under_ram','shmmax_capped_low'].includes(sysvipcLimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             sysvipcLimitsAuditData.verdict.verdict === 'shmmni_low' ? 'var(--accent)' :
+                             sysvipcLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.sysvipc.verdict")} : <b>{sysvipcLimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sysvipcLimitsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        sysvipcLimitsAuditData.verdict.verdict === 'shmmax_zero' ? 'var(--err)' :
+                        ['shmall_under_ram','shmmax_capped_low'].includes(sysvipcLimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        sysvipcLimitsAuditData.verdict.verdict === 'shmmni_low' ? 'var(--accent)' :
+                        sysvipcLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{sysvipcLimitsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(sysvipcLimitsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sysvipc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  sysvipcLimitsAuditData.verdict.verdict === 'shmmax_zero'
+                    ? "# shmmax=0 disables SysV SHM — restore a sane default\n# Set to 90% of RAM as bytes :\nMEM=$(awk '/^MemTotal/{print $2*1024 * 9/10}' /proc/meminfo)\necho $MEM | sudo tee /proc/sys/kernel/shmmax\n# Persist :\necho \"kernel.shmmax = $MEM\" | sudo tee /etc/sysctl.d/99-sysvipc.conf\nsudo sysctl --system"
+                  : sysvipcLimitsAuditData.verdict.verdict === 'shmall_under_ram'
+                    ? "# shmall (in pages) is below MemTotal — bump it\nPAGES=$(getconf _PHYS_PAGES)\necho $PAGES | sudo tee /proc/sys/kernel/shmall\necho \"kernel.shmall = $PAGES\" | sudo tee /etc/sysctl.d/99-sysvipc.conf\nsudo sysctl --system"
+                  : sysvipcLimitsAuditData.verdict.verdict === 'shmmax_capped_low'
+                    ? "# shmmax < 2 GiB on a memory-rich box — bump for PostgreSQL/CUDA-MPS\nMEM=$(awk '/^MemTotal/{print $2*1024 * 9/10}' /proc/meminfo)\necho $MEM | sudo tee /proc/sys/kernel/shmmax\necho \"kernel.shmmax = $MEM\" | sudo tee /etc/sysctl.d/99-shmmax.conf\nsudo sysctl --system"
+                  : sysvipcLimitsAuditData.verdict.verdict === 'shmmni_low'
+                    ? "# shmmni below the modern default of 4096 — bump\necho 4096 | sudo tee /proc/sys/kernel/shmmni\necho 'kernel.shmmni = 4096' | sudo tee /etc/sysctl.d/99-shmmni.conf\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #89.4 PCIe link drift (UI sprint 80) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pcielink.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pcielink.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieLinkSpeedDriftAudit}>{i18n.t("integrations.pcielink.refresh")}</button>
+          {#if pcieLinkSpeedDriftAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pcieLinkSpeedDriftAuditData.verdict.verdict === 'nvme_link_downgraded' ? 'var(--warn)' :
+                             pcieLinkSpeedDriftAuditData.verdict.verdict === 'peripheral_link_downgraded' ? 'var(--accent)' :
+                             pcieLinkSpeedDriftAuditData.verdict.verdict === 'links_at_max' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {pcieLinkSpeedDriftAuditData.linked_count}/{pcieLinkSpeedDriftAuditData.device_count} linked · {i18n.t("integrations.pcielink.verdict")} : <b>{pcieLinkSpeedDriftAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pcieLinkSpeedDriftAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pcieLinkSpeedDriftAuditData.verdict.verdict === 'nvme_link_downgraded' ? 'var(--warn)' :
+                        pcieLinkSpeedDriftAuditData.verdict.verdict === 'peripheral_link_downgraded' ? 'var(--accent)' :
+                        pcieLinkSpeedDriftAuditData.verdict.verdict === 'links_at_max' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pcieLinkSpeedDriftAuditData.verdict.reason}</p>
+            {#if !['links_at_max','unknown'].includes(pcieLinkSpeedDriftAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pcielink.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  pcieLinkSpeedDriftAuditData.verdict.verdict === 'nvme_link_downgraded'
+                    ? "# NVMe below max PCIe link — inspect + reseat\nfor n in /sys/class/nvme/nvme*; do\n  pci=$(basename $(readlink $n/device))\n  echo \"$(basename $n) @$pci:\"\n  echo \"  cur: $(cat /sys/bus/pci/devices/$pci/current_link_speed) x$(cat /sys/bus/pci/devices/$pci/current_link_width)\"\n  echo \"  max: $(cat /sys/bus/pci/devices/$pci/max_link_speed) x$(cat /sys/bus/pci/devices/$pci/max_link_width)\"\ndone\n# Common fixes : reseat the M.2 slot, check thermals (NVMe\n# thermal-throttles to lower link speed), verify BIOS\n# bifurcation settings match the physical card layout."
+                  : pcieLinkSpeedDriftAuditData.verdict.verdict === 'peripheral_link_downgraded'
+                    ? "# Non-GPU non-NVMe PCIe device below max link — inspect\nfor d in /sys/bus/pci/devices/*; do\n  bdf=$(basename $d)\n  cls=$(cat $d/class)\n  case \"$cls\" in 0x0300*|0x0302*|0x0108*|0x06*) continue ;; esac\n  cs=$(cat $d/current_link_speed 2>/dev/null)\n  ms=$(cat $d/max_link_speed 2>/dev/null)\n  cw=$(cat $d/current_link_width 2>/dev/null)\n  mw=$(cat $d/max_link_width 2>/dev/null)\n  [ \"$cs\" != \"$ms\" ] || [ \"$cw\" != \"$mw\" ] &&\n    echo \"$bdf cls=$cls cur=$cs/x$cw max=$ms/x$mw\"\ndone\n# Often a ribbon / riser issue — reseat the card."
                   : ""
                 }</pre>
               </details>
