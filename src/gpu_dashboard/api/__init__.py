@@ -490,3 +490,4 @@ from .edac_dimm_ce_trend_audit import handle_edac_dimm_ce_trend_audit_status  # 
 from .ata_port_sata_audit import handle_ata_port_sata_audit_status  # noqa: F401,F811
 from .fw_cfg_blob_audit import handle_fw_cfg_blob_audit_status  # noqa: F401,F811
 from .uevent_helper_audit import handle_uevent_helper_audit_status  # noqa: F401,F811
+from .dmi_entries_raw_audit import handle_dmi_entries_raw_audit_status  # noqa: F401,F811
