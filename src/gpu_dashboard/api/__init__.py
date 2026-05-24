@@ -494,3 +494,4 @@ from .dmi_entries_raw_audit import handle_dmi_entries_raw_audit_status  # noqa: 
 from .tracing_events_enable_audit import handle_tracing_events_enable_audit_status  # noqa: F401,F811
 from .process_id_limits_audit import handle_process_id_limits_audit_status  # noqa: F401,F811
 from .sysctl_dev_subtree_audit import handle_sysctl_dev_subtree_audit_status  # noqa: F401,F811
+from .kernel_notes_vmcoreinfo_audit import handle_kernel_notes_vmcoreinfo_audit_status  # noqa: F401,F811

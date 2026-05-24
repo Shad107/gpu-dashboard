@@ -1707,6 +1707,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sysctl_dev_subtree_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kernel-notes-vmcoreinfo-audit":
+                # R&D #73.4 — kexec / vmcoreinfo / notes kdump prep
+                code, body = api.handle_kernel_notes_vmcoreinfo_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
