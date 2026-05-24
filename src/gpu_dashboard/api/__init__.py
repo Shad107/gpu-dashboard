@@ -536,3 +536,4 @@ from .clk_summary_audit import handle_clk_summary_audit_status  # noqa: F401,F81
 from .nfsd_stats_audit import handle_nfsd_stats_audit_status  # noqa: F401,F811
 from .dri_debugfs_audit import handle_dri_debugfs_audit_status  # noqa: F401,F811
 from .suspend_stats_audit import handle_suspend_stats_audit_status  # noqa: F401,F811
+from .loop_device_audit import handle_loop_device_audit_status  # noqa: F401,F811
