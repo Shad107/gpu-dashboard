@@ -1767,6 +1767,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ipv6_conf_per_iface_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/wmi-bus-audit":
+                # R&D #76.1 — /sys/devices/virtual/wmi_bus per-instance
+                code, body = api.handle_wmi_bus_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
