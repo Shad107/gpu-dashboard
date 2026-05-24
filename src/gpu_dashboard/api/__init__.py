@@ -505,3 +505,4 @@ from .sgx_enclave_audit import handle_sgx_enclave_audit_status  # noqa: F401,F81
 from .lsm_subtree_audit import handle_lsm_subtree_audit_status  # noqa: F401,F811
 from .ipv4_conf_per_iface_audit import handle_ipv4_conf_per_iface_audit_status  # noqa: F401,F811
 from .input_device_audit import handle_input_device_audit_status  # noqa: F401,F811
+from .ipv6_conf_per_iface_audit import handle_ipv6_conf_per_iface_audit_status  # noqa: F401,F811

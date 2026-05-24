@@ -1762,6 +1762,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_input_device_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ipv6-conf-per-iface-audit":
+                # R&D #76.2 — /proc/sys/net/ipv6/conf per-iface
+                code, body = api.handle_ipv6_conf_per_iface_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
