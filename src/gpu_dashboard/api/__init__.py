@@ -517,3 +517,4 @@ from .net_stacking_topology_audit import handle_net_stacking_topology_audit_stat
 from .proc_maps_anomaly_audit import handle_proc_maps_anomaly_audit_status  # noqa: F401,F811
 from .softnet_stat_audit import handle_softnet_stat_audit_status  # noqa: F401,F811
 from .route_table_audit import handle_route_table_audit_status  # noqa: F401,F811
+from .fb_vtconsole_audit import handle_fb_vtconsole_audit_status  # noqa: F401,F811
