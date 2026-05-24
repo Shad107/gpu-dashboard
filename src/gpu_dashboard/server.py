@@ -1947,6 +1947,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_unix_socket_inventory_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sched-features-debugfs-audit":
+                # R&D #85.4 — CFS feature flags + tuning knobs
+                code, body = api.handle_sched_features_debugfs_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
