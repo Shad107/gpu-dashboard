@@ -1887,6 +1887,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_rcu_expedited_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/page-owner-frag-audit":
+                # R&D #82.4 — extfrag/unusable index + page_owner
+                code, body = api.handle_page_owner_frag_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
