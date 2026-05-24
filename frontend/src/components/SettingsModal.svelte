@@ -2354,6 +2354,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #77 (UI sprint 68) ────────────────────────────────────────────
+  let cpuThermalThrottleCountersAuditData  = $state<Awaited<ReturnType<typeof api.cpuThermalThrottleCountersAuditStatus>>  | null>(null);
+  let pciSriovPostureAuditData             = $state<Awaited<ReturnType<typeof api.pciSriovPostureAuditStatus>>             | null>(null);
+  let cpuCppcAuditData                     = $state<Awaited<ReturnType<typeof api.cpuCppcAuditStatus>>                     | null>(null);
+  let pcieAerFleetAuditData                = $state<Awaited<ReturnType<typeof api.pcieAerFleetAuditStatus>>                | null>(null);
+  async function loadCpuThermalThrottleCountersAudit() {
+    try { cpuThermalThrottleCountersAuditData = await api.cpuThermalThrottleCountersAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPciSriovPostureAudit() {
+    try { pciSriovPostureAuditData = await api.pciSriovPostureAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpuCppcAudit() {
+    try { cpuCppcAuditData = await api.cpuCppcAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPcieAerFleetAudit() {
+    try { pcieAerFleetAuditData = await api.pcieAerFleetAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2737,6 +2759,11 @@
       if (!ipv6ConfPerIfaceAuditData)           loadIpv6ConfPerIfaceAudit();
       if (!wmiBusAuditData)                     loadWmiBusAudit();
       if (!numaHmatAccessAuditData)             loadNumaHmatAccessAudit();
+      // R&D #77 cards
+      if (!cpuThermalThrottleCountersAuditData) loadCpuThermalThrottleCountersAudit();
+      if (!pciSriovPostureAuditData)            loadPciSriovPostureAudit();
+      if (!cpuCppcAuditData)                    loadCpuCppcAudit();
+      if (!pcieAerFleetAuditData)               loadPcieAerFleetAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -13288,6 +13315,154 @@
                              border-radius: 4px; overflow-x: auto;">{numaHmatAccessAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(numaHmatAccessAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #77.2 CPU thermal throttle (UI sprint 68) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cputhrottle.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cputhrottle.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuThermalThrottleCountersAudit}>{i18n.t("integrations.cputhrottle.refresh")}</button>
+          {#if cpuThermalThrottleCountersAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuThermalThrottleCountersAuditData.verdict.verdict === 'package_throttling_active' ? 'var(--err)' :
+                             ['core_throttling_active','power_limit_hit'].includes(cpuThermalThrottleCountersAuditData.verdict.verdict) ? 'var(--warn)' :
+                             cpuThermalThrottleCountersAuditData.verdict.verdict === 'counters_absent' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cpuThermalThrottleCountersAuditData.cpu_count} CPUs · {i18n.t("integrations.cputhrottle.verdict")} : <b>{cpuThermalThrottleCountersAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuThermalThrottleCountersAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuThermalThrottleCountersAuditData.verdict.verdict === 'package_throttling_active' ? 'var(--err)' :
+                        ['core_throttling_active','power_limit_hit'].includes(cpuThermalThrottleCountersAuditData.verdict.verdict) ? 'var(--warn)' :
+                        cpuThermalThrottleCountersAuditData.verdict.verdict === 'counters_absent' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpuThermalThrottleCountersAuditData.verdict.reason}</p>
+            {#if cpuThermalThrottleCountersAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cputhrottle.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuThermalThrottleCountersAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuThermalThrottleCountersAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #77.4 PCI SR-IOV (UI sprint 68) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sriov.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sriov.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPciSriovPostureAudit}>{i18n.t("integrations.sriov.refresh")}</button>
+          {#if pciSriovPostureAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pciSriovPostureAuditData.verdict.verdict === 'unexpected_vfs_active' ? 'var(--err)' :
+                             pciSriovPostureAuditData.verdict.verdict === 'drivers_autoprobe_disabled_no_vfio' ? 'var(--warn)' :
+                             ['sriov_capable_unused','no_sriov_capable'].includes(pciSriovPostureAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {pciSriovPostureAuditData.sriov_capable_count} cap · {pciSriovPostureAuditData.active_vf_count} VFs · {i18n.t("integrations.sriov.verdict")} : <b>{pciSriovPostureAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pciSriovPostureAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pciSriovPostureAuditData.verdict.verdict === 'unexpected_vfs_active' ? 'var(--err)' :
+                        pciSriovPostureAuditData.verdict.verdict === 'drivers_autoprobe_disabled_no_vfio' ? 'var(--warn)' :
+                        ['sriov_capable_unused','no_sriov_capable'].includes(pciSriovPostureAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pciSriovPostureAuditData.verdict.reason}</p>
+            {#if pciSriovPostureAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sriov.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{pciSriovPostureAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(pciSriovPostureAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #77.1 CPU CPPC (UI sprint 68) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cppc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cppc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuCppcAudit}>{i18n.t("integrations.cppc.refresh")}</button>
+          {#if cpuCppcAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['cppc_clamped','frequency_inversion'].includes(cpuCppcAuditData.verdict.verdict) ? 'var(--err)' :
+                             cpuCppcAuditData.verdict.verdict === 'driver_ignoring_cppc' ? 'var(--warn)' :
+                             cpuCppcAuditData.verdict.verdict === 'cppc_absent' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cpuCppcAuditData.cpu_count} CPUs · drv={cpuCppcAuditData.scaling_driver ?? '?'} · {i18n.t("integrations.cppc.verdict")} : <b>{cpuCppcAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuCppcAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['cppc_clamped','frequency_inversion'].includes(cpuCppcAuditData.verdict.verdict) ? 'var(--err)' :
+                        cpuCppcAuditData.verdict.verdict === 'driver_ignoring_cppc' ? 'var(--warn)' :
+                        cpuCppcAuditData.verdict.verdict === 'cppc_absent' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpuCppcAuditData.verdict.reason}</p>
+            {#if cpuCppcAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cppc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuCppcAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuCppcAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #77.3 PCIe AER fleet (UI sprint 68) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.aerfleet.title")}</h4>
+        <p class="muted">{i18n.t("integrations.aerfleet.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieAerFleetAudit}>{i18n.t("integrations.aerfleet.refresh")}</button>
+          {#if pcieAerFleetAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pcieAerFleetAuditData.verdict.verdict === 'fleet_fatal' ? 'var(--err)' :
+                             ['fleet_nonfatal','bridge_correctable_storm'].includes(pcieAerFleetAuditData.verdict.verdict) ? 'var(--warn)' :
+                             pcieAerFleetAuditData.verdict.verdict === 'nvme_or_nic_correctable' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {pcieAerFleetAuditData.device_count} devs · {i18n.t("integrations.aerfleet.verdict")} : <b>{pcieAerFleetAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pcieAerFleetAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pcieAerFleetAuditData.verdict.verdict === 'fleet_fatal' ? 'var(--err)' :
+                        ['fleet_nonfatal','bridge_correctable_storm'].includes(pcieAerFleetAuditData.verdict.verdict) ? 'var(--warn)' :
+                        pcieAerFleetAuditData.verdict.verdict === 'nvme_or_nic_correctable' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pcieAerFleetAuditData.verdict.reason}</p>
+            {#if pcieAerFleetAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.aerfleet.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{pcieAerFleetAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(pcieAerFleetAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

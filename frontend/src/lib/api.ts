@@ -4653,4 +4653,58 @@ export const api = {
       has_memory: string | null;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #77 (UI sprint 68) ──
+  cpuThermalThrottleCountersAuditStatus: () =>
+    fetch("/api/cpu-thermal-throttle-counters-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      counters_by_cpu: Record<string, Record<string, number | null>>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  pciSriovPostureAuditStatus: () =>
+    fetch("/api/pci-sriov-posture-audit").then(jsonOf<{
+      ok: boolean;
+      sriov_capable_count: number;
+      active_vf_count: number;
+      vfio_module_loaded: boolean;
+      devices: Array<{
+        bdf: string;
+        sriov_totalvfs: number | null;
+        sriov_numvfs: number | null;
+        sriov_drivers_autoprobe: number | null;
+        sriov_offset: number | null;
+        sriov_stride: number | null;
+        sriov_vf_total_msix: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  cpuCppcAuditStatus: () =>
+    fetch("/api/cpu-cppc-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      scaling_driver: string | null;
+      sample_cpu_cppc: Record<string, number | null> | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  pcieAerFleetAuditStatus: () =>
+    fetch("/api/pcie-aer-fleet-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      totals: { correctable: number; fatal: number; nonfatal: number };
+      by_kind: Record<string, number>;
+      devices_sample: Array<{
+        bdf: string;
+        class_id: number | null;
+        driver: string | null;
+        kind: string;
+        correctable: number;
+        fatal: number;
+        nonfatal: number;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
