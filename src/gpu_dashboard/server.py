@@ -1962,6 +1962,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_thunderbolt_usb4_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nvme-controller-state-audit":
+                # R&D #86.3 — NVMe controller state + firmware
+                code, body = api.handle_nvme_controller_state_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

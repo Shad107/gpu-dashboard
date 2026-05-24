@@ -545,3 +545,4 @@ from .unix_socket_inventory_audit import handle_unix_socket_inventory_audit_stat
 from .sched_features_debugfs_audit import handle_sched_features_debugfs_audit_status  # noqa: F401,F811
 from .wol_ethtool_audit import handle_wol_ethtool_audit_status  # noqa: F401,F811
 from .thunderbolt_usb4_audit import handle_thunderbolt_usb4_audit_status  # noqa: F401,F811
+from .nvme_controller_state_audit import handle_nvme_controller_state_audit_status  # noqa: F401,F811
