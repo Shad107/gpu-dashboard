@@ -1922,6 +1922,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_loop_device_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kernel-module-params-drift-audit":
+                # R&D #84.3 — module parameter drift from defaults
+                code, body = api.handle_kernel_module_params_drift_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
