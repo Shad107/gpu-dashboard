@@ -1837,6 +1837,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_arp_neighbor_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/snmp6-icmp-audit":
+                # R&D #80.2 — IPv6 ICMP / ND / MLD counters
+                code, body = api.handle_snmp6_icmp_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
