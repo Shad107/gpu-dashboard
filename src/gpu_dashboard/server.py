@@ -1867,6 +1867,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cgroup_io_stat_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/thermal-trip-drift-audit":
+                # R&D #81.4 — thermal-zone trip configuration
+                code, body = api.handle_thermal_trip_drift_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

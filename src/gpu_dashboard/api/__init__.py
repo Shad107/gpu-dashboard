@@ -526,3 +526,4 @@ from .proc_status_caps_audit import handle_proc_status_caps_audit_status  # noqa
 from .xhci_companion_audit import handle_xhci_companion_audit_status  # noqa: F401,F811
 from .bpf_program_inventory_audit import handle_bpf_program_inventory_audit_status  # noqa: F401,F811
 from .cgroup_io_stat_audit import handle_cgroup_io_stat_audit_status  # noqa: F401,F811
+from .thermal_trip_drift_audit import handle_thermal_trip_drift_audit_status  # noqa: F401,F811
