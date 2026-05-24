@@ -1712,6 +1712,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_kernel_notes_vmcoreinfo_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/firmware-attributes-audit":
+                # R&D #73.3 — vendor BIOS attributes (Dell/Lenovo/HP)
+                code, body = api.handle_firmware_attributes_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
