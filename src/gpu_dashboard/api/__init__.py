@@ -514,3 +514,4 @@ from .cpu_cppc_audit import handle_cpu_cppc_audit_status  # noqa: F401,F811
 from .pcie_aer_fleet_audit import handle_pcie_aer_fleet_audit_status  # noqa: F401,F811
 from .net_iface_counters_audit import handle_net_iface_counters_audit_status  # noqa: F401,F811
 from .net_stacking_topology_audit import handle_net_stacking_topology_audit_status  # noqa: F401,F811
+from .proc_maps_anomaly_audit import handle_proc_maps_anomaly_audit_status  # noqa: F401,F811

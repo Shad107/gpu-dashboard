@@ -1807,6 +1807,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_net_stacking_topology_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-maps-anomaly-audit":
+                # R&D #78.4 — /proc/<pid>/maps anomaly scan
+                code, body = api.handle_proc_maps_anomaly_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
