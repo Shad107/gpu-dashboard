@@ -1757,6 +1757,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ipv4_conf_per_iface_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/input-device-audit":
+                # R&D #76.4 — /sys/class/input/event* wakeup posture
+                code, body = api.handle_input_device_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
