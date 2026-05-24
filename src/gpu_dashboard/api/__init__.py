@@ -548,3 +548,4 @@ from .thunderbolt_usb4_audit import handle_thunderbolt_usb4_audit_status  # noqa
 from .nvme_controller_state_audit import handle_nvme_controller_state_audit_status  # noqa: F401,F811
 from .workqueue_cpumask_audit import handle_workqueue_cpumask_audit_status  # noqa: F401,F811
 from .usb_authorized_default_audit import handle_usb_authorized_default_audit_status  # noqa: F401,F811
+from .proc_locks_contention_audit import handle_proc_locks_contention_audit_status  # noqa: F401,F811
