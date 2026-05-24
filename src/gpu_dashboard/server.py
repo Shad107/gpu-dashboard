@@ -1722,6 +1722,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_isolation_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/dma-heap-audit":
+                # R&D #74.2 — /sys/class/dma_heap inventory + perms
+                code, body = api.handle_dma_heap_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

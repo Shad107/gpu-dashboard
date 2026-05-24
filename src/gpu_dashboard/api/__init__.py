@@ -497,3 +497,4 @@ from .sysctl_dev_subtree_audit import handle_sysctl_dev_subtree_audit_status  # 
 from .kernel_notes_vmcoreinfo_audit import handle_kernel_notes_vmcoreinfo_audit_status  # noqa: F401,F811
 from .firmware_attributes_audit import handle_firmware_attributes_audit_status  # noqa: F401,F811
 from .cpu_isolation_audit import handle_cpu_isolation_audit_status  # noqa: F401,F811
+from .dma_heap_audit import handle_dma_heap_audit_status  # noqa: F401,F811
