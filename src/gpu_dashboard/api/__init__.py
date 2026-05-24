@@ -532,3 +532,4 @@ from .cpu_dma_latency_qos_audit import handle_cpu_dma_latency_qos_audit_status  
 from .rcu_expedited_audit import handle_rcu_expedited_audit_status  # noqa: F401,F811
 from .page_owner_frag_audit import handle_page_owner_frag_audit_status  # noqa: F401,F811
 from .block_integrity_audit import handle_block_integrity_audit_status  # noqa: F401,F811
+from .clk_summary_audit import handle_clk_summary_audit_status  # noqa: F401,F811

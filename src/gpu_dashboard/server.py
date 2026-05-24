@@ -1897,6 +1897,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_block_integrity_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/clk-summary-audit":
+                # R&D #83.2 — Linux common-clock framework state
+                code, body = api.handle_clk_summary_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
