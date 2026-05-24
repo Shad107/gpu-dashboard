@@ -2027,6 +2027,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sysvipc_limits_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pcie-link-speed-drift-audit":
+                # R&D #89.4 — non-GPU PCIe link drift (NVMe + peripherals)
+                code, body = api.handle_pcie_link_speed_drift_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

@@ -558,3 +558,4 @@ from .timer_migration_nohz_drift_audit import handle_timer_migration_nohz_drift_
 from .tcp_congestion_control_audit import handle_tcp_congestion_control_audit_status  # noqa: F401,F811
 from .namespace_limits_audit import handle_namespace_limits_audit_status  # noqa: F401,F811
 from .sysvipc_limits_audit import handle_sysvipc_limits_audit_status  # noqa: F401,F811
+from .pcie_link_speed_drift_audit import handle_pcie_link_speed_drift_audit_status  # noqa: F401,F811
