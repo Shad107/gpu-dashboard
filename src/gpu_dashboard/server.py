@@ -1857,6 +1857,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_xhci_companion_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/bpf-program-inventory-audit":
+                # R&D #81.2 — pinned BPF inventory + fdinfo scan
+                code, body = api.handle_bpf_program_inventory_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
