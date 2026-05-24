@@ -1982,6 +1982,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_locks_contention_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpu-smt-control-audit":
+                # R&D #87.3 — SMT over-mitigation / still-vulnerable
+                code, body = api.handle_cpu_smt_control_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
