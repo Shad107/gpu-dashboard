@@ -2393,6 +2393,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #79 (UI sprint 70) ────────────────────────────────────────────
+  let softnetStatAuditData       = $state<Awaited<ReturnType<typeof api.softnetStatAuditStatus>>       | null>(null);
+  let routeTableAuditData        = $state<Awaited<ReturnType<typeof api.routeTableAuditStatus>>        | null>(null);
+  let fbVtconsoleAuditData       = $state<Awaited<ReturnType<typeof api.fbVtconsoleAuditStatus>>       | null>(null);
+  let schedTunablesAuditData     = $state<Awaited<ReturnType<typeof api.schedTunablesAuditStatus>>     | null>(null);
+  async function loadSoftnetStatAudit() {
+    try { softnetStatAuditData = await api.softnetStatAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadRouteTableAudit() {
+    try { routeTableAuditData = await api.routeTableAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFbVtconsoleAudit() {
+    try { fbVtconsoleAuditData = await api.fbVtconsoleAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSchedTunablesAudit() {
+    try { schedTunablesAuditData = await api.schedTunablesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2785,6 +2807,11 @@
       if (!netIfaceCountersAuditData)           loadNetIfaceCountersAudit();
       if (!netStackingTopologyAuditData)        loadNetStackingTopologyAudit();
       if (!procMapsAnomalyAuditData)            loadProcMapsAnomalyAudit();
+      // R&D #79 cards
+      if (!softnetStatAuditData)                loadSoftnetStatAudit();
+      if (!routeTableAuditData)                 loadRouteTableAudit();
+      if (!fbVtconsoleAuditData)                loadFbVtconsoleAudit();
+      if (!schedTunablesAuditData)              loadSchedTunablesAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -13629,6 +13656,188 @@
                     ? "# memfd executable mappings — usually a JIT, but worth inspecting\nfor p in $(ls /proc | grep -E '^[0-9]+$'); do\n  [ -r /proc/$p/maps ] || continue\n  grep -E 'x.*memfd:' /proc/$p/maps 2>/dev/null | head -3 | \\\n    awk -v p=$p '{print p\" \" $NF}'\ndone\n# If it's a known JIT we missed (Mono, Wine, …) file an issue to whitelist."
                   : procMapsAnomalyAuditData.verdict.verdict === 'requires_root'
                     ? "# Most PIDs are root-owned and unreadable as your UID\n# Re-run the dashboard as root to get a full-system scan, e.g.:\nsudo systemctl restart gpu-dashboard.service\n# Or run a one-shot scan with sudo for the most-recent verdict:\ncurl -s http://localhost:9999/api/proc-maps-anomaly-audit | jq .verdict"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #79.1 softnet_stat (UI sprint 70) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.softnet.title")}</h4>
+        <p class="muted">{i18n.t("integrations.softnet.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSoftnetStatAudit}>{i18n.t("integrations.softnet.refresh")}</button>
+          {#if softnetStatAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={softnetStatAuditData.verdict.verdict === 'err' ? 'var(--err)' :
+                             softnetStatAuditData.verdict.verdict === 'warn' ? 'var(--warn)' :
+                             softnetStatAuditData.verdict.verdict === 'accent' ? 'var(--accent)' :
+                             softnetStatAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {softnetStatAuditData.cpu_count} CPU(s) · drops={softnetStatAuditData.totals.dropped} · {i18n.t("integrations.softnet.verdict")} : <b>{softnetStatAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if softnetStatAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        softnetStatAuditData.verdict.verdict === 'err' ? 'var(--err)' :
+                        softnetStatAuditData.verdict.verdict === 'warn' ? 'var(--warn)' :
+                        softnetStatAuditData.verdict.verdict === 'accent' ? 'var(--accent)' :
+                        softnetStatAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{softnetStatAuditData.verdict.reason}</p>
+            {#if softnetStatAuditData.verdict.verdict !== 'ok' && softnetStatAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.softnet.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  softnetStatAuditData.verdict.verdict === 'err'
+                    ? "# softirq drops happening NOW — bump backlog + budget\nsudo sysctl -w net.core.netdev_max_backlog=10000\nsudo sysctl -w net.core.netdev_budget=600\nsudo sysctl -w net.core.netdev_budget_usecs=8000\n# Or enable RPS to spread softirq load across CPUs:\nfor q in /sys/class/net/$IFACE/queues/rx-*/rps_cpus; do echo ff | sudo tee $q; done\n# To persist: /etc/sysctl.d/99-net-tune.conf"
+                  : softnetStatAuditData.verdict.verdict === 'warn'
+                    ? "# Single-CPU drop or NAPI squeeze — investigate which CPU\ncat /proc/net/softnet_stat | awk '{printf \"CPU%d  drop=%d  ts=%d\\n\", NR-1, strtonum(\"0x\"$2), strtonum(\"0x\"$3)}'\n# If consistently the same CPU → IRQ pinning issue:\ncat /proc/interrupts | grep -E '^\\s*\\d+:'\n# Spread across CPUs:  sudo systemctl restart irqbalance"
+                  : softnetStatAuditData.verdict.verdict === 'accent'
+                    ? "# cpu_collision is rare on modern kernels — check kernel + driver\nuname -r\n# If kernel is older than 5.10, an upgrade often fixes locking pathology:\nsudo apt update && sudo apt upgrade linux-image-generic"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #79.2 route table (UI sprint 70) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.routes.title")}</h4>
+        <p class="muted">{i18n.t("integrations.routes.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRouteTableAudit}>{i18n.t("integrations.routes.refresh")}</button>
+          {#if routeTableAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={routeTableAuditData.verdict.verdict === 'err' ? 'var(--err)' :
+                             routeTableAuditData.verdict.verdict === 'warn' ? 'var(--warn)' :
+                             routeTableAuditData.verdict.verdict === 'accent' ? 'var(--accent)' :
+                             routeTableAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {routeTableAuditData.default_v4_count} default(s) · {routeTableAuditData.host_v4_count} /32 host(s) · {i18n.t("integrations.routes.verdict")} : <b>{routeTableAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if routeTableAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        routeTableAuditData.verdict.verdict === 'err' ? 'var(--err)' :
+                        routeTableAuditData.verdict.verdict === 'warn' ? 'var(--warn)' :
+                        routeTableAuditData.verdict.verdict === 'accent' ? 'var(--accent)' :
+                        routeTableAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{routeTableAuditData.verdict.reason}</p>
+            {#if routeTableAuditData.verdict.verdict !== 'ok' && routeTableAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.routes.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  routeTableAuditData.verdict.verdict === 'err'
+                    ? "# Inspect current routes — restore default gw if missing\nip route show\nip -6 route show\n# Restore via NetworkManager:\nsudo nmcli con up $CONNECTION\n# Or one-shot manual:\nsudo ip route add default via $GATEWAY dev $IFACE"
+                  : routeTableAuditData.verdict.verdict === 'warn'
+                    ? "# Default gw on container-bridge — find the culprit\nip route show default\nss -tlnp | grep ':80\\|:443'\n# If docker stole it, restart with proper iptables config:\nsudo systemctl restart docker\n# Or remove the rogue default:\nsudo ip route del default dev docker0"
+                  : routeTableAuditData.verdict.verdict === 'accent'
+                    ? "# Many /32 host routes — likely a VPN-client leak\nip -4 route | grep '/32' | head -20\n# Inspect VPN config — split-tunnel routes can pile up\nsudo wg show all 2>/dev/null    # WireGuard\nsudo openvpn3 sessions-list 2>/dev/null    # OpenVPN3\n# Manual flush of /32 routes (DANGEROUS — only if certain):\n# ip -4 route | awk '$1 ~ /\\/32$/ {print $1}' | xargs -n1 sudo ip route del"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #79.3 fb / vtconsole (UI sprint 70) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fbvtcon.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fbvtcon.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFbVtconsoleAudit}>{i18n.t("integrations.fbvtcon.refresh")}</button>
+          {#if fbVtconsoleAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={fbVtconsoleAuditData.verdict.verdict === 'efifb_owns_console' ? 'var(--err)' :
+                             ['vesafb_fallback','wrong_fb_bound'].includes(fbVtconsoleAuditData.verdict.verdict) ? 'var(--warn)' :
+                             fbVtconsoleAuditData.verdict.verdict === 'multi_fb_ok' ? 'var(--accent)' :
+                             fbVtconsoleAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {fbVtconsoleAuditData.fb_count} fb(s) · {i18n.t("integrations.fbvtcon.verdict")} : <b>{fbVtconsoleAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fbVtconsoleAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        fbVtconsoleAuditData.verdict.verdict === 'efifb_owns_console' ? 'var(--err)' :
+                        ['vesafb_fallback','wrong_fb_bound'].includes(fbVtconsoleAuditData.verdict.verdict) ? 'var(--warn)' :
+                        fbVtconsoleAuditData.verdict.verdict === 'multi_fb_ok' ? 'var(--accent)' :
+                        fbVtconsoleAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{fbVtconsoleAuditData.verdict.reason}</p>
+            {#if fbVtconsoleAuditData.verdict.verdict !== 'ok' && fbVtconsoleAuditData.verdict.verdict !== 'unknown' && fbVtconsoleAuditData.verdict.verdict !== 'multi_fb_ok'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fbvtcon.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  fbVtconsoleAuditData.verdict.verdict === 'efifb_owns_console'
+                    ? "# Force efifb / simpledrm out of the way so nvidia-drm takes over\n# Edit /etc/default/grub — add to GRUB_CMDLINE_LINUX:\n#   nvidia-drm.modeset=1 nvidia-drm.fbdev=1 video=efifb:off\nsudo nano /etc/default/grub\nsudo update-grub\n# Rebuild initramfs to ensure nvidia loads before efifb:\nsudo update-initramfs -u\nsudo reboot"
+                  : fbVtconsoleAuditData.verdict.verdict === 'vesafb_fallback'
+                    ? "# Graphics stack incomplete — GPU driver never replaced firmware fb\n# Check driver status:\nlsmod | grep -E 'nvidia|amdgpu|i915|nouveau'\ndmesg | grep -iE 'drm|nvidia|efifb' | tail -20\n# If nvidia driver missing or broken:\nsudo dpkg --configure -a\nsudo apt install --reinstall nvidia-driver-XXX\nsudo reboot"
+                  : fbVtconsoleAuditData.verdict.verdict === 'wrong_fb_bound'
+                    ? "# Console bound to wrong framebuffer — rebind manually\nfor v in /sys/class/vtconsole/vtcon*; do\n  echo \"$(basename $v) $(cat $v/name) bind=$(cat $v/bind)\"\ndone\n# Bind the right vtcon (typically vtcon1 for fb device):\necho 1 | sudo tee /sys/class/vtconsole/vtcon1/bind"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #79.4 sched tunables (UI sprint 70) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.schedtune.title")}</h4>
+        <p class="muted">{i18n.t("integrations.schedtune.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSchedTunablesAudit}>{i18n.t("integrations.schedtune.refresh")}</button>
+          {#if schedTunablesAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={schedTunablesAuditData.verdict.verdict === 'unbounded_rt_runtime' ? 'var(--err)' :
+                             ['autogroup_off','rt_ratio_low'].includes(schedTunablesAuditData.verdict.verdict) ? 'var(--warn)' :
+                             schedTunablesAuditData.verdict.verdict === 'schedstats_off' ? 'var(--accent)' :
+                             schedTunablesAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.schedtune.verdict")} : <b>{schedTunablesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if schedTunablesAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        schedTunablesAuditData.verdict.verdict === 'unbounded_rt_runtime' ? 'var(--err)' :
+                        ['autogroup_off','rt_ratio_low'].includes(schedTunablesAuditData.verdict.verdict) ? 'var(--warn)' :
+                        schedTunablesAuditData.verdict.verdict === 'schedstats_off' ? 'var(--accent)' :
+                        schedTunablesAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{schedTunablesAuditData.verdict.reason}</p>
+            {#if schedTunablesAuditData.verdict.verdict !== 'ok' && schedTunablesAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.schedtune.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  schedTunablesAuditData.verdict.verdict === 'unbounded_rt_runtime'
+                    ? "# DANGEROUS: RT runtime is unlimited — restore the cap NOW\nsudo sysctl -w kernel.sched_rt_runtime_us=950000\n# To persist:\necho 'kernel.sched_rt_runtime_us = 950000' | sudo tee /etc/sysctl.d/99-sched-safety.conf"
+                  : schedTunablesAuditData.verdict.verdict === 'autogroup_off'
+                    ? "# Re-enable autogroup so desktop session keeps interactivity\nsudo sysctl -w kernel.sched_autogroup_enabled=1\necho 'kernel.sched_autogroup_enabled = 1' | sudo tee /etc/sysctl.d/99-sched-desktop.conf"
+                  : schedTunablesAuditData.verdict.verdict === 'rt_ratio_low'
+                    ? "# RT bandwidth too restricted — restore 95% default\ncat /proc/sys/kernel/sched_rt_runtime_us /proc/sys/kernel/sched_rt_period_us\nsudo sysctl -w kernel.sched_rt_runtime_us=950000\nsudo sysctl -w kernel.sched_rt_period_us=1000000\n# Persist via /etc/sysctl.d/"
+                  : schedTunablesAuditData.verdict.verdict === 'schedstats_off'
+                    ? "# Enable schedstats so other CFS audits have data\nsudo sysctl -w kernel.sched_schedstats=1\n# To persist:\necho 'kernel.sched_schedstats = 1' | sudo tee /etc/sysctl.d/99-sched-stats.conf\n# Then refresh the runqueue-wait audit card."
                   : ""
                 }</pre>
               </details>

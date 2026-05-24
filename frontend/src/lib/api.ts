@@ -4733,4 +4733,45 @@ export const api = {
       pid_count_scanned: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #79 (UI sprint 70) ──
+  softnetStatAuditStatus: () =>
+    fetch("/api/softnet-stat-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      totals: {
+        dropped: number;
+        time_squeeze: number;
+        cpu_collision: number;
+        processed: number;
+      };
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  routeTableAuditStatus: () =>
+    fetch("/api/route-table-audit").then(jsonOf<{
+      ok: boolean;
+      v4_route_count: number;
+      v6_route_count: number;
+      default_v4_count: number;
+      host_v4_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  fbVtconsoleAuditStatus: () =>
+    fetch("/api/fb-vtconsole-audit").then(jsonOf<{
+      ok: boolean;
+      fb_count: number;
+      fbs: Array<{ id: number; name: string }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  schedTunablesAuditStatus: () =>
+    fetch("/api/sched-tunables-audit").then(jsonOf<{
+      ok: boolean;
+      tunables: Record<string, number | null>;
+      features_readable: boolean;
+      feature_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
