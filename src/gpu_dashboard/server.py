@@ -1937,6 +1937,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_dynamic_debug_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/extcon-state-audit":
+                # R&D #85.2 — extcon cable-state audit
+                code, body = api.handle_extcon_state_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
