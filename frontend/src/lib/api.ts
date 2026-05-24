@@ -4478,4 +4478,60 @@ export const api = {
       pending_reboot: Array<{ vendor: string; value: number | null }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #74 (UI sprint 65) ──
+  cpuIsolationAuditStatus: () =>
+    fetch("/api/cpu-isolation-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      isolated: number[];
+      nohz_full: number[];
+      offline: number[];
+      possible_count: number;
+      present_count: number;
+      kernel_max: number | null;
+      cmdline_isolcpus: number[];
+      cmdline_nohz_full: number[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  dmaHeapAuditStatus: () =>
+    fetch("/api/dma-heap-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      heap_count: number;
+      heaps: Array<{
+        name: string;
+        dev_node_present: boolean;
+        dev_node_mode: number | null;
+      }>;
+      gpu_present: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  abiCompatAuditStatus: () =>
+    fetch("/api/abi-compat-audit").then(jsonOf<{
+      ok: boolean;
+      abi_present: boolean;
+      abi_knobs: Record<string, number>;
+      ia32_emulation: number | null;
+      binfmt_misc_status: string | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  v4l2MediaAuditStatus: () =>
+    fetch("/api/v4l2-media-audit").then(jsonOf<{
+      ok: boolean;
+      v4l_present: boolean;
+      media_present: boolean;
+      cec_present: boolean;
+      v4l_count: number;
+      media_count: number;
+      cec_count: number;
+      v4l_devices: Array<{ name: string; driver: string | null }>;
+      media_devices: Array<{ name: string; driver: string | null }>;
+      cec_devices: Array<{ name: string; driver: string | null }>;
+      dev_root_only: string[];
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

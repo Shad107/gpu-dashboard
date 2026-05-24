@@ -2288,6 +2288,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #74 (UI sprint 65) ────────────────────────────────────────────
+  let cpuIsolationAuditData       = $state<Awaited<ReturnType<typeof api.cpuIsolationAuditStatus>>       | null>(null);
+  let dmaHeapAuditData            = $state<Awaited<ReturnType<typeof api.dmaHeapAuditStatus>>            | null>(null);
+  let abiCompatAuditData          = $state<Awaited<ReturnType<typeof api.abiCompatAuditStatus>>          | null>(null);
+  let v4l2MediaAuditData          = $state<Awaited<ReturnType<typeof api.v4l2MediaAuditStatus>>          | null>(null);
+  async function loadCpuIsolationAudit() {
+    try { cpuIsolationAuditData = await api.cpuIsolationAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDmaHeapAudit() {
+    try { dmaHeapAuditData = await api.dmaHeapAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAbiCompatAudit() {
+    try { abiCompatAuditData = await api.abiCompatAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadV4l2MediaAudit() {
+    try { v4l2MediaAuditData = await api.v4l2MediaAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2656,6 +2678,11 @@
       if (!sysctlDevSubtreeAuditData)           loadSysctlDevSubtreeAudit();
       if (!kernelNotesVmcoreinfoAuditData)      loadKernelNotesVmcoreinfoAudit();
       if (!firmwareAttributesAuditData)         loadFirmwareAttributesAudit();
+      // R&D #74 cards
+      if (!cpuIsolationAuditData)               loadCpuIsolationAudit();
+      if (!dmaHeapAuditData)                    loadDmaHeapAudit();
+      if (!abiCompatAuditData)                  loadAbiCompatAudit();
+      if (!v4l2MediaAuditData)                  loadV4l2MediaAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -12769,6 +12796,152 @@
                              border-radius: 4px; overflow-x: auto;">{firmwareAttributesAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(firmwareAttributesAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #74.1 CPU isolation (UI sprint 65) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cpuiso.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cpuiso.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuIsolationAudit}>{i18n.t("integrations.cpuiso.refresh")}</button>
+          {#if cpuIsolationAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuIsolationAuditData.verdict.verdict === 'isolation_misaligned_cmdline' ? 'var(--err)' :
+                             ['nohz_full_without_isolcpus','heavy_isolation_on_desktop'].includes(cpuIsolationAuditData.verdict.verdict) ? 'var(--warn)' :
+                             cpuIsolationAuditData.verdict.verdict === 'partial_offline_unexpected' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {cpuIsolationAuditData.possible_count} CPUs · iso={cpuIsolationAuditData.isolated.length} · {i18n.t("integrations.cpuiso.verdict")} : <b>{cpuIsolationAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuIsolationAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuIsolationAuditData.verdict.verdict === 'isolation_misaligned_cmdline' ? 'var(--err)' :
+                        ['nohz_full_without_isolcpus','heavy_isolation_on_desktop'].includes(cpuIsolationAuditData.verdict.verdict) ? 'var(--warn)' :
+                        cpuIsolationAuditData.verdict.verdict === 'partial_offline_unexpected' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpuIsolationAuditData.verdict.reason}</p>
+            {#if cpuIsolationAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cpuiso.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{cpuIsolationAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(cpuIsolationAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #74.2 dma-buf heaps (UI sprint 65) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dmaheap.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dmaheap.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDmaHeapAudit}>{i18n.t("integrations.dmaheap.refresh")}</button>
+          {#if dmaHeapAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={dmaHeapAuditData.verdict.verdict === 'heaps_world_writable' ? 'var(--err)' :
+                             dmaHeapAuditData.verdict.verdict === 'cma_heap_missing_for_dma_buf' ? 'var(--warn)' :
+                             ['only_system_heap_present','heap_perms_root_only'].includes(dmaHeapAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {dmaHeapAuditData.heap_count} heap(s) · {i18n.t("integrations.dmaheap.verdict")} : <b>{dmaHeapAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dmaHeapAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        dmaHeapAuditData.verdict.verdict === 'heaps_world_writable' ? 'var(--err)' :
+                        dmaHeapAuditData.verdict.verdict === 'cma_heap_missing_for_dma_buf' ? 'var(--warn)' :
+                        ['only_system_heap_present','heap_perms_root_only'].includes(dmaHeapAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{dmaHeapAuditData.verdict.reason}</p>
+            {#if dmaHeapAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dmaheap.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{dmaHeapAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(dmaHeapAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #74.3 ABI compat (UI sprint 65) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.abicompat.title")}</h4>
+        <p class="muted">{i18n.t("integrations.abicompat.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadAbiCompatAudit}>{i18n.t("integrations.abicompat.refresh")}</button>
+          {#if abiCompatAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['vsyscall32_disabled_breaks_steam','ia32_emulation_off','legacy_va_layout_forced'].includes(abiCompatAuditData.verdict.verdict) ? 'var(--err)' :
+                             abiCompatAuditData.verdict.verdict === 'nonstandard_abi_quirks' ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              binfmt={abiCompatAuditData.binfmt_misc_status ?? '?'} · {i18n.t("integrations.abicompat.verdict")} : <b>{abiCompatAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if abiCompatAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['vsyscall32_disabled_breaks_steam','ia32_emulation_off','legacy_va_layout_forced'].includes(abiCompatAuditData.verdict.verdict) ? 'var(--err)' :
+                        abiCompatAuditData.verdict.verdict === 'nonstandard_abi_quirks' ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{abiCompatAuditData.verdict.reason}</p>
+            {#if abiCompatAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.abicompat.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{abiCompatAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(abiCompatAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #74.4 V4L2 + media + CEC (UI sprint 65) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.v4l2media.title")}</h4>
+        <p class="muted">{i18n.t("integrations.v4l2media.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadV4l2MediaAudit}>{i18n.t("integrations.v4l2media.refresh")}</button>
+          {#if v4l2MediaAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={v4l2MediaAuditData.verdict.verdict === 'device_root_only_blocks_users' ? 'var(--err)' :
+                             ['driver_missing_kernel_module','capture_node_present_no_media_controller'].includes(v4l2MediaAuditData.verdict.verdict) ? 'var(--warn)' :
+                             v4l2MediaAuditData.verdict.verdict === 'stale_v4l_no_driver' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              v4l={v4l2MediaAuditData.v4l_count} media={v4l2MediaAuditData.media_count} cec={v4l2MediaAuditData.cec_count} · {i18n.t("integrations.v4l2media.verdict")} : <b>{v4l2MediaAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if v4l2MediaAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        v4l2MediaAuditData.verdict.verdict === 'device_root_only_blocks_users' ? 'var(--err)' :
+                        ['driver_missing_kernel_module','capture_node_present_no_media_controller'].includes(v4l2MediaAuditData.verdict.verdict) ? 'var(--warn)' :
+                        v4l2MediaAuditData.verdict.verdict === 'stale_v4l_no_driver' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{v4l2MediaAuditData.verdict.reason}</p>
+            {#if v4l2MediaAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.v4l2media.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{v4l2MediaAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(v4l2MediaAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
