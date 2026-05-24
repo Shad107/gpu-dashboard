@@ -1777,6 +1777,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_numa_hmat_access_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpu-thermal-throttle-counters-audit":
+                # R&D #77.2 — per-CPU thermal + RAPL throttle counters
+                code, body = api.handle_cpu_thermal_throttle_counters_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
