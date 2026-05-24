@@ -543,3 +543,4 @@ from .dynamic_debug_audit import handle_dynamic_debug_audit_status  # noqa: F401
 from .extcon_state_audit import handle_extcon_state_audit_status  # noqa: F401,F811
 from .unix_socket_inventory_audit import handle_unix_socket_inventory_audit_status  # noqa: F401,F811
 from .sched_features_debugfs_audit import handle_sched_features_debugfs_audit_status  # noqa: F401,F811
+from .wol_ethtool_audit import handle_wol_ethtool_audit_status  # noqa: F401,F811

@@ -1952,6 +1952,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sched_features_debugfs_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/wol-ethtool-audit":
+                # R&D #86.1 — NIC WoL + speed downshift
+                code, body = api.handle_wol_ethtool_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
