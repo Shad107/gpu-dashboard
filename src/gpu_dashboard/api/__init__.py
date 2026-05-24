@@ -561,3 +561,4 @@ from .sysvipc_limits_audit import handle_sysvipc_limits_audit_status  # noqa: F4
 from .pcie_link_speed_drift_audit import handle_pcie_link_speed_drift_audit_status  # noqa: F401,F811
 from .resctrl_audit import handle_resctrl_audit_status  # noqa: F401,F811
 from .proc_net_protocols_audit import handle_proc_net_protocols_audit_status  # noqa: F401,F811
+from .cpufreq_governor_tunables_audit import handle_cpufreq_governor_tunables_audit_status  # noqa: F401,F811

@@ -2042,6 +2042,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_net_protocols_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpufreq-governor-tunables-audit":
+                # R&D #90.3 — governor sub-knobs (rate_limit_us etc)
+                code, body = api.handle_cpufreq_governor_tunables_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
