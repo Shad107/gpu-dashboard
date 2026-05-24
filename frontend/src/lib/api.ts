@@ -5078,4 +5078,65 @@ export const api = {
       tunings: Record<string, number>;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #86 (UI sprint 77) ──
+  wolEthtoolAuditStatus: () =>
+    fetch("/api/wol-ethtool-audit").then(jsonOf<{
+      ok: boolean;
+      iface_count: number;
+      interfaces: Array<{
+        name: string;
+        operstate: string;
+        carrier: number | null;
+        duplex: string;
+        speed: number | null;
+        wakeup: string;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  thunderboltUsb4AuditStatus: () =>
+    fetch("/api/thunderbolt-usb4-audit").then(jsonOf<{
+      ok: boolean;
+      bus_present: boolean;
+      domain_count: number;
+      device_count: number;
+      domains: Array<{
+        name: string;
+        security: string;
+        iommu_dma_protection: number | null;
+      }>;
+      devices: Array<{
+        name: string;
+        authorized: number | null;
+        vendor_name: string;
+        device_name: string;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  nvmeControllerStateAuditStatus: () =>
+    fetch("/api/nvme-controller-state-audit").then(jsonOf<{
+      ok: boolean;
+      controller_count: number;
+      controllers: Array<{
+        name: string;
+        state: string;
+        firmware_rev: string;
+        numa_node: number | null;
+        transport: string;
+        model: string;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  workqueueCpumaskAuditStatus: () =>
+    fetch("/api/workqueue-cpumask-audit").then(jsonOf<{
+      ok: boolean;
+      wq_count: number;
+      global_cpumask: string;
+      isolated_cpus: string;
+      cpu_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

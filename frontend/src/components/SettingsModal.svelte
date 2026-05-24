@@ -2547,6 +2547,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #86 (UI sprint 77) ────────────────────────────────────────────
+  let wolEthtoolAuditData                 = $state<Awaited<ReturnType<typeof api.wolEthtoolAuditStatus>>                 | null>(null);
+  let thunderboltUsb4AuditData            = $state<Awaited<ReturnType<typeof api.thunderboltUsb4AuditStatus>>            | null>(null);
+  let nvmeControllerStateAuditData        = $state<Awaited<ReturnType<typeof api.nvmeControllerStateAuditStatus>>        | null>(null);
+  let workqueueCpumaskAuditData           = $state<Awaited<ReturnType<typeof api.workqueueCpumaskAuditStatus>>           | null>(null);
+  async function loadWolEthtoolAudit() {
+    try { wolEthtoolAuditData = await api.wolEthtoolAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadThunderboltUsb4Audit() {
+    try { thunderboltUsb4AuditData = await api.thunderboltUsb4AuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNvmeControllerStateAudit() {
+    try { nvmeControllerStateAuditData = await api.nvmeControllerStateAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadWorkqueueCpumaskAudit() {
+    try { workqueueCpumaskAuditData = await api.workqueueCpumaskAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2974,6 +2996,11 @@
       if (!extconStateAuditData)                loadExtconStateAudit();
       if (!unixSocketInventoryAuditData)        loadUnixSocketInventoryAudit();
       if (!schedFeaturesDebugfsAuditData)       loadSchedFeaturesDebugfsAudit();
+      // R&D #86 cards
+      if (!wolEthtoolAuditData)                 loadWolEthtoolAudit();
+      if (!thunderboltUsb4AuditData)            loadThunderboltUsb4Audit();
+      if (!nvmeControllerStateAuditData)        loadNvmeControllerStateAudit();
+      if (!workqueueCpumaskAuditData)           loadWorkqueueCpumaskAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -15074,6 +15101,186 @@
                     ? "# A tracked sched flag is off — verify it's intentional\nsudo cat /sys/kernel/debug/sched/features\n# If it was a gaming-guide tweak you no longer want :\necho GENTLE_FAIR_SLEEPERS | sudo tee /sys/kernel/debug/sched/features\n# (replace flag name with the disabled one shown above)"
                   : schedFeaturesDebugfsAuditData.verdict.verdict === 'requires_root'
                     ? "# debugfs mode-700 — re-run dashboard as root\nsudo systemctl restart gpu-dashboard.service\n# Or one-shot :\nsudo cat /sys/kernel/debug/sched/features"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #86.1 WoL ethtool (UI sprint 77) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wol.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wol.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadWolEthtoolAudit}>{i18n.t("integrations.wol.refresh")}</button>
+          {#if wolEthtoolAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={wolEthtoolAuditData.verdict.verdict === 'wakeup_armed_no_link' ? 'var(--err)' :
+                             wolEthtoolAuditData.verdict.verdict === 'speed_downshift' ? 'var(--warn)' :
+                             wolEthtoolAuditData.verdict.verdict === 'wakeup_enabled' ? 'var(--accent)' :
+                             wolEthtoolAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {wolEthtoolAuditData.iface_count} iface(s) · {i18n.t("integrations.wol.verdict")} : <b>{wolEthtoolAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if wolEthtoolAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        wolEthtoolAuditData.verdict.verdict === 'wakeup_armed_no_link' ? 'var(--err)' :
+                        wolEthtoolAuditData.verdict.verdict === 'speed_downshift' ? 'var(--warn)' :
+                        wolEthtoolAuditData.verdict.verdict === 'wakeup_enabled' ? 'var(--accent)' :
+                        wolEthtoolAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{wolEthtoolAuditData.verdict.reason}</p>
+            {#if wolEthtoolAuditData.verdict.verdict !== 'ok' && wolEthtoolAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.wol.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  wolEthtoolAuditData.verdict.verdict === 'wakeup_armed_no_link'
+                    ? "# WoL armed on a NIC with no link — turn it off\nsudo ethtool -s $IFACE wol d\n# Persist with NetworkManager :\nsudo nmcli con modify $CONNECTION 802-3-ethernet.wake-on-lan ignore"
+                  : wolEthtoolAuditData.verdict.verdict === 'speed_downshift'
+                    ? "# Speed downshift — check cable + force auto-negotiation\nethtool $IFACE\nsudo ethtool -r $IFACE   # renegotiate\n# If persistent, try a different cable / port :\nsudo ethtool -s $IFACE autoneg on speed 1000 duplex full"
+                  : wolEthtoolAuditData.verdict.verdict === 'wakeup_enabled'
+                    ? "# WoL on a live link — disable if you don't actually use it\nfor iface in /sys/class/net/*; do\n  n=$(basename $iface)\n  [ \"$(cat $iface/device/power/wakeup 2>/dev/null)\" = enabled ] && \\\n    sudo ethtool -s $n wol d\ndone"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #86.2 Thunderbolt / USB4 (UI sprint 77) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.thunderbolt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.thunderbolt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadThunderboltUsb4Audit}>{i18n.t("integrations.thunderbolt.refresh")}</button>
+          {#if thunderboltUsb4AuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['unauthenticated_device','security_none'].includes(thunderboltUsb4AuditData.verdict.verdict) ? 'var(--err)' :
+                             thunderboltUsb4AuditData.verdict.verdict === 'no_iommu_dma_protection' ? 'var(--warn)' :
+                             thunderboltUsb4AuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {thunderboltUsb4AuditData.domain_count} dom · {thunderboltUsb4AuditData.device_count} dev · {i18n.t("integrations.thunderbolt.verdict")} : <b>{thunderboltUsb4AuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if thunderboltUsb4AuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['unauthenticated_device','security_none'].includes(thunderboltUsb4AuditData.verdict.verdict) ? 'var(--err)' :
+                        thunderboltUsb4AuditData.verdict.verdict === 'no_iommu_dma_protection' ? 'var(--warn)' :
+                        thunderboltUsb4AuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{thunderboltUsb4AuditData.verdict.reason}</p>
+            {#if thunderboltUsb4AuditData.verdict.verdict !== 'ok' && thunderboltUsb4AuditData.verdict.verdict !== 'n/a' && thunderboltUsb4AuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.thunderbolt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  thunderboltUsb4AuditData.verdict.verdict === 'unauthenticated_device'
+                    ? "# Approve the pending Thunderbolt device :\nsudo boltctl list\nsudo boltctl enroll <uuid>      # one-shot\nsudo boltctl enroll --policy auto <uuid>   # remember"
+                  : thunderboltUsb4AuditData.verdict.verdict === 'security_none'
+                    ? "# DMA shield disabled — change domain to user/secure\n# Inspect current setting :\nsudo cat /sys/bus/thunderbolt/devices/domain*/security\n# This is set in BIOS for most laptops ; reboot and look for\n# 'Thunderbolt Security Level' = 'User' or 'Secure'\n# A workaround for Linux 5.10+ is the boot param :\n#   GRUB_CMDLINE_LINUX += 'iommu=force'"
+                  : thunderboltUsb4AuditData.verdict.verdict === 'no_iommu_dma_protection'
+                    ? "# IOMMU DMA protection off on a TB domain\n# Confirm kernel + BIOS IOMMU :\ndmesg | grep -iE 'iommu|dmar' | head -20\n# Boot with iommu=force / intel_iommu=on / amd_iommu=on :\nsudo nano /etc/default/grub\nsudo update-grub && sudo reboot"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #86.3 NVMe controller state (UI sprint 77) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nvmestate.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nvmestate.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvmeControllerStateAudit}>{i18n.t("integrations.nvmestate.refresh")}</button>
+          {#if nvmeControllerStateAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={nvmeControllerStateAuditData.verdict.verdict === 'controller_dead' ? 'var(--err)' :
+                             ['controller_resetting','firmware_mismatch_same_model'].includes(nvmeControllerStateAuditData.verdict.verdict) ? 'var(--warn)' :
+                             nvmeControllerStateAuditData.verdict.verdict === 'numa_node_unset' ? 'var(--accent)' :
+                             nvmeControllerStateAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {nvmeControllerStateAuditData.controller_count} ctrl · {i18n.t("integrations.nvmestate.verdict")} : <b>{nvmeControllerStateAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nvmeControllerStateAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        nvmeControllerStateAuditData.verdict.verdict === 'controller_dead' ? 'var(--err)' :
+                        ['controller_resetting','firmware_mismatch_same_model'].includes(nvmeControllerStateAuditData.verdict.verdict) ? 'var(--warn)' :
+                        nvmeControllerStateAuditData.verdict.verdict === 'numa_node_unset' ? 'var(--accent)' :
+                        nvmeControllerStateAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{nvmeControllerStateAuditData.verdict.reason}</p>
+            {#if nvmeControllerStateAuditData.verdict.verdict !== 'ok' && nvmeControllerStateAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nvmestate.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  nvmeControllerStateAuditData.verdict.verdict === 'controller_dead'
+                    ? "# NVMe controller dead — inspect and rescan\nfor n in /sys/class/nvme/nvme*; do\n  echo \"$(basename $n): state=$(cat $n/state)\"\ndone\nsudo dmesg --since '1 hour ago' | grep -iE 'nvme|pcie' | head -20\n# Last-resort : trigger controller reset (DANGEROUS — IO in flight)\nsudo nvme reset /dev/nvme0\n# Or full reseat / replace the drive."
+                  : nvmeControllerStateAuditData.verdict.verdict === 'controller_resetting'
+                    ? "# Controller flapping — narrow PCIe + temp + driver\nsudo nvme smart-log /dev/nvme0 | head -20\nsudo lspci -vvv -s $(basename $(readlink -f /sys/class/nvme/nvme0/device))\nsudo dmesg --since '1 hour ago' | grep -iE 'nvme.*reset|aer' | head"
+                  : nvmeControllerStateAuditData.verdict.verdict === 'firmware_mismatch_same_model'
+                    ? "# Firmware-rev drift across identical drives — update the lagging one\nfor n in /sys/class/nvme/nvme*; do\n  echo \"$(basename $n): model=$(cat $n/model) fw=$(cat $n/firmware_rev)\"\ndone\n# Update via vendor tool or :\nsudo nvme fw-download /dev/nvme0 -f /path/to/firmware.bin\nsudo nvme fw-commit /dev/nvme0 -a 3 -s 0"
+                  : nvmeControllerStateAuditData.verdict.verdict === 'numa_node_unset'
+                    ? "# numa_node = -1 on PCIe NVMe — scheduler can't pin IO threads\n# Identify the PCI device + slot :\nfor n in /sys/class/nvme/nvme*; do\n  echo \"$(basename $n): $(readlink $n/device | xargs -I{} basename {})\"\ndone\n# Fix at BIOS level — enable 'NUMA Group' in chipset settings ;\n# or kernel cmdline : 'numa=on' if it was forced off"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #86.4 Workqueue cpumask (UI sprint 77) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.workqueue.title")}</h4>
+        <p class="muted">{i18n.t("integrations.workqueue.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadWorkqueueCpumaskAudit}>{i18n.t("integrations.workqueue.refresh")}</button>
+          {#if workqueueCpumaskAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={workqueueCpumaskAuditData.verdict.verdict === 'wq_on_isolated_cpu' ? 'var(--err)' :
+                             workqueueCpumaskAuditData.verdict.verdict === 'unbound_wq_default_only' ? 'var(--warn)' :
+                             workqueueCpumaskAuditData.verdict.verdict === 'nice_drift' ? 'var(--accent)' :
+                             workqueueCpumaskAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {workqueueCpumaskAuditData.wq_count} wq · cpumask={workqueueCpumaskAuditData.global_cpumask || '?'} · {i18n.t("integrations.workqueue.verdict")} : <b>{workqueueCpumaskAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if workqueueCpumaskAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        workqueueCpumaskAuditData.verdict.verdict === 'wq_on_isolated_cpu' ? 'var(--err)' :
+                        workqueueCpumaskAuditData.verdict.verdict === 'unbound_wq_default_only' ? 'var(--warn)' :
+                        workqueueCpumaskAuditData.verdict.verdict === 'nice_drift' ? 'var(--accent)' :
+                        workqueueCpumaskAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{workqueueCpumaskAuditData.verdict.reason}</p>
+            {#if workqueueCpumaskAuditData.verdict.verdict !== 'ok' && workqueueCpumaskAuditData.verdict.verdict !== 'n/a' && workqueueCpumaskAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.workqueue.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  workqueueCpumaskAuditData.verdict.verdict === 'wq_on_isolated_cpu'
+                    ? "# Workqueue overlapping isolcpus — narrow the global cpumask\ncat /sys/devices/system/cpu/isolated\n# Set the WQ cpumask to NON-isolated cores (e.g. 0xf = CPU 0-3)\necho f | sudo tee /sys/devices/virtual/workqueue/cpumask\n# To persist : tmpfiles.d entry or a oneshot systemd unit"
+                  : workqueueCpumaskAuditData.verdict.verdict === 'unbound_wq_default_only'
+                    ? "# Multiple unbound WQs pinned to CPU 0 only — let kernel spread\nfor wq in /sys/devices/virtual/workqueue/*/; do\n  echo \"$(basename $wq): cpumask=$(cat $wq/cpumask)\"\ndone\n# Reset to global mask :\necho fff | sudo tee /sys/devices/virtual/workqueue/<wq>/cpumask"
+                  : workqueueCpumaskAuditData.verdict.verdict === 'nice_drift'
+                    ? "# A WQ has non-zero nice value — informational tweak\nfor wq in /sys/devices/virtual/workqueue/*/; do\n  n=$(cat $wq/nice 2>/dev/null)\n  [ -n \"$n\" ] && [ \"$n\" != 0 ] && echo \"$(basename $wq): nice=$n\"\ndone"
                   : ""
                 }</pre>
               </details>
