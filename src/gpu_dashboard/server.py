@@ -1817,6 +1817,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_softnet_stat_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/route-table-audit":
+                # R&D #79.2 — IPv4/IPv6 routing-table sanity
+                code, body = api.handle_route_table_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
