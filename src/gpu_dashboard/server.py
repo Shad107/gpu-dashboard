@@ -2012,6 +2012,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_timer_migration_nohz_drift_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/tcp-congestion-control-audit":
+                # R&D #89.1 — TCP CC selector + TFO posture
+                code, body = api.handle_tcp_congestion_control_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

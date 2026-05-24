@@ -555,3 +555,4 @@ from .userspace_hardening_sysctls_audit import handle_userspace_hardening_sysctl
 from .suspend_mode_selector_audit import handle_suspend_mode_selector_audit_status  # noqa: F401,F811
 from .iommu_reserved_regions_audit import handle_iommu_reserved_regions_audit_status  # noqa: F401,F811
 from .timer_migration_nohz_drift_audit import handle_timer_migration_nohz_drift_audit_status  # noqa: F401,F811
+from .tcp_congestion_control_audit import handle_tcp_congestion_control_audit_status  # noqa: F401,F811
