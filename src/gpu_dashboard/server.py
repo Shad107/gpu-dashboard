@@ -1692,6 +1692,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_dmi_entries_raw_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/tracing-events-enable-audit":
+                # R&D #72.3 — /sys/kernel/tracing/events/* enable
+                code, body = api.handle_tracing_events_enable_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
