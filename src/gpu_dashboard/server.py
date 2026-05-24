@@ -1972,6 +1972,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_workqueue_cpumask_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/usb-authorized-default-audit":
+                # R&D #87.1 — per-hub USB authorization gate
+                code, body = api.handle_usb_authorized_default_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
