@@ -2332,6 +2332,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #76 (UI sprint 67) ────────────────────────────────────────────
+  let inputDeviceAuditData          = $state<Awaited<ReturnType<typeof api.inputDeviceAuditStatus>>          | null>(null);
+  let ipv6ConfPerIfaceAuditData     = $state<Awaited<ReturnType<typeof api.ipv6ConfPerIfaceAuditStatus>>     | null>(null);
+  let wmiBusAuditData               = $state<Awaited<ReturnType<typeof api.wmiBusAuditStatus>>               | null>(null);
+  let numaHmatAccessAuditData       = $state<Awaited<ReturnType<typeof api.numaHmatAccessAuditStatus>>       | null>(null);
+  async function loadInputDeviceAudit() {
+    try { inputDeviceAuditData = await api.inputDeviceAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIpv6ConfPerIfaceAudit() {
+    try { ipv6ConfPerIfaceAuditData = await api.ipv6ConfPerIfaceAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadWmiBusAudit() {
+    try { wmiBusAuditData = await api.wmiBusAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNumaHmatAccessAudit() {
+    try { numaHmatAccessAuditData = await api.numaHmatAccessAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2710,6 +2732,11 @@
       if (!sgxEnclaveAuditData)                 loadSgxEnclaveAudit();
       if (!lsmSubtreeAuditData)                 loadLsmSubtreeAudit();
       if (!ipv4ConfPerIfaceAuditData)           loadIpv4ConfPerIfaceAudit();
+      // R&D #76 cards
+      if (!inputDeviceAuditData)                loadInputDeviceAudit();
+      if (!ipv6ConfPerIfaceAuditData)           loadIpv6ConfPerIfaceAudit();
+      if (!wmiBusAuditData)                     loadWmiBusAudit();
+      if (!numaHmatAccessAuditData)             loadNumaHmatAccessAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -13117,6 +13144,150 @@
                              border-radius: 4px; overflow-x: auto;">{ipv4ConfPerIfaceAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(ipv4ConfPerIfaceAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #76.4 input device (UI sprint 67) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.inputdev.title")}</h4>
+        <p class="muted">{i18n.t("integrations.inputdev.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadInputDeviceAudit}>{i18n.t("integrations.inputdev.refresh")}</button>
+          {#if inputDeviceAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={inputDeviceAuditData.verdict.verdict === 'spurious_wake_source' ? 'var(--err)' :
+                             ['wakeup_enabled_orphan','inhibited_active_input'].includes(inputDeviceAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {inputDeviceAuditData.device_count} dev · wake={inputDeviceAuditData.wakeup_enabled_count} · {i18n.t("integrations.inputdev.verdict")} : <b>{inputDeviceAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if inputDeviceAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        inputDeviceAuditData.verdict.verdict === 'spurious_wake_source' ? 'var(--err)' :
+                        ['wakeup_enabled_orphan','inhibited_active_input'].includes(inputDeviceAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{inputDeviceAuditData.verdict.reason}</p>
+            {#if inputDeviceAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.inputdev.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{inputDeviceAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(inputDeviceAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #76.2 IPv6 per-iface conf (UI sprint 67) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ipv6conf.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ipv6conf.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIpv6ConfPerIfaceAudit}>{i18n.t("integrations.ipv6conf.refresh")}</button>
+          {#if ipv6ConfPerIfaceAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ipv6ConfPerIfaceAuditData.verdict.verdict === 'ra_accept_on_router' ? 'var(--err)' :
+                             ['tempaddr_disabled_public','unsolicited_forwarding'].includes(ipv6ConfPerIfaceAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ipv6ConfPerIfaceAuditData.verdict.verdict === 'redirects_accepted' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {ipv6ConfPerIfaceAuditData.iface_count} iface(s) · {i18n.t("integrations.ipv6conf.verdict")} : <b>{ipv6ConfPerIfaceAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ipv6ConfPerIfaceAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ipv6ConfPerIfaceAuditData.verdict.verdict === 'ra_accept_on_router' ? 'var(--err)' :
+                        ['tempaddr_disabled_public','unsolicited_forwarding'].includes(ipv6ConfPerIfaceAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ipv6ConfPerIfaceAuditData.verdict.verdict === 'redirects_accepted' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{ipv6ConfPerIfaceAuditData.verdict.reason}</p>
+            {#if ipv6ConfPerIfaceAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ipv6conf.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ipv6ConfPerIfaceAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ipv6ConfPerIfaceAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #76.1 WMI bus (UI sprint 67) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wmibus.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wmibus.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadWmiBusAudit}>{i18n.t("integrations.wmibus.refresh")}</button>
+          {#if wmiBusAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={wmiBusAuditData.verdict.verdict === 'expensive_unbound' ? 'var(--err)' :
+                             ['orphan_guid','missing_modalias','stale_binding'].includes(wmiBusAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {wmiBusAuditData.guid_count} GUIDs · {wmiBusAuditData.bound_count} bound · {i18n.t("integrations.wmibus.verdict")} : <b>{wmiBusAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if wmiBusAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        wmiBusAuditData.verdict.verdict === 'expensive_unbound' ? 'var(--err)' :
+                        ['orphan_guid','missing_modalias','stale_binding'].includes(wmiBusAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{wmiBusAuditData.verdict.reason}</p>
+            {#if wmiBusAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.wmibus.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{wmiBusAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(wmiBusAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #76.3 NUMA HMAT (UI sprint 67) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.numahmat.title")}</h4>
+        <p class="muted">{i18n.t("integrations.numahmat.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNumaHmatAccessAudit}>{i18n.t("integrations.numahmat.refresh")}</button>
+          {#if numaHmatAccessAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={numaHmatAccessAuditData.verdict.verdict === 'cross_node_bw_cliff' ? 'var(--err)' :
+                             numaHmatAccessAuditData.verdict.verdict === 'asymmetric_latency' ? 'var(--warn)' :
+                             ['hmat_absent','single_node_uniform'].includes(numaHmatAccessAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {numaHmatAccessAuditData.node_count} node(s) · {i18n.t("integrations.numahmat.verdict")} : <b>{numaHmatAccessAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if numaHmatAccessAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        numaHmatAccessAuditData.verdict.verdict === 'cross_node_bw_cliff' ? 'var(--err)' :
+                        numaHmatAccessAuditData.verdict.verdict === 'asymmetric_latency' ? 'var(--warn)' :
+                        ['hmat_absent','single_node_uniform'].includes(numaHmatAccessAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{numaHmatAccessAuditData.verdict.reason}</p>
+            {#if numaHmatAccessAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.numahmat.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{numaHmatAccessAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(numaHmatAccessAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

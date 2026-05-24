@@ -4585,4 +4585,72 @@ export const api = {
       knobs: Record<string, Record<string, number | null>>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #76 (UI sprint 67) ──
+  inputDeviceAuditStatus: () =>
+    fetch("/api/input-device-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      device_count: number;
+      wakeup_enabled_count: number;
+      inhibited_count: number;
+      devices: Array<{
+        id: string;
+        name: string | null;
+        inhibited: number | null;
+        modalias: string | null;
+        wakeup: string | null;
+        wakeup_count: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  ipv6ConfPerIfaceAuditStatus: () =>
+    fetch("/api/ipv6-conf-per-iface-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      iface_count: number;
+      ifaces: string[];
+      knobs: Record<string, Record<string, number | null>>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  wmiBusAuditStatus: () =>
+    fetch("/api/wmi-bus-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      guid_count: number;
+      expensive_count: number;
+      bound_count: number;
+      guids: Array<{
+        bus: string;
+        guid: string;
+        instance_count: number | null;
+        expensive: number | null;
+        object_id: string | null;
+        setable: number | null;
+        driver: string | null;
+        driver_dangling: boolean;
+        modalias: string | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  numaHmatAccessAuditStatus: () =>
+    fetch("/api/numa-hmat-access-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      node_count: number;
+      nodes: number[];
+      accesses: Record<string, Record<string, {
+        present: boolean;
+        read_bandwidth: number | null;
+        read_latency: number | null;
+        write_bandwidth: number | null;
+        write_latency: number | null;
+      }>>;
+      has_cpu: string | null;
+      has_memory: string | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
