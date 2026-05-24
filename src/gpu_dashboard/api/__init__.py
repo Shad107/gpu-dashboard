@@ -500,3 +500,4 @@ from .cpu_isolation_audit import handle_cpu_isolation_audit_status  # noqa: F401
 from .dma_heap_audit import handle_dma_heap_audit_status  # noqa: F401,F811
 from .abi_compat_audit import handle_abi_compat_audit_status  # noqa: F401,F811
 from .v4l2_media_audit import handle_v4l2_media_audit_status  # noqa: F401,F811
+from .misc_chardev_audit import handle_misc_chardev_audit_status  # noqa: F401,F811

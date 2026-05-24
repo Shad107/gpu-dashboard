@@ -1737,6 +1737,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_v4l2_media_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/misc-chardev-audit":
+                # R&D #75.2 — /proc/misc + /sys/class/misc dev nodes
+                code, body = api.handle_misc_chardev_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
