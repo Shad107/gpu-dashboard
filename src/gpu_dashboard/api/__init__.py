@@ -559,3 +559,4 @@ from .tcp_congestion_control_audit import handle_tcp_congestion_control_audit_st
 from .namespace_limits_audit import handle_namespace_limits_audit_status  # noqa: F401,F811
 from .sysvipc_limits_audit import handle_sysvipc_limits_audit_status  # noqa: F401,F811
 from .pcie_link_speed_drift_audit import handle_pcie_link_speed_drift_audit_status  # noqa: F401,F811
+from .resctrl_audit import handle_resctrl_audit_status  # noqa: F401,F811

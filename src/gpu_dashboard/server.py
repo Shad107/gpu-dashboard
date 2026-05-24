@@ -2032,6 +2032,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_link_speed_drift_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/resctrl-audit":
+                # R&D #90.1 — resctrl L3/MBA partition + throttle
+                code, body = api.handle_resctrl_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
