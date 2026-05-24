@@ -4817,4 +4817,64 @@ export const api = {
       cap_last_cap: number | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #81 (UI sprint 72) ──
+  xhciCompanionAuditStatus: () =>
+    fetch("/api/xhci-companion-audit").then(jsonOf<{
+      ok: boolean;
+      hub_count: number;
+      usb3_count: number;
+      usb2_count: number;
+      hubs: Array<{
+        node: string;
+        version: string | null;
+        version_major: number | null;
+        speed: number | null;
+        maxchild: number | null;
+        pci_bdf: string | null;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  bpfProgramInventoryAuditStatus: () =>
+    fetch("/api/bpf-program-inventory-audit").then(jsonOf<{
+      ok: boolean;
+      bpffs_mounted: boolean;
+      pin_count: number | null;
+      pin_readable: boolean;
+      prog_id_count: number;
+      map_id_count: number;
+      pids_scanned: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cgroupIoStatAuditStatus: () =>
+    fetch("/api/cgroup-io-stat-audit").then(jsonOf<{
+      ok: boolean;
+      cgroup_count: number;
+      root_pressure: {
+        some?: { avg10: number; avg60: number; avg300: number; total: number };
+        full?: { avg10: number; avg60: number; avg300: number; total: number };
+      } | null;
+      top_writers: Array<{
+        path: string;
+        wbytes: number;
+        rbytes: number;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  thermalTripDriftAuditStatus: () =>
+    fetch("/api/thermal-trip-drift-audit").then(jsonOf<{
+      ok: boolean;
+      zone_count: number;
+      zones: Array<{
+        zone: string;
+        type: string | null;
+        temp_c: number | null;
+        policy: string | null;
+        trip_count: number;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

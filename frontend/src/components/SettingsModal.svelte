@@ -2437,6 +2437,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #81 (UI sprint 72) ────────────────────────────────────────────
+  let xhciCompanionAuditData          = $state<Awaited<ReturnType<typeof api.xhciCompanionAuditStatus>>          | null>(null);
+  let bpfProgramInventoryAuditData    = $state<Awaited<ReturnType<typeof api.bpfProgramInventoryAuditStatus>>    | null>(null);
+  let cgroupIoStatAuditData           = $state<Awaited<ReturnType<typeof api.cgroupIoStatAuditStatus>>           | null>(null);
+  let thermalTripDriftAuditData       = $state<Awaited<ReturnType<typeof api.thermalTripDriftAuditStatus>>       | null>(null);
+  async function loadXhciCompanionAudit() {
+    try { xhciCompanionAuditData = await api.xhciCompanionAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBpfProgramInventoryAudit() {
+    try { bpfProgramInventoryAuditData = await api.bpfProgramInventoryAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCgroupIoStatAudit() {
+    try { cgroupIoStatAuditData = await api.cgroupIoStatAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadThermalTripDriftAudit() {
+    try { thermalTripDriftAuditData = await api.thermalTripDriftAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2839,6 +2861,11 @@
       if (!snmp6IcmpAuditData)                  loadSnmp6IcmpAudit();
       if (!btrfsAllocatorAuditData)             loadBtrfsAllocatorAudit();
       if (!procStatusCapsAuditData)             loadProcStatusCapsAudit();
+      // R&D #81 cards
+      if (!xhciCompanionAuditData)              loadXhciCompanionAudit();
+      if (!bpfProgramInventoryAuditData)        loadBpfProgramInventoryAudit();
+      if (!cgroupIoStatAuditData)               loadCgroupIoStatAudit();
+      if (!thermalTripDriftAuditData)           loadThermalTripDriftAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -14043,6 +14070,186 @@
                     ? "# Ambient capabilities survive exec — investigate the process tree\nps -ef --forest | head -50\n# Inspect the specific process :\ncat /proc/$PID/status | grep -E 'Cap|Name|PPid'\n# Common source: capsh / `setpriv --ambient-caps` in a wrapper script"
                   : procStatusCapsAuditData.verdict.verdict === 'requires_root'
                     ? "# Most PIDs unreadable as your UID — re-run the dashboard as root\nsudo systemctl restart gpu-dashboard.service\n# Or one-shot manual check with sudo:\nsudo curl -s http://localhost:9999/api/proc-status-caps-audit | jq .verdict"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #81.1 xHCI USB 3 companion (UI sprint 72) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.xhci.title")}</h4>
+        <p class="muted">{i18n.t("integrations.xhci.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadXhciCompanionAudit}>{i18n.t("integrations.xhci.refresh")}</button>
+          {#if xhciCompanionAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={xhciCompanionAuditData.verdict.verdict === 'usb3_root_no_companion' ? 'var(--err)' :
+                             xhciCompanionAuditData.verdict.verdict === 'usb3_root_speed_degraded' ? 'var(--warn)' :
+                             xhciCompanionAuditData.verdict.verdict === 'usb2_only_legacy' ? 'var(--accent)' :
+                             xhciCompanionAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {xhciCompanionAuditData.usb3_count} USB 3 / {xhciCompanionAuditData.usb2_count} USB 2 of {xhciCompanionAuditData.hub_count} hub(s) · {i18n.t("integrations.xhci.verdict")} : <b>{xhciCompanionAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if xhciCompanionAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        xhciCompanionAuditData.verdict.verdict === 'usb3_root_no_companion' ? 'var(--err)' :
+                        xhciCompanionAuditData.verdict.verdict === 'usb3_root_speed_degraded' ? 'var(--warn)' :
+                        xhciCompanionAuditData.verdict.verdict === 'usb2_only_legacy' ? 'var(--accent)' :
+                        xhciCompanionAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{xhciCompanionAuditData.verdict.reason}</p>
+            {#if xhciCompanionAuditData.verdict.verdict !== 'ok' && xhciCompanionAuditData.verdict.verdict !== 'unknown' && xhciCompanionAuditData.verdict.verdict !== 'usb2_only_legacy'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.xhci.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  xhciCompanionAuditData.verdict.verdict === 'usb3_root_no_companion'
+                    ? "# USB 3 root has no USB 2 companion — xHCI handoff broke\n# Identify the controller :\nlspci | grep -iE 'usb.*xhci'\n# Re-bind the controller (replace BDF):\necho 0000:00:14.0 | sudo tee /sys/bus/pci/drivers/xhci_hcd/unbind\necho 0000:00:14.0 | sudo tee /sys/bus/pci/drivers/xhci_hcd/bind\n# If that fails, check BIOS for 'xHCI hand-off' setting"
+                  : xhciCompanionAuditData.verdict.verdict === 'usb3_root_speed_degraded'
+                    ? "# USB 3 root reporting < 5000 Mb/s — SuperSpeed link not negotiated\n# Inspect the link speed :\nfor d in /sys/bus/usb/devices/usb*; do\n  echo \"$(basename $d): speed=$(cat $d/speed) version=$(cat $d/version)\"\ndone\n# Common fixes: try a different USB 3 cable (worn cables degrade to USB 2),\n# re-seat the cable, or test another USB 3 port"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #81.2 BPF program inventory (UI sprint 72) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bpf.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bpf.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBpfProgramInventoryAudit}>{i18n.t("integrations.bpf.refresh")}</button>
+          {#if bpfProgramInventoryAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={bpfProgramInventoryAuditData.verdict.verdict === 'excessive_pins' ? 'var(--err)' :
+                             bpfProgramInventoryAuditData.verdict.verdict === 'many_user_prog_refs' ? 'var(--warn)' :
+                             bpfProgramInventoryAuditData.verdict.verdict === 'pins_present' ? 'var(--accent)' :
+                             bpfProgramInventoryAuditData.verdict.verdict === 'ok_empty' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {bpfProgramInventoryAuditData.pin_count ?? '?'} pin(s) · {bpfProgramInventoryAuditData.prog_id_count} prog · {bpfProgramInventoryAuditData.map_id_count} map · {i18n.t("integrations.bpf.verdict")} : <b>{bpfProgramInventoryAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if bpfProgramInventoryAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        bpfProgramInventoryAuditData.verdict.verdict === 'excessive_pins' ? 'var(--err)' :
+                        bpfProgramInventoryAuditData.verdict.verdict === 'many_user_prog_refs' ? 'var(--warn)' :
+                        bpfProgramInventoryAuditData.verdict.verdict === 'pins_present' ? 'var(--accent)' :
+                        bpfProgramInventoryAuditData.verdict.verdict === 'ok_empty' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{bpfProgramInventoryAuditData.verdict.reason}</p>
+            {#if bpfProgramInventoryAuditData.verdict.verdict !== 'ok_empty' && bpfProgramInventoryAuditData.verdict.verdict !== 'unknown' && bpfProgramInventoryAuditData.verdict.verdict !== 'pins_present'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.bpf.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  bpfProgramInventoryAuditData.verdict.verdict === 'excessive_pins'
+                    ? "# Too many pinned BPF objects — list and prune\nsudo find /sys/fs/bpf -maxdepth 4 -ls 2>/dev/null | head -60\n# Cilium-managed:  sudo cilium endpoint list  (don't delete those)\n# bpftrace orphans:  sudo rm /sys/fs/bpf/<pin_name>\n# systemd-oomd churn:  sudo systemctl restart systemd-oomd"
+                  : bpfProgramInventoryAuditData.verdict.verdict === 'many_user_prog_refs'
+                    ? "# Many BPF refs from user-mode fdinfo — find the holder\nfor p in $(ls /proc | grep -E '^[0-9]+$'); do\n  [ -d /proc/$p/fdinfo ] || continue\n  if grep -lE '^prog_id:|^map_id:' /proc/$p/fdinfo/* 2>/dev/null | head -1; then\n    echo \"  PID $p ($(cat /proc/$p/comm 2>/dev/null))\"\n  fi\ndone"
+                  : bpfProgramInventoryAuditData.verdict.verdict === 'requires_root'
+                    ? "# /sys/fs/bpf mode 700 — re-run dashboard as root for full inventory\nsudo systemctl restart gpu-dashboard.service\n# Or one-shot check :\nsudo curl -s http://localhost:9999/api/bpf-program-inventory-audit | jq .verdict"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #81.3 cgroup io.stat (UI sprint 72) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cgroupio.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cgroupio.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupIoStatAudit}>{i18n.t("integrations.cgroupio.refresh")}</button>
+          {#if cgroupIoStatAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cgroupIoStatAuditData.verdict.verdict === 'runaway_writer' ? 'var(--err)' :
+                             cgroupIoStatAuditData.verdict.verdict === 'io_throttled_long' ? 'var(--warn)' :
+                             cgroupIoStatAuditData.verdict.verdict === 'imbalanced_readers' ? 'var(--accent)' :
+                             cgroupIoStatAuditData.verdict.verdict === 'ok_balanced' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cgroupIoStatAuditData.cgroup_count} cgroup(s) · full avg10={cgroupIoStatAuditData.root_pressure?.full?.avg10?.toFixed(2) ?? '?'}% · {i18n.t("integrations.cgroupio.verdict")} : <b>{cgroupIoStatAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupIoStatAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cgroupIoStatAuditData.verdict.verdict === 'runaway_writer' ? 'var(--err)' :
+                        cgroupIoStatAuditData.verdict.verdict === 'io_throttled_long' ? 'var(--warn)' :
+                        cgroupIoStatAuditData.verdict.verdict === 'imbalanced_readers' ? 'var(--accent)' :
+                        cgroupIoStatAuditData.verdict.verdict === 'ok_balanced' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cgroupIoStatAuditData.verdict.reason}</p>
+            {#if cgroupIoStatAuditData.verdict.verdict !== 'ok_balanced' && cgroupIoStatAuditData.verdict.verdict !== 'unknown' && cgroupIoStatAuditData.verdict.verdict !== 'no_cgroup_v2'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cgroupio.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cgroupIoStatAuditData.verdict.verdict === 'runaway_writer'
+                    ? "# A single cgroup is hogging the NVMe under active pressure\n# List the top writers right now :\nfor f in $(find /sys/fs/cgroup -maxdepth 4 -name io.stat 2>/dev/null); do\n  cg=$(dirname $f)\n  total=$(awk '{sum+=$3} END {print sum+0}' $f)\n  echo \"$total ${cg#/sys/fs/cgroup}\"\ndone | sort -rn | head -10\n# Tame via IOWeight or IOMaxBandwidth on the offending unit:\nsudo systemctl set-property <unit>.service IOWeight=50 IOReadBandwidthMax='/dev/sda 50M'"
+                  : cgroupIoStatAuditData.verdict.verdict === 'io_throttled_long'
+                    ? "# Sustained IO pressure — find what's blocking\ncat /sys/fs/cgroup/io.pressure\nfor cg in /sys/fs/cgroup/*.slice; do\n  echo \"$(basename $cg):  $(cat $cg/io.pressure 2>/dev/null | grep full)\"\ndone\n# Consider: enable io.cost / io.bfq model, or set IO limits on noisy units"
+                  : cgroupIoStatAuditData.verdict.verdict === 'imbalanced_readers'
+                    ? "# One cgroup dominates reads since boot — usually expected\n# Confirm with current activity :\nfor f in $(find /sys/fs/cgroup -maxdepth 4 -name io.stat 2>/dev/null); do\n  cg=$(dirname $f)\n  reads=$(awk '{sum+=$2} END {print sum+0}' $f)\n  printf '%14d  %s\\n' $reads ${cg#/sys/fs/cgroup}\ndone | sort -rn | head -10"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #81.4 thermal trip drift (UI sprint 72) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.thermaltrip.title")}</h4>
+        <p class="muted">{i18n.t("integrations.thermaltrip.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadThermalTripDriftAudit}>{i18n.t("integrations.thermaltrip.refresh")}</button>
+          {#if thermalTripDriftAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={thermalTripDriftAuditData.verdict.verdict === 'trip_below_current_temp' ? 'var(--err)' :
+                             thermalTripDriftAuditData.verdict.verdict === 'hyst_zero_oscillation_risk' ? 'var(--warn)' :
+                             ['passive_disabled_on_cpu_zone','policy_user_space_idle'].includes(thermalTripDriftAuditData.verdict.verdict) ? 'var(--accent)' :
+                             thermalTripDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {thermalTripDriftAuditData.zone_count} zone(s) · {i18n.t("integrations.thermaltrip.verdict")} : <b>{thermalTripDriftAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if thermalTripDriftAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        thermalTripDriftAuditData.verdict.verdict === 'trip_below_current_temp' ? 'var(--err)' :
+                        thermalTripDriftAuditData.verdict.verdict === 'hyst_zero_oscillation_risk' ? 'var(--warn)' :
+                        ['passive_disabled_on_cpu_zone','policy_user_space_idle'].includes(thermalTripDriftAuditData.verdict.verdict) ? 'var(--accent)' :
+                        thermalTripDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{thermalTripDriftAuditData.verdict.reason}</p>
+            {#if thermalTripDriftAuditData.verdict.verdict !== 'ok' && thermalTripDriftAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.thermaltrip.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  thermalTripDriftAuditData.verdict.verdict === 'trip_below_current_temp'
+                    ? "# A non-critical trip is already below current temp\n# Inspect the offending zone's full configuration:\nfor z in /sys/class/thermal/thermal_zone*; do\n  echo \"=== $(basename $z) type=$(cat $z/type) temp=$(cat $z/temp)mC ===\"\n  for t in $z/trip_point_*_type; do\n    i=${t##*_point_}; i=${i%%_type}\n    echo \"  trip $i: $(cat $t) temp=$(cat $z/trip_point_${i}_temp)mC hyst=$(cat $z/trip_point_${i}_hyst 2>/dev/null)mC\"\n  done\ndone\n# Most fixes: BIOS reset to defaults, or unload/reload the thermal driver"
+                  : thermalTripDriftAuditData.verdict.verdict === 'hyst_zero_oscillation_risk'
+                    ? "# hysteresis=0 on a passive/active trip — fan will oscillate\n# Set a non-zero hysteresis (root only, persists until reboot):\nfor t in /sys/class/thermal/thermal_zone*/trip_point_*_hyst; do\n  if [ \"$(cat $t)\" = \"0\" ]; then\n    echo 2000 | sudo tee $t   # 2°C hysteresis\n  fi\ndone\n# Persistent fix: thermald config or BIOS update"
+                  : thermalTripDriftAuditData.verdict.verdict === 'passive_disabled_on_cpu_zone'
+                    ? "# CPU zone has no enabled passive trip — install thermald or BIOS update\nsudo apt install thermald\nsudo systemctl enable --now thermald\n# Or via intel_pstate / cpufreq governor:\necho powersave | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+                  : thermalTripDriftAuditData.verdict.verdict === 'policy_user_space_idle'
+                    ? "# Thermal policy = user_space but no userland daemon is driving it\n# Switch to step_wise (kernel-managed):\nfor z in /sys/class/thermal/thermal_zone*; do\n  echo step_wise | sudo tee $z/policy\ndone\n# Or install / start thermald to drive user_space mode :\nsudo systemctl enable --now thermald"
                   : ""
                 }</pre>
               </details>
