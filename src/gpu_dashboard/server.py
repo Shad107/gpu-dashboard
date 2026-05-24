@@ -1732,6 +1732,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_abi_compat_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/v4l2-media-audit":
+                # R&D #74.4 — /sys/class/{video4linux,media,cec}
+                code, body = api.handle_v4l2_media_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
