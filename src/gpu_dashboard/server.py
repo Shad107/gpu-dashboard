@@ -1792,6 +1792,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_cppc_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pcie-aer-fleet-audit":
+                # R&D #77.3 — fleet-wide per-device PCIe AER
+                code, body = api.handle_pcie_aer_fleet_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
