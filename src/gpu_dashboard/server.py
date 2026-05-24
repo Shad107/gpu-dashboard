@@ -1772,6 +1772,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_wmi_bus_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/numa-hmat-access-audit":
+                # R&D #76.3 — NUMA HMAT/CDAT access matrix
+                code, body = api.handle_numa_hmat_access_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
