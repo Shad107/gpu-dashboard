@@ -4976,4 +4976,58 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #84 (UI sprint 75) ──
+  suspendStatsAuditStatus: () =>
+    fetch("/api/suspend-stats-audit").then(jsonOf<{
+      ok: boolean;
+      success: number | null;
+      fail: number | null;
+      last_failed_dev: string | null;
+      last_failed_errno: number | null;
+      last_failed_step: string | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  loopDeviceAuditStatus: () =>
+    fetch("/api/loop-device-audit").then(jsonOf<{
+      ok: boolean;
+      loop_count_total: number;
+      loop_count_active: number;
+      loops: Array<{
+        name: string;
+        size_sectors: number | null;
+        ro: number | null;
+        backing_file: string | null;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  kernelModuleParamsDriftAuditStatus: () =>
+    fetch("/api/kernel-module-params-drift-audit").then(jsonOf<{
+      ok: boolean;
+      scanned: number;
+      drifted: number;
+      params: Array<{
+        module: string;
+        param: string;
+        value: string;
+        default: string;
+        risk: string;
+        non_default: boolean;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  ttySerialConsoleAuditStatus: () =>
+    fetch("/api/tty-serial-console-audit").then(jsonOf<{
+      ok: boolean;
+      consoles: string[];
+      usb_serial_count: number;
+      usb_serial_devices: Array<{
+        name: string;
+        runtime_status: string | null;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

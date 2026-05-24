@@ -2503,6 +2503,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #84 (UI sprint 75) ────────────────────────────────────────────
+  let suspendStatsAuditData                = $state<Awaited<ReturnType<typeof api.suspendStatsAuditStatus>>                | null>(null);
+  let loopDeviceAuditData                  = $state<Awaited<ReturnType<typeof api.loopDeviceAuditStatus>>                  | null>(null);
+  let kernelModuleParamsDriftAuditData     = $state<Awaited<ReturnType<typeof api.kernelModuleParamsDriftAuditStatus>>     | null>(null);
+  let ttySerialConsoleAuditData            = $state<Awaited<ReturnType<typeof api.ttySerialConsoleAuditStatus>>            | null>(null);
+  async function loadSuspendStatsAudit() {
+    try { suspendStatsAuditData = await api.suspendStatsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadLoopDeviceAudit() {
+    try { loopDeviceAuditData = await api.loopDeviceAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKernelModuleParamsDriftAudit() {
+    try { kernelModuleParamsDriftAuditData = await api.kernelModuleParamsDriftAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadTtySerialConsoleAudit() {
+    try { ttySerialConsoleAuditData = await api.ttySerialConsoleAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2920,6 +2942,11 @@
       if (!clkSummaryAuditData)                 loadClkSummaryAudit();
       if (!nfsdStatsAuditData)                  loadNfsdStatsAudit();
       if (!driDebugfsAuditData)                 loadDriDebugfsAudit();
+      // R&D #84 cards
+      if (!suspendStatsAuditData)               loadSuspendStatsAudit();
+      if (!loopDeviceAuditData)                 loadLoopDeviceAudit();
+      if (!kernelModuleParamsDriftAuditData)    loadKernelModuleParamsDriftAudit();
+      if (!ttySerialConsoleAuditData)           loadTtySerialConsoleAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -14670,6 +14697,182 @@
                     ? "# > 1 master client — two compositors fighting for KMS\nsudo cat /sys/kernel/debug/dri/0/clients\n# Identify and stop the duplicate (Xorg + Wayland running in parallel?)\nps -ef | grep -iE 'xorg|wayland|sway|hyprland'"
                   : driDebugfsAuditData.verdict.verdict === 'requires_root'
                     ? "# debugfs mode-700 — re-run dashboard as root\nsudo systemctl restart gpu-dashboard.service"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #84.1 Suspend stats (UI sprint 75) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.suspend.title")}</h4>
+        <p class="muted">{i18n.t("integrations.suspend.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSuspendStatsAudit}>{i18n.t("integrations.suspend.refresh")}</button>
+          {#if suspendStatsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={suspendStatsAuditData.verdict.verdict === 'suspend_failing' ? 'var(--err)' :
+                             suspendStatsAuditData.verdict.verdict === 'suspend_had_failures' ? 'var(--warn)' :
+                             suspendStatsAuditData.verdict.verdict === 'suspend_never_exercised' ? 'var(--accent)' :
+                             suspendStatsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              success={suspendStatsAuditData.success ?? '?'} · fail={suspendStatsAuditData.fail ?? '?'} · {i18n.t("integrations.suspend.verdict")} : <b>{suspendStatsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if suspendStatsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        suspendStatsAuditData.verdict.verdict === 'suspend_failing' ? 'var(--err)' :
+                        suspendStatsAuditData.verdict.verdict === 'suspend_had_failures' ? 'var(--warn)' :
+                        suspendStatsAuditData.verdict.verdict === 'suspend_never_exercised' ? 'var(--accent)' :
+                        suspendStatsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{suspendStatsAuditData.verdict.reason}</p>
+            {#if suspendStatsAuditData.verdict.verdict !== 'ok' && suspendStatsAuditData.verdict.verdict !== 'unknown' && suspendStatsAuditData.verdict.verdict !== 'suspend_never_exercised'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.suspend.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  suspendStatsAuditData.verdict.verdict === 'suspend_failing'
+                    ? "# Suspend has failed repeatedly — inspect last failure\ncat /sys/power/suspend_stats/last_failed_dev\ncat /sys/power/suspend_stats/last_failed_errno\ncat /sys/power/suspend_stats/last_failed_step\n# Get the kernel trace for the next attempt :\nsudo dmesg --since '1 hour ago' | grep -iE 'suspend|resume|pm:'\n# Then : update the offending driver, or blacklist if always-fails"
+                  : suspendStatsAuditData.verdict.verdict === 'suspend_had_failures'
+                    ? "# Some past failures — confirm current state with a test cycle\nsudo systemctl suspend\n# After wake-up : check the counters again\ncat /sys/power/suspend_stats/{success,fail}\n# If a specific device keeps failing, consider: pm-utils quirks or\n# /etc/systemd/sleep.conf settings"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #84.2 Loop device backing (UI sprint 75) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.loopdev.title")}</h4>
+        <p class="muted">{i18n.t("integrations.loopdev.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLoopDeviceAudit}>{i18n.t("integrations.loopdev.refresh")}</button>
+          {#if loopDeviceAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={loopDeviceAuditData.verdict.verdict === 'loop_deleted_backing' ? 'var(--err)' :
+                             loopDeviceAuditData.verdict.verdict === 'loop_unstable_backing' ? 'var(--warn)' :
+                             loopDeviceAuditData.verdict.verdict === 'excessive_loops' ? 'var(--accent)' :
+                             loopDeviceAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {loopDeviceAuditData.loop_count_active} active / {loopDeviceAuditData.loop_count_total} total · {i18n.t("integrations.loopdev.verdict")} : <b>{loopDeviceAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if loopDeviceAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        loopDeviceAuditData.verdict.verdict === 'loop_deleted_backing' ? 'var(--err)' :
+                        loopDeviceAuditData.verdict.verdict === 'loop_unstable_backing' ? 'var(--warn)' :
+                        loopDeviceAuditData.verdict.verdict === 'excessive_loops' ? 'var(--accent)' :
+                        loopDeviceAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{loopDeviceAuditData.verdict.reason}</p>
+            {#if loopDeviceAuditData.verdict.verdict !== 'ok' && loopDeviceAuditData.verdict.verdict !== 'n/a' && loopDeviceAuditData.verdict.verdict !== 'excessive_loops'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.loopdev.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  loopDeviceAuditData.verdict.verdict === 'loop_deleted_backing'
+                    ? "# Loop devices holding deleted backing files — find culprits\nfor d in /sys/block/loop*/loop/backing_file; do\n  b=$(cat $d 2>/dev/null)\n  if [[ \"$b\" == *\\(deleted\\)* ]]; then\n    echo \"$(basename $(dirname $(dirname $d)))  →  $b\"\n  fi\ndone\n# Detach them to free disk space :\nsudo losetup -d /dev/loopN\n# Or batch :  sudo losetup -D  (detaches ALL unused loops)"
+                  : loopDeviceAuditData.verdict.verdict === 'loop_unstable_backing'
+                    ? "# Loop backed by /tmp /dev/shm /run — dies on reboot\nfor d in /sys/block/loop*/loop/backing_file; do\n  b=$(cat $d 2>/dev/null)\n  case \"$b\" in /tmp/*|/dev/shm/*|/run/*) echo \"$(basename $(dirname $(dirname $d)))  →  $b\" ;; esac\ndone\n# Move backing file to a persistent location, or detach :\nsudo losetup -d /dev/loopN"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #84.3 Kernel module params drift (UI sprint 75) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.modparams.title")}</h4>
+        <p class="muted">{i18n.t("integrations.modparams.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKernelModuleParamsDriftAudit}>{i18n.t("integrations.modparams.refresh")}</button>
+          {#if kernelModuleParamsDriftAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={kernelModuleParamsDriftAuditData.verdict.verdict === 'security_param_flipped' ? 'var(--err)' :
+                             kernelModuleParamsDriftAuditData.verdict.verdict === 'perf_param_drifted' ? 'var(--warn)' :
+                             kernelModuleParamsDriftAuditData.verdict.verdict === 'many_non_default' ? 'var(--accent)' :
+                             kernelModuleParamsDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {kernelModuleParamsDriftAuditData.scanned} scanned · {kernelModuleParamsDriftAuditData.drifted} drifted · {i18n.t("integrations.modparams.verdict")} : <b>{kernelModuleParamsDriftAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kernelModuleParamsDriftAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        kernelModuleParamsDriftAuditData.verdict.verdict === 'security_param_flipped' ? 'var(--err)' :
+                        kernelModuleParamsDriftAuditData.verdict.verdict === 'perf_param_drifted' ? 'var(--warn)' :
+                        kernelModuleParamsDriftAuditData.verdict.verdict === 'many_non_default' ? 'var(--accent)' :
+                        kernelModuleParamsDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{kernelModuleParamsDriftAuditData.verdict.reason}</p>
+            {#if kernelModuleParamsDriftAuditData.verdict.verdict !== 'ok' && kernelModuleParamsDriftAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.modparams.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  kernelModuleParamsDriftAuditData.verdict.verdict === 'security_param_flipped'
+                    ? "# A security-relevant module param has drifted\n# Inspect /etc/modprobe.d/ for the source of drift :\nsudo grep -rE 'usbcore|nvme' /etc/modprobe.d/\n# Reset to default at next reboot by removing the offending line\n# OR set immediately :\necho 1 | sudo tee /sys/module/usbcore/parameters/authorized_default\n# (replace with the relevant module/param/default)"
+                  : kernelModuleParamsDriftAuditData.verdict.verdict === 'perf_param_drifted'
+                    ? "# Perf-relevant param drift — review modprobe.d edits\nsudo grep -rE 'zswap|nvme' /etc/modprobe.d/\n# Reset to default if undesired :\necho 20 | sudo tee /sys/module/zswap/parameters/max_pool_percent\n# (Some params are read-only post-load — require reboot to apply)"
+                  : kernelModuleParamsDriftAuditData.verdict.verdict === 'many_non_default'
+                    ? "# Several module params drifted — audit modprobe.d coverage\nsudo cat /etc/modprobe.d/*.conf\nsudo dmesg | grep -i 'module.*param'"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #84.4 TTY / serial console (UI sprint 75) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ttyserial.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ttyserial.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTtySerialConsoleAudit}>{i18n.t("integrations.ttyserial.refresh")}</button>
+          {#if ttySerialConsoleAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ttySerialConsoleAuditData.verdict.verdict === 'serial_console_no_cable' ? 'var(--err)' :
+                             ttySerialConsoleAuditData.verdict.verdict === 'usb_serial_error_state' ? 'var(--warn)' :
+                             ttySerialConsoleAuditData.verdict.verdict === 'usb_serial_unstable_names' ? 'var(--accent)' :
+                             ttySerialConsoleAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              consoles={ttySerialConsoleAuditData.consoles.join(',') || '-'} · {ttySerialConsoleAuditData.usb_serial_count} USB-serial · {i18n.t("integrations.ttyserial.verdict")} : <b>{ttySerialConsoleAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ttySerialConsoleAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ttySerialConsoleAuditData.verdict.verdict === 'serial_console_no_cable' ? 'var(--err)' :
+                        ttySerialConsoleAuditData.verdict.verdict === 'usb_serial_error_state' ? 'var(--warn)' :
+                        ttySerialConsoleAuditData.verdict.verdict === 'usb_serial_unstable_names' ? 'var(--accent)' :
+                        ttySerialConsoleAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{ttySerialConsoleAuditData.verdict.reason}</p>
+            {#if ttySerialConsoleAuditData.verdict.verdict !== 'ok' && ttySerialConsoleAuditData.verdict.verdict !== 'n/a'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ttyserial.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  ttySerialConsoleAuditData.verdict.verdict === 'serial_console_no_cable'
+                    ? "# Active console is only ttyS — boot logs going to serial\n# Inspect kernel cmdline for leftover server-grade console= flag\ncat /proc/cmdline\n# Remove 'console=ttyS0,...' from /etc/default/grub:\nsudo nano /etc/default/grub\nsudo update-grub\nsudo reboot"
+                  : ttySerialConsoleAuditData.verdict.verdict === 'usb_serial_error_state'
+                    ? "# USB-serial dongle stuck in error state — re-bind\nfor d in /sys/class/tty/ttyUSB*; do\n  if [ \"$(cat $d/device/power/runtime_status 2>/dev/null)\" = error ]; then\n    echo \"reset $(basename $d)\"\n    n=$(basename $d)\n    # Unbind+rebind via the parent USB device path\n    echo $(readlink -f $d/device | xargs basename) | sudo tee /sys/bus/usb/drivers/usb/unbind\n    echo $(readlink -f $d/device | xargs basename) | sudo tee /sys/bus/usb/drivers/usb/bind\n  fi\ndone"
+                  : ttySerialConsoleAuditData.verdict.verdict === 'usb_serial_unstable_names'
+                    ? "# Multiple USB-serial dongles — pin names with udev\nls -la /sys/class/tty/ttyUSB*\n# Get a stable identifier:\nudevadm info -q property -n /dev/ttyUSB0 | grep -E 'ID_SERIAL_SHORT|ID_VENDOR_ID|ID_MODEL_ID'\n# Then write /etc/udev/rules.d/99-usb-serial.rules :\n# SUBSYSTEM==\"tty\",ATTRS{idVendor}==\"XXXX\",ATTRS{idProduct}==\"XXXX\",ATTRS{serial}==\"YYYY\",SYMLINK+=\"my_ups\""
                   : ""
                 }</pre>
               </details>
