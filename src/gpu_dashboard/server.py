@@ -2037,6 +2037,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_resctrl_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-net-protocols-audit":
+                # R&D #90.2 — /proc/net AF_PACKET + raw socket leaks
+                code, body = api.handle_proc_net_protocols_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
