@@ -509,3 +509,4 @@ from .ipv6_conf_per_iface_audit import handle_ipv6_conf_per_iface_audit_status  
 from .wmi_bus_audit import handle_wmi_bus_audit_status  # noqa: F401,F811
 from .numa_hmat_access_audit import handle_numa_hmat_access_audit_status  # noqa: F401,F811
 from .cpu_thermal_throttle_counters_audit import handle_cpu_thermal_throttle_counters_audit_status  # noqa: F401,F811
+from .pci_sriov_posture_audit import handle_pci_sriov_posture_audit_status  # noqa: F401,F811

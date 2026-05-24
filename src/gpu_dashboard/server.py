@@ -1782,6 +1782,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cpu_thermal_throttle_counters_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pci-sriov-posture-audit":
+                # R&D #77.4 — PCI SR-IOV VF posture
+                code, body = api.handle_pci_sriov_posture_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
