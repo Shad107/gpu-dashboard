@@ -1877,6 +1877,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sysrq_mask_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpu-dma-latency-qos-audit":
+                # R&D #82.2 — CPU PM-QoS + /dev/cpu_dma_latency
+                code, body = api.handle_cpu_dma_latency_qos_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

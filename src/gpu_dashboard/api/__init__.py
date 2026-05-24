@@ -528,3 +528,4 @@ from .bpf_program_inventory_audit import handle_bpf_program_inventory_audit_stat
 from .cgroup_io_stat_audit import handle_cgroup_io_stat_audit_status  # noqa: F401,F811
 from .thermal_trip_drift_audit import handle_thermal_trip_drift_audit_status  # noqa: F401,F811
 from .sysrq_mask_audit import handle_sysrq_mask_audit_status  # noqa: F401,F811
+from .cpu_dma_latency_qos_audit import handle_cpu_dma_latency_qos_audit_status  # noqa: F401,F811
