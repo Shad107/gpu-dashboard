@@ -550,3 +550,4 @@ from .workqueue_cpumask_audit import handle_workqueue_cpumask_audit_status  # no
 from .usb_authorized_default_audit import handle_usb_authorized_default_audit_status  # noqa: F401,F811
 from .proc_locks_contention_audit import handle_proc_locks_contention_audit_status  # noqa: F401,F811
 from .cpu_smt_control_audit import handle_cpu_smt_control_audit_status  # noqa: F401,F811
+from .interrupt_skew_audit import handle_interrupt_skew_audit_status  # noqa: F401,F811
