@@ -2415,6 +2415,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #80 (UI sprint 71) ────────────────────────────────────────────
+  let arpNeighborAuditData       = $state<Awaited<ReturnType<typeof api.arpNeighborAuditStatus>>       | null>(null);
+  let snmp6IcmpAuditData         = $state<Awaited<ReturnType<typeof api.snmp6IcmpAuditStatus>>         | null>(null);
+  let btrfsAllocatorAuditData    = $state<Awaited<ReturnType<typeof api.btrfsAllocatorAuditStatus>>    | null>(null);
+  let procStatusCapsAuditData    = $state<Awaited<ReturnType<typeof api.procStatusCapsAuditStatus>>    | null>(null);
+  async function loadArpNeighborAudit() {
+    try { arpNeighborAuditData = await api.arpNeighborAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSnmp6IcmpAudit() {
+    try { snmp6IcmpAuditData = await api.snmp6IcmpAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBtrfsAllocatorAudit() {
+    try { btrfsAllocatorAuditData = await api.btrfsAllocatorAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcStatusCapsAudit() {
+    try { procStatusCapsAuditData = await api.procStatusCapsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2812,6 +2834,11 @@
       if (!routeTableAuditData)                 loadRouteTableAudit();
       if (!fbVtconsoleAuditData)                loadFbVtconsoleAudit();
       if (!schedTunablesAuditData)              loadSchedTunablesAudit();
+      // R&D #80 cards
+      if (!arpNeighborAuditData)                loadArpNeighborAudit();
+      if (!snmp6IcmpAuditData)                  loadSnmp6IcmpAudit();
+      if (!btrfsAllocatorAuditData)             loadBtrfsAllocatorAudit();
+      if (!procStatusCapsAuditData)             loadProcStatusCapsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -13838,6 +13865,184 @@
                     ? "# RT bandwidth too restricted — restore 95% default\ncat /proc/sys/kernel/sched_rt_runtime_us /proc/sys/kernel/sched_rt_period_us\nsudo sysctl -w kernel.sched_rt_runtime_us=950000\nsudo sysctl -w kernel.sched_rt_period_us=1000000\n# Persist via /etc/sysctl.d/"
                   : schedTunablesAuditData.verdict.verdict === 'schedstats_off'
                     ? "# Enable schedstats so other CFS audits have data\nsudo sysctl -w kernel.sched_schedstats=1\n# To persist:\necho 'kernel.sched_schedstats = 1' | sudo tee /etc/sysctl.d/99-sched-stats.conf\n# Then refresh the runqueue-wait audit card."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #80.1 ARP / neighbor cache (UI sprint 71) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.arp.title")}</h4>
+        <p class="muted">{i18n.t("integrations.arp.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadArpNeighborAudit}>{i18n.t("integrations.arp.refresh")}</button>
+          {#if arpNeighborAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={arpNeighborAuditData.verdict.verdict === 'arp_table_overflow' ? 'var(--err)' :
+                             arpNeighborAuditData.verdict.verdict === 'incomplete_neighbors_high' ? 'var(--warn)' :
+                             arpNeighborAuditData.verdict.verdict === 'arp_table_high_watermark' ? 'var(--accent)' :
+                             arpNeighborAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {arpNeighborAuditData.entries} entry/ies · {arpNeighborAuditData.incomplete_count} incomplete · {i18n.t("integrations.arp.verdict")} : <b>{arpNeighborAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if arpNeighborAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        arpNeighborAuditData.verdict.verdict === 'arp_table_overflow' ? 'var(--err)' :
+                        arpNeighborAuditData.verdict.verdict === 'incomplete_neighbors_high' ? 'var(--warn)' :
+                        arpNeighborAuditData.verdict.verdict === 'arp_table_high_watermark' ? 'var(--accent)' :
+                        arpNeighborAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{arpNeighborAuditData.verdict.reason}</p>
+            {#if arpNeighborAuditData.verdict.verdict !== 'ok' && arpNeighborAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.arp.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  arpNeighborAuditData.verdict.verdict === 'arp_table_overflow'
+                    ? "# ARP table overflowed — raise gc_thresh{1,2,3}\nsudo sysctl -w net.ipv4.neigh.default.gc_thresh1=256\nsudo sysctl -w net.ipv4.neigh.default.gc_thresh2=1024\nsudo sysctl -w net.ipv4.neigh.default.gc_thresh3=2048\n# Also for IPv6 if you have a large LAN:\nsudo sysctl -w net.ipv6.neigh.default.gc_thresh3=2048\n# Persist: /etc/sysctl.d/99-neigh.conf"
+                  : arpNeighborAuditData.verdict.verdict === 'incomplete_neighbors_high'
+                    ? "# Multiple INCOMPLETE ARP entries — find the unreachable hosts\nip neigh show | grep INCOMPLETE\n# Each one is a host that stopped answering ARP. Cross-check:\nfor ip in $(ip neigh show | awk '/INCOMPLETE/ {print $1}'); do\n  ping -c 1 -W 1 $ip\ndone\n# Then : restart the dead host, or `ip neigh del $IP` to clear stale entries"
+                  : arpNeighborAuditData.verdict.verdict === 'arp_table_high_watermark'
+                    ? "# Approaching the forced-GC watermark — bump gc_thresh2\ncat /proc/sys/net/ipv4/neigh/default/gc_thresh{1,2,3}\nsudo sysctl -w net.ipv4.neigh.default.gc_thresh2=1024\n# Persist: /etc/sysctl.d/99-neigh.conf"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #80.2 IPv6 ICMP / ND / MLD (UI sprint 71) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.snmp6.title")}</h4>
+        <p class="muted">{i18n.t("integrations.snmp6.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSnmp6IcmpAudit}>{i18n.t("integrations.snmp6.refresh")}</button>
+          {#if snmp6IcmpAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={snmp6IcmpAuditData.verdict.verdict === 'icmp6_in_errors_growing' ? 'var(--err)' :
+                             snmp6IcmpAuditData.verdict.verdict === 'nd_unsolicited_advert_storm' ? 'var(--warn)' :
+                             snmp6IcmpAuditData.verdict.verdict === 'mld_query_loss' ? 'var(--accent)' :
+                             snmp6IcmpAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {snmp6IcmpAuditData.sample?.Icmp6InMsgs ?? 0} in / {snmp6IcmpAuditData.sample?.Icmp6OutMsgs ?? 0} out · {i18n.t("integrations.snmp6.verdict")} : <b>{snmp6IcmpAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if snmp6IcmpAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        snmp6IcmpAuditData.verdict.verdict === 'icmp6_in_errors_growing' ? 'var(--err)' :
+                        snmp6IcmpAuditData.verdict.verdict === 'nd_unsolicited_advert_storm' ? 'var(--warn)' :
+                        snmp6IcmpAuditData.verdict.verdict === 'mld_query_loss' ? 'var(--accent)' :
+                        snmp6IcmpAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{snmp6IcmpAuditData.verdict.reason}</p>
+            {#if snmp6IcmpAuditData.verdict.verdict !== 'ok' && snmp6IcmpAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.snmp6.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  snmp6IcmpAuditData.verdict.verdict === 'icmp6_in_errors_growing'
+                    ? "# ICMP6 csum / parse errors — on-wire corruption or broken peer\ncat /proc/net/snmp6 | grep -E 'Icmp6In(Errors|CsumErrors)'\n# Watch the source of bad traffic with tcpdump:\nsudo tcpdump -i any -nn 'icmp6 and (icmp6[0] == 1 or icmp6[0] == 2 or icmp6[0] == 3)' -c 50\n# Likely cause: faulty switch port, bad IPv6 implementation on a peer"
+                  : snmp6IcmpAuditData.verdict.verdict === 'nd_unsolicited_advert_storm'
+                    ? "# Suspicious Neighbor-Advertisement storm — possible ND poisoning\ncat /proc/net/snmp6 | grep -E 'Icmp6.*Neighbor'\n# Identify the source:\nsudo tcpdump -i any -nn 'icmp6 and icmp6[0] == 136' -c 100\n# Lock down with kernel RA / NA filters:\nsudo sysctl -w net.ipv6.conf.all.accept_ra=0\nsudo sysctl -w net.ipv6.conf.all.autoconf=0"
+                  : snmp6IcmpAuditData.verdict.verdict === 'mld_query_loss'
+                    ? "# IPv6 header / address pathology on the LAN\ncat /proc/net/snmp6 | grep -E 'Ip6In(Addr|Hdr)Errors'\n# Inspect dropped packets to find culprit IP:\nsudo tcpdump -i any -nn 'ip6' -c 100 | grep -v echo"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #80.3 btrfs allocator (UI sprint 71) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.btrfs.title")}</h4>
+        <p class="muted">{i18n.t("integrations.btrfs.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBtrfsAllocatorAudit}>{i18n.t("integrations.btrfs.refresh")}</button>
+          {#if btrfsAllocatorAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={btrfsAllocatorAuditData.verdict.verdict === 'metadata_full_imminent' ? 'var(--err)' :
+                             btrfsAllocatorAuditData.verdict.verdict === 'unbalanced_chunks' ? 'var(--warn)' :
+                             btrfsAllocatorAuditData.verdict.verdict === 'mixed_profile_unexpected' ? 'var(--accent)' :
+                             btrfsAllocatorAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {btrfsAllocatorAuditData.fs_count} btrfs FS · {i18n.t("integrations.btrfs.verdict")} : <b>{btrfsAllocatorAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if btrfsAllocatorAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        btrfsAllocatorAuditData.verdict.verdict === 'metadata_full_imminent' ? 'var(--err)' :
+                        btrfsAllocatorAuditData.verdict.verdict === 'unbalanced_chunks' ? 'var(--warn)' :
+                        btrfsAllocatorAuditData.verdict.verdict === 'mixed_profile_unexpected' ? 'var(--accent)' :
+                        btrfsAllocatorAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{btrfsAllocatorAuditData.verdict.reason}</p>
+            {#if btrfsAllocatorAuditData.verdict.verdict !== 'ok' && btrfsAllocatorAuditData.verdict.verdict !== 'unknown' && btrfsAllocatorAuditData.verdict.verdict !== 'n/a'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.btrfs.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  btrfsAllocatorAuditData.verdict.verdict === 'metadata_full_imminent'
+                    ? "# Metadata chunks near full — REBALANCE BEFORE WRITES FAIL\nsudo btrfs filesystem usage /\n# Trim half-empty metadata chunks (safe — does not delete data):\nsudo btrfs balance start -musage=50 /\n# If still tight, escalate:\nsudo btrfs balance start -musage=75 /"
+                  : btrfsAllocatorAuditData.verdict.verdict === 'unbalanced_chunks'
+                    ? "# Data chunks half-empty — rebalance reclaims the holes\nsudo btrfs filesystem usage /\nsudo btrfs balance start -dusage=50 /\n# Rebalance is online-safe but I/O heavy ; run during quiet hours"
+                  : btrfsAllocatorAuditData.verdict.verdict === 'mixed_profile_unexpected'
+                    ? "# Multiple profiles under same block group — half-finished convert\nsudo btrfs filesystem df /\n# Decide target profile and convert :\nsudo btrfs balance start -dconvert=single -mconvert=dup /\n# (replace with the profile you want — single / dup / raid1 …)"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #80.4 capability / hardening posture (UI sprint 71) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.proccaps.title")}</h4>
+        <p class="muted">{i18n.t("integrations.proccaps.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcStatusCapsAudit}>{i18n.t("integrations.proccaps.refresh")}</button>
+          {#if procStatusCapsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procStatusCapsAuditData.verdict.verdict === 'unexpected_full_caps_userland' ? 'var(--err)' :
+                             procStatusCapsAuditData.verdict.verdict === 'ambient_caps_set_outside_systemd' ? 'var(--warn)' :
+                             procStatusCapsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {procStatusCapsAuditData.pid_count_scanned}/{procStatusCapsAuditData.pid_count_total} PIDs · {i18n.t("integrations.proccaps.verdict")} : <b>{procStatusCapsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procStatusCapsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        procStatusCapsAuditData.verdict.verdict === 'unexpected_full_caps_userland' ? 'var(--err)' :
+                        procStatusCapsAuditData.verdict.verdict === 'ambient_caps_set_outside_systemd' ? 'var(--warn)' :
+                        procStatusCapsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{procStatusCapsAuditData.verdict.reason}</p>
+            {#if procStatusCapsAuditData.verdict.verdict !== 'ok' && procStatusCapsAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.proccaps.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  procStatusCapsAuditData.verdict.verdict === 'unexpected_full_caps_userland'
+                    ? "# Dangerous capability held by a non-root user process\n# Identify the process and its parent chain:\nfor p in $(ls /proc | grep -E '^[0-9]+$'); do\n  [ -r /proc/$p/status ] || continue\n  awk -F'\\t' '/^Uid:/{uid=$2} /^CapEff:/{cap=$2} /^Name:/{name=$2}\n         END{if(uid!=0&&cap!=\"0000000000000000\")print p\" \"name\" uid=\"uid\" cap=\"cap}' /proc/$p/status\ndone | sort -u | head -10\n# Then check the source — service file, container caps, manual setcap"
+                  : procStatusCapsAuditData.verdict.verdict === 'ambient_caps_set_outside_systemd'
+                    ? "# Ambient capabilities survive exec — investigate the process tree\nps -ef --forest | head -50\n# Inspect the specific process :\ncat /proc/$PID/status | grep -E 'Cap|Name|PPid'\n# Common source: capsh / `setpriv --ambient-caps` in a wrapper script"
+                  : procStatusCapsAuditData.verdict.verdict === 'requires_root'
+                    ? "# Most PIDs unreadable as your UID — re-run the dashboard as root\nsudo systemctl restart gpu-dashboard.service\n# Or one-shot manual check with sudo:\nsudo curl -s http://localhost:9999/api/proc-status-caps-audit | jq .verdict"
                   : ""
                 }</pre>
               </details>

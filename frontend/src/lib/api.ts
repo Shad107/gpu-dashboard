@@ -4774,4 +4774,47 @@ export const api = {
       feature_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #80 (UI sprint 71) ──
+  arpNeighborAuditStatus: () =>
+    fetch("/api/arp-neighbor-audit").then(jsonOf<{
+      ok: boolean;
+      entries: number;
+      incomplete_count: number;
+      table_fulls: number;
+      gc_thresholds: {
+        gc_thresh1: number | null;
+        gc_thresh2: number | null;
+        gc_thresh3: number | null;
+      };
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  snmp6IcmpAuditStatus: () =>
+    fetch("/api/snmp6-icmp-audit").then(jsonOf<{
+      ok: boolean;
+      counter_count: number;
+      sample: Record<string, number>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  btrfsAllocatorAuditStatus: () =>
+    fetch("/api/btrfs-allocator-audit").then(jsonOf<{
+      ok: boolean;
+      fs_count: number;
+      filesystems: Array<{
+        uuid: string;
+        allocation: Record<string, Record<string, Record<string, number | null>>>;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  procStatusCapsAuditStatus: () =>
+    fetch("/api/proc-status-caps-audit").then(jsonOf<{
+      ok: boolean;
+      pid_count_total: number;
+      pid_count_scanned: number;
+      cap_last_cap: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
