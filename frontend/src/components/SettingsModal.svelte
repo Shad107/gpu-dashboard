@@ -2635,6 +2635,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #90 (UI sprint 81) ────────────────────────────────────────────
+  let resctrlAuditData                    = $state<Awaited<ReturnType<typeof api.resctrlAuditStatus>>                    | null>(null);
+  let procNetProtocolsAuditData           = $state<Awaited<ReturnType<typeof api.procNetProtocolsAuditStatus>>           | null>(null);
+  let cpufreqGovernorTunablesAuditData    = $state<Awaited<ReturnType<typeof api.cpufreqGovernorTunablesAuditStatus>>    | null>(null);
+  let pcieDpcAuditData                    = $state<Awaited<ReturnType<typeof api.pcieDpcAuditStatus>>                    | null>(null);
+  async function loadResctrlAudit() {
+    try { resctrlAuditData = await api.resctrlAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcNetProtocolsAudit() {
+    try { procNetProtocolsAuditData = await api.procNetProtocolsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpufreqGovernorTunablesAudit() {
+    try { cpufreqGovernorTunablesAuditData = await api.cpufreqGovernorTunablesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPcieDpcAudit() {
+    try { pcieDpcAuditData = await api.pcieDpcAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3082,6 +3104,11 @@
       if (!namespaceLimitsAuditData)            loadNamespaceLimitsAudit();
       if (!sysvipcLimitsAuditData)              loadSysvipcLimitsAudit();
       if (!pcieLinkSpeedDriftAuditData)         loadPcieLinkSpeedDriftAudit();
+      // R&D #90 cards
+      if (!resctrlAuditData)                    loadResctrlAudit();
+      if (!procNetProtocolsAuditData)           loadProcNetProtocolsAudit();
+      if (!cpufreqGovernorTunablesAuditData)    loadCpufreqGovernorTunablesAudit();
+      if (!pcieDpcAuditData)                    loadPcieDpcAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -15884,6 +15911,174 @@
                     ? "# NVMe below max PCIe link — inspect + reseat\nfor n in /sys/class/nvme/nvme*; do\n  pci=$(basename $(readlink $n/device))\n  echo \"$(basename $n) @$pci:\"\n  echo \"  cur: $(cat /sys/bus/pci/devices/$pci/current_link_speed) x$(cat /sys/bus/pci/devices/$pci/current_link_width)\"\n  echo \"  max: $(cat /sys/bus/pci/devices/$pci/max_link_speed) x$(cat /sys/bus/pci/devices/$pci/max_link_width)\"\ndone\n# Common fixes : reseat the M.2 slot, check thermals (NVMe\n# thermal-throttles to lower link speed), verify BIOS\n# bifurcation settings match the physical card layout."
                   : pcieLinkSpeedDriftAuditData.verdict.verdict === 'peripheral_link_downgraded'
                     ? "# Non-GPU non-NVMe PCIe device below max link — inspect\nfor d in /sys/bus/pci/devices/*; do\n  bdf=$(basename $d)\n  cls=$(cat $d/class)\n  case \"$cls\" in 0x0300*|0x0302*|0x0108*|0x06*) continue ;; esac\n  cs=$(cat $d/current_link_speed 2>/dev/null)\n  ms=$(cat $d/max_link_speed 2>/dev/null)\n  cw=$(cat $d/current_link_width 2>/dev/null)\n  mw=$(cat $d/max_link_width 2>/dev/null)\n  [ \"$cs\" != \"$ms\" ] || [ \"$cw\" != \"$mw\" ] &&\n    echo \"$bdf cls=$cls cur=$cs/x$cw max=$ms/x$mw\"\ndone\n# Often a ribbon / riser issue — reseat the card."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #90.1 resctrl L3/MBA (UI sprint 81) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.resctrl.title")}</h4>
+        <p class="muted">{i18n.t("integrations.resctrl.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadResctrlAudit}>{i18n.t("integrations.resctrl.refresh")}</button>
+          {#if resctrlAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={resctrlAuditData.verdict.verdict === 'cat_partitioned_non_default' ? 'var(--err)' :
+                             resctrlAuditData.verdict.verdict === 'mba_throttle_active' ? 'var(--warn)' :
+                             resctrlAuditData.verdict.verdict === 'resctrl_mounted_unused' ? 'var(--accent)' :
+                             resctrlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              mounted={resctrlAuditData.mounted ? 'yes' : 'no'} · {resctrlAuditData.ctrl_group_count} group(s) · {i18n.t("integrations.resctrl.verdict")} : <b>{resctrlAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if resctrlAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        resctrlAuditData.verdict.verdict === 'cat_partitioned_non_default' ? 'var(--err)' :
+                        resctrlAuditData.verdict.verdict === 'mba_throttle_active' ? 'var(--warn)' :
+                        resctrlAuditData.verdict.verdict === 'resctrl_mounted_unused' ? 'var(--accent)' :
+                        resctrlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{resctrlAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(resctrlAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.resctrl.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  resctrlAuditData.verdict.verdict === 'cat_partitioned_non_default'
+                    ? "# L3 cache partitioned away from CPUs — inspect + restore\ngrep -H . /sys/fs/resctrl/*/schemata\n# Restore the offending CTRL group to default mask :\nsudo bash -c 'echo \"L3:0=ffff\" > /sys/fs/resctrl/<group>/schemata'\n# Or remove the group :\nsudo rmdir /sys/fs/resctrl/<group>"
+                  : resctrlAuditData.verdict.verdict === 'mba_throttle_active'
+                    ? "# MBA throttle pinned < 100% — restore full bandwidth\ngrep -H . /sys/fs/resctrl/*/schemata | grep '^.*:MB:'\nsudo bash -c 'echo \"MB:0=100\" >> /sys/fs/resctrl/schemata'"
+                  : resctrlAuditData.verdict.verdict === 'resctrl_mounted_unused'
+                    ? "# resctrl mounted but no allocations — unmount to free machinery\nsudo umount /sys/fs/resctrl\n# Persist : remove the resctrl mount line from /etc/fstab if present"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #90.2 /proc/net protocols (UI sprint 81) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.netproto.title")}</h4>
+        <p class="muted">{i18n.t("integrations.netproto.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcNetProtocolsAudit}>{i18n.t("integrations.netproto.refresh")}</button>
+          {#if procNetProtocolsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['af_packet_promisc_listener','raw_socket_leak'].includes(procNetProtocolsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             procNetProtocolsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {procNetProtocolsAuditData.packet_socket_count} packet · {procNetProtocolsAuditData.raw_socket_count} raw · {i18n.t("integrations.netproto.verdict")} : <b>{procNetProtocolsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procNetProtocolsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['af_packet_promisc_listener','raw_socket_leak'].includes(procNetProtocolsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        procNetProtocolsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{procNetProtocolsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(procNetProtocolsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.netproto.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  procNetProtocolsAuditData.verdict.verdict === 'af_packet_promisc_listener'
+                    ? "# AF_PACKET ETH_P_ALL socket open — find + kill the listener\nsudo ss -lpn | awk '/PACKET/'\nsudo lsof -nP +c0 2>/dev/null | grep -E 'tcpdump|tshark|dumpcap|wireshark'\n# Kill identified process :\nsudo pkill -f tcpdump"
+                  : procNetProtocolsAuditData.verdict.verdict === 'raw_socket_leak'
+                    ? "# Many raw sockets open — find owners\nsudo ss -lpn | grep -i raw\n# Identify processes holding raw sockets :\nfor pid in $(sudo ss -lpn 2>/dev/null | awk '/raw/{print $7}' | sed 's/.*pid=\\([0-9]*\\).*/\\1/'); do\n  echo \"$pid: $(cat /proc/$pid/comm 2>/dev/null)\"\ndone\n# Kill rogue ICMP loop / suricata etc."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #90.3 cpufreq governor tunables (UI sprint 81) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cpufreqgovtune.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cpufreqgovtune.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpufreqGovernorTunablesAudit}>{i18n.t("integrations.cpufreqgovtune.refresh")}</button>
+          {#if cpufreqGovernorTunablesAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['rate_limit_too_high','ondemand_legacy_active'].includes(cpufreqGovernorTunablesAuditData.verdict.verdict) ? 'var(--warn)' :
+                             cpufreqGovernorTunablesAuditData.verdict.verdict === 'governor_drift_across_policies' ? 'var(--accent)' :
+                             cpufreqGovernorTunablesAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cpufreqGovernorTunablesAuditData.policy_count} policy · {cpufreqGovernorTunablesAuditData.governors.join(',') || '?'} · {i18n.t("integrations.cpufreqgovtune.verdict")} : <b>{cpufreqGovernorTunablesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpufreqGovernorTunablesAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['rate_limit_too_high','ondemand_legacy_active'].includes(cpufreqGovernorTunablesAuditData.verdict.verdict) ? 'var(--warn)' :
+                        cpufreqGovernorTunablesAuditData.verdict.verdict === 'governor_drift_across_policies' ? 'var(--accent)' :
+                        cpufreqGovernorTunablesAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpufreqGovernorTunablesAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(cpufreqGovernorTunablesAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cpufreqgovtune.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cpufreqGovernorTunablesAuditData.verdict.verdict === 'rate_limit_too_high'
+                    ? "# schedutil rate_limit_us > 10000 µs — lower it\nfor f in /sys/devices/system/cpu/cpufreq/policy*/schedutil/rate_limit_us; do\n  echo 500 | sudo tee $f\ndone\n# Persist via systemd-tmpfiles or a one-shot service."
+                  : cpufreqGovernorTunablesAuditData.verdict.verdict === 'ondemand_legacy_active'
+                    ? "# Legacy ondemand/conservative active — switch to schedutil\nfor f in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do\n  echo schedutil | sudo tee $f\ndone\n# Persist via GRUB :\nsudo sed -i 's/quiet/quiet cpufreq.default_governor=schedutil/' /etc/default/grub\nsudo update-grub"
+                  : cpufreqGovernorTunablesAuditData.verdict.verdict === 'governor_drift_across_policies'
+                    ? "# Non-uniform governors across policies — normalize\ngrep -H . /sys/devices/system/cpu/cpufreq/policy*/scaling_governor\n# Apply uniform governor (replace 'schedutil' with desired) :\nfor f in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do\n  echo schedutil | sudo tee $f\ndone"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #90.4 PCIe DPC (UI sprint 81) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pciedpc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pciedpc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieDpcAudit}>{i18n.t("integrations.pciedpc.refresh")}</button>
+          {#if pcieDpcAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pcieDpcAuditData.verdict.verdict === 'dpc_triggered' ? 'var(--err)' :
+                             pcieDpcAuditData.verdict.verdict === 'dpc_disabled_capable' ? 'var(--accent)' :
+                             pcieDpcAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {pcieDpcAuditData.dpc_capable_count}/{pcieDpcAuditData.device_count} DPC · {i18n.t("integrations.pciedpc.verdict")} : <b>{pcieDpcAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pcieDpcAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pcieDpcAuditData.verdict.verdict === 'dpc_triggered' ? 'var(--err)' :
+                        pcieDpcAuditData.verdict.verdict === 'dpc_disabled_capable' ? 'var(--accent)' :
+                        pcieDpcAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pcieDpcAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(pcieDpcAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pciedpc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  pcieDpcAuditData.verdict.verdict === 'dpc_triggered'
+                    ? "# DPC triggered — downstream device contained\n# Find the contained device + the AER fatal event :\nsudo dmesg -T | grep -iE 'dpc|aer.*fatal' | tail -30\nfor d in /sys/bus/pci/devices/*/dpc/dpc_status; do\n  v=$(cat $d 2>/dev/null)\n  [ \"$v\" != \"0\" ] && [ \"$v\" != \"0x0\" ] && echo \"$(dirname $(dirname $d)): status=$v\"\ndone\n# Recovery options :\n#  1. rescan the bus once the underlying cause is fixed :\n#     echo 1 | sudo tee /sys/bus/pci/rescan\n#  2. clear DPC status (clears the latch but device stays contained) :\n#     echo 0x1f | sudo tee /sys/bus/pci/devices/<port>/dpc/dpc_status"
+                  : pcieDpcAuditData.verdict.verdict === 'dpc_disabled_capable'
+                    ? "# Root port has DPC capability but disabled — enable it\nfor d in /sys/bus/pci/devices/*/dpc/dpc_ctl; do\n  cap=$(cat $(dirname $d)/dpc_cap 2>/dev/null)\n  ctl=$(cat $d 2>/dev/null)\n  [ -n \"$cap\" ] && [ \"$ctl\" = \"0\" ] && echo $((0x3)) | sudo tee $d\ndone\n# Verify :\ngrep -H . /sys/bus/pci/devices/*/dpc/dpc_ctl"
                   : ""
                 }</pre>
               </details>

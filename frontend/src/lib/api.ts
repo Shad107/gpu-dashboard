@@ -5251,4 +5251,37 @@ export const api = {
       linked_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #90 (UI sprint 81) ──
+  resctrlAuditStatus: () =>
+    fetch("/api/resctrl-audit").then(jsonOf<{
+      ok: boolean;
+      mounted: boolean;
+      ctrl_group_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  procNetProtocolsAuditStatus: () =>
+    fetch("/api/proc-net-protocols-audit").then(jsonOf<{
+      ok: boolean;
+      packet_socket_count: number;
+      raw_socket_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cpufreqGovernorTunablesAuditStatus: () =>
+    fetch("/api/cpufreq-governor-tunables-audit").then(jsonOf<{
+      ok: boolean;
+      policy_count: number;
+      governors: string[];
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  pcieDpcAuditStatus: () =>
+    fetch("/api/pcie-dpc-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      dpc_capable_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
