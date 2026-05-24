@@ -4707,4 +4707,30 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #78 (UI sprint 69) ──
+  netIfaceCountersAuditStatus: () =>
+    fetch("/api/net-iface-counters-audit").then(jsonOf<{
+      ok: boolean;
+      iface_count: number;
+      ifaces: string[];
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  netStackingTopologyAuditStatus: () =>
+    fetch("/api/net-stacking-topology-audit").then(jsonOf<{
+      ok: boolean;
+      iface_count: number;
+      bonds: string[];
+      bridges: string[];
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  procMapsAnomalyAuditStatus: () =>
+    fetch("/api/proc-maps-anomaly-audit").then(jsonOf<{
+      ok: boolean;
+      pid_count_total: number;
+      pid_count_scanned: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

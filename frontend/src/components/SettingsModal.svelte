@@ -2376,6 +2376,23 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #78 (UI sprint 69) ────────────────────────────────────────────
+  let netIfaceCountersAuditData     = $state<Awaited<ReturnType<typeof api.netIfaceCountersAuditStatus>>     | null>(null);
+  let netStackingTopologyAuditData  = $state<Awaited<ReturnType<typeof api.netStackingTopologyAuditStatus>>  | null>(null);
+  let procMapsAnomalyAuditData      = $state<Awaited<ReturnType<typeof api.procMapsAnomalyAuditStatus>>      | null>(null);
+  async function loadNetIfaceCountersAudit() {
+    try { netIfaceCountersAuditData = await api.netIfaceCountersAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNetStackingTopologyAudit() {
+    try { netStackingTopologyAuditData = await api.netStackingTopologyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadProcMapsAnomalyAudit() {
+    try { procMapsAnomalyAuditData = await api.procMapsAnomalyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2764,6 +2781,10 @@
       if (!pciSriovPostureAuditData)            loadPciSriovPostureAudit();
       if (!cpuCppcAuditData)                    loadCpuCppcAudit();
       if (!pcieAerFleetAuditData)               loadPcieAerFleetAudit();
+      // R&D #78 cards
+      if (!netIfaceCountersAuditData)           loadNetIfaceCountersAudit();
+      if (!netStackingTopologyAuditData)        loadNetStackingTopologyAudit();
+      if (!procMapsAnomalyAuditData)            loadProcMapsAnomalyAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -13463,6 +13484,153 @@
                              border-radius: 4px; overflow-x: auto;">{pcieAerFleetAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(pcieAerFleetAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #78.1 NIC error counters (UI sprint 69) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.netcounters.title")}</h4>
+        <p class="muted">{i18n.t("integrations.netcounters.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNetIfaceCountersAudit}>{i18n.t("integrations.netcounters.refresh")}</button>
+          {#if netIfaceCountersAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={netIfaceCountersAuditData.verdict.verdict === 'rx_crc_storm' ? 'var(--err)' :
+                             ['tx_errors_climbing','carrier_flapping'].includes(netIfaceCountersAuditData.verdict.verdict) ? 'var(--warn)' :
+                             netIfaceCountersAuditData.verdict.verdict === 'rx_dropped_elevated' ? 'var(--accent)' :
+                             netIfaceCountersAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {netIfaceCountersAuditData.iface_count} iface(s) · {i18n.t("integrations.netcounters.verdict")} : <b>{netIfaceCountersAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if netIfaceCountersAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        netIfaceCountersAuditData.verdict.verdict === 'rx_crc_storm' ? 'var(--err)' :
+                        ['tx_errors_climbing','carrier_flapping'].includes(netIfaceCountersAuditData.verdict.verdict) ? 'var(--warn)' :
+                        netIfaceCountersAuditData.verdict.verdict === 'rx_dropped_elevated' ? 'var(--accent)' :
+                        netIfaceCountersAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{netIfaceCountersAuditData.verdict.reason}</p>
+            {#if netIfaceCountersAuditData.verdict.verdict !== 'ok' && netIfaceCountersAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.netcounters.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  netIfaceCountersAuditData.verdict.verdict === 'rx_crc_storm'
+                    ? "# CRC errors = physical-layer faults (bad cable, dirty SFP)\n# Identify the bad iface, then replace the cable / patch:\nfor i in /sys/class/net/*/statistics/rx_crc_errors; do\n  echo \"$(basename $(dirname $(dirname $i))): $(cat $i)\"\ndone | grep -v ': 0$'\n# Then: replace cable / re-seat SFP / try another switch port"
+                  : netIfaceCountersAuditData.verdict.verdict === 'tx_errors_climbing'
+                    ? "# Sustained tx_errors point to upstream rejection or driver bug\n# Check link partner negotiation and driver version:\nethtool $(echo /sys/class/net/* | tr ' ' '\\n' | xargs -n1 basename | grep -v '^lo$' | head -1)\nethtool -i $(echo /sys/class/net/* | tr ' ' '\\n' | xargs -n1 basename | grep -v '^lo$' | head -1)\nethtool -S $IFACE | grep -E 'tx_err|tx_aborted|tx_carrier'"
+                  : netIfaceCountersAuditData.verdict.verdict === 'carrier_flapping'
+                    ? "# Link is bouncing — check ethtool diagnostic + kernel log\ndmesg --since '1 hour ago' | grep -E 'eth|enp|ens|wl' | head -20\nethtool $IFACE\n# Common fixes: re-seat cable, disable EEE (energy-efficient eth),\n# or swap NIC if onboard:  ethtool --set-eee $IFACE eee off"
+                  : netIfaceCountersAuditData.verdict.verdict === 'rx_dropped_elevated'
+                    ? "# Kernel ran out of socket buffer — bump net.core rmem ceilings\nsudo sysctl -w net.core.rmem_max=16777216\nsudo sysctl -w net.core.rmem_default=2097152\nsudo sysctl -w net.core.netdev_max_backlog=5000\n# To persist:  add to /etc/sysctl.d/99-net.conf"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #78.2 net stacking topology (UI sprint 69) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.netstacking.title")}</h4>
+        <p class="muted">{i18n.t("integrations.netstacking.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNetStackingTopologyAudit}>{i18n.t("integrations.netstacking.refresh")}</button>
+          {#if netStackingTopologyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={netStackingTopologyAuditData.verdict.verdict === 'bond_degraded_slave' ? 'var(--err)' :
+                             netStackingTopologyAuditData.verdict.verdict === 'bridge_stp_disabled' ? 'var(--warn)' :
+                             ['orphan_lower_member','stacking_inconsistent'].includes(netStackingTopologyAuditData.verdict.verdict) ? 'var(--accent)' :
+                             netStackingTopologyAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {netStackingTopologyAuditData.iface_count} iface(s) · {netStackingTopologyAuditData.bonds.length} bond(s) · {netStackingTopologyAuditData.bridges.length} bridge(s) · {i18n.t("integrations.netstacking.verdict")} : <b>{netStackingTopologyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if netStackingTopologyAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        netStackingTopologyAuditData.verdict.verdict === 'bond_degraded_slave' ? 'var(--err)' :
+                        netStackingTopologyAuditData.verdict.verdict === 'bridge_stp_disabled' ? 'var(--warn)' :
+                        ['orphan_lower_member','stacking_inconsistent'].includes(netStackingTopologyAuditData.verdict.verdict) ? 'var(--accent)' :
+                        netStackingTopologyAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{netStackingTopologyAuditData.verdict.reason}</p>
+            {#if netStackingTopologyAuditData.verdict.verdict !== 'ok' && netStackingTopologyAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.netstacking.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  netStackingTopologyAuditData.verdict.verdict === 'bond_degraded_slave'
+                    ? "# Inspect bond + slaves\ncat /proc/net/bonding/bond0\nip -d link show type bond_slave\n# Re-attach a dead slave (substitute your iface):\nsudo ifenslave -d bond0 eth1 && sudo ifenslave bond0 eth1\n# Or via networkctl/NetworkManager:\nsudo nmcli con up bond0-slave-eth1"
+                  : netStackingTopologyAuditData.verdict.verdict === 'bridge_stp_disabled'
+                    ? "# Enable STP on a multi-port bridge to avoid L2 loops\nsudo ip link set $BRIDGE type bridge stp_state 1\n# To persist with iproute2 + networkd: /etc/systemd/network/*.network\n#   [Bridge]\n#   STP=yes"
+                  : netStackingTopologyAuditData.verdict.verdict === 'orphan_lower_member'
+                    ? "# An iface references a master that no longer exists\nip -d link show\n# Re-attach the iface to its intended master or clear the stale link:\nsudo ip link set $IFACE nomaster\n# Then re-add to the live master:\nsudo ip link set $IFACE master $MASTER"
+                  : netStackingTopologyAuditData.verdict.verdict === 'stacking_inconsistent'
+                    ? "# Kernel sysfs shows lower_X without matching upper_X reverse link\n# This is a kernel/sysfs drift — a `ip link` recreate of the upper\n# usually heals it:\nsudo ip link del $BRIDGE_OR_BOND\n# Then recreate from your network config (netplan apply, nmcli, …)"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #78.4 /proc/pid/maps anomaly (UI sprint 69) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.procmaps.title")}</h4>
+        <p class="muted">{i18n.t("integrations.procmaps.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcMapsAnomalyAudit}>{i18n.t("integrations.procmaps.refresh")}</button>
+          {#if procMapsAnomalyAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={procMapsAnomalyAuditData.verdict.verdict === 'rwx_mapping_found' ? 'var(--err)' :
+                             ['anon_exec_segment','deleted_exec_backing'].includes(procMapsAnomalyAuditData.verdict.verdict) ? 'var(--warn)' :
+                             procMapsAnomalyAuditData.verdict.verdict === 'memfd_exec_present' ? 'var(--accent)' :
+                             procMapsAnomalyAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {procMapsAnomalyAuditData.pid_count_scanned}/{procMapsAnomalyAuditData.pid_count_total} PIDs · {i18n.t("integrations.procmaps.verdict")} : <b>{procMapsAnomalyAuditData.verdict.verdict}</b>
+            </span>
+          {:else if procMapsAnomalyAuditData}
+            <span class="kv" style="margin-left: 12px; color: var(--text-dim);">
+              {i18n.t("integrations.procmaps.verdict")} : <b>{procMapsAnomalyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if procMapsAnomalyAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        procMapsAnomalyAuditData.verdict.verdict === 'rwx_mapping_found' ? 'var(--err)' :
+                        ['anon_exec_segment','deleted_exec_backing'].includes(procMapsAnomalyAuditData.verdict.verdict) ? 'var(--warn)' :
+                        procMapsAnomalyAuditData.verdict.verdict === 'memfd_exec_present' ? 'var(--accent)' :
+                        procMapsAnomalyAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{procMapsAnomalyAuditData.verdict.reason}</p>
+            {#if procMapsAnomalyAuditData.verdict.verdict !== 'ok' && procMapsAnomalyAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.procmaps.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  procMapsAnomalyAuditData.verdict.verdict === 'rwx_mapping_found'
+                    ? "# W+X mappings break W^X — investigate the flagged process:\nfor p in $(ls /proc | grep -E '^[0-9]+$'); do\n  [ -r /proc/$p/maps ] || continue\n  if grep -q 'rwxp' /proc/$p/maps 2>/dev/null; then\n    echo \"=== pid=$p comm=$(cat /proc/$p/comm 2>/dev/null)\"\n    grep 'rwxp' /proc/$p/maps | head -5\n  fi\ndone\n# Common culprit: custom JIT not yet on our whitelist — file an issue with the comm name."
+                  : procMapsAnomalyAuditData.verdict.verdict === 'anon_exec_segment'
+                    ? "# Anonymous exec mappings outside the JIT whitelist:\n# Identify which process and what library context:\nfor p in $(ls /proc | grep -E '^[0-9]+$'); do\n  [ -r /proc/$p/maps ] || continue\n  awk '$2 ~ /x/ && NF == 5' /proc/$p/maps 2>/dev/null | grep -q . && \\\n    echo \"$p $(cat /proc/$p/comm 2>/dev/null)\"\ndone\n# If a known JIT engine — file an issue to add it to the whitelist."
+                  : procMapsAnomalyAuditData.verdict.verdict === 'deleted_exec_backing'
+                    ? "# Process is running code from a file that no longer exists on disk\n# (usually a package upgrade — restart the daemon to pick up the new binary)\nfor p in $(ls /proc | grep -E '^[0-9]+$'); do\n  [ -r /proc/$p/maps ] || continue\n  grep -E 'x.*\\(deleted\\)' /proc/$p/maps 2>/dev/null | head -3 | \\\n    awk -v p=$p '{print p\" \" $NF}'\ndone\n# Then: systemctl restart <unit> or kill+respawn the affected process."
+                  : procMapsAnomalyAuditData.verdict.verdict === 'memfd_exec_present'
+                    ? "# memfd executable mappings — usually a JIT, but worth inspecting\nfor p in $(ls /proc | grep -E '^[0-9]+$'); do\n  [ -r /proc/$p/maps ] || continue\n  grep -E 'x.*memfd:' /proc/$p/maps 2>/dev/null | head -3 | \\\n    awk -v p=$p '{print p\" \" $NF}'\ndone\n# If it's a known JIT we missed (Mono, Wine, …) file an issue to whitelist."
+                  : procMapsAnomalyAuditData.verdict.verdict === 'requires_root'
+                    ? "# Most PIDs are root-owned and unreadable as your UID\n# Re-run the dashboard as root to get a full-system scan, e.g.:\nsudo systemctl restart gpu-dashboard.service\n# Or run a one-shot scan with sudo for the most-recent verdict:\ncurl -s http://localhost:9999/api/proc-maps-anomaly-audit | jq .verdict"
+                  : ""
+                }</pre>
               </details>
             {/if}
           </div>
