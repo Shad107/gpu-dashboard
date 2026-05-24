@@ -1997,6 +1997,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_userspace_hardening_sysctls_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/suspend-mode-selector-audit":
+                # R&D #88.2 — /sys/power selector files
+                code, body = api.handle_suspend_mode_selector_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
