@@ -2017,6 +2017,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_tcp_congestion_control_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/namespace-limits-audit":
+                # R&D #89.2 — /proc/sys/user/max_*_namespaces caps
+                code, body = api.handle_namespace_limits_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
