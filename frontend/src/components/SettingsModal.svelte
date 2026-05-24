@@ -2266,6 +2266,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #73 (UI sprint 64) ────────────────────────────────────────────
+  let processIdLimitsAuditData          = $state<Awaited<ReturnType<typeof api.processIdLimitsAuditStatus>>          | null>(null);
+  let sysctlDevSubtreeAuditData         = $state<Awaited<ReturnType<typeof api.sysctlDevSubtreeAuditStatus>>         | null>(null);
+  let kernelNotesVmcoreinfoAuditData    = $state<Awaited<ReturnType<typeof api.kernelNotesVmcoreinfoAuditStatus>>    | null>(null);
+  let firmwareAttributesAuditData       = $state<Awaited<ReturnType<typeof api.firmwareAttributesAuditStatus>>       | null>(null);
+  async function loadProcessIdLimitsAudit() {
+    try { processIdLimitsAuditData = await api.processIdLimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSysctlDevSubtreeAudit() {
+    try { sysctlDevSubtreeAuditData = await api.sysctlDevSubtreeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKernelNotesVmcoreinfoAudit() {
+    try { kernelNotesVmcoreinfoAuditData = await api.kernelNotesVmcoreinfoAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFirmwareAttributesAudit() {
+    try { firmwareAttributesAuditData = await api.firmwareAttributesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2629,6 +2651,11 @@
       if (!ueventHelperAuditData)               loadUeventHelperAudit();
       if (!dmiEntriesRawAuditData)              loadDmiEntriesRawAudit();
       if (!tracingEventsEnableAuditData)        loadTracingEventsEnableAudit();
+      // R&D #73 cards
+      if (!processIdLimitsAuditData)            loadProcessIdLimitsAudit();
+      if (!sysctlDevSubtreeAuditData)           loadSysctlDevSubtreeAudit();
+      if (!kernelNotesVmcoreinfoAuditData)      loadKernelNotesVmcoreinfoAudit();
+      if (!firmwareAttributesAuditData)         loadFirmwareAttributesAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -12598,6 +12625,150 @@
                              border-radius: 4px; overflow-x: auto;">{tracingEventsEnableAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(tracingEventsEnableAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #73.1 PID/threads/mmap limits (UI sprint 64) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pidlimits.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pidlimits.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadProcessIdLimitsAudit}>{i18n.t("integrations.pidlimits.refresh")}</button>
+          {#if processIdLimitsAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={processIdLimitsAuditData.verdict.verdict === 'pid_exhaustion_imminent' ? 'var(--err)' :
+                             ['threads_max_too_low','pid_max_legacy_32k','max_map_count_too_low'].includes(processIdLimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             'var(--text-dim)'}>
+              {processIdLimitsAuditData.active_pids} PIDs · {processIdLimitsAuditData.pid_usage_pct ?? '?'}% · {i18n.t("integrations.pidlimits.verdict")} : <b>{processIdLimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if processIdLimitsAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        processIdLimitsAuditData.verdict.verdict === 'pid_exhaustion_imminent' ? 'var(--err)' :
+                        ['threads_max_too_low','pid_max_legacy_32k','max_map_count_too_low'].includes(processIdLimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{processIdLimitsAuditData.verdict.reason}</p>
+            {#if processIdLimitsAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pidlimits.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{processIdLimitsAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(processIdLimitsAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #73.2 /proc/sys/dev knobs (UI sprint 64) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sysctldev.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sysctldev.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSysctlDevSubtreeAudit}>{i18n.t("integrations.sysctldev.refresh")}</button>
+          {#if sysctlDevSubtreeAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['scsi_verbose_logging_on','i915_perf_paranoid_unset'].includes(sysctlDevSubtreeAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['hpet_max_user_freq_low','cdrom_autoclose_off'].includes(sysctlDevSubtreeAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.sysctldev.verdict")} : <b>{sysctlDevSubtreeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sysctlDevSubtreeAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['scsi_verbose_logging_on','i915_perf_paranoid_unset'].includes(sysctlDevSubtreeAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['hpet_max_user_freq_low','cdrom_autoclose_off'].includes(sysctlDevSubtreeAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{sysctlDevSubtreeAuditData.verdict.reason}</p>
+            {#if sysctlDevSubtreeAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sysctldev.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{sysctlDevSubtreeAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(sysctlDevSubtreeAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #73.4 kdump/vmcoreinfo readiness (UI sprint 64) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kexecprep.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kexecprep.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKernelNotesVmcoreinfoAudit}>{i18n.t("integrations.kexecprep.refresh")}</button>
+          {#if kernelNotesVmcoreinfoAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['crash_kernel_not_reserved','vmcoreinfo_unreadable'].includes(kernelNotesVmcoreinfoAuditData.verdict.verdict) ? 'var(--err)' :
+                             ['kexec_loaded_unexpectedly','kernel_notes_missing'].includes(kernelNotesVmcoreinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                             kernelNotesVmcoreinfoAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              crash_loaded={kernelNotesVmcoreinfoAuditData.kexec_crash_loaded ?? '?'} · {i18n.t("integrations.kexecprep.verdict")} : <b>{kernelNotesVmcoreinfoAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kernelNotesVmcoreinfoAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['crash_kernel_not_reserved','vmcoreinfo_unreadable'].includes(kernelNotesVmcoreinfoAuditData.verdict.verdict) ? 'var(--err)' :
+                        ['kexec_loaded_unexpectedly','kernel_notes_missing'].includes(kernelNotesVmcoreinfoAuditData.verdict.verdict) ? 'var(--warn)' :
+                        kernelNotesVmcoreinfoAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{kernelNotesVmcoreinfoAuditData.verdict.reason}</p>
+            {#if kernelNotesVmcoreinfoAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.kexecprep.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{kernelNotesVmcoreinfoAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(kernelNotesVmcoreinfoAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #73.3 BIOS firmware-attributes (UI sprint 64) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fwattr.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fwattr.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFirmwareAttributesAudit}>{i18n.t("integrations.fwattr.refresh")}</button>
+          {#if firmwareAttributesAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={firmwareAttributesAuditData.verdict.verdict === 'pending_reboot_stuck' ? 'var(--err)' :
+                             ['thermal_mode_quiet','power_limit_unlocked_off'].includes(firmwareAttributesAuditData.verdict.verdict) ? 'var(--warn)' :
+                             firmwareAttributesAuditData.verdict.verdict === 'attributes_absent' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {firmwareAttributesAuditData.vendor_count} vendor(s) · {i18n.t("integrations.fwattr.verdict")} : <b>{firmwareAttributesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if firmwareAttributesAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        firmwareAttributesAuditData.verdict.verdict === 'pending_reboot_stuck' ? 'var(--err)' :
+                        ['thermal_mode_quiet','power_limit_unlocked_off'].includes(firmwareAttributesAuditData.verdict.verdict) ? 'var(--warn)' :
+                        firmwareAttributesAuditData.verdict.verdict === 'attributes_absent' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{firmwareAttributesAuditData.verdict.reason}</p>
+            {#if firmwareAttributesAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fwattr.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{firmwareAttributesAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(firmwareAttributesAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>

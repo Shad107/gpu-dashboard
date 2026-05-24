@@ -4424,4 +4424,58 @@ export const api = {
       enabled_by_subsys: Record<string, string[]>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #73 (UI sprint 64) ──
+  processIdLimitsAuditStatus: () =>
+    fetch("/api/process-id-limits-audit").then(jsonOf<{
+      ok: boolean;
+      pid_max: number | null;
+      threads_max: number | null;
+      max_map_count: number | null;
+      active_pids: number;
+      pid_usage_pct: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  sysctlDevSubtreeAuditStatus: () =>
+    fetch("/api/sysctl-dev-subtree-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      scsi_logging_level: number | null;
+      i915_perf_stream_paranoid: number | null;
+      hpet_max_user_freq: number | null;
+      cdrom_autoclose: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  kernelNotesVmcoreinfoAuditStatus: () =>
+    fetch("/api/kernel-notes-vmcoreinfo-audit").then(jsonOf<{
+      ok: boolean;
+      notes_present: boolean;
+      notes_size: number | null;
+      vmcoreinfo_present: boolean;
+      vmcoreinfo_size: number | null;
+      kexec_loaded: number | null;
+      kexec_crash_loaded: number | null;
+      kexec_crash_size: number | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  firmwareAttributesAuditStatus: () =>
+    fetch("/api/firmware-attributes-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      vendor_count: number;
+      vendors: string[];
+      attribute_count: number;
+      attributes_sample: Array<{
+        vendor: string;
+        name: string;
+        current_value: string | null;
+        default_value: string | null;
+        type: string | null;
+      }>;
+      pending_reboot: Array<{ vendor: string; value: number | null }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };
