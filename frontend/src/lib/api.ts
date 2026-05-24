@@ -4534,4 +4534,55 @@ export const api = {
       dev_root_only: string[];
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #75 (UI sprint 66) ──
+  miscChardevAuditStatus: () =>
+    fetch("/api/misc-chardev-audit").then(jsonOf<{
+      ok: boolean;
+      misc_count: number;
+      sysfs_misc_count: number;
+      kvm_module_loaded: boolean;
+      watched_devices: Array<{
+        name: string;
+        present: boolean;
+        mode: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  sgxEnclaveAuditStatus: () =>
+    fetch("/api/sgx-enclave-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_has_sgx: boolean;
+      cpu_has_sgx_lc: boolean;
+      sgx_sysfs_entries: string[];
+      dev_nodes: Array<{
+        name: string;
+        present: boolean;
+        mode: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  lsmSubtreeAuditStatus: () =>
+    fetch("/api/lsm-subtree-audit").then(jsonOf<{
+      ok: boolean;
+      security_present: boolean;
+      lsm_stack: string[];
+      subdirs: string[];
+      lockdown: string | null;
+      apparmor_profile_count: number | null;
+      core_files_readable: boolean;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  ipv4ConfPerIfaceAuditStatus: () =>
+    fetch("/api/ipv4-conf-per-iface-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      iface_count: number;
+      ifaces: string[];
+      knobs: Record<string, Record<string, number | null>>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

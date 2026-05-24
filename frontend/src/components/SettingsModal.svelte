@@ -2310,6 +2310,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #75 (UI sprint 66) ────────────────────────────────────────────
+  let miscChardevAuditData         = $state<Awaited<ReturnType<typeof api.miscChardevAuditStatus>>         | null>(null);
+  let sgxEnclaveAuditData          = $state<Awaited<ReturnType<typeof api.sgxEnclaveAuditStatus>>          | null>(null);
+  let lsmSubtreeAuditData          = $state<Awaited<ReturnType<typeof api.lsmSubtreeAuditStatus>>          | null>(null);
+  let ipv4ConfPerIfaceAuditData    = $state<Awaited<ReturnType<typeof api.ipv4ConfPerIfaceAuditStatus>>    | null>(null);
+  async function loadMiscChardevAudit() {
+    try { miscChardevAuditData = await api.miscChardevAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSgxEnclaveAudit() {
+    try { sgxEnclaveAuditData = await api.sgxEnclaveAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadLsmSubtreeAudit() {
+    try { lsmSubtreeAuditData = await api.lsmSubtreeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIpv4ConfPerIfaceAudit() {
+    try { ipv4ConfPerIfaceAuditData = await api.ipv4ConfPerIfaceAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2683,6 +2705,11 @@
       if (!dmaHeapAuditData)                    loadDmaHeapAudit();
       if (!abiCompatAuditData)                  loadAbiCompatAudit();
       if (!v4l2MediaAuditData)                  loadV4l2MediaAudit();
+      // R&D #75 cards
+      if (!miscChardevAuditData)                loadMiscChardevAudit();
+      if (!sgxEnclaveAuditData)                 loadSgxEnclaveAudit();
+      if (!lsmSubtreeAuditData)                 loadLsmSubtreeAudit();
+      if (!ipv4ConfPerIfaceAuditData)           loadIpv4ConfPerIfaceAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -12942,6 +12969,154 @@
                              border-radius: 4px; overflow-x: auto;">{v4l2MediaAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(v4l2MediaAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #75.2 misc chardev (UI sprint 66) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.miscchar.title")}</h4>
+        <p class="muted">{i18n.t("integrations.miscchar.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMiscChardevAudit}>{i18n.t("integrations.miscchar.refresh")}</button>
+          {#if miscChardevAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={miscChardevAuditData.verdict.verdict === 'world_writable_node' ? 'var(--err)' :
+                             ['orphan_minor','kvm_node_missing'].includes(miscChardevAuditData.verdict.verdict) ? 'var(--warn)' :
+                             miscChardevAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {miscChardevAuditData.misc_count} minors · {i18n.t("integrations.miscchar.verdict")} : <b>{miscChardevAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if miscChardevAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        miscChardevAuditData.verdict.verdict === 'world_writable_node' ? 'var(--err)' :
+                        ['orphan_minor','kvm_node_missing'].includes(miscChardevAuditData.verdict.verdict) ? 'var(--warn)' :
+                        miscChardevAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{miscChardevAuditData.verdict.reason}</p>
+            {#if miscChardevAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.miscchar.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{miscChardevAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(miscChardevAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #75.3 Intel SGX (UI sprint 66) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sgx.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sgx.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSgxEnclaveAudit}>{i18n.t("integrations.sgx.refresh")}</button>
+          {#if sgxEnclaveAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['sgx_disabled_in_bios','provision_node_world_writable'].includes(sgxEnclaveAuditData.verdict.verdict) ? 'var(--err)' :
+                             sgxEnclaveAuditData.verdict.verdict === 'flc_missing' ? 'var(--warn)' :
+                             sgxEnclaveAuditData.verdict.verdict === 'sgx_unavailable' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              sgx={sgxEnclaveAuditData.cpu_has_sgx ? 'yes' : 'no'} · {i18n.t("integrations.sgx.verdict")} : <b>{sgxEnclaveAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sgxEnclaveAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['sgx_disabled_in_bios','provision_node_world_writable'].includes(sgxEnclaveAuditData.verdict.verdict) ? 'var(--err)' :
+                        sgxEnclaveAuditData.verdict.verdict === 'flc_missing' ? 'var(--warn)' :
+                        sgxEnclaveAuditData.verdict.verdict === 'sgx_unavailable' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{sgxEnclaveAuditData.verdict.reason}</p>
+            {#if sgxEnclaveAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sgx.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{sgxEnclaveAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(sgxEnclaveAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #75.1 LSM subtree (UI sprint 66) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.lsmsub.title")}</h4>
+        <p class="muted">{i18n.t("integrations.lsmsub.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLsmSubtreeAudit}>{i18n.t("integrations.lsmsub.refresh")}</button>
+          {#if lsmSubtreeAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={lsmSubtreeAuditData.verdict.verdict === 'lsm_disabled' ? 'var(--err)' :
+                             ['policy_unloaded','stacked_partial'].includes(lsmSubtreeAuditData.verdict.verdict) ? 'var(--warn)' :
+                             lsmSubtreeAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {lsmSubtreeAuditData.lsm_stack.length} LSMs · lockdown={lsmSubtreeAuditData.lockdown ?? '?'} · {i18n.t("integrations.lsmsub.verdict")} : <b>{lsmSubtreeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if lsmSubtreeAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        lsmSubtreeAuditData.verdict.verdict === 'lsm_disabled' ? 'var(--err)' :
+                        ['policy_unloaded','stacked_partial'].includes(lsmSubtreeAuditData.verdict.verdict) ? 'var(--warn)' :
+                        lsmSubtreeAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{lsmSubtreeAuditData.verdict.reason}</p>
+            {#if lsmSubtreeAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.lsmsub.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{lsmSubtreeAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(lsmSubtreeAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #75.4 IPv4 per-iface conf (UI sprint 66) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ipv4conf.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ipv4conf.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIpv4ConfPerIfaceAudit}>{i18n.t("integrations.ipv4conf.refresh")}</button>
+          {#if ipv4ConfPerIfaceAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['source_route_accepted','rp_filter_loose'].includes(ipv4ConfPerIfaceAuditData.verdict.verdict) ? 'var(--err)' :
+                             ipv4ConfPerIfaceAuditData.verdict.verdict === 'redirects_accepted' ? 'var(--warn)' :
+                             ipv4ConfPerIfaceAuditData.verdict.verdict === 'forwarding_unexpected' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {ipv4ConfPerIfaceAuditData.iface_count} iface(s) · {i18n.t("integrations.ipv4conf.verdict")} : <b>{ipv4ConfPerIfaceAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ipv4ConfPerIfaceAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['source_route_accepted','rp_filter_loose'].includes(ipv4ConfPerIfaceAuditData.verdict.verdict) ? 'var(--err)' :
+                        ipv4ConfPerIfaceAuditData.verdict.verdict === 'redirects_accepted' ? 'var(--warn)' :
+                        ipv4ConfPerIfaceAuditData.verdict.verdict === 'forwarding_unexpected' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{ipv4ConfPerIfaceAuditData.verdict.reason}</p>
+            {#if ipv4ConfPerIfaceAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ipv4conf.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ipv4ConfPerIfaceAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ipv4ConfPerIfaceAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
