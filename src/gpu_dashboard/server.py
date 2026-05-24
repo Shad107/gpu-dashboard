@@ -1752,6 +1752,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_lsm_subtree_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ipv4-conf-per-iface-audit":
+                # R&D #75.4 — /proc/sys/net/ipv4/conf per-iface knobs
+                code, body = api.handle_ipv4_conf_per_iface_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

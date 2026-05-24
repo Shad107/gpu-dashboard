@@ -503,3 +503,4 @@ from .v4l2_media_audit import handle_v4l2_media_audit_status  # noqa: F401,F811
 from .misc_chardev_audit import handle_misc_chardev_audit_status  # noqa: F401,F811
 from .sgx_enclave_audit import handle_sgx_enclave_audit_status  # noqa: F401,F811
 from .lsm_subtree_audit import handle_lsm_subtree_audit_status  # noqa: F401,F811
+from .ipv4_conf_per_iface_audit import handle_ipv4_conf_per_iface_audit_status  # noqa: F401,F811
