@@ -4877,4 +4877,52 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #82 (UI sprint 73) ──
+  sysrqMaskAuditStatus: () =>
+    fetch("/api/sysrq-mask-audit").then(jsonOf<{
+      ok: boolean;
+      values: {
+        sysrq: number | null;
+        kexec_load_disabled: number | null;
+        sysrq_always_enabled: number | null;
+      };
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cpuDmaLatencyQosAuditStatus: () =>
+    fetch("/api/cpu-dma-latency-qos-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      clamped_count: number;
+      holders: Array<{ pid: number; comm: string }>;
+      pids_scanned: number;
+      pids_inaccessible: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  rcuExpeditedAuditStatus: () =>
+    fetch("/api/rcu-expedited-audit").then(jsonOf<{
+      ok: boolean;
+      state: {
+        rcu_expedited: number | null;
+        rcu_normal: number | null;
+        rcu_cpu_stall_timeout: number | null;
+        isolated_cpus: number[];
+        isolcpus_cmd: string | null;
+        nohz_full_cmd: string | null;
+        rcu_nocbs_cmd: string | null;
+      };
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  pageOwnerFragAuditStatus: () =>
+    fetch("/api/page-owner-frag-audit").then(jsonOf<{
+      ok: boolean;
+      extfrag_zones: number;
+      unusable_zones: number;
+      page_owner_present: boolean;
+      thp_defrag: string | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

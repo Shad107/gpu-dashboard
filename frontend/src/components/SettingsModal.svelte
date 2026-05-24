@@ -2459,6 +2459,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #82 (UI sprint 73) ────────────────────────────────────────────
+  let sysrqMaskAuditData              = $state<Awaited<ReturnType<typeof api.sysrqMaskAuditStatus>>              | null>(null);
+  let cpuDmaLatencyQosAuditData       = $state<Awaited<ReturnType<typeof api.cpuDmaLatencyQosAuditStatus>>       | null>(null);
+  let rcuExpeditedAuditData           = $state<Awaited<ReturnType<typeof api.rcuExpeditedAuditStatus>>           | null>(null);
+  let pageOwnerFragAuditData          = $state<Awaited<ReturnType<typeof api.pageOwnerFragAuditStatus>>          | null>(null);
+  async function loadSysrqMaskAudit() {
+    try { sysrqMaskAuditData = await api.sysrqMaskAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpuDmaLatencyQosAudit() {
+    try { cpuDmaLatencyQosAuditData = await api.cpuDmaLatencyQosAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadRcuExpeditedAudit() {
+    try { rcuExpeditedAuditData = await api.rcuExpeditedAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPageOwnerFragAudit() {
+    try { pageOwnerFragAuditData = await api.pageOwnerFragAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2866,6 +2888,11 @@
       if (!bpfProgramInventoryAuditData)        loadBpfProgramInventoryAudit();
       if (!cgroupIoStatAuditData)               loadCgroupIoStatAudit();
       if (!thermalTripDriftAuditData)           loadThermalTripDriftAudit();
+      // R&D #82 cards
+      if (!sysrqMaskAuditData)                  loadSysrqMaskAudit();
+      if (!cpuDmaLatencyQosAuditData)           loadCpuDmaLatencyQosAudit();
+      if (!rcuExpeditedAuditData)               loadRcuExpeditedAudit();
+      if (!pageOwnerFragAuditData)              loadPageOwnerFragAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -14250,6 +14277,190 @@
                     ? "# CPU zone has no enabled passive trip — install thermald or BIOS update\nsudo apt install thermald\nsudo systemctl enable --now thermald\n# Or via intel_pstate / cpufreq governor:\necho powersave | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
                   : thermalTripDriftAuditData.verdict.verdict === 'policy_user_space_idle'
                     ? "# Thermal policy = user_space but no userland daemon is driving it\n# Switch to step_wise (kernel-managed):\nfor z in /sys/class/thermal/thermal_zone*; do\n  echo step_wise | sudo tee $z/policy\ndone\n# Or install / start thermald to drive user_space mode :\nsudo systemctl enable --now thermald"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #82.1 SysRq + kexec hardening (UI sprint 73) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sysrq.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sysrq.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSysrqMaskAudit}>{i18n.t("integrations.sysrq.refresh")}</button>
+          {#if sysrqMaskAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={sysrqMaskAuditData.verdict.verdict === 'sysrq_full_with_kexec' ? 'var(--err)' :
+                             sysrqMaskAuditData.verdict.verdict === 'sysrq_full_enabled' ? 'var(--warn)' :
+                             sysrqMaskAuditData.verdict.verdict === 'sysrq_risky_subset' ? 'var(--accent)' :
+                             sysrqMaskAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              sysrq={sysrqMaskAuditData.values.sysrq} · kexec_disabled={sysrqMaskAuditData.values.kexec_load_disabled ?? '?'} · {i18n.t("integrations.sysrq.verdict")} : <b>{sysrqMaskAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sysrqMaskAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        sysrqMaskAuditData.verdict.verdict === 'sysrq_full_with_kexec' ? 'var(--err)' :
+                        sysrqMaskAuditData.verdict.verdict === 'sysrq_full_enabled' ? 'var(--warn)' :
+                        sysrqMaskAuditData.verdict.verdict === 'sysrq_risky_subset' ? 'var(--accent)' :
+                        sysrqMaskAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{sysrqMaskAuditData.verdict.reason}</p>
+            {#if sysrqMaskAuditData.verdict.verdict !== 'ok' && sysrqMaskAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sysrq.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  sysrqMaskAuditData.verdict.verdict === 'sysrq_full_with_kexec'
+                    ? "# CRITICAL: lock down both sysrq AND kexec\nsudo sysctl -w kernel.sysrq=176\nsudo sysctl -w kernel.kexec_load_disabled=1\n# Persist:\nprintf 'kernel.sysrq=176\\nkernel.kexec_load_disabled=1\\n' | sudo tee /etc/sysctl.d/99-hardening.conf"
+                  : sysrqMaskAuditData.verdict.verdict === 'sysrq_full_enabled'
+                    ? "# Narrow the SysRq mask to safe subset (176 = REISUB minus dump/SAK)\nsudo sysctl -w kernel.sysrq=176\necho 'kernel.sysrq=176' | sudo tee /etc/sysctl.d/99-sysrq.conf"
+                  : sysrqMaskAuditData.verdict.verdict === 'sysrq_risky_subset'
+                    ? "# Remove risky bits (SAK=0x02, dump=0x04) from the SysRq mask\ncurrent=$(cat /proc/sys/kernel/sysrq)\nsudo sysctl -w kernel.sysrq=$(( current & ~0x02 & ~0x04 ))\n# Persist:\necho 'kernel.sysrq='$(cat /proc/sys/kernel/sysrq) | sudo tee /etc/sysctl.d/99-sysrq.conf"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #82.2 CPU PM-QoS idle wattage (UI sprint 73) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cpudmaqos.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cpudmaqos.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpuDmaLatencyQosAudit}>{i18n.t("integrations.cpudmaqos.refresh")}</button>
+          {#if cpuDmaLatencyQosAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpuDmaLatencyQosAuditData.verdict.verdict === 'pm_qos_latency_clamped_majority' ? 'var(--err)' :
+                             cpuDmaLatencyQosAuditData.verdict.verdict === 'cpu_dma_latency_held_external' ? 'var(--warn)' :
+                             ['pm_qos_mixed','no_cpuidle'].includes(cpuDmaLatencyQosAuditData.verdict.verdict) ? 'var(--accent)' :
+                             cpuDmaLatencyQosAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cpuDmaLatencyQosAuditData.cpu_count} CPU · {cpuDmaLatencyQosAuditData.clamped_count} clamped · {cpuDmaLatencyQosAuditData.holders.length} holder(s) · {i18n.t("integrations.cpudmaqos.verdict")} : <b>{cpuDmaLatencyQosAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpuDmaLatencyQosAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpuDmaLatencyQosAuditData.verdict.verdict === 'pm_qos_latency_clamped_majority' ? 'var(--err)' :
+                        cpuDmaLatencyQosAuditData.verdict.verdict === 'cpu_dma_latency_held_external' ? 'var(--warn)' :
+                        ['pm_qos_mixed','no_cpuidle'].includes(cpuDmaLatencyQosAuditData.verdict.verdict) ? 'var(--accent)' :
+                        cpuDmaLatencyQosAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpuDmaLatencyQosAuditData.verdict.reason}</p>
+            {#if cpuDmaLatencyQosAuditData.verdict.verdict !== 'ok' && cpuDmaLatencyQosAuditData.verdict.verdict !== 'unknown' && cpuDmaLatencyQosAuditData.verdict.verdict !== 'no_cpuidle'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cpudmaqos.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cpuDmaLatencyQosAuditData.verdict.verdict === 'pm_qos_latency_clamped_majority'
+                    ? "# Reset per-CPU PM-QoS resume latency to NO_CONSTRAINT\nfor f in /sys/devices/system/cpu/cpu*/power/pm_qos_resume_latency_us; do\n  echo 0 | sudo tee $f > /dev/null\ndone\n# To persist after reboot, audit init scripts / kernel cmdline overrides"
+                  : cpuDmaLatencyQosAuditData.verdict.verdict === 'cpu_dma_latency_held_external'
+                    ? "# Find the process pinning /dev/cpu_dma_latency\nsudo lsof /dev/cpu_dma_latency 2>/dev/null\n# Common culprits:\n#   pulseaudio  → systemctl --user restart pulseaudio  (or switch to pipewire)\n#   steam       → close Steam fully ; check Big Picture mode\n#   wireplumber → systemctl --user restart wireplumber\n#   discord     → relaunch Discord"
+                  : cpuDmaLatencyQosAuditData.verdict.verdict === 'pm_qos_mixed'
+                    ? "# Inconsistent clamping — reset all CPUs to default\nfor f in /sys/devices/system/cpu/cpu*/power/pm_qos_resume_latency_us; do\n  echo \"$f: $(cat $f)\"\ndone\nfor f in /sys/devices/system/cpu/cpu*/power/pm_qos_resume_latency_us; do\n  echo 0 | sudo tee $f > /dev/null\ndone"
+                  : cpuDmaLatencyQosAuditData.verdict.verdict === 'requires_root'
+                    ? "# /proc/<pid>/fd unreadable for system PIDs — re-run as root\nsudo systemctl restart gpu-dashboard.service\n# Or one-shot check :\nsudo curl -s http://localhost:9999/api/cpu-dma-latency-qos-audit | jq .verdict"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #82.3 RCU expedited / isolation (UI sprint 73) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rcu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rcu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRcuExpeditedAudit}>{i18n.t("integrations.rcu.refresh")}</button>
+          {#if rcuExpeditedAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={rcuExpeditedAuditData.verdict.verdict === 'rcu_expedited_with_isolation' ? 'var(--err)' :
+                             rcuExpeditedAuditData.verdict.verdict === 'rcu_stall_timeout_short' ? 'var(--warn)' :
+                             rcuExpeditedAuditData.verdict.verdict === 'rcu_nocbs_no_isolation' ? 'var(--accent)' :
+                             rcuExpeditedAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              rcu_expedited={rcuExpeditedAuditData.state.rcu_expedited ?? '?'} · {rcuExpeditedAuditData.state.isolated_cpus.length} isolated CPU · {i18n.t("integrations.rcu.verdict")} : <b>{rcuExpeditedAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if rcuExpeditedAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        rcuExpeditedAuditData.verdict.verdict === 'rcu_expedited_with_isolation' ? 'var(--err)' :
+                        rcuExpeditedAuditData.verdict.verdict === 'rcu_stall_timeout_short' ? 'var(--warn)' :
+                        rcuExpeditedAuditData.verdict.verdict === 'rcu_nocbs_no_isolation' ? 'var(--accent)' :
+                        rcuExpeditedAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{rcuExpeditedAuditData.verdict.reason}</p>
+            {#if rcuExpeditedAuditData.verdict.verdict !== 'ok' && rcuExpeditedAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.rcu.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  rcuExpeditedAuditData.verdict.verdict === 'rcu_expedited_with_isolation'
+                    ? "# Disable expedited RCU globally — preserve isolation\necho 0 | sudo tee /sys/kernel/rcu_expedited\necho 1 | sudo tee /sys/kernel/rcu_normal\n# Persist via /etc/sysctl.d/  (kernel 5.10+) :\nprintf 'kernel.rcu_expedited=0\\nkernel.rcu_normal=1\\n' | sudo tee /etc/sysctl.d/99-rcu.conf"
+                  : rcuExpeditedAuditData.verdict.verdict === 'rcu_stall_timeout_short'
+                    ? "# Raise stall timeout to the kernel default (60s)\nsudo sysctl -w kernel.rcu_cpu_stall_timeout=60\necho 'kernel.rcu_cpu_stall_timeout=60' | sudo tee /etc/sysctl.d/99-rcu.conf"
+                  : rcuExpeditedAuditData.verdict.verdict === 'rcu_nocbs_no_isolation'
+                    ? "# rcu_nocbs on cmdline without matching isolation — finish the RT setup\nsudo nano /etc/default/grub\n# Add to GRUB_CMDLINE_LINUX_DEFAULT (matching rcu_nocbs= range):\n#   isolcpus=<cpus> nohz_full=<cpus>\nsudo update-grub\nsudo reboot"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #82.4 page fragmentation index (UI sprint 73) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pageownerfrag.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pageownerfrag.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPageOwnerFragAudit}>{i18n.t("integrations.pageownerfrag.refresh")}</button>
+          {#if pageOwnerFragAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pageOwnerFragAuditData.verdict.verdict === 'extfrag_high_with_thp_defrag' ? 'var(--err)' :
+                             pageOwnerFragAuditData.verdict.verdict === 'unusable_index_high' ? 'var(--warn)' :
+                             pageOwnerFragAuditData.verdict.verdict === 'page_owner_overhead_no_use' ? 'var(--accent)' :
+                             pageOwnerFragAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              thp_defrag={pageOwnerFragAuditData.thp_defrag ?? '?'} · extfrag={pageOwnerFragAuditData.extfrag_zones} z · {i18n.t("integrations.pageownerfrag.verdict")} : <b>{pageOwnerFragAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pageOwnerFragAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pageOwnerFragAuditData.verdict.verdict === 'extfrag_high_with_thp_defrag' ? 'var(--err)' :
+                        pageOwnerFragAuditData.verdict.verdict === 'unusable_index_high' ? 'var(--warn)' :
+                        pageOwnerFragAuditData.verdict.verdict === 'page_owner_overhead_no_use' ? 'var(--accent)' :
+                        pageOwnerFragAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pageOwnerFragAuditData.verdict.reason}</p>
+            {#if pageOwnerFragAuditData.verdict.verdict !== 'ok' && pageOwnerFragAuditData.verdict.verdict !== 'unknown' && pageOwnerFragAuditData.verdict.verdict !== 'n/a'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pageownerfrag.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  pageOwnerFragAuditData.verdict.verdict === 'extfrag_high_with_thp_defrag'
+                    ? "# High extfrag + aggressive THP defrag → THP collapse stalls\n# Drop THP defrag to madvise (only opt-in):\necho madvise | sudo tee /sys/kernel/mm/transparent_hugepage/defrag\n# Optional: trigger one-shot compaction now:\necho 1 | sudo tee /proc/sys/vm/compact_memory\n# Persist via /etc/tmpfiles.d/99-thp.conf:\n#   w /sys/kernel/mm/transparent_hugepage/defrag - - - - madvise"
+                  : pageOwnerFragAuditData.verdict.verdict === 'unusable_index_high'
+                    ? "# High unusable_index — force compaction + watch fragmentation\nsudo sysctl -w vm.compact_memory=1\n# Inspect per-zone fragmentation:\nsudo cat /sys/kernel/debug/extfrag/unusable_index\nsudo cat /proc/buddyinfo\n# Long-term: lower vm.swappiness so anon pages can move to swap"
+                  : pageOwnerFragAuditData.verdict.verdict === 'page_owner_overhead_no_use'
+                    ? "# page_owner is on but not being collected — remove from cmdline\nsudo nano /etc/default/grub\n# Remove 'page_owner=on' from GRUB_CMDLINE_LINUX_DEFAULT\nsudo update-grub\nsudo reboot"
+                  : pageOwnerFragAuditData.verdict.verdict === 'requires_root'
+                    ? "# /sys/kernel/debug is mode-700 — re-run dashboard as root\nsudo systemctl restart gpu-dashboard.service\n# Or one-shot inspection :\nsudo cat /sys/kernel/debug/extfrag/extfrag_index"
                   : ""
                 }</pre>
               </details>
