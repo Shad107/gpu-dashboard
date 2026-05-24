@@ -563,3 +563,4 @@ from .resctrl_audit import handle_resctrl_audit_status  # noqa: F401,F811
 from .proc_net_protocols_audit import handle_proc_net_protocols_audit_status  # noqa: F401,F811
 from .cpufreq_governor_tunables_audit import handle_cpufreq_governor_tunables_audit_status  # noqa: F401,F811
 from .pcie_dpc_audit import handle_pcie_dpc_audit_status  # noqa: F401,F811
+from .cgroup_pids_controller_audit import handle_cgroup_pids_controller_audit_status  # noqa: F401,F811

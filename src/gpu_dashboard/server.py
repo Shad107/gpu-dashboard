@@ -2052,6 +2052,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_dpc_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cgroup-pids-controller-audit":
+                # R&D #91.1 — per-cgroup pids.max posture
+                code, body = api.handle_cgroup_pids_controller_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
