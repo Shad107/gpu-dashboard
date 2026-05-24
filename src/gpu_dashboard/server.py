@@ -1942,6 +1942,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_extcon_state_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/unix-socket-inventory-audit":
+                # R&D #85.3 — /proc/net/unix breakdown
+                code, body = api.handle_unix_socket_inventory_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
