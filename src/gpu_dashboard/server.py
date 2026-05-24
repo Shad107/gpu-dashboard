@@ -1832,6 +1832,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sched_tunables_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/arp-neighbor-audit":
+                # R&D #80.1 — IPv4 ARP / neighbor-cache health
+                code, body = api.handle_arp_neighbor_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
