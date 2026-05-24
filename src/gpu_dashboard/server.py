@@ -1847,6 +1847,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_btrfs_allocator_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/proc-status-caps-audit":
+                # R&D #80.4 — capability / hardening posture
+                code, body = api.handle_proc_status_caps_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

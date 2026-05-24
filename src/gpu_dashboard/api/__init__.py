@@ -522,3 +522,4 @@ from .sched_tunables_audit import handle_sched_tunables_audit_status  # noqa: F4
 from .arp_neighbor_audit import handle_arp_neighbor_audit_status  # noqa: F401,F811
 from .snmp6_icmp_audit import handle_snmp6_icmp_audit_status  # noqa: F401,F811
 from .btrfs_allocator_audit import handle_btrfs_allocator_audit_status  # noqa: F401,F811
+from .proc_status_caps_audit import handle_proc_status_caps_audit_status  # noqa: F401,F811
