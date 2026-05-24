@@ -1682,6 +1682,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_fw_cfg_blob_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/uevent-helper-audit":
+                # R&D #72.4 — /sys/kernel/uevent_helper hotplug
+                code, body = api.handle_uevent_helper_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

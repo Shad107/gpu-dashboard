@@ -489,3 +489,4 @@ from .page_idle_tracking_audit import handle_page_idle_tracking_audit_status  # 
 from .edac_dimm_ce_trend_audit import handle_edac_dimm_ce_trend_audit_status  # noqa: F401,F811
 from .ata_port_sata_audit import handle_ata_port_sata_audit_status  # noqa: F401,F811
 from .fw_cfg_blob_audit import handle_fw_cfg_blob_audit_status  # noqa: F401,F811
+from .uevent_helper_audit import handle_uevent_helper_audit_status  # noqa: F401,F811
