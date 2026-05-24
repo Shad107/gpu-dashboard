@@ -518,3 +518,4 @@ from .proc_maps_anomaly_audit import handle_proc_maps_anomaly_audit_status  # no
 from .softnet_stat_audit import handle_softnet_stat_audit_status  # noqa: F401,F811
 from .route_table_audit import handle_route_table_audit_status  # noqa: F401,F811
 from .fb_vtconsole_audit import handle_fb_vtconsole_audit_status  # noqa: F401,F811
+from .sched_tunables_audit import handle_sched_tunables_audit_status  # noqa: F401,F811

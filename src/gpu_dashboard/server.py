@@ -1827,6 +1827,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_fb_vtconsole_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sched-tunables-audit":
+                # R&D #79.4 — sched_* tunable safety
+                code, body = api.handle_sched_tunables_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
