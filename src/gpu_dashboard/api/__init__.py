@@ -553,3 +553,4 @@ from .cpu_smt_control_audit import handle_cpu_smt_control_audit_status  # noqa: 
 from .interrupt_skew_audit import handle_interrupt_skew_audit_status  # noqa: F401,F811
 from .userspace_hardening_sysctls_audit import handle_userspace_hardening_sysctls_audit_status  # noqa: F401,F811
 from .suspend_mode_selector_audit import handle_suspend_mode_selector_audit_status  # noqa: F401,F811
+from .iommu_reserved_regions_audit import handle_iommu_reserved_regions_audit_status  # noqa: F401,F811

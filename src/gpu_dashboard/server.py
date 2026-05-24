@@ -2002,6 +2002,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_suspend_mode_selector_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/iommu-reserved-regions-audit":
+                # R&D #88.3 — IOMMU group type + reserved_regions
+                code, body = api.handle_iommu_reserved_regions_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
