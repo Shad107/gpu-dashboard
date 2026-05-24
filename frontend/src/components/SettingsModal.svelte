@@ -2591,6 +2591,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #88 (UI sprint 79) ────────────────────────────────────────────
+  let userspaceHardeningSysctlsAuditData  = $state<Awaited<ReturnType<typeof api.userspaceHardeningSysctlsAuditStatus>>  | null>(null);
+  let suspendModeSelectorAuditData        = $state<Awaited<ReturnType<typeof api.suspendModeSelectorAuditStatus>>        | null>(null);
+  let iommuReservedRegionsAuditData       = $state<Awaited<ReturnType<typeof api.iommuReservedRegionsAuditStatus>>       | null>(null);
+  let timerMigrationNohzDriftAuditData    = $state<Awaited<ReturnType<typeof api.timerMigrationNohzDriftAuditStatus>>    | null>(null);
+  async function loadUserspaceHardeningSysctlsAudit() {
+    try { userspaceHardeningSysctlsAuditData = await api.userspaceHardeningSysctlsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSuspendModeSelectorAudit() {
+    try { suspendModeSelectorAuditData = await api.suspendModeSelectorAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadIommuReservedRegionsAudit() {
+    try { iommuReservedRegionsAuditData = await api.iommuReservedRegionsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadTimerMigrationNohzDriftAudit() {
+    try { timerMigrationNohzDriftAuditData = await api.timerMigrationNohzDriftAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3028,6 +3050,11 @@
       if (!procLocksContentionAuditData)        loadProcLocksContentionAudit();
       if (!cpuSmtControlAuditData)              loadCpuSmtControlAudit();
       if (!interruptSkewAuditData)              loadInterruptSkewAudit();
+      // R&D #88 cards
+      if (!userspaceHardeningSysctlsAuditData)  loadUserspaceHardeningSysctlsAudit();
+      if (!suspendModeSelectorAuditData)        loadSuspendModeSelectorAudit();
+      if (!iommuReservedRegionsAuditData)       loadIommuReservedRegionsAudit();
+      if (!timerMigrationNohzDriftAuditData)    loadTimerMigrationNohzDriftAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -15476,6 +15503,190 @@
                     ? "# irqbalance (or admin) overrode many driver affinity hints\n# Inspect : for each IRQ, hint vs actual\nfor irq in /proc/irq/[0-9]*; do\n  n=$(basename $irq)\n  h=$(cat $irq/affinity_hint 2>/dev/null)\n  a=$(cat $irq/smp_affinity_list 2>/dev/null)\n  [ \"$h\" != \"00000000\" ] && echo \"IRQ $n: hint=$h smp=$a\"\ndone | head -20\n# Option A — apply driver hints :\nfor irq in /proc/irq/[0-9]*; do\n  h=$(cat $irq/affinity_hint 2>/dev/null)\n  [ -n \"$h\" ] && [ \"$h\" != \"00000000\" ] && echo $h | sudo tee $irq/smp_affinity >/dev/null\ndone\n# Option B — let irqbalance honor hints :\necho 'IRQBALANCE_ARGS=\"--hintpolicy=subset\"' | sudo tee -a /etc/default/irqbalance\nsudo systemctl restart irqbalance"
                   : interruptSkewAuditData.verdict.verdict === 'affinity_hint_mismatch'
                     ? "# A handful of IRQs drift from their driver hint — informational\nfor irq in /proc/irq/[0-9]*; do\n  n=$(basename $irq)\n  h=$(cat $irq/affinity_hint 2>/dev/null)\n  a=$(cat $irq/smp_affinity_list 2>/dev/null)\n  [ -n \"$h\" ] && [ \"$h\" != \"00000000\" ] && echo \"IRQ $n: hint=$h smp=$a\"\ndone | head\n# To realign one specific IRQ :\necho <hint-hex> | sudo tee /proc/irq/<N>/smp_affinity"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #88.1 Userspace hardening sysctls (UI sprint 79) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.userspacehard.title")}</h4>
+        <p class="muted">{i18n.t("integrations.userspacehard.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUserspaceHardeningSysctlsAudit}>{i18n.t("integrations.userspacehard.refresh")}</button>
+          {#if userspaceHardeningSysctlsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['aslr_disabled','suid_dumpable_world'].includes(userspaceHardeningSysctlsAuditData.verdict.verdict) ? 'var(--err)' :
+                             ['protected_symlinks_off','protected_hardlinks_off'].includes(userspaceHardeningSysctlsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             userspaceHardeningSysctlsAuditData.verdict.verdict === 'protected_fifos_regular_off' ? 'var(--accent)' :
+                             userspaceHardeningSysctlsAuditData.verdict.verdict === 'hardened' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.userspacehard.verdict")} : <b>{userspaceHardeningSysctlsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if userspaceHardeningSysctlsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['aslr_disabled','suid_dumpable_world'].includes(userspaceHardeningSysctlsAuditData.verdict.verdict) ? 'var(--err)' :
+                        ['protected_symlinks_off','protected_hardlinks_off'].includes(userspaceHardeningSysctlsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        userspaceHardeningSysctlsAuditData.verdict.verdict === 'protected_fifos_regular_off' ? 'var(--accent)' :
+                        userspaceHardeningSysctlsAuditData.verdict.verdict === 'hardened' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{userspaceHardeningSysctlsAuditData.verdict.reason}</p>
+            {#if userspaceHardeningSysctlsAuditData.verdict.verdict !== 'hardened' && userspaceHardeningSysctlsAuditData.verdict.verdict !== 'unknown'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.userspacehard.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  userspaceHardeningSysctlsAuditData.verdict.verdict === 'aslr_disabled'
+                    ? "# ASLR completely disabled — re-enable\necho 2 | sudo tee /proc/sys/kernel/randomize_va_space\n# Persist via sysctl :\necho 'kernel.randomize_va_space = 2' | sudo tee /etc/sysctl.d/99-hardening.conf\nsudo sysctl --system"
+                  : userspaceHardeningSysctlsAuditData.verdict.verdict === 'suid_dumpable_world'
+                    ? "# SUID processes can produce coredumps — disable\necho 0 | sudo tee /proc/sys/fs/suid_dumpable\necho 'fs.suid_dumpable = 0' | sudo tee -a /etc/sysctl.d/99-hardening.conf\nsudo sysctl --system"
+                  : userspaceHardeningSysctlsAuditData.verdict.verdict === 'protected_symlinks_off'
+                    ? "# Symlink protection off — enable to block /tmp race attacks\necho 1 | sudo tee /proc/sys/fs/protected_symlinks\necho 'fs.protected_symlinks = 1' | sudo tee -a /etc/sysctl.d/99-hardening.conf\nsudo sysctl --system"
+                  : userspaceHardeningSysctlsAuditData.verdict.verdict === 'protected_hardlinks_off'
+                    ? "# Hardlink protection off — enable\necho 1 | sudo tee /proc/sys/fs/protected_hardlinks\necho 'fs.protected_hardlinks = 1' | sudo tee -a /etc/sysctl.d/99-hardening.conf\nsudo sysctl --system"
+                  : userspaceHardeningSysctlsAuditData.verdict.verdict === 'protected_fifos_regular_off'
+                    ? "# Tighten /tmp creation policy for FIFOs and regular files\necho 2 | sudo tee /proc/sys/fs/protected_fifos\necho 2 | sudo tee /proc/sys/fs/protected_regular\ncat <<EOF | sudo tee -a /etc/sysctl.d/99-hardening.conf\nfs.protected_fifos = 2\nfs.protected_regular = 2\nEOF\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #88.2 Suspend mode selector (UI sprint 79) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.suspendsel.title")}</h4>
+        <p class="muted">{i18n.t("integrations.suspendsel.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSuspendModeSelectorAudit}>{i18n.t("integrations.suspendsel.refresh")}</button>
+          {#if suspendModeSelectorAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['pm_test_armed','s2idle_only_no_deep'].includes(suspendModeSelectorAuditData.verdict.verdict) ? 'var(--warn)' :
+                             ['mem_sleep_s2idle_with_deep','hibernate_disabled_with_swap'].includes(suspendModeSelectorAuditData.verdict.verdict) ? 'var(--accent)' :
+                             ['mem_sleep_deep_selected','no_suspend_support'].includes(suspendModeSelectorAuditData.verdict.verdict) ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              mem_sleep={suspendModeSelectorAuditData.mem_sleep || '?'} · {i18n.t("integrations.suspendsel.verdict")} : <b>{suspendModeSelectorAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if suspendModeSelectorAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['pm_test_armed','s2idle_only_no_deep'].includes(suspendModeSelectorAuditData.verdict.verdict) ? 'var(--warn)' :
+                        ['mem_sleep_s2idle_with_deep','hibernate_disabled_with_swap'].includes(suspendModeSelectorAuditData.verdict.verdict) ? 'var(--accent)' :
+                        ['mem_sleep_deep_selected','no_suspend_support'].includes(suspendModeSelectorAuditData.verdict.verdict) ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{suspendModeSelectorAuditData.verdict.reason}</p>
+            {#if !['mem_sleep_deep_selected','no_suspend_support','unknown'].includes(suspendModeSelectorAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.suspendsel.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  suspendModeSelectorAuditData.verdict.verdict === 'pm_test_armed'
+                    ? "# pm_test armed — next suspend will fake-resume and no-op\necho none | sudo tee /sys/power/pm_test\n# This usually means a developer left it set ; check /etc/rc.local\n# and any pm/test scripts that may re-arm on boot."
+                  : suspendModeSelectorAuditData.verdict.verdict === 's2idle_only_no_deep'
+                    ? "# Firmware doesn't expose deep S3 — check BIOS / DSDT\ncat /sys/power/mem_sleep\n# Modern laptops sometimes ship deep S3 disabled in firmware\n# (Windows Modern Standby). Look in BIOS for 'OS Type' or\n# 'Sleep State Selection'. On some boards, kernel param\n# 'mem_sleep_default=deep' can also force the default."
+                  : suspendModeSelectorAuditData.verdict.verdict === 'mem_sleep_s2idle_with_deep'
+                    ? "# [s2idle] selected but 'deep' is available — switch\necho deep | sudo tee /sys/power/mem_sleep\n# Persist via kernel cmdline :\nsudo sed -i 's/quiet/quiet mem_sleep_default=deep/' /etc/default/grub\nsudo update-grub"
+                  : suspendModeSelectorAuditData.verdict.verdict === 'hibernate_disabled_with_swap'
+                    ? "# Hibernate disabled but swap is configured — wasted space\n# Either enable hibernate (add resume= cmdline + initramfs hook) :\nblkid -o value -s UUID $(awk '/swap/{print $1}' /etc/fstab)\nsudo sed -i 's/quiet/quiet resume=UUID=<swap-uuid>/' /etc/default/grub\nsudo update-grub && sudo update-initramfs -u\n# Or reclaim the swap space if you don't intend to hibernate."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #88.3 IOMMU reserved regions (UI sprint 79) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.iommureserved.title")}</h4>
+        <p class="muted">{i18n.t("integrations.iommureserved.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIommuReservedRegionsAudit}>{i18n.t("integrations.iommureserved.refresh")}</button>
+          {#if iommuReservedRegionsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={iommuReservedRegionsAuditData.verdict.verdict === 'iommu_off_but_groups_present' ? 'var(--err)' :
+                             ['direct_map_on_gpu_group','reserved_region_overlap_msi'].includes(iommuReservedRegionsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             iommuReservedRegionsAuditData.verdict.verdict === 'dma_type_default' ? 'var(--accent)' :
+                             iommuReservedRegionsAuditData.verdict.verdict === 'iommu_dma_fq_ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {iommuReservedRegionsAuditData.group_count} group(s) · {iommuReservedRegionsAuditData.gpu_group_count} GPU · {i18n.t("integrations.iommureserved.verdict")} : <b>{iommuReservedRegionsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if iommuReservedRegionsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        iommuReservedRegionsAuditData.verdict.verdict === 'iommu_off_but_groups_present' ? 'var(--err)' :
+                        ['direct_map_on_gpu_group','reserved_region_overlap_msi'].includes(iommuReservedRegionsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        iommuReservedRegionsAuditData.verdict.verdict === 'dma_type_default' ? 'var(--accent)' :
+                        iommuReservedRegionsAuditData.verdict.verdict === 'iommu_dma_fq_ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{iommuReservedRegionsAuditData.verdict.reason}</p>
+            {#if !['iommu_dma_fq_ok','unknown'].includes(iommuReservedRegionsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.iommureserved.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  iommuReservedRegionsAuditData.verdict.verdict === 'iommu_off_but_groups_present'
+                    ? "# Groups exist but cmdline lacks iommu enable token — stale state\ncat /proc/cmdline | tr ' ' '\\n' | grep -i iommu\n# Add to GRUB for Intel :\nsudo sed -i 's/quiet/quiet intel_iommu=on iommu=pt/' /etc/default/grub\n# Or AMD :\nsudo sed -i 's/quiet/quiet amd_iommu=on iommu=pt/' /etc/default/grub\nsudo update-grub && sudo reboot"
+                  : iommuReservedRegionsAuditData.verdict.verdict === 'direct_map_on_gpu_group'
+                    ? "# GPU group is identity-mapped — only intentional for VFIO\n# Check if VFIO/passthrough is actually in use :\nlsmod | grep -E 'vfio|nvidia' && lsof | grep nvidia\n# If NOT passthrough, switch the group back to DMA :\nfor g in /sys/kernel/iommu_groups/*/type; do\n  [ \"$(cat $g)\" = identity ] && echo DMA | sudo tee $g\ndone"
+                  : iommuReservedRegionsAuditData.verdict.verdict === 'reserved_region_overlap_msi'
+                    ? "# direct vs MSI reserved region overlap — inspect\nfor g in /sys/kernel/iommu_groups/*/reserved_regions; do\n  echo \"=== $g ===\"\n  cat $g\ndone | grep -B1 -A4 msi\n# If passthrough is broken, may need a firmware update from\n# the motherboard vendor. File a bug to the iommu mailing list\n# with /sys output + /proc/cmdline + dmesg | grep iommu."
+                  : iommuReservedRegionsAuditData.verdict.verdict === 'dma_type_default'
+                    ? "# Groups using DMA instead of DMA-FQ — flush latency tax\n# Modern kernels default to DMA-FQ unless iommu.strict=1 is set.\n# Check :\ncat /proc/cmdline | tr ' ' '\\n' | grep iommu\n# Remove iommu.strict=1 if set, or add iommu.strict=0 explicitly :\nsudo sed -i 's/iommu.strict=1//; s/quiet/quiet iommu.strict=0/' /etc/default/grub\nsudo update-grub && sudo reboot"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #88.4 timer_migration × nohz_full drift (UI sprint 79) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.timermigration.title")}</h4>
+        <p class="muted">{i18n.t("integrations.timermigration.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTimerMigrationNohzDriftAudit}>{i18n.t("integrations.timermigration.refresh")}</button>
+          {#if timerMigrationNohzDriftAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={timerMigrationNohzDriftAuditData.verdict.verdict === 'nohz_full_without_timer_migration_off' ? 'var(--err)' :
+                             ['timer_migration_off_no_isolation','rcu_nocbs_mismatch_nohz_full'].includes(timerMigrationNohzDriftAuditData.verdict.verdict) ? 'var(--warn)' :
+                             timerMigrationNohzDriftAuditData.verdict.verdict === 'aligned' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              timer_migration={timerMigrationNohzDriftAuditData.timer_migration ?? '?'} · {i18n.t("integrations.timermigration.verdict")} : <b>{timerMigrationNohzDriftAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if timerMigrationNohzDriftAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        timerMigrationNohzDriftAuditData.verdict.verdict === 'nohz_full_without_timer_migration_off' ? 'var(--err)' :
+                        ['timer_migration_off_no_isolation','rcu_nocbs_mismatch_nohz_full'].includes(timerMigrationNohzDriftAuditData.verdict.verdict) ? 'var(--warn)' :
+                        timerMigrationNohzDriftAuditData.verdict.verdict === 'aligned' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{timerMigrationNohzDriftAuditData.verdict.reason}</p>
+            {#if !['aligned','unknown','requires_root'].includes(timerMigrationNohzDriftAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.timermigration.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  timerMigrationNohzDriftAuditData.verdict.verdict === 'nohz_full_without_timer_migration_off'
+                    ? "# nohz_full populated but timer_migration is on — disable\necho 0 | sudo tee /proc/sys/kernel/timer_migration\n# Persist via sysctl :\necho 'kernel.timer_migration = 0' | sudo tee /etc/sysctl.d/99-isolation.conf\nsudo sysctl --system\n# Verify timers stop migrating to isolated CPUs :\ngrep . /sys/devices/system/cpu/cpu*/topology/thread_siblings_list | head"
+                  : timerMigrationNohzDriftAuditData.verdict.verdict === 'timer_migration_off_no_isolation'
+                    ? "# timer_migration off with no nohz_full/isolcpus/rcu_nocbs — pure overhead\necho 1 | sudo tee /proc/sys/kernel/timer_migration\n# Persist :\nsudo sed -i '/kernel.timer_migration/d' /etc/sysctl.d/*\necho 'kernel.timer_migration = 1' | sudo tee /etc/sysctl.d/99-default.conf\nsudo sysctl --system"
+                  : timerMigrationNohzDriftAuditData.verdict.verdict === 'rcu_nocbs_mismatch_nohz_full'
+                    ? "# rcu_nocbs and nohz_full cmdline masks differ — align them\ncat /proc/cmdline | tr ' ' '\\n' | grep -E 'nohz_full|rcu_nocbs'\n# Edit GRUB so both lists match (e.g. both = 4-7) :\nsudo sed -i 's/nohz_full=[^ ]*/nohz_full=4-7/; s/rcu_nocbs=[^ ]*/rcu_nocbs=4-7/' /etc/default/grub\nsudo update-grub && sudo reboot"
                   : ""
                 }</pre>
               </details>

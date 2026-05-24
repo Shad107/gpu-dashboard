@@ -5179,4 +5179,42 @@ export const api = {
       mismatch_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #88 (UI sprint 79) ──
+  userspaceHardeningSysctlsAuditStatus: () =>
+    fetch("/api/userspace-hardening-sysctls-audit").then(jsonOf<{
+      ok: boolean;
+      sysctls: Record<string, number>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  suspendModeSelectorAuditStatus: () =>
+    fetch("/api/suspend-mode-selector-audit").then(jsonOf<{
+      ok: boolean;
+      state: string;
+      mem_sleep: string;
+      disk: string;
+      pm_test: string;
+      swap_present: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  iommuReservedRegionsAuditStatus: () =>
+    fetch("/api/iommu-reserved-regions-audit").then(jsonOf<{
+      ok: boolean;
+      group_count: number;
+      gpu_group_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  timerMigrationNohzDriftAuditStatus: () =>
+    fetch("/api/timer-migration-nohz-drift-audit").then(jsonOf<{
+      ok: boolean;
+      timer_migration: number | null;
+      nohz_full: number[];
+      isolated: number[];
+      cmdline_nohz_full: number[];
+      cmdline_rcu_nocbs: number[];
+      verdict: { verdict: string; reason: string };
+    }>),
 };
