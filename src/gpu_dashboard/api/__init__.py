@@ -523,3 +523,4 @@ from .arp_neighbor_audit import handle_arp_neighbor_audit_status  # noqa: F401,F
 from .snmp6_icmp_audit import handle_snmp6_icmp_audit_status  # noqa: F401,F811
 from .btrfs_allocator_audit import handle_btrfs_allocator_audit_status  # noqa: F401,F811
 from .proc_status_caps_audit import handle_proc_status_caps_audit_status  # noqa: F401,F811
+from .xhci_companion_audit import handle_xhci_companion_audit_status  # noqa: F401,F811

@@ -1852,6 +1852,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_proc_status_caps_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/xhci-companion-audit":
+                # R&D #81.1 — xHCI USB 3 / USB 2 companion check
+                code, body = api.handle_xhci_companion_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
