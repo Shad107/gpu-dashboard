@@ -4363,4 +4363,65 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
+
+  // ── R&D #72 (UI sprint 63) ──
+  fwCfgBlobAuditStatus: () =>
+    fetch("/api/fw-cfg-blob-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      rev: number | null;
+      entry_count: number;
+      names_readable: boolean;
+      entries_sample: Array<{
+        key: number;
+        name: string | null;
+        size: number | null;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  ueventHelperAuditStatus: () =>
+    fetch("/api/uevent-helper-audit").then(jsonOf<{
+      ok: boolean;
+      uevent_helper_present: boolean;
+      uevent_helper_readable: boolean;
+      uevent_helper_value: string | null;
+      hotplug_present: boolean;
+      hotplug_readable: boolean;
+      hotplug_value: string | null;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  dmiEntriesRawAuditStatus: () =>
+    fetch("/api/dmi-entries-raw-audit").then(jsonOf<{
+      ok: boolean;
+      path_present: boolean;
+      listable: boolean;
+      entry_count: number;
+      distinct_type_count: number;
+      type_counts: Record<string, number>;
+      entries_sample: Array<{
+        id: string;
+        type: number;
+        type_label: string;
+        instance: number;
+        handle: number | null;
+        length: number | null;
+        type_readable: boolean;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
+
+  tracingEventsEnableAuditStatus: () =>
+    fetch("/api/tracing-events-enable-audit").then(jsonOf<{
+      ok: boolean;
+      present: boolean;
+      subsystem_count: number;
+      subsystems_sample: string[];
+      gpu_subsystems_present: string[];
+      readable: boolean;
+      total_enabled: number;
+      enabled_by_subsys: Record<string, string[]>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

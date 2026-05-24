@@ -2244,6 +2244,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #72 (UI sprint 63) ────────────────────────────────────────────
+  let fwCfgBlobAuditData                 = $state<Awaited<ReturnType<typeof api.fwCfgBlobAuditStatus>>                 | null>(null);
+  let ueventHelperAuditData              = $state<Awaited<ReturnType<typeof api.ueventHelperAuditStatus>>              | null>(null);
+  let dmiEntriesRawAuditData             = $state<Awaited<ReturnType<typeof api.dmiEntriesRawAuditStatus>>             | null>(null);
+  let tracingEventsEnableAuditData       = $state<Awaited<ReturnType<typeof api.tracingEventsEnableAuditStatus>>       | null>(null);
+  async function loadFwCfgBlobAudit() {
+    try { fwCfgBlobAuditData = await api.fwCfgBlobAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadUeventHelperAudit() {
+    try { ueventHelperAuditData = await api.ueventHelperAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDmiEntriesRawAudit() {
+    try { dmiEntriesRawAuditData = await api.dmiEntriesRawAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadTracingEventsEnableAudit() {
+    try { tracingEventsEnableAuditData = await api.tracingEventsEnableAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -2602,6 +2624,11 @@
       if (!pageIdleTrackingAuditData)           loadPageIdleTrackingAudit();
       if (!edacDimmCeTrendAuditData)            loadEdacDimmCeTrendAudit();
       if (!ataPortSataAuditData)                loadAtaPortSataAudit();
+      // R&D #72 cards
+      if (!fwCfgBlobAuditData)                  loadFwCfgBlobAudit();
+      if (!ueventHelperAuditData)               loadUeventHelperAudit();
+      if (!dmiEntriesRawAuditData)              loadDmiEntriesRawAudit();
+      if (!tracingEventsEnableAuditData)        loadTracingEventsEnableAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -12429,6 +12456,148 @@
                              border-radius: 4px; overflow-x: auto;">{ataPortSataAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(ataPortSataAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #72.1 QEMU fw_cfg blob (UI sprint 63) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fwcfg.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fwcfg.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFwCfgBlobAudit}>{i18n.t("integrations.fwcfg.refresh")}</button>
+          {#if fwCfgBlobAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={fwCfgBlobAuditData.verdict.verdict === 'nvidia_passthrough_vm' ? 'var(--warn)' :
+                             fwCfgBlobAuditData.verdict.verdict === 'qemu_guest_with_opt_rom' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {fwCfgBlobAuditData.entry_count} entries · {i18n.t("integrations.fwcfg.verdict")} : <b>{fwCfgBlobAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fwCfgBlobAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        fwCfgBlobAuditData.verdict.verdict === 'nvidia_passthrough_vm' ? 'var(--warn)' :
+                        fwCfgBlobAuditData.verdict.verdict === 'qemu_guest_with_opt_rom' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{fwCfgBlobAuditData.verdict.reason}</p>
+            {#if fwCfgBlobAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fwcfg.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{fwCfgBlobAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(fwCfgBlobAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #72.4 uevent helper (UI sprint 63) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.uevent.title")}</h4>
+        <p class="muted">{i18n.t("integrations.uevent.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUeventHelperAudit}>{i18n.t("integrations.uevent.refresh")}</button>
+          {#if ueventHelperAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={['uevent_helper_set_to_script','hotplug_handler_set'].includes(ueventHelperAuditData.verdict.verdict) ? 'var(--err)' :
+                             ueventHelperAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.uevent.verdict")} : <b>{ueventHelperAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ueventHelperAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ['uevent_helper_set_to_script','hotplug_handler_set'].includes(ueventHelperAuditData.verdict.verdict) ? 'var(--err)' :
+                        ueventHelperAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{ueventHelperAuditData.verdict.reason}</p>
+            {#if ueventHelperAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.uevent.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{ueventHelperAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(ueventHelperAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #72.2 DMI raw entries (UI sprint 63) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dmientries.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dmientries.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDmiEntriesRawAudit}>{i18n.t("integrations.dmientries.refresh")}</button>
+          {#if dmiEntriesRawAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={dmiEntriesRawAuditData.verdict.verdict === 'ipmi_bmc_exposed' ? 'var(--warn)' :
+                             ['dimm_slot_mismatch','smbios_truncated'].includes(dmiEntriesRawAuditData.verdict.verdict) ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {dmiEntriesRawAuditData.entry_count} entries · {dmiEntriesRawAuditData.distinct_type_count} types · {i18n.t("integrations.dmientries.verdict")} : <b>{dmiEntriesRawAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dmiEntriesRawAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        dmiEntriesRawAuditData.verdict.verdict === 'ipmi_bmc_exposed' ? 'var(--warn)' :
+                        ['dimm_slot_mismatch','smbios_truncated'].includes(dmiEntriesRawAuditData.verdict.verdict) ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{dmiEntriesRawAuditData.verdict.reason}</p>
+            {#if dmiEntriesRawAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dmientries.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{dmiEntriesRawAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(dmiEntriesRawAuditData!.verdict!.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #72.3 ftrace events per-subsys (UI sprint 63) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.tracingevt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.tracingevt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTracingEventsEnableAudit}>{i18n.t("integrations.tracingevt.refresh")}</button>
+          {#if tracingEventsEnableAuditData?.ok}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={tracingEventsEnableAuditData.verdict.verdict === 'gpu_event_stuck_on' ? 'var(--err)' :
+                             ['many_subsys_enabled','single_evt_enabled'].includes(tracingEventsEnableAuditData.verdict.verdict) ? 'var(--warn)' :
+                             tracingEventsEnableAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              {tracingEventsEnableAuditData.subsystem_count} subsys · gpu={tracingEventsEnableAuditData.gpu_subsystems_present.length} · {i18n.t("integrations.tracingevt.verdict")} : <b>{tracingEventsEnableAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if tracingEventsEnableAuditData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        tracingEventsEnableAuditData.verdict.verdict === 'gpu_event_stuck_on' ? 'var(--err)' :
+                        ['many_subsys_enabled','single_evt_enabled'].includes(tracingEventsEnableAuditData.verdict.verdict) ? 'var(--warn)' :
+                        tracingEventsEnableAuditData.verdict.verdict === 'requires_root' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{tracingEventsEnableAuditData.verdict.reason}</p>
+            {#if tracingEventsEnableAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.tracingevt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{tracingEventsEnableAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(tracingEventsEnableAuditData!.verdict!.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
