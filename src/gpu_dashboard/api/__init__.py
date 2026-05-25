@@ -585,3 +585,4 @@ from .tracing_buffer_footprint_audit import handle_tracing_buffer_footprint_audi
 from .per_device_wakeup_attribution_audit import handle_per_device_wakeup_attribution_audit_status  # noqa: F401,F811
 from .block_discard_caps_audit import handle_block_discard_caps_audit_status  # noqa: F401,F811
 from .cpuset_v2_partition_audit import handle_cpuset_v2_partition_audit_status  # noqa: F401,F811
+from .tracing_instances_audit import handle_tracing_instances_audit_status  # noqa: F401,F811
