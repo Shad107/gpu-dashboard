@@ -2087,6 +2087,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_khugepaged_pressure_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/drm-fdinfo-engine-usage-audit":
+                # R&D #92.4 — per-PID DRM client VRAM attribution
+                code, body = api.handle_drm_fdinfo_engine_usage_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
