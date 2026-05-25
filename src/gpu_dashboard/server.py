@@ -2122,6 +2122,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_fs_aio_fanotify_limits_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/drm-ttm-page-pool-audit":
+                # R&D #94.3 — TTM page pool caps posture
+                code, body = api.handle_drm_ttm_page_pool_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

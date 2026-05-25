@@ -577,3 +577,4 @@ from .nfs_mountstats_audit import handle_nfs_mountstats_audit_status  # noqa: F4
 from .bpf_jit_xdp_busy_poll_audit import handle_bpf_jit_xdp_busy_poll_audit_status  # noqa: F401,F811
 from .hwpoison_memory_failure_audit import handle_hwpoison_memory_failure_audit_status  # noqa: F401,F811
 from .fs_aio_fanotify_limits_audit import handle_fs_aio_fanotify_limits_audit_status  # noqa: F401,F811
+from .drm_ttm_page_pool_audit import handle_drm_ttm_page_pool_audit_status  # noqa: F401,F811
