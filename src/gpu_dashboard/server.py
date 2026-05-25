@@ -2237,6 +2237,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_workqueue_power_efficient_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/bql-stall-counters-audit":
+                # R&D #100.2 — per-TX-queue BQL stall counters
+                code, body = api.handle_bql_stall_counters_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
