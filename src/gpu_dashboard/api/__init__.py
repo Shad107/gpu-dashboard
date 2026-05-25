@@ -627,3 +627,4 @@ from .io_delay_type_audit import handle_io_delay_type_audit_status  # noqa: F401
 from .printk_pacing_audit import handle_printk_pacing_audit_status  # noqa: F401,F811
 from .cache_l2_imbalance_audit import handle_cache_l2_imbalance_audit_status  # noqa: F401,F811
 from .cpufreq_setspeed_drift_audit import handle_cpufreq_setspeed_drift_audit_status  # noqa: F401,F811
+from .vm_numa_policy_audit import handle_vm_numa_policy_audit_status  # noqa: F401,F811
