@@ -612,3 +612,4 @@ from .modprobe_blacklist_drift_audit import handle_modprobe_blacklist_drift_audi
 from .module_sig_enforce_audit import handle_module_sig_enforce_audit_status  # noqa: F401,F811
 from .bpf_jit_harden_audit import handle_bpf_jit_harden_audit_status  # noqa: F401,F811
 from .kernel_oops_warn_counter_audit import handle_kernel_oops_warn_counter_audit_status  # noqa: F401,F811
+from .ephemeral_port_range_audit import handle_ephemeral_port_range_audit_status  # noqa: F401,F811
