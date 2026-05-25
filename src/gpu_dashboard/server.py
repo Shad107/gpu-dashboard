@@ -2392,6 +2392,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_numa_balancing_scan_tuning_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nvidia-drm-params-audit":
+                # R&D #108.1 — KMS-side nvidia driver posture
+                code, body = api.handle_nvidia_drm_params_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
