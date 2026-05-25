@@ -2257,6 +2257,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_kfence_runtime_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/net-qdisc-default-audit":
+                # R&D #101.2 — default network qdisc posture
+                code, body = api.handle_net_qdisc_default_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
