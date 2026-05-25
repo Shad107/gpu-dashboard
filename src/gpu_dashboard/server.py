@@ -2202,6 +2202,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_fs_quota_projid_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/fuse-connections-audit":
+                # R&D #98.3 — FUSE wedged-request detector
+                code, body = api.handle_fuse_connections_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

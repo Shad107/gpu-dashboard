@@ -593,3 +593,4 @@ from .cgroup_delegate_audit import handle_cgroup_delegate_audit_status  # noqa: 
 from .pci_d3cold_runtime_audit import handle_pci_d3cold_runtime_audit_status  # noqa: F401,F811
 from .psi_irq_full_audit import handle_psi_irq_full_audit_status  # noqa: F401,F811
 from .fs_quota_projid_audit import handle_fs_quota_projid_audit_status  # noqa: F401,F811
+from .fuse_connections_audit import handle_fuse_connections_audit_status  # noqa: F401,F811
