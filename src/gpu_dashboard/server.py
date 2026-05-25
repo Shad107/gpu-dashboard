@@ -2107,6 +2107,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_nfs_mountstats_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/bpf-jit-xdp-busy-poll-audit":
+                # R&D #93.4 — BPF JIT + XDP + busy_poll
+                code, body = api.handle_bpf_jit_xdp_busy_poll_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
