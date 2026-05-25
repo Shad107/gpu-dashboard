@@ -2117,6 +2117,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hwpoison_memory_failure_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/fs-aio-fanotify-limits-audit":
+                # R&D #94.2 — aio-max-nr default + fanotify caps
+                code, body = api.handle_fs_aio_fanotify_limits_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
