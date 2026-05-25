@@ -135,11 +135,63 @@ export type StoredEvent = {
   payload: any | null;
 };
 
+/**
+ * Thrown when /api/* requests fail in a way that strongly suggests
+ * the Python backend isn't running — typically the vite dev proxy
+ * returning 502/503/504 because it can't reach localhost:9999, or
+ * fetch() itself rejecting with a TypeError.
+ *
+ * Hardening #11 — surfaces a single clear message to existing
+ * toast handlers (e.g. `toast.emit("✗ " + (e as Error).message)`)
+ * so cards stop showing cryptic "HTTP 502" / "Unexpected token" /
+ * "Failed to fetch" strings when the user forgets to start the
+ * service.
+ */
+export class BackendOfflineError extends Error {
+  constructor(detail?: string) {
+    super(
+      "Backend offline — is the gpu-dashboard service running?" +
+        (detail ? ` (${detail})` : "")
+    );
+    this.name = "BackendOfflineError";
+  }
+}
+
 async function jsonOf<T>(r: Response): Promise<T> {
+  // 502/503/504 from the vite dev proxy or any reverse proxy in
+  // front of the python backend almost always means the backend
+  // process is down. Surface a friendly message.
+  if (r.status === 502 || r.status === 503 || r.status === 504) {
+    throw new BackendOfflineError(`HTTP ${r.status}`);
+  }
   if (!r.ok && r.status !== 400 && r.status !== 500) {
     throw new Error(`HTTP ${r.status}`);
   }
   return r.json();
+}
+
+/**
+ * Wraps fetch() so a TypeError ("Failed to fetch" / "NetworkError")
+ * — which is what the browser throws when the server is genuinely
+ * unreachable rather than returning a 5xx — becomes a
+ * BackendOfflineError with the same friendly message.
+ *
+ * Existing callsites can opt in by replacing `fetch(...)` with
+ * `safeFetch(...)`; the return type is identical so no other code
+ * needs to change.
+ */
+export async function safeFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (e) {
+    if (e instanceof TypeError) {
+      throw new BackendOfflineError(e.message);
+    }
+    throw e;
+  }
 }
 
 export const api = {
