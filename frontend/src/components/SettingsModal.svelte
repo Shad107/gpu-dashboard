@@ -3031,6 +3031,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #108 (UI sprint 99) ───────────────────────────────────────────
+  let nvidiaDrmParamsAuditData            = $state<Awaited<ReturnType<typeof api.nvidiaDrmParamsAuditStatus>>            | null>(null);
+  let overlayModuleParamsAuditData        = $state<Awaited<ReturnType<typeof api.overlayModuleParamsAuditStatus>>        | null>(null);
+  let dmModParamsAuditData                = $state<Awaited<ReturnType<typeof api.dmModParamsAuditStatus>>                | null>(null);
+  let cgroupTreeLimitsAuditData           = $state<Awaited<ReturnType<typeof api.cgroupTreeLimitsAuditStatus>>           | null>(null);
+  async function loadNvidiaDrmParamsAudit() {
+    try { nvidiaDrmParamsAuditData = await api.nvidiaDrmParamsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadOverlayModuleParamsAudit() {
+    try { overlayModuleParamsAuditData = await api.overlayModuleParamsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDmModParamsAudit() {
+    try { dmModParamsAuditData = await api.dmModParamsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCgroupTreeLimitsAudit() {
+    try { cgroupTreeLimitsAuditData = await api.cgroupTreeLimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3568,6 +3590,11 @@
       if (!sysrqCadPoweroffAuditData)           loadSysrqCadPoweroffAudit();
       if (!vmDirtyBytesDriftAuditData)          loadVmDirtyBytesDriftAudit();
       if (!numaBalancingScanTuningAuditData)    loadNumaBalancingScanTuningAudit();
+      // R&D #108 cards
+      if (!nvidiaDrmParamsAuditData)            loadNvidiaDrmParamsAudit();
+      if (!overlayModuleParamsAuditData)        loadOverlayModuleParamsAudit();
+      if (!dmModParamsAuditData)                loadDmModParamsAudit();
+      if (!cgroupTreeLimitsAuditData)           loadCgroupTreeLimitsAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -19535,6 +19562,170 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
                     ? "# Restore default scan chunk (256 MB)\nsudo sysctl -w kernel.numa_balancing_scan_size_mb=256"
                   : numaBalancingScanTuningAuditData.verdict.verdict === 'drifted_from_defaults'
                     ? "# Multiple knobs differ from default — review explicitly\ngrep -H . /proc/sys/kernel/numa_balancing_scan_*"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #108.1 nvidia_drm params (UI sprint 99) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nvdrm.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nvdrm.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvidiaDrmParamsAudit}>{i18n.t("integrations.nvdrm.refresh")}</button>
+          {#if nvidiaDrmParamsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={nvidiaDrmParamsAuditData.verdict.verdict === 'nvidia_drm_modeset_disabled' ? 'var(--err)' :
+                             nvidiaDrmParamsAuditData.verdict.verdict === 'nvidia_drm_fbdev_disabled' ? 'var(--accent)' :
+                             nvidiaDrmParamsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              modeset={nvidiaDrmParamsAuditData.modeset ?? '—'} · fbdev={nvidiaDrmParamsAuditData.fbdev ?? '—'} · {i18n.t("integrations.nvdrm.verdict")} : <b>{nvidiaDrmParamsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nvidiaDrmParamsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        nvidiaDrmParamsAuditData.verdict.verdict === 'nvidia_drm_modeset_disabled' ? 'var(--err)' :
+                        nvidiaDrmParamsAuditData.verdict.verdict === 'nvidia_drm_fbdev_disabled' ? 'var(--accent)' :
+                        nvidiaDrmParamsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{nvidiaDrmParamsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(nvidiaDrmParamsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nvdrm.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  nvidiaDrmParamsAuditData.verdict.verdict === 'nvidia_drm_modeset_disabled'
+                    ? "# Enable Wayland-compatible KMS for nvidia\n# GRUB cmdline :\nsudo sed -i 's/\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 nvidia-drm.modeset=1\"/' /etc/default/grub\nsudo update-grub && sudo reboot\n# Verify after reboot (root) :\nsudo cat /sys/module/nvidia_drm/parameters/modeset   # → Y"
+                  : nvidiaDrmParamsAuditData.verdict.verdict === 'nvidia_drm_fbdev_disabled'
+                    ? "# Enable nvidia console takeover (TTY fallback)\n# Add to GRUB cmdline :\nsudo sed -i 's/\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 nvidia-drm.fbdev=1\"/' /etc/default/grub\nsudo update-grub && sudo reboot"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #108.2 overlay module params (UI sprint 99) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.overlay.title")}</h4>
+        <p class="muted">{i18n.t("integrations.overlay.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadOverlayModuleParamsAudit}>{i18n.t("integrations.overlay.refresh")}</button>
+          {#if overlayModuleParamsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={overlayModuleParamsAuditData.verdict.verdict === 'overlay_redirect_dir_off' ? 'var(--warn)' :
+                             (overlayModuleParamsAuditData.verdict.verdict === 'overlay_metacopy_off' || overlayModuleParamsAuditData.verdict.verdict === 'overlay_xino_auto_off') ? 'var(--accent)' :
+                             overlayModuleParamsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              metacopy={overlayModuleParamsAuditData.metacopy ?? '—'} · redirect_dir={overlayModuleParamsAuditData.redirect_dir ?? '—'} · {i18n.t("integrations.overlay.verdict")} : <b>{overlayModuleParamsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if overlayModuleParamsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        overlayModuleParamsAuditData.verdict.verdict === 'overlay_redirect_dir_off' ? 'var(--warn)' :
+                        (overlayModuleParamsAuditData.verdict.verdict === 'overlay_metacopy_off' || overlayModuleParamsAuditData.verdict.verdict === 'overlay_xino_auto_off') ? 'var(--accent)' :
+                        overlayModuleParamsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{overlayModuleParamsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(overlayModuleParamsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.overlay.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  overlayModuleParamsAuditData.verdict.verdict === 'overlay_redirect_dir_off'
+                    ? "# Enable overlay redirect_dir for Docker / Podman / snap\n# Add to modprobe.d :\nsudo tee /etc/modprobe.d/overlay.conf <<'EOF'\noptions overlay redirect_dir=Y metacopy=Y\nEOF\n# Apply (requires reboot or full unmount of all overlay mounts) :\nsudo update-initramfs -u\nsudo reboot"
+                  : overlayModuleParamsAuditData.verdict.verdict === 'overlay_metacopy_off'
+                    ? "# Enable metadata-only copy_up to speed up chmod on large files\nsudo tee /etc/modprobe.d/overlay.conf <<'EOF'\noptions overlay metacopy=Y\nEOF\nsudo update-initramfs -u && sudo reboot"
+                  : overlayModuleParamsAuditData.verdict.verdict === 'overlay_xino_auto_off'
+                    ? "# Enable cross-layer inode auto-assignment\nsudo tee -a /etc/modprobe.d/overlay.conf <<'EOF'\noptions overlay xino_auto=Y\nEOF\nsudo update-initramfs -u && sudo reboot"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #108.3 dm_mod params (UI sprint 99) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dmmod.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dmmod.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDmModParamsAudit}>{i18n.t("integrations.dmmod.refresh")}</button>
+          {#if dmModParamsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={(dmModParamsAuditData.verdict.verdict === 'dm_use_blk_mq_off' || dmModParamsAuditData.verdict.verdict === 'dm_numa_node_pinned') ? 'var(--accent)' :
+                             dmModParamsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              blk_mq={dmModParamsAuditData.use_blk_mq ?? '—'} · numa={dmModParamsAuditData.dm_numa_node ?? '—'} · {i18n.t("integrations.dmmod.verdict")} : <b>{dmModParamsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dmModParamsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        (dmModParamsAuditData.verdict.verdict === 'dm_use_blk_mq_off' || dmModParamsAuditData.verdict.verdict === 'dm_numa_node_pinned') ? 'var(--accent)' :
+                        dmModParamsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{dmModParamsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(dmModParamsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dmmod.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  dmModParamsAuditData.verdict.verdict === 'dm_use_blk_mq_off'
+                    ? "# Switch dm to blk-mq mode (modern, faster)\nsudo tee /etc/modprobe.d/dm_mod.conf <<'EOF'\noptions dm_mod use_blk_mq=Y\nEOF\nsudo update-initramfs -u && sudo reboot"
+                  : dmModParamsAuditData.verdict.verdict === 'dm_numa_node_pinned'
+                    ? "# Unpin dm threads from a specific NUMA node\nsudo tee /etc/modprobe.d/dm_mod.conf <<'EOF'\noptions dm_mod dm_numa_node=-1\nEOF"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #108.4 cgroup tree limits (UI sprint 99) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cgtree.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cgtree.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupTreeLimitsAudit}>{i18n.t("integrations.cgtree.refresh")}</button>
+          {#if cgroupTreeLimitsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cgroupTreeLimitsAuditData.verdict.verdict === 'cgroup_descendants_near_cap' ? 'var(--warn)' :
+                             cgroupTreeLimitsAuditData.verdict.verdict === 'cgroup_depth_capped_low' ? 'var(--accent)' :
+                             cgroupTreeLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              nr={cgroupTreeLimitsAuditData.nr_descendants ?? '—'} · max={cgroupTreeLimitsAuditData.max_descendants ?? 'max'} · {i18n.t("integrations.cgtree.verdict")} : <b>{cgroupTreeLimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupTreeLimitsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cgroupTreeLimitsAuditData.verdict.verdict === 'cgroup_descendants_near_cap' ? 'var(--warn)' :
+                        cgroupTreeLimitsAuditData.verdict.verdict === 'cgroup_depth_capped_low' ? 'var(--accent)' :
+                        cgroupTreeLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cgroupTreeLimitsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(cgroupTreeLimitsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cgtree.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cgroupTreeLimitsAuditData.verdict.verdict === 'cgroup_descendants_near_cap'
+                    ? "# Find the runaway subtree creating descendants\nfor d in $(find /sys/fs/cgroup -name cgroup.stat); do\n  n=$(awk '/^nr_descendants/{print $2}' $d 2>/dev/null)\n  [ \"$n\" -gt 50 ] 2>/dev/null && echo \"$(dirname $d) : $n\"\ndone | sort -t: -k2 -rn | head\n# Likely runc / systemd-userdb leak ; restart the offending service"
+                  : cgroupTreeLimitsAuditData.verdict.verdict === 'cgroup_depth_capped_low'
+                    ? "# Lift the depth cap to default\necho max | sudo tee /sys/fs/cgroup/cgroup.max.depth"
                   : ""
                 }</pre>
               </details>

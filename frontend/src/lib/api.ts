@@ -5927,4 +5927,39 @@ export const api = {
       scan_size_mb: number | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #108 (UI sprint 99) ──
+  nvidiaDrmParamsAuditStatus: () =>
+    fetch("/api/nvidia-drm-params-audit").then(jsonOf<{
+      ok: boolean;
+      modeset: boolean | null;
+      fbdev: boolean | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  overlayModuleParamsAuditStatus: () =>
+    fetch("/api/overlay-module-params-audit").then(jsonOf<{
+      ok: boolean;
+      metacopy: boolean | null;
+      redirect_dir: boolean | null;
+      xino_auto: boolean | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  dmModParamsAuditStatus: () =>
+    fetch("/api/dm-mod-params-audit").then(jsonOf<{
+      ok: boolean;
+      use_blk_mq: boolean | null;
+      dm_numa_node: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cgroupTreeLimitsAuditStatus: () =>
+    fetch("/api/cgroup-tree-limits-audit").then(jsonOf<{
+      ok: boolean;
+      max_depth: number | null;
+      max_descendants: number | null;
+      nr_descendants: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
