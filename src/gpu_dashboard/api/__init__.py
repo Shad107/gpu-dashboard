@@ -599,3 +599,4 @@ from .umwait_control_audit import handle_umwait_control_audit_status  # noqa: F4
 from .split_lock_detect_audit import handle_split_lock_detect_audit_status  # noqa: F401,F811
 from .oom_policy_sysctl_audit import handle_oom_policy_sysctl_audit_status  # noqa: F401,F811
 from .rseq_kernel_audit import handle_rseq_kernel_audit_status  # noqa: F401,F811
+from .workqueue_power_efficient_audit import handle_workqueue_power_efficient_audit_status  # noqa: F401,F811

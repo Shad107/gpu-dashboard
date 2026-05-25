@@ -2232,6 +2232,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_rseq_kernel_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/workqueue-power-efficient-audit":
+                # R&D #100.1 — workqueue power_efficient posture
+                code, body = api.handle_workqueue_power_efficient_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
