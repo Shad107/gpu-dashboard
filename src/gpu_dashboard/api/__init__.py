@@ -601,3 +601,4 @@ from .oom_policy_sysctl_audit import handle_oom_policy_sysctl_audit_status  # no
 from .rseq_kernel_audit import handle_rseq_kernel_audit_status  # noqa: F401,F811
 from .workqueue_power_efficient_audit import handle_workqueue_power_efficient_audit_status  # noqa: F401,F811
 from .bql_stall_counters_audit import handle_bql_stall_counters_audit_status  # noqa: F401,F811
+from .perf_sampling_limits_audit import handle_perf_sampling_limits_audit_status  # noqa: F401,F811
