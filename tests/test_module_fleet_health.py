@@ -80,6 +80,14 @@ def test_module_fleet_imports_cleanly():
         "Module import failures:\n" + "\n".join(failures))
 
 
+# Hardening #7: a status() that reports ok=False must surface at
+# least one of these actionable secondary keys so consumers can
+# render a meaningful message instead of "something is wrong".
+_OK_FALSE_ACTIONABLE_KEYS = frozenset({
+    "verdict", "error", "reason", "message",
+    "errors", "detail", "details"})
+
+
 @pytest.mark.parametrize("modname", _MODULE_NAMES)
 def test_module_status_does_not_crash(modname):
     """Where the module exposes a zero-required-arg ``status()``,
@@ -105,3 +113,11 @@ def test_module_status_does_not_crash(modname):
     assert ("verdict" in out) or ("ok" in out), (
         f"{modname}.status() dict lacks both 'verdict' and 'ok' "
         f"keys: {sorted(out.keys())[:10]}")
+    # Hardening #7 — when reporting failure, surface why.
+    if out.get("ok") is False:
+        actionable = set(out.keys()) & _OK_FALSE_ACTIONABLE_KEYS
+        assert actionable, (
+            f"{modname}.status() returned ok=False without any of "
+            f"{sorted(_OK_FALSE_ACTIONABLE_KEYS)} — consumers cannot "
+            f"render a useful message. Keys present: "
+            f"{sorted(out.keys())[:10]}")
