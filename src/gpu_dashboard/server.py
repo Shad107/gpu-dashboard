@@ -2127,6 +2127,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_drm_ttm_page_pool_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/lockdep-lockstat-audit":
+                # R&D #94.4 — kernel lockdep posture + silent death
+                code, body = api.handle_lockdep_lockstat_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
