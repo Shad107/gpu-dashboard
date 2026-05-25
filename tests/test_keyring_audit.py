@@ -57,6 +57,31 @@ def test_parse_keys_empty():
     assert mod.parse_keys("") == []
 
 
+# --- count_by_type (R&D #111.3) -----------------------------------
+
+def test_count_by_type_empty():
+    assert mod.count_by_type([]) == {}
+
+
+def test_count_by_type_aggregates():
+    keys = [
+        {"uid": 0, "type": "asymmetric", "desc": "modsign"},
+        {"uid": 0, "type": "asymmetric", "desc": "imakeys"},
+        {"uid": 1000, "type": "logon", "desc": "nfs"},
+        {"uid": 1000, "type": "keyring", "desc": "_ses"},
+        {"uid": 1000, "type": "keyring", "desc": "_uid"},
+        {"uid": 1000, "type": "user", "desc": "cred"}]
+    counts = mod.count_by_type(keys)
+    assert counts == {"asymmetric": 2, "logon": 1,
+                       "keyring": 2, "user": 1}
+
+
+def test_count_by_type_skips_missing_type():
+    keys = [{"uid": 0, "desc": "x"},
+              {"uid": 0, "type": "logon", "desc": "y"}]
+    assert mod.count_by_type(keys) == {"logon": 1}
+
+
 # --- classify ------------------------------------------------------
 
 def _user(uid=1000, keys=10, maxkeys=200, bytes_=100, maxbytes=20000):
@@ -125,6 +150,8 @@ def test_status_with_isolated(monkeypatch, tmp_path):
     assert out["ok"] is True
     assert out["user_count"] == 2
     assert out["verdict"]["verdict"] == "ok"
+    # R&D #111.3 — type_counts surfaced from /proc/keys.
+    assert out["type_counts"] == {"keyring": 3}
 
 
 def test_status_unknown(monkeypatch, tmp_path):

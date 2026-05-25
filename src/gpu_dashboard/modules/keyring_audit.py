@@ -127,6 +127,22 @@ _QUOTA_THRESHOLD = 0.80
 _SESSION_KEYRING_LIMIT = 50
 
 
+def count_by_type(keys: list) -> dict:
+    """Aggregate /proc/keys rows by `type` column.
+
+    Surfaces logon / asymmetric / user / keyring / big_key / dns_resolver
+    counts to the UI. R&D #111.3 deepening — the survey noted neither
+    keyring_audit nor keyring_lifecycle_audit classified by type.
+    """
+    counts: dict = {}
+    for k in keys:
+        t = k.get("type")
+        if not t:
+            continue
+        counts[t] = counts.get(t, 0) + 1
+    return counts
+
+
 def classify(users: list, keys: list) -> dict:
     if not users:
         return {"verdict": "unknown",
@@ -190,5 +206,6 @@ def status(cfg=None) -> dict:
         "user_count": len(users),
         "key_count": len(keys),
         "users": users,
+        "type_counts": count_by_type(keys),
         "verdict": verdict,
     }
