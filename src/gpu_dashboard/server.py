@@ -2352,6 +2352,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_drm_gt_load_status_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/io-delay-type-audit":
+                # R&D #106.1 — x86 legacy port-I/O delay mode
+                code, body = api.handle_io_delay_type_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

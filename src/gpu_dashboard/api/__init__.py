@@ -623,3 +623,4 @@ from .power_async_suspend_audit import handle_power_async_suspend_audit_status  
 from .vm_compaction_proactive_audit import handle_vm_compaction_proactive_audit_status  # noqa: F401,F811
 from .ima_digest_lists_audit import handle_ima_digest_lists_audit_status  # noqa: F401,F811
 from .drm_gt_load_status_audit import handle_drm_gt_load_status_audit_status  # noqa: F401,F811
+from .io_delay_type_audit import handle_io_delay_type_audit_status  # noqa: F401,F811
