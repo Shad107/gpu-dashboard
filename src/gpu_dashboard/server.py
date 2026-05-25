@@ -2097,6 +2097,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pipe_mqueue_limits_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cgroup-v2-memory-peak-audit":
+                # R&D #93.2 — cgroup v2 memory.peak ratio + swap.peak
+                code, body = api.handle_cgroup_v2_memory_peak_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
