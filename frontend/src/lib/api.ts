@@ -5361,4 +5361,36 @@ export const api = {
       unreadable_files: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #93 (UI sprint 84) ──
+  pipeMqueueLimitsAuditStatus: () =>
+    fetch("/api/pipe-mqueue-limits-audit").then(jsonOf<{
+      ok: boolean;
+      limits: Record<string, number | null>;
+      mem_total: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cgroupV2MemoryPeakAuditStatus: () =>
+    fetch("/api/cgroup-v2-memory-peak-audit").then(jsonOf<{
+      ok: boolean;
+      cgroup_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  nfsMountstatsAuditStatus: () =>
+    fetch("/api/nfs-mountstats-audit").then(jsonOf<{
+      ok: boolean;
+      nfs_mount_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  bpfJitXdpBusyPollAuditStatus: () =>
+    fetch("/api/bpf-jit-xdp-busy-poll-audit").then(jsonOf<{
+      ok: boolean;
+      bpf_jit_enable: number | null;
+      busy_poll: number | null;
+      xdp_attached_ifaces: string[];
+      verdict: { verdict: string; reason: string };
+    }>),
 };

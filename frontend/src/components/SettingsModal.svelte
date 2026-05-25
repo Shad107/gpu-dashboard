@@ -2701,6 +2701,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #93 (UI sprint 84) ────────────────────────────────────────────
+  let pipeMqueueLimitsAuditData           = $state<Awaited<ReturnType<typeof api.pipeMqueueLimitsAuditStatus>>           | null>(null);
+  let cgroupV2MemoryPeakAuditData         = $state<Awaited<ReturnType<typeof api.cgroupV2MemoryPeakAuditStatus>>         | null>(null);
+  let nfsMountstatsAuditData              = $state<Awaited<ReturnType<typeof api.nfsMountstatsAuditStatus>>              | null>(null);
+  let bpfJitXdpBusyPollAuditData          = $state<Awaited<ReturnType<typeof api.bpfJitXdpBusyPollAuditStatus>>          | null>(null);
+  async function loadPipeMqueueLimitsAudit() {
+    try { pipeMqueueLimitsAuditData = await api.pipeMqueueLimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCgroupV2MemoryPeakAudit() {
+    try { cgroupV2MemoryPeakAuditData = await api.cgroupV2MemoryPeakAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNfsMountstatsAudit() {
+    try { nfsMountstatsAuditData = await api.nfsMountstatsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBpfJitXdpBusyPollAudit() {
+    try { bpfJitXdpBusyPollAuditData = await api.bpfJitXdpBusyPollAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3163,6 +3185,11 @@
       if (!kernelLockupWatchdogAuditData)       loadKernelLockupWatchdogAudit();
       if (!khugepagedPressureAuditData)         loadKhugepagedPressureAudit();
       if (!drmFdinfoEngineUsageAuditData)       loadDrmFdinfoEngineUsageAudit();
+      // R&D #93 cards
+      if (!pipeMqueueLimitsAuditData)           loadPipeMqueueLimitsAudit();
+      if (!cgroupV2MemoryPeakAuditData)         loadCgroupV2MemoryPeakAudit();
+      if (!nfsMountstatsAuditData)              loadNfsMountstatsAudit();
+      if (!bpfJitXdpBusyPollAuditData)          loadBpfJitXdpBusyPollAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -16497,6 +16524,186 @@ for d in /proc/*/fdinfo; do
 done' | sort | uniq | sort -k3 -rn | head -10
 # Identified the offender? Kill or restart it :
 sudo kill <PID>`}</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #93.1 pipe / POSIX-mqueue / epoll (UI sprint 84) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pipemq.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pipemq.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPipeMqueueLimitsAudit}>{i18n.t("integrations.pipemq.refresh")}</button>
+          {#if pipeMqueueLimitsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pipeMqueueLimitsAuditData.verdict.verdict === 'mqueue_exhausted' ? 'var(--err)' :
+                             ['pipe_user_pages_low','epoll_watches_low'].includes(pipeMqueueLimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                             pipeMqueueLimitsAuditData.verdict.verdict === 'non_default_pipe_max' ? 'var(--accent)' :
+                             pipeMqueueLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.pipemq.verdict")} : <b>{pipeMqueueLimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pipeMqueueLimitsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pipeMqueueLimitsAuditData.verdict.verdict === 'mqueue_exhausted' ? 'var(--err)' :
+                        ['pipe_user_pages_low','epoll_watches_low'].includes(pipeMqueueLimitsAuditData.verdict.verdict) ? 'var(--warn)' :
+                        pipeMqueueLimitsAuditData.verdict.verdict === 'non_default_pipe_max' ? 'var(--accent)' :
+                        pipeMqueueLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pipeMqueueLimitsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(pipeMqueueLimitsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pipemq.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  pipeMqueueLimitsAuditData.verdict.verdict === 'mqueue_exhausted'
+                    ? "# POSIX mqueue caps too low — restore defaults\necho 256 | sudo tee /proc/sys/fs/mqueue/queues_max\necho 8192 | sudo tee /proc/sys/fs/mqueue/msgsize_max\necho 10 | sudo tee /proc/sys/fs/mqueue/msg_max\ncat <<EOF | sudo tee /etc/sysctl.d/99-mqueue.conf\nfs.mqueue.queues_max = 256\nfs.mqueue.msgsize_max = 8192\nfs.mqueue.msg_max = 10\nEOF\nsudo sysctl --system"
+                  : pipeMqueueLimitsAuditData.verdict.verdict === 'pipe_user_pages_low'
+                    ? "# pipe-user-pages-soft too low — bump to 16384 (kernel default)\necho 16384 | sudo tee /proc/sys/fs/pipe-user-pages-soft\necho 'fs.pipe-user-pages-soft = 16384' | sudo tee /etc/sysctl.d/99-pipe.conf\nsudo sysctl --system"
+                  : pipeMqueueLimitsAuditData.verdict.verdict === 'epoll_watches_low'
+                    ? "# epoll max_user_watches too low for a big-RAM IDE host\necho 1048576 | sudo tee /proc/sys/fs/epoll/max_user_watches\necho 'fs.epoll.max_user_watches = 1048576' | sudo tee /etc/sysctl.d/99-epoll.conf\nsudo sysctl --system"
+                  : pipeMqueueLimitsAuditData.verdict.verdict === 'non_default_pipe_max'
+                    ? "# pipe-max-size quietly diverged from default — restore\necho 1048576 | sudo tee /proc/sys/fs/pipe-max-size\n# Trace which drop-in changed it :\ngrep -r 'pipe-max-size' /etc/sysctl.d /etc/sysctl.conf 2>/dev/null"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #93.2 cgroup v2 memory.peak (UI sprint 84) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cgmempeak.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cgmempeak.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupV2MemoryPeakAudit}>{i18n.t("integrations.cgmempeak.refresh")}</button>
+          {#if cgroupV2MemoryPeakAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cgroupV2MemoryPeakAuditData.verdict.verdict === 'peak_at_max' ? 'var(--err)' :
+                             cgroupV2MemoryPeakAuditData.verdict.verdict === 'peak_at_high_throttling' ? 'var(--warn)' :
+                             cgroupV2MemoryPeakAuditData.verdict.verdict === 'swap_peak_active' ? 'var(--accent)' :
+                             cgroupV2MemoryPeakAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cgroupV2MemoryPeakAuditData.cgroup_count} cgroup(s) · {i18n.t("integrations.cgmempeak.verdict")} : <b>{cgroupV2MemoryPeakAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupV2MemoryPeakAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cgroupV2MemoryPeakAuditData.verdict.verdict === 'peak_at_max' ? 'var(--err)' :
+                        cgroupV2MemoryPeakAuditData.verdict.verdict === 'peak_at_high_throttling' ? 'var(--warn)' :
+                        cgroupV2MemoryPeakAuditData.verdict.verdict === 'swap_peak_active' ? 'var(--accent)' :
+                        cgroupV2MemoryPeakAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cgroupV2MemoryPeakAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(cgroupV2MemoryPeakAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cgmempeak.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cgroupV2MemoryPeakAuditData.verdict.verdict === 'peak_at_max'
+                    ? "# Cgroup sitting at memory.max ceiling — find + raise\nfor d in $(find /sys/fs/cgroup -name memory.max -type f); do\n  m=$(cat $d)\n  [ \"$m\" = max ] && continue\n  p=$(cat $(dirname $d)/memory.peak)\n  pct=$(echo \"$p $m\" | awk '{print int($1*100/$2)}')\n  [ $pct -ge 98 ] && echo \"$(dirname $d): peak=$p max=$m ($pct%)\"\ndone\n# Raise via systemd :\nsudo systemctl set-property <unit> MemoryMax=infinity"
+                  : cgroupV2MemoryPeakAuditData.verdict.verdict === 'peak_at_high_throttling'
+                    ? "# memory.high throttling biting — bump MemoryHigh\nfor d in $(find /sys/fs/cgroup -name memory.events.local -type f); do\n  hits=$(awk '/^high /{print $2}' $d)\n  [ -z \"$hits\" ] || [ \"$hits\" = 0 ] && continue\n  echo \"$(dirname $d): high_hits=$hits\"\ndone\n# Persist via systemd :\nsudo systemctl set-property <unit> MemoryHigh=8G"
+                  : cgroupV2MemoryPeakAuditData.verdict.verdict === 'swap_peak_active'
+                    ? "# Cgroups used swap — investigate which / why\nfor d in $(find /sys/fs/cgroup -name memory.swap.peak -type f); do\n  v=$(cat $d 2>/dev/null)\n  [ -z \"$v\" ] || [ \"$v\" = 0 ] && continue\n  echo \"$(dirname $d): swap.peak=$v\"\ndone | sort -k2 -t= -rn\n# Reset peak counters for a fresh window :\nfor d in $(find /sys/fs/cgroup -name memory.peak -type f); do\n  echo 0 | sudo tee $d 2>/dev/null > /dev/null\ndone"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #93.3 NFS mountstats (UI sprint 84) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nfsmountstats.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nfsmountstats.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNfsMountstatsAudit}>{i18n.t("integrations.nfsmountstats.refresh")}</button>
+          {#if nfsMountstatsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={nfsMountstatsAuditData.verdict.verdict === 'xprt_reconnect_storm' ? 'var(--err)' :
+                             nfsMountstatsAuditData.verdict.verdict === 'bad_xids_present' ? 'var(--warn)' :
+                             nfsMountstatsAuditData.verdict.verdict === 'many_nfs_mounts' ? 'var(--accent)' :
+                             ['ok','no_nfs_mounts'].includes(nfsMountstatsAuditData.verdict.verdict) ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {nfsMountstatsAuditData.nfs_mount_count} NFS mount(s) · {i18n.t("integrations.nfsmountstats.verdict")} : <b>{nfsMountstatsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nfsMountstatsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        nfsMountstatsAuditData.verdict.verdict === 'xprt_reconnect_storm' ? 'var(--err)' :
+                        nfsMountstatsAuditData.verdict.verdict === 'bad_xids_present' ? 'var(--warn)' :
+                        nfsMountstatsAuditData.verdict.verdict === 'many_nfs_mounts' ? 'var(--accent)' :
+                        ['ok','no_nfs_mounts'].includes(nfsMountstatsAuditData.verdict.verdict) ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{nfsMountstatsAuditData.verdict.reason}</p>
+            {#if !['ok','no_nfs_mounts','unknown','requires_root','many_nfs_mounts'].includes(nfsMountstatsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nfsmountstats.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  nfsMountstatsAuditData.verdict.verdict === 'xprt_reconnect_storm'
+                    ? "# NFS xprt reconnect storm — inspect transport\nawk '/^device .* with fstype nfs/{m=$2 \" \" $4} /^[[:space:]]*xprt: tcp/{print m, $0}' /proc/self/mountstats\n# Common fixes :\n#  1. Check network jitter: ping <server> -i 0.2 -c 100\n#  2. Server-side: check nfsd thread count + tcp socket reset\n#  3. Switch to vers=4.1 if currently on 4.2 (or vice-versa) :\n#     sudo umount /mnt/nfs && sudo mount -o remount,vers=4.1 /mnt/nfs"
+                  : nfsMountstatsAuditData.verdict.verdict === 'bad_xids_present'
+                    ? "# NFS bad_xids > 0 — RPC reply mismatches\nawk '/^device .* fstype nfs/{m=$2} /xprt: tcp/{print m, \"bad_xids=\" $9}' /proc/self/mountstats | grep -v 'bad_xids=0$'\n# Usually indicates server bug or middlebox reordering. Check :\n#   - dmesg | grep -i nfs\n#   - server logs (rpcdebug + nfsdebug)"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #93.4 BPF JIT + XDP + busy_poll (UI sprint 84) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bpfjit.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bpfjit.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBpfJitXdpBusyPollAudit}>{i18n.t("integrations.bpfjit.refresh")}</button>
+          {#if bpfJitXdpBusyPollAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={bpfJitXdpBusyPollAuditData.verdict.verdict === 'jit_disabled' ? 'var(--err)' :
+                             bpfJitXdpBusyPollAuditData.verdict.verdict === 'xdp_attached' ? 'var(--warn)' :
+                             bpfJitXdpBusyPollAuditData.verdict.verdict === 'busy_poll_active' ? 'var(--accent)' :
+                             bpfJitXdpBusyPollAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              jit={bpfJitXdpBusyPollAuditData.bpf_jit_enable ?? '?'} · busy_poll={bpfJitXdpBusyPollAuditData.busy_poll ?? '?'} · {i18n.t("integrations.bpfjit.verdict")} : <b>{bpfJitXdpBusyPollAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if bpfJitXdpBusyPollAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        bpfJitXdpBusyPollAuditData.verdict.verdict === 'jit_disabled' ? 'var(--err)' :
+                        bpfJitXdpBusyPollAuditData.verdict.verdict === 'xdp_attached' ? 'var(--warn)' :
+                        bpfJitXdpBusyPollAuditData.verdict.verdict === 'busy_poll_active' ? 'var(--accent)' :
+                        bpfJitXdpBusyPollAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{bpfJitXdpBusyPollAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(bpfJitXdpBusyPollAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.bpfjit.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  bpfJitXdpBusyPollAuditData.verdict.verdict === 'jit_disabled'
+                    ? "# Enable BPF JIT (10x speedup, less interpreter exposure)\necho 1 | sudo tee /proc/sys/net/core/bpf_jit_enable\necho 'net.core.bpf_jit_enable = 1' | sudo tee /etc/sysctl.d/99-bpf-jit.conf\nsudo sysctl --system"
+                  : bpfJitXdpBusyPollAuditData.verdict.verdict === 'xdp_attached'
+                    ? "# XDP attached unexpectedly — identify + detach\nfor n in /sys/class/net/*/xdp; do\n  test -e $n || continue\n  echo \"=== $n ===\"\n  cat $n 2>/dev/null\ndone\n# If a leftover from bpftrace/docker, detach :\nsudo ip link set dev <iface> xdp off\n# Or via xdp-loader / cilium / etc as appropriate"
+                  : bpfJitXdpBusyPollAuditData.verdict.verdict === 'busy_poll_active'
+                    ? "# busy_poll > 0 — only useful with SO_BUSY_POLL apps\ngrep -H . /proc/sys/net/core/busy_poll /proc/sys/net/core/busy_read\n# If no app uses it, reset to 0 (default) :\necho 0 | sudo tee /proc/sys/net/core/busy_poll\necho 0 | sudo tee /proc/sys/net/core/busy_read"
+                  : ""
+                }</pre>
               </details>
             {/if}
           </div>
