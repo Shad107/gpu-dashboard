@@ -2137,6 +2137,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_mdio_phy_eee_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kernel-module-refcnt-audit":
+                # R&D #95.2 — module refcnt / holders / initstate
+                code, body = api.handle_kernel_module_refcnt_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
