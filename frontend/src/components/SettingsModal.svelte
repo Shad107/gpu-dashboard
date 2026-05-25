@@ -2657,6 +2657,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #91 (UI sprint 82) ────────────────────────────────────────────
+  let cgroupPidsControllerAuditData       = $state<Awaited<ReturnType<typeof api.cgroupPidsControllerAuditStatus>>       | null>(null);
+  let dmaBufBufinfoAuditData              = $state<Awaited<ReturnType<typeof api.dmaBufBufinfoAuditStatus>>              | null>(null);
+  let nvmeHmbFeaturesAuditData            = $state<Awaited<ReturnType<typeof api.nvmeHmbFeaturesAuditStatus>>            | null>(null);
+  let vmstatReclaimPressureAuditData      = $state<Awaited<ReturnType<typeof api.vmstatReclaimPressureAuditStatus>>      | null>(null);
+  async function loadCgroupPidsControllerAudit() {
+    try { cgroupPidsControllerAuditData = await api.cgroupPidsControllerAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDmaBufBufinfoAudit() {
+    try { dmaBufBufinfoAuditData = await api.dmaBufBufinfoAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNvmeHmbFeaturesAudit() {
+    try { nvmeHmbFeaturesAuditData = await api.nvmeHmbFeaturesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadVmstatReclaimPressureAudit() {
+    try { vmstatReclaimPressureAuditData = await api.vmstatReclaimPressureAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3109,6 +3131,11 @@
       if (!procNetProtocolsAuditData)           loadProcNetProtocolsAudit();
       if (!cpufreqGovernorTunablesAuditData)    loadCpufreqGovernorTunablesAudit();
       if (!pcieDpcAuditData)                    loadPcieDpcAudit();
+      // R&D #91 cards
+      if (!cgroupPidsControllerAuditData)       loadCgroupPidsControllerAudit();
+      if (!dmaBufBufinfoAuditData)              loadDmaBufBufinfoAudit();
+      if (!nvmeHmbFeaturesAuditData)            loadNvmeHmbFeaturesAudit();
+      if (!vmstatReclaimPressureAuditData)      loadVmstatReclaimPressureAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -16079,6 +16106,186 @@
                     ? "# DPC triggered — downstream device contained\n# Find the contained device + the AER fatal event :\nsudo dmesg -T | grep -iE 'dpc|aer.*fatal' | tail -30\nfor d in /sys/bus/pci/devices/*/dpc/dpc_status; do\n  v=$(cat $d 2>/dev/null)\n  [ \"$v\" != \"0\" ] && [ \"$v\" != \"0x0\" ] && echo \"$(dirname $(dirname $d)): status=$v\"\ndone\n# Recovery options :\n#  1. rescan the bus once the underlying cause is fixed :\n#     echo 1 | sudo tee /sys/bus/pci/rescan\n#  2. clear DPC status (clears the latch but device stays contained) :\n#     echo 0x1f | sudo tee /sys/bus/pci/devices/<port>/dpc/dpc_status"
                   : pcieDpcAuditData.verdict.verdict === 'dpc_disabled_capable'
                     ? "# Root port has DPC capability but disabled — enable it\nfor d in /sys/bus/pci/devices/*/dpc/dpc_ctl; do\n  cap=$(cat $(dirname $d)/dpc_cap 2>/dev/null)\n  ctl=$(cat $d 2>/dev/null)\n  [ -n \"$cap\" ] && [ \"$ctl\" = \"0\" ] && echo $((0x3)) | sudo tee $d\ndone\n# Verify :\ngrep -H . /sys/bus/pci/devices/*/dpc/dpc_ctl"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #91.1 cgroup pids controller (UI sprint 82) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cgrouppids.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cgrouppids.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupPidsControllerAudit}>{i18n.t("integrations.cgrouppids.refresh")}</button>
+          {#if cgroupPidsControllerAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cgroupPidsControllerAuditData.verdict.verdict === 'pids_max_hit' ? 'var(--err)' :
+                             cgroupPidsControllerAuditData.verdict.verdict === 'pids_max_historic' ? 'var(--warn)' :
+                             cgroupPidsControllerAuditData.verdict.verdict === 'pids_near_limit' ? 'var(--accent)' :
+                             cgroupPidsControllerAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cgroupPidsControllerAuditData.cgroup_with_cap_count} numeric cap(s) · {i18n.t("integrations.cgrouppids.verdict")} : <b>{cgroupPidsControllerAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupPidsControllerAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cgroupPidsControllerAuditData.verdict.verdict === 'pids_max_hit' ? 'var(--err)' :
+                        cgroupPidsControllerAuditData.verdict.verdict === 'pids_max_historic' ? 'var(--warn)' :
+                        cgroupPidsControllerAuditData.verdict.verdict === 'pids_near_limit' ? 'var(--accent)' :
+                        cgroupPidsControllerAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cgroupPidsControllerAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(cgroupPidsControllerAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cgrouppids.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cgroupPidsControllerAuditData.verdict.verdict === 'pids_max_hit'
+                    ? "# A cgroup is at its pids.max cap right now — find + raise\nfor d in $(find /sys/fs/cgroup -name pids.max -type f); do\n  m=$(cat $d)\n  [ \"$m\" = max ] && continue\n  c=$(cat $(dirname $d)/pids.current)\n  [ \"$c\" -ge \"$m\" ] && echo \"$(dirname $d): $c/$m\"\ndone\n# Raise via systemd :\nsudo systemctl set-property <unit> TasksMax=infinity\n# Or directly :\nsudo bash -c 'echo max > /sys/fs/cgroup/<path>/pids.max'"
+                  : cgroupPidsControllerAuditData.verdict.verdict === 'pids_max_historic'
+                    ? "# Historic pids.max hits — find culprits + raise caps\nfor d in $(find /sys/fs/cgroup -name pids.events -type f); do\n  hits=$(awk '/^max /{print $2}' $d)\n  [ -z \"$hits\" ] || [ \"$hits\" = 0 ] && continue\n  echo \"$(dirname $d): hits=$hits\"\ndone\n# Reset counter (just clears events, doesn't change cap) :\nsudo bash -c 'echo > /sys/fs/cgroup/<path>/pids.events'"
+                  : cgroupPidsControllerAuditData.verdict.verdict === 'pids_near_limit'
+                    ? "# Cgroups at > 80% of cap — proactive bump\nfor d in $(find /sys/fs/cgroup -name pids.max -type f); do\n  m=$(cat $d)\n  [ \"$m\" = max ] && continue\n  c=$(cat $(dirname $d)/pids.current)\n  pct=$(( c * 100 / m ))\n  [ $pct -ge 80 ] && echo \"$(dirname $d): $c/$m ($pct%)\"\ndone"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #91.2 dma_buf bufinfo (UI sprint 82) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dmabufbuf.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dmabufbuf.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDmaBufBufinfoAudit}>{i18n.t("integrations.dmabufbuf.refresh")}</button>
+          {#if dmaBufBufinfoAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={dmaBufBufinfoAuditData.verdict.verdict === 'exporter_dominates' ? 'var(--err)' :
+                             dmaBufBufinfoAuditData.verdict.verdict === 'top3_high_footprint' ? 'var(--warn)' :
+                             dmaBufBufinfoAuditData.verdict.verdict === 'dmabuf_footprint_high' ? 'var(--accent)' :
+                             dmaBufBufinfoAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {dmaBufBufinfoAuditData.exporter_count} exporter(s) · {(dmaBufBufinfoAuditData.total_bytes / 2**30).toFixed(2)} GiB · {i18n.t("integrations.dmabufbuf.verdict")} : <b>{dmaBufBufinfoAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if dmaBufBufinfoAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        dmaBufBufinfoAuditData.verdict.verdict === 'exporter_dominates' ? 'var(--err)' :
+                        dmaBufBufinfoAuditData.verdict.verdict === 'top3_high_footprint' ? 'var(--warn)' :
+                        dmaBufBufinfoAuditData.verdict.verdict === 'dmabuf_footprint_high' ? 'var(--accent)' :
+                        dmaBufBufinfoAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{dmaBufBufinfoAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(dmaBufBufinfoAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dmabufbuf.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  dmaBufBufinfoAuditData.verdict.verdict === 'exporter_dominates'
+                    ? "# Single dma-buf exporter dominates RAM — inspect attribution\nsudo cat /sys/kernel/debug/dma_buf/bufinfo | head -50\n# Identify which process owns the FD :\nsudo lsof -nP +c0 | grep -E 'dma_buf|drm'\n# If Firefox/Chromium WebGL : restart the browser ;\n# if Wayland compositor : log out / restart compositor.\n# For deeper attribution :\nsudo cat /sys/kernel/debug/dma_buf/attach_info"
+                  : dmaBufBufinfoAuditData.verdict.verdict === 'top3_high_footprint'
+                    ? "# Top 3 dma-buf exporters dominate — list + investigate\nsudo cat /sys/kernel/debug/dma_buf/bufinfo | \\\n  awk 'NR>1 && /^0x[0-9a-fA-F]+/{print $5}' | \\\n  sort | uniq -c | sort -rn | head"
+                  : dmaBufBufinfoAuditData.verdict.verdict === 'dmabuf_footprint_high'
+                    ? "# Total dma-buf footprint > 10% RAM — informational\nsudo cat /sys/kernel/debug/dma_buf/bufinfo | tail -5"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #91.3 NVMe HMB features (UI sprint 82) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.nvmehmb.title")}</h4>
+        <p class="muted">{i18n.t("integrations.nvmehmb.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNvmeHmbFeaturesAudit}>{i18n.t("integrations.nvmehmb.refresh")}</button>
+          {#if nvmeHmbFeaturesAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_param_disabled_with_use' ? 'var(--err)' :
+                             nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_module_off_with_drives' ? 'var(--warn)' :
+                             nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_oversized' ? 'var(--accent)' :
+                             nvmeHmbFeaturesAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {nvmeHmbFeaturesAuditData.controller_count} ctrl · {nvmeHmbFeaturesAuditData.hmb_using_count} using HMB · {i18n.t("integrations.nvmehmb.verdict")} : <b>{nvmeHmbFeaturesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if nvmeHmbFeaturesAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_param_disabled_with_use' ? 'var(--err)' :
+                        nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_module_off_with_drives' ? 'var(--warn)' :
+                        nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_oversized' ? 'var(--accent)' :
+                        nvmeHmbFeaturesAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{nvmeHmbFeaturesAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(nvmeHmbFeaturesAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.nvmehmb.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_param_disabled_with_use'
+                    ? "# HMB in use but kernel param will kill it on reload\ngrep -H . /sys/class/nvme/nvme*/hmb 2>/dev/null\ncat /sys/module/nvme/parameters/max_host_mem_size_mb\n# Remove the limit (default = unlimited / firmware-decides) :\nsudo sed -i 's/nvme.max_host_mem_size_mb=[^ ]*//' /etc/default/grub\nsudo update-grub\n# Or live :\necho -1 | sudo tee /sys/module/nvme/parameters/max_host_mem_size_mb"
+                  : nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_module_off_with_drives'
+                    ? "# nvme.max_host_mem_size_mb=0 — HMB disabled for all controllers\n# DRAM-less SSDs will operate without their FTL cache (5x slower 4K reads).\n# Inspect cmdline / module conf :\ngrep -E 'max_host_mem_size_mb' /proc/cmdline /etc/modprobe.d/*.conf /etc/default/grub 2>/dev/null\n# Re-enable (set to default unlimited) :\nsudo sed -i 's/nvme.max_host_mem_size_mb=[^ ]*//' /etc/default/grub\nsudo update-grub && sudo reboot"
+                  : nvmeHmbFeaturesAuditData.verdict.verdict === 'hmb_oversized'
+                    ? "# HMB consuming > 64 MiB on a small-RAM box\n# Cap HMB to a smaller value :\necho 32 | sudo tee /sys/module/nvme/parameters/max_host_mem_size_mb\n# Reload nvme to apply :\nsudo modprobe -r nvme && sudo modprobe nvme"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #91.4 vmstat reclaim pressure (UI sprint 82) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vmstatreclaim.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vmstatreclaim.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVmstatReclaimPressureAudit}>{i18n.t("integrations.vmstatreclaim.refresh")}</button>
+          {#if vmstatReclaimPressureAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={vmstatReclaimPressureAuditData.verdict.verdict === 'oom_or_direct_reclaim_heavy' ? 'var(--err)' :
+                             vmstatReclaimPressureAuditData.verdict.verdict === 'compaction_failing' ? 'var(--warn)' :
+                             vmstatReclaimPressureAuditData.verdict.verdict === 'watermarks_loose_big_box' ? 'var(--accent)' :
+                             vmstatReclaimPressureAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              prev={vmstatReclaimPressureAuditData.has_prev_snapshot ? 'yes' : 'no'} · {i18n.t("integrations.vmstatreclaim.verdict")} : <b>{vmstatReclaimPressureAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vmstatReclaimPressureAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        vmstatReclaimPressureAuditData.verdict.verdict === 'oom_or_direct_reclaim_heavy' ? 'var(--err)' :
+                        vmstatReclaimPressureAuditData.verdict.verdict === 'compaction_failing' ? 'var(--warn)' :
+                        vmstatReclaimPressureAuditData.verdict.verdict === 'watermarks_loose_big_box' ? 'var(--accent)' :
+                        vmstatReclaimPressureAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{vmstatReclaimPressureAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(vmstatReclaimPressureAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.vmstatreclaim.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  vmstatReclaimPressureAuditData.verdict.verdict === 'oom_or_direct_reclaim_heavy'
+                    ? "# OOM event OR heavy direct-reclaim — investigate\nsudo dmesg -T | grep -i 'killed process' | tail -5\n# Snapshot current pressure :\ngrep -E '(pgsteal|pgscan|oom_kill)' /proc/vmstat\n# Mitigations :\n#  1. Bump watermarks so kswapd kicks in sooner :\n#     echo 200 | sudo tee /proc/sys/vm/watermark_scale_factor\n#  2. Raise min_free_kbytes (default ~64 MB) :\n#     echo 524288 | sudo tee /proc/sys/vm/min_free_kbytes\n#  3. Find + bound the memory-hungry process (LLM, browser)"
+                  : vmstatReclaimPressureAuditData.verdict.verdict === 'compaction_failing'
+                    ? "# Compaction failing — memory fragmentation, THP collapsing\ngrep -E 'compact_' /proc/vmstat\n# Force a compaction round :\necho 1 | sudo tee /proc/sys/vm/compact_memory\n# Persist friendlier fragmentation threshold :\necho 100 | sudo tee /proc/sys/vm/extfrag_threshold"
+                  : vmstatReclaimPressureAuditData.verdict.verdict === 'watermarks_loose_big_box'
+                    ? "# watermark_scale_factor still default 10 on a big-RAM box\n# Bump for tighter kswapd reaction :\necho 200 | sudo tee /proc/sys/vm/watermark_scale_factor\n# Persist via sysctl :\necho 'vm.watermark_scale_factor = 200' | sudo tee /etc/sysctl.d/99-watermarks.conf\nsudo sysctl --system"
                   : ""
                 }</pre>
               </details>

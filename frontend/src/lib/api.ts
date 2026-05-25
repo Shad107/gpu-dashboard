@@ -5284,4 +5284,38 @@ export const api = {
       dpc_capable_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #91 (UI sprint 82) ──
+  cgroupPidsControllerAuditStatus: () =>
+    fetch("/api/cgroup-pids-controller-audit").then(jsonOf<{
+      ok: boolean;
+      cgroup_with_cap_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  dmaBufBufinfoAuditStatus: () =>
+    fetch("/api/dma-buf-bufinfo-audit").then(jsonOf<{
+      ok: boolean;
+      exporter_count: number;
+      total_bytes: number;
+      mem_total: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  nvmeHmbFeaturesAuditStatus: () =>
+    fetch("/api/nvme-hmb-features-audit").then(jsonOf<{
+      ok: boolean;
+      controller_count: number;
+      hmb_using_count: number;
+      max_host_mem_size_mb: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  vmstatReclaimPressureAuditStatus: () =>
+    fetch("/api/vmstat-reclaim-pressure-audit").then(jsonOf<{
+      ok: boolean;
+      has_prev_snapshot: boolean;
+      watermark_scale_factor: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
