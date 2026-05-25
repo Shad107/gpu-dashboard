@@ -5601,4 +5601,44 @@ export const api = {
       CONFIG_FUTEX_PI: string | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #100 (UI sprint 91) ──
+  workqueuePowerEfficientAuditStatus: () =>
+    fetch("/api/workqueue-power-efficient-audit").then(jsonOf<{
+      ok: boolean;
+      power_efficient: string | null;
+      cpu_intensive_thresh_us: number | null;
+      default_affinity_scope: string | null;
+      cmdline_power_efficient: string | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  bqlStallCountersAuditStatus: () =>
+    fetch("/api/bql-stall-counters-audit").then(jsonOf<{
+      ok: boolean;
+      iface_count: number;
+      queue_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  perfSamplingLimitsAuditStatus: () =>
+    fetch("/api/perf-sampling-limits-audit").then(jsonOf<{
+      ok: boolean;
+      perf_cpu_time_max_percent: number | null;
+      perf_event_max_sample_rate: number | null;
+      perf_event_mlock_kb: number | null;
+      perf_event_max_stack: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  zswapDeepPoolAuditStatus: () =>
+    fetch("/api/zswap-deep-pool-audit").then(jsonOf<{
+      ok: boolean;
+      enabled: string | null;
+      exclusive_loads: string | null;
+      shrinker_enabled: string | null;
+      pool_limit_hit: number | null;
+      reject_compress_poor: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

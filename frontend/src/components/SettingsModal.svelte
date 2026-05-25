@@ -2855,6 +2855,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #100 (UI sprint 91) ───────────────────────────────────────────
+  let workqueuePowerEfficientAuditData    = $state<Awaited<ReturnType<typeof api.workqueuePowerEfficientAuditStatus>>    | null>(null);
+  let bqlStallCountersAuditData           = $state<Awaited<ReturnType<typeof api.bqlStallCountersAuditStatus>>           | null>(null);
+  let perfSamplingLimitsAuditData         = $state<Awaited<ReturnType<typeof api.perfSamplingLimitsAuditStatus>>         | null>(null);
+  let zswapDeepPoolAuditData              = $state<Awaited<ReturnType<typeof api.zswapDeepPoolAuditStatus>>              | null>(null);
+  async function loadWorkqueuePowerEfficientAudit() {
+    try { workqueuePowerEfficientAuditData = await api.workqueuePowerEfficientAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBqlStallCountersAudit() {
+    try { bqlStallCountersAuditData = await api.bqlStallCountersAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPerfSamplingLimitsAudit() {
+    try { perfSamplingLimitsAuditData = await api.perfSamplingLimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadZswapDeepPoolAudit() {
+    try { zswapDeepPoolAuditData = await api.zswapDeepPoolAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3352,6 +3374,11 @@
       if (!splitLockDetectAuditData)            loadSplitLockDetectAudit();
       if (!oomPolicySysctlAuditData)            loadOomPolicySysctlAudit();
       if (!rseqKernelAuditData)                 loadRseqKernelAudit();
+      // R&D #100 cards
+      if (!workqueuePowerEfficientAuditData)    loadWorkqueuePowerEfficientAudit();
+      if (!bqlStallCountersAuditData)           loadBqlStallCountersAudit();
+      if (!perfSamplingLimitsAuditData)         loadPerfSamplingLimitsAudit();
+      if (!zswapDeepPoolAuditData)              loadZswapDeepPoolAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -17930,6 +17957,186 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# Kernel built without CONFIG_RSEQ — switch to a distro kernel that has it\n# Verify current config :\ngrep -E 'CONFIG_RSEQ' /boot/config-$(uname -r) || \\\n  zgrep CONFIG_RSEQ /proc/config.gz\n# Install a stock distro kernel (Ubuntu/Debian) :\nsudo apt install -y linux-image-generic\nsudo update-grub && sudo reboot\n# Or for self-built kernels, set in .config :\nscripts/config -e CONFIG_RSEQ\nmake -j$(nproc) && sudo make modules_install install"
                   : rseqKernelAuditData.verdict.verdict === 'futex_pi_disabled'
                     ? "# CONFIG_FUTEX_PI=n — required for low-latency audio (JACK/PipeWire RT)\n# Verify :\ngrep -E 'CONFIG_FUTEX' /boot/config-$(uname -r) || \\\n  zgrep CONFIG_FUTEX /proc/config.gz\n# Rebuild kernel with :\nscripts/config -e CONFIG_FUTEX_PI\nmake -j$(nproc) && sudo make modules_install install"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #100.1 workqueue power_efficient (UI sprint 91) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.wqpe.title")}</h4>
+        <p class="muted">{i18n.t("integrations.wqpe.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadWorkqueuePowerEfficientAudit}>{i18n.t("integrations.wqpe.refresh")}</button>
+          {#if workqueuePowerEfficientAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={workqueuePowerEfficientAuditData.verdict.verdict === 'wq_power_efficient_forced_on_desktop' ? 'var(--err)' :
+                             workqueuePowerEfficientAuditData.verdict.verdict === 'wq_cpu_intensive_thresh_too_low' ? 'var(--warn)' :
+                             workqueuePowerEfficientAuditData.verdict.verdict === 'wq_power_efficient_runtime_on' ? 'var(--accent)' :
+                             workqueuePowerEfficientAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              pe={workqueuePowerEfficientAuditData.power_efficient ?? '—'} · ci_thrs={workqueuePowerEfficientAuditData.cpu_intensive_thresh_us ?? '—'}µs · {i18n.t("integrations.wqpe.verdict")} : <b>{workqueuePowerEfficientAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if workqueuePowerEfficientAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        workqueuePowerEfficientAuditData.verdict.verdict === 'wq_power_efficient_forced_on_desktop' ? 'var(--err)' :
+                        workqueuePowerEfficientAuditData.verdict.verdict === 'wq_cpu_intensive_thresh_too_low' ? 'var(--warn)' :
+                        workqueuePowerEfficientAuditData.verdict.verdict === 'wq_power_efficient_runtime_on' ? 'var(--accent)' :
+                        workqueuePowerEfficientAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{workqueuePowerEfficientAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(workqueuePowerEfficientAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.wqpe.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  workqueuePowerEfficientAuditData.verdict.verdict === 'wq_power_efficient_forced_on_desktop'
+                    ? "# Remove workqueue.power_efficient=Y from cmdline\nsudo sed -i 's/ workqueue.power_efficient=Y//' /etc/default/grub\nsudo update-grub && sudo reboot\n# Or runtime off (no reboot) :\necho N | sudo tee /sys/module/workqueue/parameters/power_efficient"
+                  : workqueuePowerEfficientAuditData.verdict.verdict === 'wq_cpu_intensive_thresh_too_low'
+                    ? "# Bump cpu_intensive_thresh_us to the kernel default\necho 10000 | sudo tee /sys/module/workqueue/parameters/cpu_intensive_thresh_us\n# Persist via modprobe :\necho 'options workqueue cpu_intensive_thresh_us=10000' | \\\n  sudo tee /etc/modprobe.d/workqueue.conf"
+                  : workqueuePowerEfficientAuditData.verdict.verdict === 'wq_power_efficient_runtime_on'
+                    ? "# Distro set power_efficient=Y at runtime — turn off for desktop class\necho N | sudo tee /sys/module/workqueue/parameters/power_efficient\n# Persist via modprobe :\necho 'options workqueue power_efficient=N' | \\\n  sudo tee /etc/modprobe.d/workqueue.conf\n# Verify :\ncat /sys/module/workqueue/parameters/power_efficient"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #100.2 BQL stall counters (UI sprint 91) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bql.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bql.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBqlStallCountersAudit}>{i18n.t("integrations.bql.refresh")}</button>
+          {#if bqlStallCountersAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={bqlStallCountersAuditData.verdict.verdict === 'bql_stall_max_above_5s' ? 'var(--err)' :
+                             bqlStallCountersAuditData.verdict.verdict === 'bql_stall_cnt_growing' ? 'var(--warn)' :
+                             bqlStallCountersAuditData.verdict.verdict === 'bql_stall_thrs_disabled' ? 'var(--accent)' :
+                             bqlStallCountersAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {bqlStallCountersAuditData.iface_count} iface · {bqlStallCountersAuditData.queue_count} q · {i18n.t("integrations.bql.verdict")} : <b>{bqlStallCountersAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if bqlStallCountersAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        bqlStallCountersAuditData.verdict.verdict === 'bql_stall_max_above_5s' ? 'var(--err)' :
+                        bqlStallCountersAuditData.verdict.verdict === 'bql_stall_cnt_growing' ? 'var(--warn)' :
+                        bqlStallCountersAuditData.verdict.verdict === 'bql_stall_thrs_disabled' ? 'var(--accent)' :
+                        bqlStallCountersAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{bqlStallCountersAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(bqlStallCountersAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.bql.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  bqlStallCountersAuditData.verdict.verdict === 'bql_stall_max_above_5s'
+                    ? "# Find the wedged TX queue + check driver state\nfor q in /sys/class/net/*/queues/tx-*/byte_queue_limits; do\n  m=$(cat $q/stall_max 2>/dev/null)\n  [ \"$m\" -ge 5000 ] && echo \"$q : stall_max=${m}ms\"\ndone\n# Inspect driver-side TX hang :\nsudo ethtool -S <iface> | grep -iE 'tx_(timeout|stall|hang)'\nsudo dmesg | grep -iE 'tx_timeout|TX hang|reset'\n# Bounce the link as last resort :\nsudo ip link set <iface> down && sleep 1 && sudo ip link set <iface> up"
+                  : bqlStallCountersAuditData.verdict.verdict === 'bql_stall_cnt_growing'
+                    ? "# stall_cnt growing on primary NIC — check driver / ring sizes\nfor q in /sys/class/net/*/queues/tx-*/byte_queue_limits/stall_cnt; do\n  c=$(cat $q); [ \"$c\" -gt 0 ] && echo \"$(dirname $q) : cnt=$c\"\ndone\n# Bigger ring buffers can help :\nsudo ethtool -G <iface> tx 4096\n# Or pin TX softirq to a dedicated CPU :\nsudo ethtool -L <iface> combined 4"
+                  : bqlStallCountersAuditData.verdict.verdict === 'bql_stall_thrs_disabled'
+                    ? "# Enable BQL stall detection per queue (default off on many kernels)\nfor q in /sys/class/net/*/queues/tx-*/byte_queue_limits/stall_thrs; do\n  echo 1000 | sudo tee $q   # threshold in ms\ndone\n# Persist via systemd one-shot :\nsudo tee /etc/systemd/system/bql-stall-thrs.service <<'EOF'\n[Unit]\nDescription=Arm BQL stall detection on all TX queues\n[Service]\nType=oneshot\nExecStart=/bin/bash -c 'for q in /sys/class/net/*/queues/tx-*/byte_queue_limits/stall_thrs; do echo 1000 > \"$q\"; done'\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl enable --now bql-stall-thrs.service"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #100.3 perf sampling limits (UI sprint 91) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.perfsample.title")}</h4>
+        <p class="muted">{i18n.t("integrations.perfsample.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPerfSamplingLimitsAudit}>{i18n.t("integrations.perfsample.refresh")}</button>
+          {#if perfSamplingLimitsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={perfSamplingLimitsAuditData.verdict.verdict === 'perf_throttle_25pct_floor_hit' ? 'var(--err)' :
+                             perfSamplingLimitsAuditData.verdict.verdict === 'perf_mlock_kb_starved' ? 'var(--warn)' :
+                             perfSamplingLimitsAuditData.verdict.verdict === 'perf_max_stack_shallow' ? 'var(--accent)' :
+                             perfSamplingLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              cpu={perfSamplingLimitsAuditData.perf_cpu_time_max_percent ?? '—'}% · rate={perfSamplingLimitsAuditData.perf_event_max_sample_rate ?? '—'} · mlock={perfSamplingLimitsAuditData.perf_event_mlock_kb ?? '—'}kB · {i18n.t("integrations.perfsample.verdict")} : <b>{perfSamplingLimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if perfSamplingLimitsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        perfSamplingLimitsAuditData.verdict.verdict === 'perf_throttle_25pct_floor_hit' ? 'var(--err)' :
+                        perfSamplingLimitsAuditData.verdict.verdict === 'perf_mlock_kb_starved' ? 'var(--warn)' :
+                        perfSamplingLimitsAuditData.verdict.verdict === 'perf_max_stack_shallow' ? 'var(--accent)' :
+                        perfSamplingLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{perfSamplingLimitsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(perfSamplingLimitsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.perfsample.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  perfSamplingLimitsAuditData.verdict.verdict === 'perf_throttle_25pct_floor_hit'
+                    ? "# Reset the perf throttle cap + sample rate\necho 50 | sudo tee /proc/sys/kernel/perf_cpu_time_max_percent\necho 100000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate\n# Persist :\nsudo tee /etc/sysctl.d/99-perf-sampling.conf <<'EOF'\nkernel.perf_cpu_time_max_percent = 50\nkernel.perf_event_max_sample_rate = 100000\nEOF\nsudo sysctl --system"
+                  : perfSamplingLimitsAuditData.verdict.verdict === 'perf_mlock_kb_starved'
+                    ? "# Bump mlock budget so non-root perf works\necho 4096 | sudo tee /proc/sys/kernel/perf_event_mlock_kb\n# Persist :\nsudo tee /etc/sysctl.d/99-perf-sampling.conf <<'EOF'\nkernel.perf_event_mlock_kb = 4096\nEOF\nsudo sysctl --system\n# Verify (as user) :\nperf record -e cycles sleep 1"
+                  : perfSamplingLimitsAuditData.verdict.verdict === 'perf_max_stack_shallow'
+                    ? "# Restore default max stack depth for flamegraphs\necho 127 | sudo tee /proc/sys/kernel/perf_event_max_stack\n# Persist :\nsudo tee /etc/sysctl.d/99-perf-sampling.conf <<'EOF'\nkernel.perf_event_max_stack = 127\nEOF\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #100.4 zswap deep pool (UI sprint 91) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.zswapdeep.title")}</h4>
+        <p class="muted">{i18n.t("integrations.zswapdeep.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadZswapDeepPoolAudit}>{i18n.t("integrations.zswapdeep.refresh")}</button>
+          {#if zswapDeepPoolAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={zswapDeepPoolAuditData.verdict.verdict === 'zswap_pool_limit_hit_persistent' ? 'var(--err)' :
+                             zswapDeepPoolAuditData.verdict.verdict === 'zswap_exclusive_loads_off' ? 'var(--warn)' :
+                             zswapDeepPoolAuditData.verdict.verdict === 'zswap_shrinker_disabled' ? 'var(--accent)' :
+                             zswapDeepPoolAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              en={zswapDeepPoolAuditData.enabled ?? '—'} · excl={zswapDeepPoolAuditData.exclusive_loads ?? '—'} · shr={zswapDeepPoolAuditData.shrinker_enabled ?? '—'} · {i18n.t("integrations.zswapdeep.verdict")} : <b>{zswapDeepPoolAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if zswapDeepPoolAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        zswapDeepPoolAuditData.verdict.verdict === 'zswap_pool_limit_hit_persistent' ? 'var(--err)' :
+                        zswapDeepPoolAuditData.verdict.verdict === 'zswap_exclusive_loads_off' ? 'var(--warn)' :
+                        zswapDeepPoolAuditData.verdict.verdict === 'zswap_shrinker_disabled' ? 'var(--accent)' :
+                        zswapDeepPoolAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{zswapDeepPoolAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(zswapDeepPoolAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.zswapdeep.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  zswapDeepPoolAuditData.verdict.verdict === 'zswap_pool_limit_hit_persistent'
+                    ? "# zswap pool is full + rejecting — bump or change compressor\n# Inspect (root) :\nsudo cat /sys/kernel/debug/zswap/pool_total_size\nsudo cat /sys/kernel/debug/zswap/stored_pages\nsudo cat /sys/kernel/debug/zswap/reject_compress_poor\n# Bump max_pool_percent (default 20%) :\necho 30 | sudo tee /sys/module/zswap/parameters/max_pool_percent\n# Or switch compressor :\necho zstd | sudo tee /sys/module/zswap/parameters/compressor"
+                  : zswapDeepPoolAuditData.verdict.verdict === 'zswap_exclusive_loads_off'
+                    ? "# Enable exclusive_loads to drop the duplicate after fault-in\necho Y | sudo tee /sys/module/zswap/parameters/exclusive_loads\n# Persist via modprobe :\necho 'options zswap exclusive_loads=Y' | \\\n  sudo tee /etc/modprobe.d/zswap.conf"
+                  : zswapDeepPoolAuditData.verdict.verdict === 'zswap_shrinker_disabled'
+                    ? "# Enable the zswap shrinker so MM can reclaim pool pages\necho Y | sudo tee /sys/module/zswap/parameters/shrinker_enabled\n# Persist :\necho 'options zswap shrinker_enabled=Y' | \\\n  sudo tee /etc/modprobe.d/zswap.conf"
                   : ""
                 }</pre>
               </details>
