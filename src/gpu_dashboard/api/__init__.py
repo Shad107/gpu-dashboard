@@ -640,3 +640,4 @@ from .acpi_boot_assets_audit import handle_acpi_boot_assets_audit_status  # noqa
 from .acpi_tables_inventory_audit import handle_acpi_tables_inventory_audit_status  # noqa: F401,F811
 from .pci_numa_pinning_audit import handle_pci_numa_pinning_audit_status  # noqa: F401,F811
 from .swap_priority_tiering_audit import handle_swap_priority_tiering_audit_status  # noqa: F401,F811
+from .xfs_log_activity_audit import handle_xfs_log_activity_audit_status  # noqa: F401,F811

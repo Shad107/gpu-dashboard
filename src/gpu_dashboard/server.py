@@ -2437,6 +2437,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_swap_priority_tiering_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/xfs-log-activity-audit":
+                # R&D #110.2 — XFS log activity surface
+                code, body = api.handle_xfs_log_activity_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
