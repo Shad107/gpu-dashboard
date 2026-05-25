@@ -2382,6 +2382,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_sysrq_cad_poweroff_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/vm-dirty-bytes-drift-audit":
+                # R&D #107.3 — dirty_bytes vs ratio silent override
+                code, body = api.handle_vm_dirty_bytes_drift_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
