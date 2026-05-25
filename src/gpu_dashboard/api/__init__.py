@@ -630,3 +630,4 @@ from .cpufreq_setspeed_drift_audit import handle_cpufreq_setspeed_drift_audit_st
 from .vm_numa_policy_audit import handle_vm_numa_policy_audit_status  # noqa: F401,F811
 from .sysrq_cad_poweroff_audit import handle_sysrq_cad_poweroff_audit_status  # noqa: F401,F811
 from .vm_dirty_bytes_drift_audit import handle_vm_dirty_bytes_drift_audit_status  # noqa: F401,F811
+from .numa_balancing_scan_tuning_audit import handle_numa_balancing_scan_tuning_audit_status  # noqa: F401,F811

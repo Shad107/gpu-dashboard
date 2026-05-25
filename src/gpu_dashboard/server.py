@@ -2387,6 +2387,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_vm_dirty_bytes_drift_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/numa-balancing-scan-tuning-audit":
+                # R&D #107.4 — NUMA balancing scan-rate knobs
+                code, body = api.handle_numa_balancing_scan_tuning_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
