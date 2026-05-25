@@ -2332,6 +2332,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ima_measurement_freshness_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/power-async-suspend-audit":
+                # R&D #105.3 — /sys/power suspend behavioural tunables
+                code, body = api.handle_power_async_suspend_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
