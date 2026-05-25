@@ -5491,4 +5491,38 @@ export const api = {
       md_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #97 (UI sprint 88) ──
+  kvmMmuAuditStatus: () =>
+    fetch("/api/kvm-mmu-audit").then(jsonOf<{
+      ok: boolean;
+      kvm_present: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  zfsArcAuditStatus: () =>
+    fetch("/api/zfs-arc-audit").then(jsonOf<{
+      ok: boolean;
+      zfs_loaded: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cgroupDelegateAuditStatus: () =>
+    fetch("/api/cgroup-delegate-audit").then(jsonOf<{
+      ok: boolean;
+      slice_count: number;
+      delegate_present: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  pciD3coldRuntimeAuditStatus: () =>
+    fetch("/api/pci-d3cold-runtime-audit").then(jsonOf<{
+      ok: boolean;
+      gpu_addr: string | null;
+      gpu_d3cold_allowed?: number | null;
+      gpu_control?: string | null;
+      gpu_runtime_status?: string | null;
+      upstream_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

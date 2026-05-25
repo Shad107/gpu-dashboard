@@ -2789,6 +2789,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #97 (UI sprint 88) ────────────────────────────────────────────
+  let kvmMmuAuditData                     = $state<Awaited<ReturnType<typeof api.kvmMmuAuditStatus>>                     | null>(null);
+  let zfsArcAuditData                     = $state<Awaited<ReturnType<typeof api.zfsArcAuditStatus>>                     | null>(null);
+  let cgroupDelegateAuditData             = $state<Awaited<ReturnType<typeof api.cgroupDelegateAuditStatus>>             | null>(null);
+  let pciD3coldRuntimeAuditData           = $state<Awaited<ReturnType<typeof api.pciD3coldRuntimeAuditStatus>>           | null>(null);
+  async function loadKvmMmuAudit() {
+    try { kvmMmuAuditData = await api.kvmMmuAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadZfsArcAudit() {
+    try { zfsArcAuditData = await api.zfsArcAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCgroupDelegateAudit() {
+    try { cgroupDelegateAuditData = await api.cgroupDelegateAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPciD3coldRuntimeAudit() {
+    try { pciD3coldRuntimeAuditData = await api.pciD3coldRuntimeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3271,6 +3293,11 @@
       if (!cpusetV2PartitionAuditData)          loadCpusetV2PartitionAudit();
       if (!tracingInstancesAuditData)           loadTracingInstancesAudit();
       if (!blockHoldersStackAuditData)          loadBlockHoldersStackAudit();
+      // R&D #97 cards
+      if (!kvmMmuAuditData)                     loadKvmMmuAudit();
+      if (!zfsArcAuditData)                     loadZfsArcAudit();
+      if (!cgroupDelegateAuditData)             loadCgroupDelegateAudit();
+      if (!pciD3coldRuntimeAuditData)           loadPciD3coldRuntimeAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -17311,6 +17338,192 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# md degraded with no active resync — inspect + kick\ncat /proc/mdstat\nfor d in /sys/block/md*/md; do\n  [ \"$(cat $d/degraded 2>/dev/null)\" -gt 0 ] && \\\n    echo \"$(dirname $d): degraded=$(cat $d/degraded) sync_action=$(cat $d/sync_action)\"\ndone\n# Add a spare :\nsudo mdadm --add /dev/md0 /dev/sdX\n# Or trigger a repair pass :\necho repair | sudo tee /sys/block/md0/md/sync_action"
                   : blockHoldersStackAuditData.verdict.verdict === 'orphan_dm_device'
                     ? "# Orphan dm device — list + remove\nsudo dmsetup ls\n# Inspect each suspect (no holders, not mounted) :\nfor d in /sys/block/dm-*; do\n  name=$(cat $d/dm/name)\n  holders=$(ls $d/holders 2>/dev/null | wc -l)\n  [ $holders = 0 ] && echo \"$name (no holders)\"\ndone\n# Remove confirmed orphans :\nsudo dmsetup remove <name>"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #97.1 KVM MMU / NX-huge / EPT/NPT (UI sprint 88) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kvmmmu.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kvmmmu.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKvmMmuAudit}>{i18n.t("integrations.kvmmmu.refresh")}</button>
+          {#if kvmMmuAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={kvmMmuAuditData.verdict.verdict === 'nx_huge_pages_disabled' ? 'var(--err)' :
+                             (kvmMmuAuditData.verdict.verdict === 'ept_npt_off' || kvmMmuAuditData.verdict.verdict === 'tdp_mmu_off') ? 'var(--warn)' :
+                             kvmMmuAuditData.verdict.verdict === 'recovery_ratio_zero' ? 'var(--accent)' :
+                             kvmMmuAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              kvm {kvmMmuAuditData.kvm_present ? 'on' : 'off'} · {i18n.t("integrations.kvmmmu.verdict")} : <b>{kvmMmuAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kvmMmuAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        kvmMmuAuditData.verdict.verdict === 'nx_huge_pages_disabled' ? 'var(--err)' :
+                        (kvmMmuAuditData.verdict.verdict === 'ept_npt_off' || kvmMmuAuditData.verdict.verdict === 'tdp_mmu_off') ? 'var(--warn)' :
+                        kvmMmuAuditData.verdict.verdict === 'recovery_ratio_zero' ? 'var(--accent)' :
+                        kvmMmuAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{kvmMmuAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(kvmMmuAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.kvmmmu.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  kvmMmuAuditData.verdict.verdict === 'nx_huge_pages_disabled'
+                    ? "# Re-enable iTLB-multihit mitigation (kvm.nx_huge_pages)\n# Persist via modprobe :\necho 'options kvm nx_huge_pages=Y' | sudo tee /etc/modprobe.d/kvm.conf\n# Or set at runtime (requires no running VMs) :\nsudo rmmod kvm_intel kvm 2>/dev/null   # or kvm_amd kvm\nsudo modprobe kvm nx_huge_pages=Y\nsudo modprobe kvm_intel   # or kvm_amd\n# Verify :\ncat /sys/module/kvm/parameters/nx_huge_pages   # → Y"
+                  : kvmMmuAuditData.verdict.verdict === 'ept_npt_off'
+                    ? "# Hardware-assisted MMU disabled — turn on EPT (Intel) or NPT (AMD)\n# Persist via modprobe :\necho 'options kvm_intel ept=1' | sudo tee /etc/modprobe.d/kvm_intel.conf\n#   or for AMD :\necho 'options kvm_amd npt=1' | sudo tee /etc/modprobe.d/kvm_amd.conf\n# Reload (no running VMs) :\nsudo rmmod kvm_intel && sudo modprobe kvm_intel   # or kvm_amd\ncat /sys/module/kvm_intel/parameters/ept   # → Y"
+                  : kvmMmuAuditData.verdict.verdict === 'tdp_mmu_off'
+                    ? "# Two-Dimensional Paging MMU disabled — slower shadow paging\n# Persist :\necho 'options kvm tdp_mmu=Y' | sudo tee -a /etc/modprobe.d/kvm.conf\n# Reload kvm with no running VMs :\nsudo rmmod kvm_intel kvm 2>/dev/null   # or kvm_amd kvm\nsudo modprobe kvm tdp_mmu=Y\nsudo modprobe kvm_intel              # or kvm_amd\ncat /sys/module/kvm/parameters/tdp_mmu   # → Y"
+                  : kvmMmuAuditData.verdict.verdict === 'recovery_ratio_zero'
+                    ? "# nx_huge_pages_recovery_ratio=0 — recovered pages never re-collapsed\n# Re-enable periodic recovery (default 60) :\necho 60 | sudo tee /sys/module/kvm/parameters/nx_huge_pages_recovery_ratio\n# Persist :\necho 'options kvm nx_huge_pages_recovery_ratio=60' | \\\n  sudo tee -a /etc/modprobe.d/kvm.conf"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #97.2 ZFS ARC tuning (UI sprint 88) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.zfsarc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.zfsarc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadZfsArcAudit}>{i18n.t("integrations.zfsarc.refresh")}</button>
+          {#if zfsArcAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={zfsArcAuditData.verdict.verdict === 'arc_unbounded' ? 'var(--err)' :
+                             zfsArcAuditData.verdict.verdict === 'arc_eating_ram' ? 'var(--warn)' :
+                             zfsArcAuditData.verdict.verdict === 'arc_meta_pressure' ? 'var(--accent)' :
+                             zfsArcAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              zfs {zfsArcAuditData.zfs_loaded ? 'loaded' : 'absent'} · {i18n.t("integrations.zfsarc.verdict")} : <b>{zfsArcAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if zfsArcAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        zfsArcAuditData.verdict.verdict === 'arc_unbounded' ? 'var(--err)' :
+                        zfsArcAuditData.verdict.verdict === 'arc_eating_ram' ? 'var(--warn)' :
+                        zfsArcAuditData.verdict.verdict === 'arc_meta_pressure' ? 'var(--accent)' :
+                        zfsArcAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{zfsArcAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(zfsArcAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.zfsarc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  zfsArcAuditData.verdict.verdict === 'arc_unbounded'
+                    ? "# Bound the ARC to a sane fraction of RAM (e.g. 25%)\nTOTAL_KB=$(awk '/MemTotal/{print $2}' /proc/meminfo)\nARC_MAX=$(( TOTAL_KB * 1024 / 4 ))\necho \"options zfs zfs_arc_max=${ARC_MAX}\" | sudo tee /etc/modprobe.d/zfs.conf\n# Apply now :\necho $ARC_MAX | sudo tee /sys/module/zfs/parameters/zfs_arc_max\n# Verify :\ncat /sys/module/zfs/parameters/zfs_arc_max"
+                  : zfsArcAuditData.verdict.verdict === 'arc_eating_ram'
+                    ? "# ARC has consumed >50% of RAM — trim arc_max\n# See current footprint :\nawk '/^size|^c_max/' /proc/spl/kstat/zfs/arcstats\nfree -h\n# Drop arc_max to 25% of RAM (online) :\nTOTAL_KB=$(awk '/MemTotal/{print $2}' /proc/meminfo)\nARC_MAX=$(( TOTAL_KB * 1024 / 4 ))\necho $ARC_MAX | sudo tee /sys/module/zfs/parameters/zfs_arc_max\n# Force reclaim :\necho 3 | sudo tee /proc/sys/vm/drop_caches"
+                  : zfsArcAuditData.verdict.verdict === 'arc_meta_pressure'
+                    ? "# Metadata >75% of ARC — workload churns inode/dnode\n# See breakdown :\nawk '/^arc_meta_used|^arc_meta_limit/' /proc/spl/kstat/zfs/arcstats\n# Raise meta_limit (default 75% of c_max). For 90% :\nC_MAX=$(cat /sys/module/zfs/parameters/zfs_arc_max)\nNEW=$(( C_MAX * 9 / 10 ))\necho $NEW | sudo tee /sys/module/zfs/parameters/zfs_arc_meta_limit\n# Or raise the overall ARC limit to compensate."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #97.3 cgroup slice delegation (UI sprint 88) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cgdelegate.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cgdelegate.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupDelegateAudit}>{i18n.t("integrations.cgdelegate.refresh")}</button>
+          {#if cgroupDelegateAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cgroupDelegateAuditData.verdict.verdict === 'frozen_descendant' ? 'var(--err)' :
+                             cgroupDelegateAuditData.verdict.verdict === 'populated_but_no_procs' ? 'var(--warn)' :
+                             (cgroupDelegateAuditData.verdict.verdict === 'subtree_missing_io' || cgroupDelegateAuditData.verdict.verdict === 'delegate_file_missing') ? 'var(--accent)' :
+                             cgroupDelegateAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cgroupDelegateAuditData.slice_count} slice(s) · {i18n.t("integrations.cgdelegate.verdict")} : <b>{cgroupDelegateAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupDelegateAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cgroupDelegateAuditData.verdict.verdict === 'frozen_descendant' ? 'var(--err)' :
+                        cgroupDelegateAuditData.verdict.verdict === 'populated_but_no_procs' ? 'var(--warn)' :
+                        (cgroupDelegateAuditData.verdict.verdict === 'subtree_missing_io' || cgroupDelegateAuditData.verdict.verdict === 'delegate_file_missing') ? 'var(--accent)' :
+                        cgroupDelegateAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cgroupDelegateAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(cgroupDelegateAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cgdelegate.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cgroupDelegateAuditData.verdict.verdict === 'frozen_descendant'
+                    ? "# Find and unfreeze frozen cgroups\nfor f in $(find /sys/fs/cgroup -name cgroup.freeze 2>/dev/null); do\n  [ \"$(cat $f 2>/dev/null)\" = 1 ] && echo \"$(dirname $f) is FROZEN\"\ndone\n# Unfreeze a specific slice :\necho 0 | sudo tee /sys/fs/cgroup/<path>/cgroup.freeze\n# Or unfreeze everything (last resort) :\nfor f in $(find /sys/fs/cgroup -name cgroup.freeze); do\n  [ \"$(cat $f 2>/dev/null)\" = 1 ] && echo 0 | sudo tee $f\ndone"
+                  : cgroupDelegateAuditData.verdict.verdict === 'populated_but_no_procs'
+                    ? "# Zombie cgroups: populated=1 but cgroup.procs empty\nfor d in $(find /sys/fs/cgroup -name cgroup.events); do\n  cg=$(dirname $d); pop=$(awk '/^populated/{print $2}' $d 2>/dev/null)\n  procs=$(wc -l < $cg/cgroup.procs 2>/dev/null)\n  child=$(find $cg -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)\n  [ \"$pop\" = 1 ] && [ \"$procs\" = 0 ] && [ \"$child\" = 0 ] && \\\n    echo \"ZOMBIE: $cg\"\ndone\n# Race or leak — retry rmdir on offending paths :\nsudo rmdir /sys/fs/cgroup/<zombie path>"
+                  : cgroupDelegateAuditData.verdict.verdict === 'subtree_missing_io'
+                    ? "# Slice subtree_control lacks io controller\n# Inspect :\ncat /sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.subtree_control\n# Enable io (root) :\necho '+io' | sudo tee /sys/fs/cgroup/system.slice/cgroup.subtree_control\necho '+io' | sudo tee /sys/fs/cgroup/user.slice/cgroup.subtree_control\n# Persist via systemd drop-in :\nsudo systemctl edit user-$(id -u).slice <<'EOF'\n[Slice]\nIOAccounting=yes\nEOF"
+                  : cgroupDelegateAuditData.verdict.verdict === 'delegate_file_missing'
+                    ? "# /sys/kernel/cgroup/delegate absent — pre-v5.13 kernel\n# Rootless delegation needs explicit chown :\nsudo chown -R $(id -u):$(id -g) /sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/\n# Or upgrade to a kernel ≥ 5.13."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #97.4 PCI D3cold runtime PM (UI sprint 88) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.d3cold.title")}</h4>
+        <p class="muted">{i18n.t("integrations.d3cold.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPciD3coldRuntimeAudit}>{i18n.t("integrations.d3cold.refresh")}</button>
+          {#if pciD3coldRuntimeAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pciD3coldRuntimeAuditData.verdict.verdict === 'gpu_d3cold_blocked_by_upstream' ? 'var(--err)' :
+                             pciD3coldRuntimeAuditData.verdict.verdict === 'runtime_pm_disabled_on_gpu' ? 'var(--warn)' :
+                             (pciD3coldRuntimeAuditData.verdict.verdict === 'autosuspend_delay_unset' || pciD3coldRuntimeAuditData.verdict.verdict === 'suspended_active_ratio_low') ? 'var(--accent)' :
+                             pciD3coldRuntimeAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {pciD3coldRuntimeAuditData.gpu_addr ?? '—'} + {pciD3coldRuntimeAuditData.upstream_count} upstream · {i18n.t("integrations.d3cold.verdict")} : <b>{pciD3coldRuntimeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pciD3coldRuntimeAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pciD3coldRuntimeAuditData.verdict.verdict === 'gpu_d3cold_blocked_by_upstream' ? 'var(--err)' :
+                        pciD3coldRuntimeAuditData.verdict.verdict === 'runtime_pm_disabled_on_gpu' ? 'var(--warn)' :
+                        (pciD3coldRuntimeAuditData.verdict.verdict === 'autosuspend_delay_unset' || pciD3coldRuntimeAuditData.verdict.verdict === 'suspended_active_ratio_low') ? 'var(--accent)' :
+                        pciD3coldRuntimeAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pciD3coldRuntimeAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(pciD3coldRuntimeAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.d3cold.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  pciD3coldRuntimeAuditData.verdict.verdict === 'gpu_d3cold_blocked_by_upstream'
+                    ? "# Upstream PCIe bridge blocks D3cold cascade — unblock it\n# Find the GPU + upstream chain :\nGPU=$(basename $(readlink -f /sys/class/drm/card0/device))\nPARENT=$(basename $(dirname $(readlink -f /sys/class/drm/card0/device)))\necho \"gpu=$GPU parent=$PARENT\"\n# Inspect upstream knobs :\ncat /sys/bus/pci/devices/$PARENT/d3cold_allowed\ncat /sys/bus/pci/devices/$PARENT/power/control\n# Unblock the chain (root) :\necho 1 | sudo tee /sys/bus/pci/devices/$PARENT/d3cold_allowed\necho auto | sudo tee /sys/bus/pci/devices/$PARENT/power/control\n# Re-check the GPU enters D3cold at idle :\nwatch -n 2 \"cat /sys/bus/pci/devices/$GPU/power/runtime_status\""
+                  : pciD3coldRuntimeAuditData.verdict.verdict === 'runtime_pm_disabled_on_gpu'
+                    ? "# Runtime PM pinned on GPU — re-enable auto-suspend\nGPU=$(basename $(readlink -f /sys/class/drm/card0/device))\necho auto | sudo tee /sys/bus/pci/devices/$GPU/power/control\n# If the NVIDIA driver flips it back, check persistence-mode :\nnvidia-smi -pm 0           # disable persistence\n# Or set autosuspend_delay_ms first :\necho 5000 | sudo tee /sys/bus/pci/devices/$GPU/power/autosuspend_delay_ms"
+                  : pciD3coldRuntimeAuditData.verdict.verdict === 'autosuspend_delay_unset'
+                    ? "# autosuspend_delay_ms unset — driver may not wire runtime PM\nGPU=$(basename $(readlink -f /sys/class/drm/card0/device))\nls /sys/bus/pci/devices/$GPU/power/\n# Try forcing a sane default (5s) :\necho 5000 | sudo tee /sys/bus/pci/devices/$GPU/power/autosuspend_delay_ms\n# If still IO error, check NVIDIA runpm config :\ncat /sys/module/nvidia/parameters/NVreg_DynamicPowerManagement"
+                  : pciD3coldRuntimeAuditData.verdict.verdict === 'suspended_active_ratio_low'
+                    ? "# GPU rarely auto-suspends — find what holds it awake\nGPU=$(basename $(readlink -f /sys/class/drm/card0/device))\ncat /sys/bus/pci/devices/$GPU/power/{runtime_status,runtime_suspended_time,runtime_active_time}\n# Common culprits :\nsudo systemctl status nvidia-persistenced 2>/dev/null\nfuser -v /dev/nvidia* 2>/dev/null\n# Stop persistenced if not needed :\nsudo systemctl stop nvidia-persistenced\n# Disable nvidia-powerd if it's polling :\nsudo systemctl stop nvidia-powerd"
                   : ""
                 }</pre>
               </details>
