@@ -624,3 +624,4 @@ from .vm_compaction_proactive_audit import handle_vm_compaction_proactive_audit_
 from .ima_digest_lists_audit import handle_ima_digest_lists_audit_status  # noqa: F401,F811
 from .drm_gt_load_status_audit import handle_drm_gt_load_status_audit_status  # noqa: F401,F811
 from .io_delay_type_audit import handle_io_delay_type_audit_status  # noqa: F401,F811
+from .printk_pacing_audit import handle_printk_pacing_audit_status  # noqa: F401,F811
