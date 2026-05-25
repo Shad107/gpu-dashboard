@@ -634,3 +634,4 @@ from .numa_balancing_scan_tuning_audit import handle_numa_balancing_scan_tuning_
 from .nvidia_drm_params_audit import handle_nvidia_drm_params_audit_status  # noqa: F401,F811
 from .overlay_module_params_audit import handle_overlay_module_params_audit_status  # noqa: F401,F811
 from .dm_mod_params_audit import handle_dm_mod_params_audit_status  # noqa: F401,F811
+from .cgroup_tree_limits_audit import handle_cgroup_tree_limits_audit_status  # noqa: F401,F811
