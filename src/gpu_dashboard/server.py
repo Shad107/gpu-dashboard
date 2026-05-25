@@ -2342,6 +2342,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_vm_compaction_proactive_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ima-digest-lists-audit":
+                # R&D #105.1 — IMA digest-list provisioning posture
+                code, body = api.handle_ima_digest_lists_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

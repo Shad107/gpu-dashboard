@@ -621,3 +621,4 @@ from .firmware_loader_policy_audit import handle_firmware_loader_policy_audit_st
 from .ima_measurement_freshness_audit import handle_ima_measurement_freshness_audit_status  # noqa: F401,F811
 from .power_async_suspend_audit import handle_power_async_suspend_audit_status  # noqa: F401,F811
 from .vm_compaction_proactive_audit import handle_vm_compaction_proactive_audit_status  # noqa: F401,F811
+from .ima_digest_lists_audit import handle_ima_digest_lists_audit_status  # noqa: F401,F811
