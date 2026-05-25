@@ -2899,6 +2899,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #102 (UI sprint 93) ───────────────────────────────────────────
+  let intelUncoreFreqAuditData            = $state<Awaited<ReturnType<typeof api.intelUncoreFreqAuditStatus>>            | null>(null);
+  let modprobeBlacklistDriftAuditData     = $state<Awaited<ReturnType<typeof api.modprobeBlacklistDriftAuditStatus>>     | null>(null);
+  let moduleSigEnforceAuditData           = $state<Awaited<ReturnType<typeof api.moduleSigEnforceAuditStatus>>           | null>(null);
+  let bpfJitHardenAuditData               = $state<Awaited<ReturnType<typeof api.bpfJitHardenAuditStatus>>               | null>(null);
+  async function loadIntelUncoreFreqAudit() {
+    try { intelUncoreFreqAuditData = await api.intelUncoreFreqAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadModprobeBlacklistDriftAudit() {
+    try { modprobeBlacklistDriftAuditData = await api.modprobeBlacklistDriftAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadModuleSigEnforceAudit() {
+    try { moduleSigEnforceAuditData = await api.moduleSigEnforceAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBpfJitHardenAudit() {
+    try { bpfJitHardenAuditData = await api.bpfJitHardenAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3406,6 +3428,11 @@
       if (!netQdiscDefaultAuditData)            loadNetQdiscDefaultAudit();
       if (!fscacheCachefilesAuditData)          loadFscacheCachefilesAudit();
       if (!ksmAdvisorAuditData)                 loadKsmAdvisorAudit();
+      // R&D #102 cards
+      if (!intelUncoreFreqAuditData)            loadIntelUncoreFreqAudit();
+      if (!modprobeBlacklistDriftAuditData)     loadModprobeBlacklistDriftAudit();
+      if (!moduleSigEnforceAuditData)           loadModuleSigEnforceAudit();
+      if (!bpfJitHardenAuditData)               loadBpfJitHardenAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -18338,6 +18365,178 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# Enable smart_scan to skip non-mergeable pages\necho 1 | sudo tee /sys/kernel/mm/ksm/smart_scan\n# Verify :\ncat /sys/kernel/mm/ksm/smart_scan"
                   : ksmAdvisorAuditData.verdict.verdict === 'ksm_target_too_aggressive'
                     ? "# Bump target_scan_time to reduce idle CPU burn\necho 200 | sudo tee /sys/kernel/mm/ksm/advisor_target_scan_time\n# Verify :\ncat /sys/kernel/mm/ksm/advisor_target_scan_time"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #102.1 Intel uncore freq (UI sprint 93) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.uncore.title")}</h4>
+        <p class="muted">{i18n.t("integrations.uncore.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIntelUncoreFreqAudit}>{i18n.t("integrations.uncore.refresh")}</button>
+          {#if intelUncoreFreqAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={intelUncoreFreqAuditData.verdict.verdict === 'uncore_max_clamped_hard' ? 'var(--err)' :
+                             intelUncoreFreqAuditData.verdict.verdict === 'uncore_stuck_at_min' ? 'var(--warn)' :
+                             intelUncoreFreqAuditData.verdict.verdict === 'uncore_max_clamped_soft' ? 'var(--accent)' :
+                             intelUncoreFreqAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {intelUncoreFreqAuditData.die_count} die · {i18n.t("integrations.uncore.verdict")} : <b>{intelUncoreFreqAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if intelUncoreFreqAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        intelUncoreFreqAuditData.verdict.verdict === 'uncore_max_clamped_hard' ? 'var(--err)' :
+                        intelUncoreFreqAuditData.verdict.verdict === 'uncore_stuck_at_min' ? 'var(--warn)' :
+                        intelUncoreFreqAuditData.verdict.verdict === 'uncore_max_clamped_soft' ? 'var(--accent)' :
+                        intelUncoreFreqAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{intelUncoreFreqAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(intelUncoreFreqAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.uncore.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  intelUncoreFreqAuditData.verdict.verdict === 'uncore_max_clamped_hard'
+                    ? "# Inspect per-die uncore caps\nfor d in /sys/devices/system/cpu/intel_uncore_frequency/package_*; do\n  echo \"$d :\"; cat $d/*_freq_khz\ndone\n# Restore to silicon max (root) :\nfor d in /sys/devices/system/cpu/intel_uncore_frequency/package_*; do\n  init=$(cat $d/initial_max_freq_khz)\n  echo $init | sudo tee $d/max_freq_khz\ndone\n# Persist via systemd unit (see kernel docs)"
+                  : intelUncoreFreqAuditData.verdict.verdict === 'uncore_stuck_at_min'
+                    ? "# Force higher min_freq so uncore doesn't park at floor :\nfor d in /sys/devices/system/cpu/intel_uncore_frequency/package_*; do\n  init=$(cat $d/initial_max_freq_khz)\n  half=$((init/2))\n  echo $half | sudo tee $d/min_freq_khz\ndone\n# Or check intel-undervolt / firmware governance — BIOS may clamp."
+                  : intelUncoreFreqAuditData.verdict.verdict === 'uncore_max_clamped_soft'
+                    ? "# Mild soft clamp — restore max to silicon ceiling :\nfor d in /sys/devices/system/cpu/intel_uncore_frequency/package_*; do\n  init=$(cat $d/initial_max_freq_khz)\n  echo $init | sudo tee $d/max_freq_khz\ndone"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #102.2 modprobe blacklist drift (UI sprint 93) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.modprobedrift.title")}</h4>
+        <p class="muted">{i18n.t("integrations.modprobedrift.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadModprobeBlacklistDriftAudit}>{i18n.t("integrations.modprobedrift.refresh")}</button>
+          {#if modprobeBlacklistDriftAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={modprobeBlacklistDriftAuditData.verdict.verdict === 'blacklist_drift' ? 'var(--err)' :
+                             modprobeBlacklistDriftAuditData.verdict.verdict === 'install_noop_drift' ? 'var(--warn)' :
+                             modprobeBlacklistDriftAuditData.verdict.verdict === 'no_blacklist_files' ? 'var(--accent)' :
+                             modprobeBlacklistDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {modprobeBlacklistDriftAuditData.conf_file_count} conf · {modprobeBlacklistDriftAuditData.blacklist_count} bl · {i18n.t("integrations.modprobedrift.verdict")} : <b>{modprobeBlacklistDriftAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if modprobeBlacklistDriftAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        modprobeBlacklistDriftAuditData.verdict.verdict === 'blacklist_drift' ? 'var(--err)' :
+                        modprobeBlacklistDriftAuditData.verdict.verdict === 'install_noop_drift' ? 'var(--warn)' :
+                        modprobeBlacklistDriftAuditData.verdict.verdict === 'no_blacklist_files' ? 'var(--accent)' :
+                        modprobeBlacklistDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{modprobeBlacklistDriftAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(modprobeBlacklistDriftAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.modprobedrift.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  modprobeBlacklistDriftAuditData.verdict.verdict === 'blacklist_drift'
+                    ? "# Find which modules are blacklisted but loaded\nfor mod in $(awk '{print $1}' /proc/modules); do\n  if grep -rh \"^blacklist $mod\\$\" /etc/modprobe.d/ /lib/modprobe.d/ 2>/dev/null | head -1; then\n    echo \"  → currently loaded\"\n  fi\ndone\n# Rebuild initramfs so blacklists are applied at boot :\nsudo update-initramfs -u    # Debian/Ubuntu\nsudo dracut -f              # Fedora/RHEL/openSUSE\n# Then reboot."
+                  : modprobeBlacklistDriftAuditData.verdict.verdict === 'install_noop_drift'
+                    ? "# 'install <mod> /bin/true' shadowed — find the load path\nfor mod in $(awk '{print $1}' /proc/modules); do\n  grep -rh \"^install $mod /bin/true\" /etc/modprobe.d/ /lib/modprobe.d/ 2>/dev/null | head -1\ndone\n# Check what loaded it (lsmod -d, modinfo, journalctl)\nsudo journalctl -k | grep -iE 'modprobe|insmod' | tail\n# Force a blacklist of the actual module name + rebuild initramfs"
+                  : modprobeBlacklistDriftAuditData.verdict.verdict === 'no_blacklist_files'
+                    ? "# No modprobe.d files at all — restore distro defaults\nsudo apt install --reinstall initramfs-tools     # Debian/Ubuntu\n# Or check that /etc/modprobe.d and /lib/modprobe.d aren't mounted-over."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #102.3 module sig_enforce (UI sprint 93) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sigenforce.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sigenforce.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadModuleSigEnforceAudit}>{i18n.t("integrations.sigenforce.refresh")}</button>
+          {#if moduleSigEnforceAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={moduleSigEnforceAuditData.verdict.verdict === 'sb_on_sig_enforce_off' ? 'var(--err)' :
+                             moduleSigEnforceAuditData.verdict.verdict === 'sig_enforce_off_lockdown_none' ? 'var(--warn)' :
+                             moduleSigEnforceAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              sig={moduleSigEnforceAuditData.sig_enforce ?? '—'} · lockdown={moduleSigEnforceAuditData.lockdown ?? '—'} · SB={moduleSigEnforceAuditData.secure_boot ?? '—'} · {i18n.t("integrations.sigenforce.verdict")} : <b>{moduleSigEnforceAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if moduleSigEnforceAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        moduleSigEnforceAuditData.verdict.verdict === 'sb_on_sig_enforce_off' ? 'var(--err)' :
+                        moduleSigEnforceAuditData.verdict.verdict === 'sig_enforce_off_lockdown_none' ? 'var(--warn)' :
+                        moduleSigEnforceAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{moduleSigEnforceAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(moduleSigEnforceAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sigenforce.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  moduleSigEnforceAuditData.verdict.verdict === 'sb_on_sig_enforce_off'
+                    ? "# Secure Boot + sig_enforce=N — fix one or the other\n# Option A: enable sig_enforce (boot arg) :\nsudo sed -i 's/\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 module.sig_enforce=1\"/' \\\\\n  /etc/default/grub\nsudo update-grub && sudo reboot\n# Option B: import MOK for unsigned modules (DKMS workflow) :\nsudo mokutil --import /var/lib/shim-signed/mok/MOK.der\n# Reboot, complete MOK enrollment in firmware, then verify\nmokutil --list-enrolled"
+                  : moduleSigEnforceAuditData.verdict.verdict === 'sig_enforce_off_lockdown_none'
+                    ? "# Add a kernel-side defence layer\n# Option A: lockdown integrity (lighter) via cmdline :\nsudo sed -i 's/\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 lockdown=integrity\"/' \\\\\n  /etc/default/grub\nsudo update-grub && sudo reboot\n# Option B: full sig_enforce :\nsudo sed -i 's/\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 module.sig_enforce=1\"/' \\\\\n  /etc/default/grub\nsudo update-grub && sudo reboot"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #102.4 BPF JIT harden (UI sprint 93) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.bpfharden.title")}</h4>
+        <p class="muted">{i18n.t("integrations.bpfharden.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBpfJitHardenAudit}>{i18n.t("integrations.bpfharden.refresh")}</button>
+          {#if bpfJitHardenAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={bpfJitHardenAuditData.verdict.verdict === 'bpf_jit_unhardened_unpriv' ? 'var(--warn)' :
+                             bpfJitHardenAuditData.verdict.verdict === 'bpf_jit_kallsyms_leak' ? 'var(--accent)' :
+                             bpfJitHardenAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              harden={bpfJitHardenAuditData.bpf_jit_harden ?? '—'} · kallsyms={bpfJitHardenAuditData.bpf_jit_kallsyms ?? '—'} · unpriv={bpfJitHardenAuditData.unprivileged_bpf_disabled ?? '—'} · {i18n.t("integrations.bpfharden.verdict")} : <b>{bpfJitHardenAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if bpfJitHardenAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        bpfJitHardenAuditData.verdict.verdict === 'bpf_jit_unhardened_unpriv' ? 'var(--warn)' :
+                        bpfJitHardenAuditData.verdict.verdict === 'bpf_jit_kallsyms_leak' ? 'var(--accent)' :
+                        bpfJitHardenAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{bpfJitHardenAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(bpfJitHardenAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.bpfharden.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  bpfJitHardenAuditData.verdict.verdict === 'bpf_jit_unhardened_unpriv'
+                    ? "# Harden the BPF JIT for unprivileged users\necho 2 | sudo tee /proc/sys/net/core/bpf_jit_harden\n# Persist :\nsudo tee /etc/sysctl.d/99-bpf-harden.conf <<'EOF'\nnet.core.bpf_jit_harden = 2\nEOF\nsudo sysctl --system"
+                  : bpfJitHardenAuditData.verdict.verdict === 'bpf_jit_kallsyms_leak'
+                    ? "# Hide JIT symbols from /proc/kallsyms (KASLR-friendly)\necho 0 | sudo tee /proc/sys/net/core/bpf_jit_kallsyms\nsudo tee /etc/sysctl.d/99-bpf-harden.conf <<'EOF'\nnet.core.bpf_jit_kallsyms = 0\nEOF\nsudo sysctl --system"
                   : ""
                 }</pre>
               </details>

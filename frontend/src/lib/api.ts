@@ -5681,4 +5681,47 @@ export const api = {
       advisor_target_scan_time: number | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #102 (UI sprint 93) ──
+  intelUncoreFreqAuditStatus: () =>
+    fetch("/api/intel-uncore-freq-audit").then(jsonOf<{
+      ok: boolean;
+      die_count: number;
+      dies: Array<{
+        name: string;
+        min_freq_khz: number | null;
+        max_freq_khz: number | null;
+        current_freq_khz: number | null;
+        initial_max_freq_khz: number | null;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  modprobeBlacklistDriftAuditStatus: () =>
+    fetch("/api/modprobe-blacklist-drift-audit").then(jsonOf<{
+      ok: boolean;
+      conf_file_count: number;
+      blacklist_count: number;
+      install_noop_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  moduleSigEnforceAuditStatus: () =>
+    fetch("/api/module-sig-enforce-audit").then(jsonOf<{
+      ok: boolean;
+      sig_enforce: string | null;
+      lockdown: string | null;
+      secure_boot: boolean | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  bpfJitHardenAuditStatus: () =>
+    fetch("/api/bpf-jit-harden-audit").then(jsonOf<{
+      ok: boolean;
+      bpf_jit_harden: number | null;
+      bpf_jit_kallsyms: number | null;
+      bpf_jit_limit: number | null;
+      unprivileged_bpf_disabled: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
