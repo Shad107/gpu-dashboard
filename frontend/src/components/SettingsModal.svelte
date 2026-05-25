@@ -2943,6 +2943,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #104 (UI sprint 95) ───────────────────────────────────────────
+  let hwpDynamicBoostAuditData            = $state<Awaited<ReturnType<typeof api.hwpDynamicBoostAuditStatus>>            | null>(null);
+  let hungTaskDriftAuditData              = $state<Awaited<ReturnType<typeof api.hungTaskDriftAuditStatus>>              | null>(null);
+  let firmwareLoaderPolicyAuditData       = $state<Awaited<ReturnType<typeof api.firmwareLoaderPolicyAuditStatus>>       | null>(null);
+  let imaMeasurementFreshnessAuditData    = $state<Awaited<ReturnType<typeof api.imaMeasurementFreshnessAuditStatus>>    | null>(null);
+  async function loadHwpDynamicBoostAudit() {
+    try { hwpDynamicBoostAuditData = await api.hwpDynamicBoostAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadHungTaskDriftAudit() {
+    try { hungTaskDriftAuditData = await api.hungTaskDriftAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFirmwareLoaderPolicyAudit() {
+    try { firmwareLoaderPolicyAuditData = await api.firmwareLoaderPolicyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadImaMeasurementFreshnessAudit() {
+    try { imaMeasurementFreshnessAuditData = await api.imaMeasurementFreshnessAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3460,6 +3482,11 @@
       if (!ephemeralPortRangeAuditData)         loadEphemeralPortRangeAudit();
       if (!zramWritebackRecompressAuditData)    loadZramWritebackRecompressAudit();
       if (!cgroupV2UclampAuditData)             loadCgroupV2UclampAudit();
+      // R&D #104 cards
+      if (!hwpDynamicBoostAuditData)            loadHwpDynamicBoostAudit();
+      if (!hungTaskDriftAuditData)              loadHungTaskDriftAudit();
+      if (!firmwareLoaderPolicyAuditData)       loadFirmwareLoaderPolicyAudit();
+      if (!imaMeasurementFreshnessAuditData)    loadImaMeasurementFreshnessAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -18746,6 +18773,178 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# Reset uclamp.min to default 0 unless boost is intentional\necho 0 | sudo tee /sys/fs/cgroup/user.slice/cpu.uclamp.min"
                   : cgroupV2UclampAuditData.verdict.verdict === 'zswap_writeback_off'
                     ? "# Allow compressed pages to drift from zswap to swap\necho 1 | sudo tee /sys/fs/cgroup/user.slice/memory.zswap.writeback"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #104.1 HWP dynamic_boost (UI sprint 95) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.hwpboost.title")}</h4>
+        <p class="muted">{i18n.t("integrations.hwpboost.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHwpDynamicBoostAudit}>{i18n.t("integrations.hwpboost.refresh")}</button>
+          {#if hwpDynamicBoostAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={hwpDynamicBoostAuditData.verdict.verdict === 'hwp_boost_off_on_desktop' ? 'var(--warn)' :
+                             hwpDynamicBoostAuditData.verdict.verdict === 'hwp_boost_fights_epp' ? 'var(--accent)' :
+                             hwpDynamicBoostAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              status={hwpDynamicBoostAuditData.intel_pstate_status ?? '—'} · boost={hwpDynamicBoostAuditData.hwp_dynamic_boost ?? '—'} · {i18n.t("integrations.hwpboost.verdict")} : <b>{hwpDynamicBoostAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hwpDynamicBoostAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        hwpDynamicBoostAuditData.verdict.verdict === 'hwp_boost_off_on_desktop' ? 'var(--warn)' :
+                        hwpDynamicBoostAuditData.verdict.verdict === 'hwp_boost_fights_epp' ? 'var(--accent)' :
+                        hwpDynamicBoostAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{hwpDynamicBoostAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(hwpDynamicBoostAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.hwpboost.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  hwpDynamicBoostAuditData.verdict.verdict === 'hwp_boost_off_on_desktop'
+                    ? "# Enable HWP burst boost for interactive responsiveness\necho 1 | sudo tee /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost\n# Persist via systemd unit / sysfsutils\nsudo tee /etc/tmpfiles.d/hwp-boost.conf <<'EOF'\nw /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost - - - - 1\nEOF\nsudo systemctl restart systemd-tmpfiles-setup.service"
+                  : hwpDynamicBoostAuditData.verdict.verdict === 'hwp_boost_fights_epp'
+                    ? "# EPP and dynamic_boost disagree — pick one\n# Either keep boost on and switch EPP to balance/performance :\necho balance_performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference\n# Or turn boost off if EPP=power is intentional :\necho 0 | sudo tee /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #104.2 hung_task drift (UI sprint 95) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.hungtask.title")}</h4>
+        <p class="muted">{i18n.t("integrations.hungtask.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHungTaskDriftAudit}>{i18n.t("integrations.hungtask.refresh")}</button>
+          {#if hungTaskDriftAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={hungTaskDriftAuditData.verdict.verdict === 'hung_task_warnings_exhausted' ? 'var(--warn)' :
+                             (hungTaskDriftAuditData.verdict.verdict === 'hung_task_check_interval_long' || hungTaskDriftAuditData.verdict.verdict === 'hung_task_warnings_decayed') ? 'var(--accent)' :
+                             hungTaskDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              warn={hungTaskDriftAuditData.hung_task_warnings ?? '—'} · timeout={hungTaskDriftAuditData.hung_task_timeout_secs ?? '—'}s · {i18n.t("integrations.hungtask.verdict")} : <b>{hungTaskDriftAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hungTaskDriftAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        hungTaskDriftAuditData.verdict.verdict === 'hung_task_warnings_exhausted' ? 'var(--warn)' :
+                        (hungTaskDriftAuditData.verdict.verdict === 'hung_task_check_interval_long' || hungTaskDriftAuditData.verdict.verdict === 'hung_task_warnings_decayed') ? 'var(--accent)' :
+                        hungTaskDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{hungTaskDriftAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(hungTaskDriftAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.hungtask.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  hungTaskDriftAuditData.verdict.verdict === 'hung_task_warnings_exhausted'
+                    ? "# Restore hang-detection budget (kernel will log new hangs again)\nsudo sysctl -w kernel.hung_task_warnings=10\n# Persist :\nsudo tee /etc/sysctl.d/99-hung-task.conf <<'EOF'\nkernel.hung_task_warnings = 10\nEOF\nsudo sysctl --system\n# Also capture what already hung this boot :\nsudo dmesg | grep -iE 'INFO: task.*blocked|hung_task' | head"
+                  : hungTaskDriftAuditData.verdict.verdict === 'hung_task_check_interval_long'
+                    ? "# Tighten check interval (default 0 = every timeout window)\nsudo sysctl -w kernel.hung_task_check_interval_secs=0"
+                  : hungTaskDriftAuditData.verdict.verdict === 'hung_task_warnings_decayed'
+                    ? "# Top up the warning budget\nsudo sysctl -w kernel.hung_task_warnings=10\nsudo dmesg | grep -iE 'hung_task' | head"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #104.3 firmware loader policy (UI sprint 95) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fwloader.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fwloader.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFirmwareLoaderPolicyAudit}>{i18n.t("integrations.fwloader.refresh")}</button>
+          {#if firmwareLoaderPolicyAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={(firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_fallback_disabled' || firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_timeout_too_short') ? 'var(--warn)' :
+                             firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_fallback_forced' ? 'var(--accent)' :
+                             firmwareLoaderPolicyAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              timeout={firmwareLoaderPolicyAuditData.timeout_s ?? '—'}s · {i18n.t("integrations.fwloader.verdict")} : <b>{firmwareLoaderPolicyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if firmwareLoaderPolicyAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        (firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_fallback_disabled' || firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_timeout_too_short') ? 'var(--warn)' :
+                        firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_fallback_forced' ? 'var(--accent)' :
+                        firmwareLoaderPolicyAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{firmwareLoaderPolicyAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(firmwareLoaderPolicyAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fwloader.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_fallback_disabled'
+                    ? "# Re-enable sysfs fallback firmware loading\necho 0 | sudo tee /sys/kernel/firmware_config/ignore_sysfs_fallback\n# Persist via boot param (firmware_class.ignore_sysfs_fallback=0)"
+                  : firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_timeout_too_short'
+                    ? "# Bump firmware loader timeout for slow USB/Wi-Fi blobs\necho 60 | sudo tee /sys/class/firmware/timeout\n# Persist via tmpfiles :\nsudo tee /etc/tmpfiles.d/fw-timeout.conf <<'EOF'\nw /sys/class/firmware/timeout - - - - 60\nEOF"
+                  : firmwareLoaderPolicyAuditData.verdict.verdict === 'fw_fallback_forced'
+                    ? "# Restore udev-only firmware path\necho 0 | sudo tee /sys/kernel/firmware_config/force_sysfs_fallback"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #104.4 IMA measurement freshness (UI sprint 95) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.imafresh.title")}</h4>
+        <p class="muted">{i18n.t("integrations.imafresh.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadImaMeasurementFreshnessAudit}>{i18n.t("integrations.imafresh.refresh")}</button>
+          {#if imaMeasurementFreshnessAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_log_missing' ? 'var(--err)' :
+                             imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_boot_aggregate_absent' ? 'var(--warn)' :
+                             imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_log_empty' ? 'var(--accent)' :
+                             imaMeasurementFreshnessAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              count={imaMeasurementFreshnessAuditData.runtime_measurements_count ?? '—'} · lines={imaMeasurementFreshnessAuditData.log_line_count} · {i18n.t("integrations.imafresh.verdict")} : <b>{imaMeasurementFreshnessAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if imaMeasurementFreshnessAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_log_missing' ? 'var(--err)' :
+                        imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_boot_aggregate_absent' ? 'var(--warn)' :
+                        imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_log_empty' ? 'var(--accent)' :
+                        imaMeasurementFreshnessAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{imaMeasurementFreshnessAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(imaMeasurementFreshnessAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.imafresh.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_log_missing'
+                    ? "# Kernel says N measurements but log is empty — remount securityfs\nsudo umount /sys/kernel/security 2>/dev/null\nsudo mount -t securityfs none /sys/kernel/security\n# Verify :\nsudo head /sys/kernel/security/ima/ascii_runtime_measurements"
+                  : imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_boot_aggregate_absent'
+                    ? "# No PCR10 anchor — IMA policy isn't measuring boot path\n# Inspect policy :\nsudo cat /sys/kernel/security/ima/policy\n# Apply a tcb policy (sample) :\nsudo tee /etc/ima/ima-policy <<'EOF'\nmeasure func=BPRM_CHECK\nmeasure func=FILE_MMAP mask=MAY_EXEC\nmeasure func=MODULE_CHECK\nEOF\nsudo systemctl reload integrity-update.service 2>/dev/null || sudo reboot"
+                  : imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_log_empty'
+                    ? "# IMA loaded but nothing measured — check policy\nsudo cat /sys/kernel/security/ima/policy | head\n# Apply or extend policy ; re-exec the workload to trigger measurements"
                   : ""
                 }</pre>
               </details>

@@ -5775,4 +5775,41 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #104 (UI sprint 95) ──
+  hwpDynamicBoostAuditStatus: () =>
+    fetch("/api/hwp-dynamic-boost-audit").then(jsonOf<{
+      ok: boolean;
+      intel_pstate_status: string | null;
+      hwp_dynamic_boost: number | null;
+      epp: string | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  hungTaskDriftAuditStatus: () =>
+    fetch("/api/hung-task-drift-audit").then(jsonOf<{
+      ok: boolean;
+      hung_task_warnings: number | null;
+      hung_task_check_interval_secs: number | null;
+      hung_task_timeout_secs: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  firmwareLoaderPolicyAuditStatus: () =>
+    fetch("/api/firmware-loader-policy-audit").then(jsonOf<{
+      ok: boolean;
+      timeout_s: number | null;
+      force_sysfs_fallback: number | null;
+      ignore_sysfs_fallback: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  imaMeasurementFreshnessAuditStatus: () =>
+    fetch("/api/ima-measurement-freshness-audit").then(jsonOf<{
+      ok: boolean;
+      runtime_measurements_count: number | null;
+      log_line_count: number;
+      has_boot_aggregate: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
