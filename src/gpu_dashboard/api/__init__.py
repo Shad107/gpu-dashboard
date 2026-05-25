@@ -568,3 +568,4 @@ from .dma_buf_bufinfo_audit import handle_dma_buf_bufinfo_audit_status  # noqa: 
 from .nvme_hmb_features_audit import handle_nvme_hmb_features_audit_status  # noqa: F401,F811
 from .vmstat_reclaim_pressure_audit import handle_vmstat_reclaim_pressure_audit_status  # noqa: F401,F811
 from .iommu_dma_strict_audit import handle_iommu_dma_strict_audit_status  # noqa: F401,F811
+from .kernel_lockup_watchdog_audit import handle_kernel_lockup_watchdog_audit_status  # noqa: F401,F811

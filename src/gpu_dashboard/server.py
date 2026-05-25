@@ -2077,6 +2077,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_iommu_dma_strict_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kernel-lockup-watchdog-audit":
+                # R&D #92.2 — soft/hard lockup detector posture
+                code, body = api.handle_kernel_lockup_watchdog_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
