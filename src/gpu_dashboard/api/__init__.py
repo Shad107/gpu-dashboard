@@ -637,3 +637,4 @@ from .dm_mod_params_audit import handle_dm_mod_params_audit_status  # noqa: F401
 from .cgroup_tree_limits_audit import handle_cgroup_tree_limits_audit_status  # noqa: F401,F811
 from .numa_demotion_enabled_audit import handle_numa_demotion_enabled_audit_status  # noqa: F401,F811
 from .acpi_boot_assets_audit import handle_acpi_boot_assets_audit_status  # noqa: F401,F811
+from .acpi_tables_inventory_audit import handle_acpi_tables_inventory_audit_status  # noqa: F401,F811

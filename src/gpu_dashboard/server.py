@@ -2422,6 +2422,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_acpi_boot_assets_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/acpi-tables-inventory-audit":
+                # R&D #109.3 — ACPI table set sanity
+                code, body = api.handle_acpi_tables_inventory_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
