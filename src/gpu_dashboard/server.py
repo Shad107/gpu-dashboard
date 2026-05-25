@@ -2212,6 +2212,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_keyring_lifecycle_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/umwait-control-audit":
+                # R&D #99.1 — Intel umwait C0.2 + max_time
+                code, body = api.handle_umwait_control_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
