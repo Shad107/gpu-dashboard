@@ -616,3 +616,4 @@ from .ephemeral_port_range_audit import handle_ephemeral_port_range_audit_status
 from .zram_writeback_recompress_audit import handle_zram_writeback_recompress_audit_status  # noqa: F401,F811
 from .cgroup_v2_uclamp_audit import handle_cgroup_v2_uclamp_audit_status  # noqa: F401,F811
 from .hwp_dynamic_boost_audit import handle_hwp_dynamic_boost_audit_status  # noqa: F401,F811
+from .hung_task_drift_audit import handle_hung_task_drift_audit_status  # noqa: F401,F811

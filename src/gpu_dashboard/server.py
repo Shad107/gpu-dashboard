@@ -2317,6 +2317,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_hwp_dynamic_boost_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hung-task-drift-audit":
+                # R&D #104.2 — hung_task warnings drift
+                code, body = api.handle_hung_task_drift_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
