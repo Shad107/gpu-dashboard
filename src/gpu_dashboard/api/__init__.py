@@ -618,3 +618,4 @@ from .cgroup_v2_uclamp_audit import handle_cgroup_v2_uclamp_audit_status  # noqa
 from .hwp_dynamic_boost_audit import handle_hwp_dynamic_boost_audit_status  # noqa: F401,F811
 from .hung_task_drift_audit import handle_hung_task_drift_audit_status  # noqa: F401,F811
 from .firmware_loader_policy_audit import handle_firmware_loader_policy_audit_status  # noqa: F401,F811
+from .ima_measurement_freshness_audit import handle_ima_measurement_freshness_audit_status  # noqa: F401,F811

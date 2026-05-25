@@ -2327,6 +2327,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_firmware_loader_policy_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/ima-measurement-freshness-audit":
+                # R&D #104.4 — IMA log content + freshness
+                code, body = api.handle_ima_measurement_freshness_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
