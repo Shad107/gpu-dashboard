@@ -2167,6 +2167,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_tracing_instances_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/block-holders-stack-audit":
+                # R&D #96.4 — dm/md stack topology + suspend/degraded/orphan
+                code, body = api.handle_block_holders_stack_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
