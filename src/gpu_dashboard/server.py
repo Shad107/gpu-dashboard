@@ -2377,6 +2377,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_vm_numa_policy_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/sysrq-cad-poweroff-audit":
+                # R&D #107.2 — Ctrl-Alt-Del + poweroff_cmd posture
+                code, body = api.handle_sysrq_cad_poweroff_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
