@@ -2367,6 +2367,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cache_l2_imbalance_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cpufreq-setspeed-drift-audit":
+                # R&D #106.4 — userspace governor setspeed drift
+                code, body = api.handle_cpufreq_setspeed_drift_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
