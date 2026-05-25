@@ -5724,4 +5724,55 @@ export const api = {
       unprivileged_bpf_disabled: number | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #103 (UI sprint 94) ──
+  kernelOopsWarnCounterAuditStatus: () =>
+    fetch("/api/kernel-oops-warn-counter-audit").then(jsonOf<{
+      ok: boolean;
+      oops_count: number | null;
+      warn_count: number | null;
+      panic_on_oops: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  ephemeralPortRangeAuditStatus: () =>
+    fetch("/api/ephemeral-port-range-audit").then(jsonOf<{
+      ok: boolean;
+      port_range_lo: number | null;
+      port_range_hi: number | null;
+      port_window: number | null;
+      ip_unprivileged_port_start: number | null;
+      reserved_ports: string;
+      tcp_socket_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  zramWritebackRecompressAuditStatus: () =>
+    fetch("/api/zram-writeback-recompress-audit").then(jsonOf<{
+      ok: boolean;
+      zram_count: number;
+      zrams: Array<{
+        name: string;
+        disksize: number | null;
+        backing_dev: string | null;
+        recomp_algorithm: string | null;
+        compr_size: number | null;
+        bd_writes: number | null;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cgroupV2UclampAuditStatus: () =>
+    fetch("/api/cgroup-v2-uclamp-audit").then(jsonOf<{
+      ok: boolean;
+      slice_count: number;
+      slices: Array<{
+        path: string;
+        uclamp_min: number | null;
+        uclamp_max: number | null;
+        zswap_max: string | null;
+        zswap_writeback: number | null;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

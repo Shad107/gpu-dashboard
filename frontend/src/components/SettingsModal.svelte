@@ -2921,6 +2921,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #103 (UI sprint 94) ───────────────────────────────────────────
+  let kernelOopsWarnCounterAuditData      = $state<Awaited<ReturnType<typeof api.kernelOopsWarnCounterAuditStatus>>      | null>(null);
+  let ephemeralPortRangeAuditData         = $state<Awaited<ReturnType<typeof api.ephemeralPortRangeAuditStatus>>         | null>(null);
+  let zramWritebackRecompressAuditData    = $state<Awaited<ReturnType<typeof api.zramWritebackRecompressAuditStatus>>    | null>(null);
+  let cgroupV2UclampAuditData             = $state<Awaited<ReturnType<typeof api.cgroupV2UclampAuditStatus>>             | null>(null);
+  async function loadKernelOopsWarnCounterAudit() {
+    try { kernelOopsWarnCounterAuditData = await api.kernelOopsWarnCounterAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadEphemeralPortRangeAudit() {
+    try { ephemeralPortRangeAuditData = await api.ephemeralPortRangeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadZramWritebackRecompressAudit() {
+    try { zramWritebackRecompressAuditData = await api.zramWritebackRecompressAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCgroupV2UclampAudit() {
+    try { cgroupV2UclampAuditData = await api.cgroupV2UclampAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3433,6 +3455,11 @@
       if (!modprobeBlacklistDriftAuditData)     loadModprobeBlacklistDriftAudit();
       if (!moduleSigEnforceAuditData)           loadModuleSigEnforceAudit();
       if (!bpfJitHardenAuditData)               loadBpfJitHardenAudit();
+      // R&D #103 cards
+      if (!kernelOopsWarnCounterAuditData)      loadKernelOopsWarnCounterAudit();
+      if (!ephemeralPortRangeAuditData)         loadEphemeralPortRangeAudit();
+      if (!zramWritebackRecompressAuditData)    loadZramWritebackRecompressAudit();
+      if (!cgroupV2UclampAuditData)             loadCgroupV2UclampAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -18537,6 +18564,188 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# Harden the BPF JIT for unprivileged users\necho 2 | sudo tee /proc/sys/net/core/bpf_jit_harden\n# Persist :\nsudo tee /etc/sysctl.d/99-bpf-harden.conf <<'EOF'\nnet.core.bpf_jit_harden = 2\nEOF\nsudo sysctl --system"
                   : bpfJitHardenAuditData.verdict.verdict === 'bpf_jit_kallsyms_leak'
                     ? "# Hide JIT symbols from /proc/kallsyms (KASLR-friendly)\necho 0 | sudo tee /proc/sys/net/core/bpf_jit_kallsyms\nsudo tee /etc/sysctl.d/99-bpf-harden.conf <<'EOF'\nnet.core.bpf_jit_kallsyms = 0\nEOF\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #103.1 kernel oops/warn counters (UI sprint 94) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.oopswarn.title")}</h4>
+        <p class="muted">{i18n.t("integrations.oopswarn.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKernelOopsWarnCounterAudit}>{i18n.t("integrations.oopswarn.refresh")}</button>
+          {#if kernelOopsWarnCounterAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={kernelOopsWarnCounterAuditData.verdict.verdict === 'silent_oops_since_boot' ? 'var(--err)' :
+                             kernelOopsWarnCounterAuditData.verdict.verdict === 'warn_count_high' ? 'var(--warn)' :
+                             kernelOopsWarnCounterAuditData.verdict.verdict === 'warn_count_nonzero' ? 'var(--accent)' :
+                             kernelOopsWarnCounterAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              oops={kernelOopsWarnCounterAuditData.oops_count ?? '—'} · warn={kernelOopsWarnCounterAuditData.warn_count ?? '—'} · {i18n.t("integrations.oopswarn.verdict")} : <b>{kernelOopsWarnCounterAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kernelOopsWarnCounterAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        kernelOopsWarnCounterAuditData.verdict.verdict === 'silent_oops_since_boot' ? 'var(--err)' :
+                        kernelOopsWarnCounterAuditData.verdict.verdict === 'warn_count_high' ? 'var(--warn)' :
+                        kernelOopsWarnCounterAuditData.verdict.verdict === 'warn_count_nonzero' ? 'var(--accent)' :
+                        kernelOopsWarnCounterAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{kernelOopsWarnCounterAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(kernelOopsWarnCounterAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.oopswarn.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  kernelOopsWarnCounterAuditData.verdict.verdict === 'silent_oops_since_boot'
+                    ? "# Kernel oopsed without panic — capture state + reboot\nsudo dmesg | grep -A 50 -iE 'BUG:|Oops:' | head -200\nsudo journalctl -k --since '6 hours ago' | grep -iE 'oops|bug:' | head\n# Save crash context before reboot :\nsudo cp /var/log/kern.log* /tmp/oops-$(date +%s).log\n# Reboot once safe :\nsudo reboot"
+                  : kernelOopsWarnCounterAuditData.verdict.verdict === 'warn_count_high'
+                    ? "# Find what keeps firing WARN_ON()\nsudo dmesg | grep -iE 'WARNING:|WARN_ON' | head -20\nsudo journalctl -k --since '24 hours ago' | grep -iE 'warning:' | head\n# Common culprits: driver bugs, locking warns, irq routing\n# Filter by module :\nsudo dmesg | grep 'WARNING:' | awk -F'/' '{print $NF}' | sort | uniq -c | sort -rn"
+                  : kernelOopsWarnCounterAuditData.verdict.verdict === 'warn_count_nonzero'
+                    ? "# Single WARN since boot — inspect once\nsudo dmesg | grep -iE 'WARNING:|WARN_ON' | head -5\nsudo journalctl -k | grep -iE 'warning:.*at.*\\.c' | tail -10"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #103.2 ephemeral port range (UI sprint 94) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ephport.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ephport.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadEphemeralPortRangeAudit}>{i18n.t("integrations.ephport.refresh")}</button>
+          {#if ephemeralPortRangeAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ephemeralPortRangeAuditData.verdict.verdict === 'ephemeral_pool_exhausted' ? 'var(--err)' :
+                             ephemeralPortRangeAuditData.verdict.verdict === 'port_window_too_small' ? 'var(--warn)' :
+                             ephemeralPortRangeAuditData.verdict.verdict === 'unpriv_port_below_1024' ? 'var(--accent)' :
+                             ephemeralPortRangeAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              window={ephemeralPortRangeAuditData.port_window ?? '—'} · used={ephemeralPortRangeAuditData.tcp_socket_count} · {i18n.t("integrations.ephport.verdict")} : <b>{ephemeralPortRangeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ephemeralPortRangeAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ephemeralPortRangeAuditData.verdict.verdict === 'ephemeral_pool_exhausted' ? 'var(--err)' :
+                        ephemeralPortRangeAuditData.verdict.verdict === 'port_window_too_small' ? 'var(--warn)' :
+                        ephemeralPortRangeAuditData.verdict.verdict === 'unpriv_port_below_1024' ? 'var(--accent)' :
+                        ephemeralPortRangeAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{ephemeralPortRangeAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(ephemeralPortRangeAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ephport.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  ephemeralPortRangeAuditData.verdict.verdict === 'ephemeral_pool_exhausted'
+                    ? "# Ephemeral port pool >80% used — find the culprit\nss -tan | wc -l\nss -tan state time-wait | wc -l   # mostly TIME_WAIT?\nss -tan | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head\n# Mitigate quickly :\necho '15 60999' | sudo tee /proc/sys/net/ipv4/ip_local_port_range\n# Persist :\nsudo tee /etc/sysctl.d/99-ports.conf <<'EOF'\nnet.ipv4.ip_local_port_range = 15000 60999\nEOF\nsudo sysctl --system"
+                  : ephemeralPortRangeAuditData.verdict.verdict === 'port_window_too_small'
+                    ? "# Widen the ephemeral port window\necho '15000 60999' | sudo tee /proc/sys/net/ipv4/ip_local_port_range\nsudo tee /etc/sysctl.d/99-ports.conf <<'EOF'\nnet.ipv4.ip_local_port_range = 15000 60999\nEOF\nsudo sysctl --system"
+                  : ephemeralPortRangeAuditData.verdict.verdict === 'unpriv_port_below_1024'
+                    ? "# Restore the default 1024 floor unless rootless containers need it lower\necho 1024 | sudo tee /proc/sys/net/ipv4/ip_unprivileged_port_start\nsudo tee /etc/sysctl.d/99-ports.conf <<'EOF'\nnet.ipv4.ip_unprivileged_port_start = 1024\nEOF\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #103.3 zram writeback (UI sprint 94) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.zramwb.title")}</h4>
+        <p class="muted">{i18n.t("integrations.zramwb.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadZramWritebackRecompressAudit}>{i18n.t("integrations.zramwb.refresh")}</button>
+          {#if zramWritebackRecompressAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={zramWritebackRecompressAuditData.verdict.verdict === 'backing_dev_pipeline_broken' ? 'var(--err)' :
+                             zramWritebackRecompressAuditData.verdict.verdict === 'zram_full_no_backing' ? 'var(--warn)' :
+                             zramWritebackRecompressAuditData.verdict.verdict === 'recomp_unset' ? 'var(--accent)' :
+                             zramWritebackRecompressAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {zramWritebackRecompressAuditData.zram_count} zram · {i18n.t("integrations.zramwb.verdict")} : <b>{zramWritebackRecompressAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if zramWritebackRecompressAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        zramWritebackRecompressAuditData.verdict.verdict === 'backing_dev_pipeline_broken' ? 'var(--err)' :
+                        zramWritebackRecompressAuditData.verdict.verdict === 'zram_full_no_backing' ? 'var(--warn)' :
+                        zramWritebackRecompressAuditData.verdict.verdict === 'recomp_unset' ? 'var(--accent)' :
+                        zramWritebackRecompressAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{zramWritebackRecompressAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(zramWritebackRecompressAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.zramwb.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  zramWritebackRecompressAuditData.verdict.verdict === 'backing_dev_pipeline_broken'
+                    ? "# Writeback wired but not flowing — kick the pipeline\nfor z in /sys/block/zram*; do\n  echo \"$z : backing=$(cat $z/backing_dev) bd_stat=$(cat $z/bd_stat 2>/dev/null)\"\ndone\n# Mark idle pages + trigger writeback (root) :\necho all | sudo tee /sys/block/zram0/idle\necho idle | sudo tee /sys/block/zram0/writeback"
+                  : zramWritebackRecompressAuditData.verdict.verdict === 'zram_full_no_backing'
+                    ? "# Configure a backing_dev so cold pages can drift to disk\n# Create a swap partition / file dedicated to zram writeback (root)\nsudo dd if=/dev/zero of=/var/lib/zram-backing bs=1M count=4096\nsudo losetup /dev/loop7 /var/lib/zram-backing\nsudo swapoff /dev/zram0 2>/dev/null\necho /dev/loop7 | sudo tee /sys/block/zram0/backing_dev\nsudo mkswap /dev/zram0 && sudo swapon /dev/zram0"
+                  : zramWritebackRecompressAuditData.verdict.verdict === 'recomp_unset'
+                    ? "# Enable secondary compression (kernel >= 6.2)\necho 'algo=zstd priority=1' | sudo tee /sys/block/zram0/recomp_algorithm\n# Trigger recompress :\necho idle | sudo tee /sys/block/zram0/recompress"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #103.4 cgroup v2 uclamp (UI sprint 94) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.uclamp.title")}</h4>
+        <p class="muted">{i18n.t("integrations.uclamp.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCgroupV2UclampAudit}>{i18n.t("integrations.uclamp.refresh")}</button>
+          {#if cgroupV2UclampAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cgroupV2UclampAuditData.verdict.verdict === 'uclamp_max_below_100' ? 'var(--err)' :
+                             cgroupV2UclampAuditData.verdict.verdict === 'zswap_disabled_on_slice' ? 'var(--warn)' :
+                             (cgroupV2UclampAuditData.verdict.verdict === 'uclamp_min_boosted' || cgroupV2UclampAuditData.verdict.verdict === 'zswap_writeback_off') ? 'var(--accent)' :
+                             cgroupV2UclampAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cgroupV2UclampAuditData.slice_count} slice · {i18n.t("integrations.uclamp.verdict")} : <b>{cgroupV2UclampAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cgroupV2UclampAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cgroupV2UclampAuditData.verdict.verdict === 'uclamp_max_below_100' ? 'var(--err)' :
+                        cgroupV2UclampAuditData.verdict.verdict === 'zswap_disabled_on_slice' ? 'var(--warn)' :
+                        (cgroupV2UclampAuditData.verdict.verdict === 'uclamp_min_boosted' || cgroupV2UclampAuditData.verdict.verdict === 'zswap_writeback_off') ? 'var(--accent)' :
+                        cgroupV2UclampAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cgroupV2UclampAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(cgroupV2UclampAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.uclamp.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cgroupV2UclampAuditData.verdict.verdict === 'uclamp_max_below_100'
+                    ? "# Lift the CPU ceiling on the affected slice\nfor s in user.slice system.slice; do\n  cat /sys/fs/cgroup/$s/cpu.uclamp.max\ndone\n# Restore to 'max' (root) :\necho max | sudo tee /sys/fs/cgroup/user.slice/cpu.uclamp.max\n# Persist via systemd drop-in :\nsudo systemctl edit user.slice <<'EOF'\n[Slice]\nCPUUtilizationClampMax=100%\nEOF"
+                  : cgroupV2UclampAuditData.verdict.verdict === 'zswap_disabled_on_slice'
+                    ? "# Re-enable zswap on the slice\necho max | sudo tee /sys/fs/cgroup/user.slice/memory.zswap.max\n# Persist via systemd drop-in :\nsudo systemctl edit user.slice <<'EOF'\n[Slice]\nMemoryZSwapMax=infinity\nEOF"
+                  : cgroupV2UclampAuditData.verdict.verdict === 'uclamp_min_boosted'
+                    ? "# Reset uclamp.min to default 0 unless boost is intentional\necho 0 | sudo tee /sys/fs/cgroup/user.slice/cpu.uclamp.min"
+                  : cgroupV2UclampAuditData.verdict.verdict === 'zswap_writeback_off'
+                    ? "# Allow compressed pages to drift from zswap to swap\necho 1 | sudo tee /sys/fs/cgroup/user.slice/memory.zswap.writeback"
                   : ""
                 }</pre>
               </details>
