@@ -2282,6 +2282,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_modprobe_blacklist_drift_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/module-sig-enforce-audit":
+                # R&D #102.3 — sig_enforce + Secure Boot consistency
+                code, body = api.handle_module_sig_enforce_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

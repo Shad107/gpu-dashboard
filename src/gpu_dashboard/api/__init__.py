@@ -609,3 +609,4 @@ from .fscache_cachefiles_audit import handle_fscache_cachefiles_audit_status  # 
 from .ksm_advisor_audit import handle_ksm_advisor_audit_status  # noqa: F401,F811
 from .intel_uncore_freq_audit import handle_intel_uncore_freq_audit_status  # noqa: F401,F811
 from .modprobe_blacklist_drift_audit import handle_modprobe_blacklist_drift_audit_status  # noqa: F401,F811
+from .module_sig_enforce_audit import handle_module_sig_enforce_audit_status  # noqa: F401,F811
