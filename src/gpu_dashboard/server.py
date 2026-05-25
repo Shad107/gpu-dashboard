@@ -2067,6 +2067,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_nvme_hmb_features_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/vmstat-reclaim-pressure-audit":
+                # R&D #91.4 — vmstat delta tracking
+                code, body = api.handle_vmstat_reclaim_pressure_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

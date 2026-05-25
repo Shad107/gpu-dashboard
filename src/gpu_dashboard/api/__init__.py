@@ -566,3 +566,4 @@ from .pcie_dpc_audit import handle_pcie_dpc_audit_status  # noqa: F401,F811
 from .cgroup_pids_controller_audit import handle_cgroup_pids_controller_audit_status  # noqa: F401,F811
 from .dma_buf_bufinfo_audit import handle_dma_buf_bufinfo_audit_status  # noqa: F401,F811
 from .nvme_hmb_features_audit import handle_nvme_hmb_features_audit_status  # noqa: F401,F811
+from .vmstat_reclaim_pressure_audit import handle_vmstat_reclaim_pressure_audit_status  # noqa: F401,F811
