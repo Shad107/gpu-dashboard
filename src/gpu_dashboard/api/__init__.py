@@ -581,3 +581,4 @@ from .drm_ttm_page_pool_audit import handle_drm_ttm_page_pool_audit_status  # no
 from .lockdep_lockstat_audit import handle_lockdep_lockstat_audit_status  # noqa: F401,F811
 from .mdio_phy_eee_audit import handle_mdio_phy_eee_audit_status  # noqa: F401,F811
 from .kernel_module_refcnt_audit import handle_kernel_module_refcnt_audit_status  # noqa: F401,F811
+from .tracing_buffer_footprint_audit import handle_tracing_buffer_footprint_audit_status  # noqa: F401,F811

@@ -2142,6 +2142,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_kernel_module_refcnt_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/tracing-buffer-footprint-audit":
+                # R&D #95.3 — ftrace buffer footprint + overrun
+                code, body = api.handle_tracing_buffer_footprint_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
