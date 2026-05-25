@@ -2197,6 +2197,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_psi_irq_full_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/fs-quota-projid-audit":
+                # R&D #98.2 — fs quota / projid / overlay-on-quota
+                code, body = api.handle_fs_quota_projid_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
