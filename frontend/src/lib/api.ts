@@ -5962,4 +5962,44 @@ export const api = {
       nr_descendants: number | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #109 (UI sprint 100) ──
+  numaDemotionEnabledAuditStatus: () =>
+    fetch("/api/numa-demotion-enabled-audit").then(jsonOf<{
+      ok: boolean;
+      demotion_enabled: boolean | null;
+      multi_node: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  acpiBootAssetsAuditStatus: () =>
+    fetch("/api/acpi-boot-assets-audit").then(jsonOf<{
+      ok: boolean;
+      bgrt_present: boolean;
+      bgrt_status: number | null;
+      bgrt_type: number | null;
+      fpdt_present: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  acpiTablesInventoryAuditStatus: () =>
+    fetch("/api/acpi-tables-inventory-audit").then(jsonOf<{
+      ok: boolean;
+      table_count: number;
+      dsdt_size: number | null;
+      ssdt_count: number;
+      has_srat: boolean;
+      has_hmat: boolean;
+      multi_node: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  pciNumaPinningAuditStatus: () =>
+    fetch("/api/pci-numa-pinning-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      multi_node: boolean;
+      n_unpinned: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

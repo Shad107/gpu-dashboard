@@ -3053,6 +3053,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #109 (UI sprint 100) ──────────────────────────────────────────
+  let numaDemotionEnabledAuditData        = $state<Awaited<ReturnType<typeof api.numaDemotionEnabledAuditStatus>>        | null>(null);
+  let acpiBootAssetsAuditData             = $state<Awaited<ReturnType<typeof api.acpiBootAssetsAuditStatus>>             | null>(null);
+  let acpiTablesInventoryAuditData        = $state<Awaited<ReturnType<typeof api.acpiTablesInventoryAuditStatus>>        | null>(null);
+  let pciNumaPinningAuditData             = $state<Awaited<ReturnType<typeof api.pciNumaPinningAuditStatus>>             | null>(null);
+  async function loadNumaDemotionEnabledAudit() {
+    try { numaDemotionEnabledAuditData = await api.numaDemotionEnabledAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAcpiBootAssetsAudit() {
+    try { acpiBootAssetsAuditData = await api.acpiBootAssetsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadAcpiTablesInventoryAudit() {
+    try { acpiTablesInventoryAuditData = await api.acpiTablesInventoryAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPciNumaPinningAudit() {
+    try { pciNumaPinningAuditData = await api.pciNumaPinningAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3595,6 +3617,11 @@
       if (!overlayModuleParamsAuditData)        loadOverlayModuleParamsAudit();
       if (!dmModParamsAuditData)                loadDmModParamsAudit();
       if (!cgroupTreeLimitsAuditData)           loadCgroupTreeLimitsAudit();
+      // R&D #109 cards
+      if (!numaDemotionEnabledAuditData)        loadNumaDemotionEnabledAudit();
+      if (!acpiBootAssetsAuditData)             loadAcpiBootAssetsAudit();
+      if (!acpiTablesInventoryAuditData)        loadAcpiTablesInventoryAudit();
+      if (!pciNumaPinningAuditData)             loadPciNumaPinningAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -19726,6 +19753,172 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
                     ? "# Find the runaway subtree creating descendants\nfor d in $(find /sys/fs/cgroup -name cgroup.stat); do\n  n=$(awk '/^nr_descendants/{print $2}' $d 2>/dev/null)\n  [ \"$n\" -gt 50 ] 2>/dev/null && echo \"$(dirname $d) : $n\"\ndone | sort -t: -k2 -rn | head\n# Likely runc / systemd-userdb leak ; restart the offending service"
                   : cgroupTreeLimitsAuditData.verdict.verdict === 'cgroup_depth_capped_low'
                     ? "# Lift the depth cap to default\necho max | sudo tee /sys/fs/cgroup/cgroup.max.depth"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #109.1 numa demotion_enabled (UI sprint 100) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.numademo.title")}</h4>
+        <p class="muted">{i18n.t("integrations.numademo.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNumaDemotionEnabledAudit}>{i18n.t("integrations.numademo.refresh")}</button>
+          {#if numaDemotionEnabledAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={numaDemotionEnabledAuditData.verdict.verdict === 'demotion_off_with_tiered_memory' ? 'var(--warn)' :
+                             numaDemotionEnabledAuditData.verdict.verdict === 'demotion_on_single_node' ? 'var(--accent)' :
+                             numaDemotionEnabledAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              demotion={numaDemotionEnabledAuditData.demotion_enabled ?? '—'} · multi={numaDemotionEnabledAuditData.multi_node} · {i18n.t("integrations.numademo.verdict")} : <b>{numaDemotionEnabledAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if numaDemotionEnabledAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        numaDemotionEnabledAuditData.verdict.verdict === 'demotion_off_with_tiered_memory' ? 'var(--warn)' :
+                        numaDemotionEnabledAuditData.verdict.verdict === 'demotion_on_single_node' ? 'var(--accent)' :
+                        numaDemotionEnabledAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{numaDemotionEnabledAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(numaDemotionEnabledAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.numademo.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  numaDemotionEnabledAuditData.verdict.verdict === 'demotion_off_with_tiered_memory'
+                    ? "# Enable NUMA demotion so cold pages drift to slower tier\necho true | sudo tee /sys/kernel/mm/numa/demotion_enabled"
+                  : numaDemotionEnabledAuditData.verdict.verdict === 'demotion_on_single_node'
+                    ? "# Single-node host doesn't need demotion; reset to default\necho false | sudo tee /sys/kernel/mm/numa/demotion_enabled"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #109.2 ACPI boot assets (UI sprint 100) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.acpiboot.title")}</h4>
+        <p class="muted">{i18n.t("integrations.acpiboot.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadAcpiBootAssetsAudit}>{i18n.t("integrations.acpiboot.refresh")}</button>
+          {#if acpiBootAssetsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={acpiBootAssetsAuditData.verdict.verdict === 'bgrt_status_invalid' ? 'var(--warn)' :
+                             acpiBootAssetsAuditData.verdict.verdict === 'no_boot_assets' ? 'var(--accent)' :
+                             acpiBootAssetsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              bgrt={acpiBootAssetsAuditData.bgrt_present ? 'on' : 'off'} · fpdt={acpiBootAssetsAuditData.fpdt_present ? 'on' : 'off'} · {i18n.t("integrations.acpiboot.verdict")} : <b>{acpiBootAssetsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if acpiBootAssetsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        acpiBootAssetsAuditData.verdict.verdict === 'bgrt_status_invalid' ? 'var(--warn)' :
+                        acpiBootAssetsAuditData.verdict.verdict === 'no_boot_assets' ? 'var(--accent)' :
+                        acpiBootAssetsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{acpiBootAssetsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(acpiBootAssetsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.acpiboot.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  acpiBootAssetsAuditData.verdict.verdict === 'bgrt_status_invalid'
+                    ? "# BGRT logo not validly displayed — inspect SecureBoot / quickboot\nsudo cat /sys/firmware/acpi/bgrt/status\n# Verify SecureBoot state :\nsudo mokutil --sb-state\n# Disable quickboot in firmware menu if SecureBoot is healthy"
+                  : acpiBootAssetsAuditData.verdict.verdict === 'no_boot_assets'
+                    ? "# Informational — firmware doesn't expose BGRT or FPDT (common on VMs).\n# Nothing to fix unless you specifically need boot-time decomposition."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #109.3 ACPI tables inventory (UI sprint 100) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.acpitbl.title")}</h4>
+        <p class="muted">{i18n.t("integrations.acpitbl.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadAcpiTablesInventoryAudit}>{i18n.t("integrations.acpitbl.refresh")}</button>
+          {#if acpiTablesInventoryAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={acpiTablesInventoryAuditData.verdict.verdict === 'missing_srat_with_multinode' ? 'var(--warn)' :
+                             (acpiTablesInventoryAuditData.verdict.verdict === 'huge_dsdt' || acpiTablesInventoryAuditData.verdict.verdict === 'excess_ssdts') ? 'var(--accent)' :
+                             acpiTablesInventoryAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {acpiTablesInventoryAuditData.table_count} tables · DSDT={acpiTablesInventoryAuditData.dsdt_size ?? '—'}B · {i18n.t("integrations.acpitbl.verdict")} : <b>{acpiTablesInventoryAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if acpiTablesInventoryAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        acpiTablesInventoryAuditData.verdict.verdict === 'missing_srat_with_multinode' ? 'var(--warn)' :
+                        (acpiTablesInventoryAuditData.verdict.verdict === 'huge_dsdt' || acpiTablesInventoryAuditData.verdict.verdict === 'excess_ssdts') ? 'var(--accent)' :
+                        acpiTablesInventoryAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{acpiTablesInventoryAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(acpiTablesInventoryAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.acpitbl.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  acpiTablesInventoryAuditData.verdict.verdict === 'missing_srat_with_multinode'
+                    ? "# Multi-node host but no SRAT — kernel uses topology heuristics\n# Update firmware (vendor BIOS update) to expose SRAT\nls /sys/firmware/acpi/tables/\n# Or accept the heuristic and verify with :\nnumactl --hardware"
+                  : acpiTablesInventoryAuditData.verdict.verdict === 'huge_dsdt'
+                    ? "# Vendor BIOS bloat — inspect for broken methods\nsudo acpidump -b -t DSDT > dsdt.aml\niasl -d dsdt.aml   # decompile + look for warnings\n# Report to vendor or extract DSDT override if needed"
+                  : acpiTablesInventoryAuditData.verdict.verdict === 'excess_ssdts'
+                    ? "# Extreme SSDT count — extract + diff\nls /sys/firmware/acpi/tables/ | grep SSDT\nsudo acpidump -b\n# Often these are vendor-pasted blobs ; rare to be wrong"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #109.4 PCI NUMA pinning (UI sprint 100) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pcinuma.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pcinuma.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPciNumaPinningAudit}>{i18n.t("integrations.pcinuma.refresh")}</button>
+          {#if pciNumaPinningAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pciNumaPinningAuditData.verdict.verdict === 'all_devices_node_minus_1_multinode_host' ? 'var(--warn)' :
+                             pciNumaPinningAuditData.verdict.verdict === 'pci_numa_skew' ? 'var(--accent)' :
+                             pciNumaPinningAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {pciNumaPinningAuditData.device_count} dev · multi={pciNumaPinningAuditData.multi_node} · {i18n.t("integrations.pcinuma.verdict")} : <b>{pciNumaPinningAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pciNumaPinningAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pciNumaPinningAuditData.verdict.verdict === 'all_devices_node_minus_1_multinode_host' ? 'var(--warn)' :
+                        pciNumaPinningAuditData.verdict.verdict === 'pci_numa_skew' ? 'var(--accent)' :
+                        pciNumaPinningAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{pciNumaPinningAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(pciNumaPinningAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pcinuma.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  pciNumaPinningAuditData.verdict.verdict === 'all_devices_node_minus_1_multinode_host'
+                    ? "# Multi-node but every PCI device maps to node=-1\n# Firmware missing ACPI _PXM for slots\n# Vendor BIOS update is the primary fix\nfor d in /sys/bus/pci/devices/*; do\n  echo \"$d : $(cat $d/numa_node 2>/dev/null)\"\ndone | head"
+                  : pciNumaPinningAuditData.verdict.verdict === 'pci_numa_skew'
+                    ? "# PCI slots heavily skewed to one NUMA node\n# Inspect mapping :\nlspci -vvv | grep -i numa\n# Mitigation : move latency-sensitive cards (GPU, NIC, NVMe) to slots\n# bound to the secondary node ; or pin processes via taskset / numactl"
                   : ""
                 }</pre>
               </details>
