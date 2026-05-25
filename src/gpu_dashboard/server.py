@@ -2152,6 +2152,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_per_device_wakeup_attribution_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/block-discard-caps-audit":
+                # R&D #96.1 — block discard / TRIM caps posture
+                code, body = api.handle_block_discard_caps_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
