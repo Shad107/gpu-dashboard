@@ -6002,4 +6002,29 @@ export const api = {
       n_unpinned: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #110 (UI sprint 101) ──
+  swapPriorityTieringAuditStatus: () =>
+    fetch("/api/swap-priority-tiering-audit").then(jsonOf<{
+      ok: boolean;
+      swap_count: number;
+      swaps: Array<{
+        filename: string;
+        type: string;
+        priority: number;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  xfsLogActivityAuditStatus: () =>
+    fetch("/api/xfs-log-activity-audit").then(jsonOf<{
+      ok: boolean;
+      filesystem_count: number;
+      filesystems: Array<{
+        dev: string;
+        rw_reads: number | null;
+        rw_writes: number | null;
+      }>;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

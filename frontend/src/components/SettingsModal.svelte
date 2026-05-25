@@ -3075,6 +3075,18 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #110 (UI sprint 101) ──────────────────────────────────────────
+  let swapPriorityTieringAuditData        = $state<Awaited<ReturnType<typeof api.swapPriorityTieringAuditStatus>>        | null>(null);
+  let xfsLogActivityAuditData             = $state<Awaited<ReturnType<typeof api.xfsLogActivityAuditStatus>>             | null>(null);
+  async function loadSwapPriorityTieringAudit() {
+    try { swapPriorityTieringAuditData = await api.swapPriorityTieringAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadXfsLogActivityAudit() {
+    try { xfsLogActivityAuditData = await api.xfsLogActivityAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3622,6 +3634,9 @@
       if (!acpiBootAssetsAuditData)             loadAcpiBootAssetsAudit();
       if (!acpiTablesInventoryAuditData)        loadAcpiTablesInventoryAudit();
       if (!pciNumaPinningAuditData)             loadPciNumaPinningAudit();
+      // R&D #110 cards
+      if (!swapPriorityTieringAuditData)        loadSwapPriorityTieringAudit();
+      if (!xfsLogActivityAuditData)             loadXfsLogActivityAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -19921,6 +19936,80 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
                     ? "# PCI slots heavily skewed to one NUMA node\n# Inspect mapping :\nlspci -vvv | grep -i numa\n# Mitigation : move latency-sensitive cards (GPU, NIC, NVMe) to slots\n# bound to the secondary node ; or pin processes via taskset / numactl"
                   : ""
                 }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #110.1 swap priority tiering (UI sprint 101) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.swappri.title")}</h4>
+        <p class="muted">{i18n.t("integrations.swappri.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSwapPriorityTieringAudit}>{i18n.t("integrations.swappri.refresh")}</button>
+          {#if swapPriorityTieringAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={swapPriorityTieringAuditData.verdict.verdict === 'disk_swap_higher_than_zram' ? 'var(--warn)' :
+                             swapPriorityTieringAuditData.verdict.verdict === 'equal_priority_round_robin' ? 'var(--accent)' :
+                             swapPriorityTieringAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {swapPriorityTieringAuditData.swap_count} swap · {i18n.t("integrations.swappri.verdict")} : <b>{swapPriorityTieringAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if swapPriorityTieringAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        swapPriorityTieringAuditData.verdict.verdict === 'disk_swap_higher_than_zram' ? 'var(--warn)' :
+                        swapPriorityTieringAuditData.verdict.verdict === 'equal_priority_round_robin' ? 'var(--accent)' :
+                        swapPriorityTieringAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{swapPriorityTieringAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(swapPriorityTieringAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.swappri.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  swapPriorityTieringAuditData.verdict.verdict === 'disk_swap_higher_than_zram'
+                    ? "# Lift zram priority above disk swap (so cold pages compress first)\nsudo swapoff /dev/zram0\nsudo swapon -p 100 /dev/zram0\nsudo swapoff /swap.img\nsudo swapon -p -2 /swap.img\n# Persist in /etc/fstab :\n# /dev/zram0  none  swap  defaults,pri=100  0  0\n# /swap.img   none  swap  defaults,pri=-2   0  0"
+                  : swapPriorityTieringAuditData.verdict.verdict === 'equal_priority_round_robin'
+                    ? "# Equal priorities = round-robin (intentional for striped RAID-0 swap)\n# If unintentional, give one swap higher priority :\nsudo swapoff /dev/<device>\nsudo swapon -p <higher_priority> /dev/<device>"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #110.2 XFS log activity (UI sprint 101) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.xfslog.title")}</h4>
+        <p class="muted">{i18n.t("integrations.xfslog.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadXfsLogActivityAudit}>{i18n.t("integrations.xfslog.refresh")}</button>
+          {#if xfsLogActivityAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={xfsLogActivityAuditData.verdict.verdict === 'xfs_stats_unreadable' ? 'var(--accent)' :
+                             xfsLogActivityAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {xfsLogActivityAuditData.filesystem_count} fs · {i18n.t("integrations.xfslog.verdict")} : <b>{xfsLogActivityAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if xfsLogActivityAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        xfsLogActivityAuditData.verdict.verdict === 'xfs_stats_unreadable' ? 'var(--accent)' :
+                        xfsLogActivityAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{xfsLogActivityAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(xfsLogActivityAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.xfslog.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{`# XFS stats files unreadable — re-run as root or sample directly\nsudo cat /sys/fs/xfs/*/stats/stats | head -20\n# Or use the userspace tool :\nsudo xfs_stats_calc 1   # need xfsprogs installed`}</pre>
               </details>
             {/if}
           </div>
