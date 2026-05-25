@@ -603,3 +603,4 @@ from .workqueue_power_efficient_audit import handle_workqueue_power_efficient_au
 from .bql_stall_counters_audit import handle_bql_stall_counters_audit_status  # noqa: F401,F811
 from .perf_sampling_limits_audit import handle_perf_sampling_limits_audit_status  # noqa: F401,F811
 from .zswap_deep_pool_audit import handle_zswap_deep_pool_audit_status  # noqa: F401,F811
+from .kfence_runtime_audit import handle_kfence_runtime_audit_status  # noqa: F401,F811

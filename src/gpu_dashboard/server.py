@@ -2252,6 +2252,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_zswap_deep_pool_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kfence-runtime-audit":
+                # R&D #101.1 — KFENCE memory-safety canary posture
+                code, body = api.handle_kfence_runtime_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
