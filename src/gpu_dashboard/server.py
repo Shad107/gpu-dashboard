@@ -2302,6 +2302,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ephemeral_port_range_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/zram-writeback-recompress-audit":
+                # R&D #103.3 — zram writeback + recomp pipeline
+                code, body = api.handle_zram_writeback_recompress_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
