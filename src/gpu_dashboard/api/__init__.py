@@ -635,3 +635,4 @@ from .nvidia_drm_params_audit import handle_nvidia_drm_params_audit_status  # no
 from .overlay_module_params_audit import handle_overlay_module_params_audit_status  # noqa: F401,F811
 from .dm_mod_params_audit import handle_dm_mod_params_audit_status  # noqa: F401,F811
 from .cgroup_tree_limits_audit import handle_cgroup_tree_limits_audit_status  # noqa: F401,F811
+from .numa_demotion_enabled_audit import handle_numa_demotion_enabled_audit_status  # noqa: F401,F811

@@ -2412,6 +2412,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cgroup_tree_limits_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/numa-demotion-enabled-audit":
+                # R&D #109.1 — NUMA demotion boolean posture
+                code, body = api.handle_numa_demotion_enabled_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
