@@ -9494,6 +9494,12 @@
                 {/each}
               </ul>
             </details>
+            {#if keyringAuditData.type_counts && Object.keys(keyringAuditData.type_counts).length > 0}
+              <p class="muted" style="margin: 4px 0; font-size: 0.85em;">
+                {i18n.t("integrations.kr.types")} :
+                {Object.entries(keyringAuditData.type_counts).map(([t,n]) => `${t}=${n}`).join(' · ')}
+              </p>
+            {/if}
             <p style="margin: 4px 0;">{keyringAuditData.verdict.reason}</p>
             {#if keyringAuditData.verdict.recommendation}
               <details style="margin-top: 4px;">
@@ -12683,7 +12689,7 @@
           {#if procSyscallAuxvAuditData?.ok}
             <span class="kv" style="margin-left: 12px;"
                   style:color={procSyscallAuxvAuditData.verdict.verdict === 'syscall_hang_long' ? 'var(--warn)' :
-                             ['hwcap_drift','timerslack_battery_hostile'].includes(procSyscallAuxvAuditData.verdict.verdict) ? 'var(--accent)' :
+                             ['hwcap_drift','timerslack_battery_hostile','unexpected_secure_mode'].includes(procSyscallAuxvAuditData.verdict.verdict) ? 'var(--accent)' :
                              'var(--text-dim)'}>
               {procSyscallAuxvAuditData.sample_count} PIDs · {procSyscallAuxvAuditData.arch} · {i18n.t("integrations.procsysauxv.verdict")} : <b>{procSyscallAuxvAuditData.verdict.verdict}</b>
             </span>
@@ -12693,9 +12699,14 @@
           <div style="margin-top: 8px; padding: 8px;
                       border-left: 3px solid {
                         procSyscallAuxvAuditData.verdict.verdict === 'syscall_hang_long' ? 'var(--warn)' :
-                        ['hwcap_drift','timerslack_battery_hostile'].includes(procSyscallAuxvAuditData.verdict.verdict) ? 'var(--accent)' :
+                        ['hwcap_drift','timerslack_battery_hostile','unexpected_secure_mode'].includes(procSyscallAuxvAuditData.verdict.verdict) ? 'var(--accent)' :
                         'var(--text-dim)'};">
             <p style="margin: 4px 0;">{procSyscallAuxvAuditData.verdict.reason}</p>
+            <p class="muted" style="margin: 4px 0; font-size: 0.85em;">
+              AT_SECURE={procSyscallAuxvAuditData.own_secure ?? '—'} ·
+              AT_RANDOM {procSyscallAuxvAuditData.own_at_random_set ? 'set' : 'unset'} ·
+              AT_BASE={procSyscallAuxvAuditData.own_at_base != null ? '0x' + procSyscallAuxvAuditData.own_at_base.toString(16) : '—'}
+            </p>
             {#if procSyscallAuxvAuditData.verdict.recommendation}
               <details style="margin-top: 4px;">
                 <summary class="muted">{i18n.t("integrations.procsysauxv.recommend")}</summary>
@@ -20556,6 +20567,9 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
               <span class="kv">{i18n.t("integrations.uc.cpu")} : <b>{cpuMicrocodeData.cpu_count}</b></span>
               <span class="kv">{i18n.t("integrations.uc.rev")} :
                 <b style="font-family: monospace;">{(cpuMicrocodeData.distinct_microcodes ?? []).join(', ') || '—'}</b>
+              </span>
+              <span class="kv muted">{i18n.t("integrations.uc.pflags")} :
+                <b style="font-family: monospace;">{cpuMicrocodeData.sys_processor_flags ?? (cpuMicrocodeData.sys_microcode_dir_present === false ? 'n/a (sysfs masked)' : '—')}</b>
               </span>
             </div>
             <p style="margin: 4px 0;">{cpuMicrocodeData.verdict?.reason}</p>

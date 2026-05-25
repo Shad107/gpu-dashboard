@@ -2316,6 +2316,8 @@ export const api = {
       microcodes?: string[];
       distinct_microcodes?: string[];
       sys_microcode_version?: string | null;
+      sys_processor_flags?: string | null;
+      sys_microcode_dir_present?: boolean;
       verdict?: { verdict: string; reason: string; recommendation: string };
     }>),
 
@@ -2893,6 +2895,7 @@ export const api = {
         keys: number; maxkeys: number;
         bytes: number; maxbytes: number;
       }>;
+      type_counts?: Record<string, number>;
       verdict: { verdict: string; reason: string; recommendation: string };
     }>),
 
@@ -3990,6 +3993,9 @@ export const api = {
       own_hwcap: number | null;
       own_hwcap2: number | null;
       own_pagesz: number | null;
+      own_secure: number | null;
+      own_at_base: number | null;
+      own_at_random_set: boolean;
       arch: string;
       battery_discharging: boolean;
       verdict: { verdict: string; reason: string; recommendation: string };
