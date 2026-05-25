@@ -5562,4 +5562,43 @@ export const api = {
       uid_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #99 (UI sprint 90) ──
+  umwaitControlAuditStatus: () =>
+    fetch("/api/umwait-control-audit").then(jsonOf<{
+      ok: boolean;
+      waitpkg: boolean;
+      enable_c02: number | null;
+      max_time: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  splitLockDetectAuditStatus: () =>
+    fetch("/api/split-lock-detect-audit").then(jsonOf<{
+      ok: boolean;
+      intel: boolean;
+      cmdline_mode: string | null;
+      sysctl_mitigate: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  oomPolicySysctlAuditStatus: () =>
+    fetch("/api/oom-policy-sysctl-audit").then(jsonOf<{
+      ok: boolean;
+      panic_on_oom: number | null;
+      oom_kill_allocating_task: number | null;
+      oom_dump_tasks: number | null;
+      mem_total_kb: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  rseqKernelAuditStatus: () =>
+    fetch("/api/rseq-kernel-audit").then(jsonOf<{
+      ok: boolean;
+      uname: string;
+      CONFIG_RSEQ: string | null;
+      CONFIG_DEBUG_RSEQ: string | null;
+      CONFIG_FUTEX_PI: string | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

@@ -2833,6 +2833,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #99 (UI sprint 90) ────────────────────────────────────────────
+  let umwaitControlAuditData              = $state<Awaited<ReturnType<typeof api.umwaitControlAuditStatus>>              | null>(null);
+  let splitLockDetectAuditData            = $state<Awaited<ReturnType<typeof api.splitLockDetectAuditStatus>>            | null>(null);
+  let oomPolicySysctlAuditData            = $state<Awaited<ReturnType<typeof api.oomPolicySysctlAuditStatus>>            | null>(null);
+  let rseqKernelAuditData                 = $state<Awaited<ReturnType<typeof api.rseqKernelAuditStatus>>                 | null>(null);
+  async function loadUmwaitControlAudit() {
+    try { umwaitControlAuditData = await api.umwaitControlAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSplitLockDetectAudit() {
+    try { splitLockDetectAuditData = await api.splitLockDetectAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadOomPolicySysctlAudit() {
+    try { oomPolicySysctlAuditData = await api.oomPolicySysctlAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadRseqKernelAudit() {
+    try { rseqKernelAuditData = await api.rseqKernelAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3325,6 +3347,11 @@
       if (!fsQuotaProjidAuditData)              loadFsQuotaProjidAudit();
       if (!fuseConnectionsAuditData)            loadFuseConnectionsAudit();
       if (!keyringLifecycleAuditData)           loadKeyringLifecycleAudit();
+      // R&D #99 cards
+      if (!umwaitControlAuditData)              loadUmwaitControlAudit();
+      if (!splitLockDetectAuditData)            loadSplitLockDetectAudit();
+      if (!oomPolicySysctlAuditData)            loadOomPolicySysctlAudit();
+      if (!rseqKernelAuditData)                 loadRseqKernelAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -17727,6 +17754,182 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# Persistent keyrings never expire — set a sane TTL (3 days)\necho 259200 | sudo tee /proc/sys/kernel/keys/persistent_keyring_expiry\n# Persist :\nsudo tee /etc/sysctl.d/99-keyring.conf <<'EOF'\nkernel.keys.persistent_keyring_expiry = 259200\nEOF\nsudo sysctl --system"
                   : keyringLifecycleAuditData.verdict.verdict === 'gc_delay_too_high'
                     ? "# gc_delay set absurdly high — revoked keyrings linger\n# Default is 300s (5 min). Reset :\necho 300 | sudo tee /proc/sys/kernel/keys/gc_delay\n# Persist :\nsudo tee /etc/sysctl.d/99-keyring.conf <<'EOF'\nkernel.keys.gc_delay = 300\nEOF\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #99.1 Intel umwait control (UI sprint 90) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.umwait.title")}</h4>
+        <p class="muted">{i18n.t("integrations.umwait.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadUmwaitControlAudit}>{i18n.t("integrations.umwait.refresh")}</button>
+          {#if umwaitControlAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={umwaitControlAuditData.verdict.verdict === 'umwait_c02_default_trap' ? 'var(--err)' :
+                             umwaitControlAuditData.verdict.verdict === 'umwait_c02_enabled' ? 'var(--warn)' :
+                             umwaitControlAuditData.verdict.verdict === 'umwait_max_time_custom' ? 'var(--accent)' :
+                             umwaitControlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              waitpkg {umwaitControlAuditData.waitpkg ? 'on' : 'off'} · c02={umwaitControlAuditData.enable_c02 ?? '—'} · t={umwaitControlAuditData.max_time ?? '—'} · {i18n.t("integrations.umwait.verdict")} : <b>{umwaitControlAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if umwaitControlAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        umwaitControlAuditData.verdict.verdict === 'umwait_c02_default_trap' ? 'var(--err)' :
+                        umwaitControlAuditData.verdict.verdict === 'umwait_c02_enabled' ? 'var(--warn)' :
+                        umwaitControlAuditData.verdict.verdict === 'umwait_max_time_custom' ? 'var(--accent)' :
+                        umwaitControlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{umwaitControlAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(umwaitControlAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.umwait.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  umwaitControlAuditData.verdict.verdict === 'umwait_c02_default_trap'
+                    ? "# Disable C0.2 to keep UMWAIT in shallow C0.1 (fast wake)\necho 0 | sudo tee /sys/devices/system/cpu/umwait_control/enable_c02\n# Or tighten max_time so even C0.2 wakes fast (units: cycles)\necho 10000 | sudo tee /sys/devices/system/cpu/umwait_control/max_time\n# Persist via systemd unit :\nsudo tee /etc/systemd/system/umwait-tune.service <<'EOF'\n[Unit]\nDescription=Tune Intel umwait for desktop latency\n[Service]\nType=oneshot\nExecStart=/bin/sh -c 'echo 0 > /sys/devices/system/cpu/umwait_control/enable_c02'\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl enable --now umwait-tune.service"
+                  : umwaitControlAuditData.verdict.verdict === 'umwait_c02_enabled'
+                    ? "# Already-tightened max_time but C0.2 still active — consider full disable\necho 0 | sudo tee /sys/devices/system/cpu/umwait_control/enable_c02\n# Verify :\ncat /sys/devices/system/cpu/umwait_control/enable_c02"
+                  : umwaitControlAuditData.verdict.verdict === 'umwait_max_time_custom'
+                    ? "# Document why max_time was tuned, or reset to default\necho 100000 | sudo tee /sys/devices/system/cpu/umwait_control/max_time\n# Inspect current state :\ngrep . /sys/devices/system/cpu/umwait_control/*"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #99.2 Split-lock detect (UI sprint 90) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.splitlock.title")}</h4>
+        <p class="muted">{i18n.t("integrations.splitlock.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSplitLockDetectAudit}>{i18n.t("integrations.splitlock.refresh")}</button>
+          {#if splitLockDetectAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={splitLockDetectAuditData.verdict.verdict === 'split_lock_fatal' ? 'var(--err)' :
+                             splitLockDetectAuditData.verdict.verdict === 'split_lock_off' ? 'var(--warn)' :
+                             splitLockDetectAuditData.verdict.verdict === 'split_lock_ratelimited' ? 'var(--accent)' :
+                             splitLockDetectAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {splitLockDetectAuditData.intel ? 'Intel' : 'non-Intel'} · cmdline={splitLockDetectAuditData.cmdline_mode ?? '—'} · {i18n.t("integrations.splitlock.verdict")} : <b>{splitLockDetectAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if splitLockDetectAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        splitLockDetectAuditData.verdict.verdict === 'split_lock_fatal' ? 'var(--err)' :
+                        splitLockDetectAuditData.verdict.verdict === 'split_lock_off' ? 'var(--warn)' :
+                        splitLockDetectAuditData.verdict.verdict === 'split_lock_ratelimited' ? 'var(--accent)' :
+                        splitLockDetectAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{splitLockDetectAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(splitLockDetectAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.splitlock.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  splitLockDetectAuditData.verdict.verdict === 'split_lock_fatal'
+                    ? "# Steam/Proton + old JVMs SIGBUS — switch to warn or ratelimit\n# Edit GRUB :\nsudo sed -i 's/split_lock_detect=fatal/split_lock_detect=warn/' \\\\\n  /etc/default/grub\nsudo update-grub\n# Or runtime softening :\necho 1 | sudo tee /proc/sys/kernel/split_lock_mitigate\n# Reboot for cmdline change."
+                  : splitLockDetectAuditData.verdict.verdict === 'split_lock_off'
+                    ? "# Re-enable warn mode to surface offenders\necho 1 | sudo tee /proc/sys/kernel/split_lock_mitigate\n# Verify warnings emit :\nsudo dmesg -w | grep 'split lock'\n# Or persist via GRUB :\nsudo sed -i 's/split_lock_detect=off/split_lock_detect=warn/' \\\\\n  /etc/default/grub\nsudo update-grub"
+                  : splitLockDetectAuditData.verdict.verdict === 'split_lock_ratelimited'
+                    ? "# Ratelimit caps log noise — verify dmesg still has clues\nsudo dmesg | grep -i 'split lock' | head -20\n# Increase the rate if needed :\nsudo sed -i 's/ratelimit:[0-9]\\\\+/ratelimit:50/' /etc/default/grub\nsudo update-grub"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #99.3 OOM policy sysctl (UI sprint 90) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.oompol.title")}</h4>
+        <p class="muted">{i18n.t("integrations.oompol.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadOomPolicySysctlAudit}>{i18n.t("integrations.oompol.refresh")}</button>
+          {#if oomPolicySysctlAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={oomPolicySysctlAuditData.verdict.verdict === 'panic_on_oom_set' ? 'var(--err)' :
+                             oomPolicySysctlAuditData.verdict.verdict === 'kill_allocating_task' ? 'var(--warn)' :
+                             oomPolicySysctlAuditData.verdict.verdict === 'dump_tasks_disabled' ? 'var(--accent)' :
+                             oomPolicySysctlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              panic={oomPolicySysctlAuditData.panic_on_oom ?? '—'} · alloc-kill={oomPolicySysctlAuditData.oom_kill_allocating_task ?? '—'} · dump={oomPolicySysctlAuditData.oom_dump_tasks ?? '—'} · {i18n.t("integrations.oompol.verdict")} : <b>{oomPolicySysctlAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if oomPolicySysctlAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        oomPolicySysctlAuditData.verdict.verdict === 'panic_on_oom_set' ? 'var(--err)' :
+                        oomPolicySysctlAuditData.verdict.verdict === 'kill_allocating_task' ? 'var(--warn)' :
+                        oomPolicySysctlAuditData.verdict.verdict === 'dump_tasks_disabled' ? 'var(--accent)' :
+                        oomPolicySysctlAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{oomPolicySysctlAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(oomPolicySysctlAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.oompol.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  oomPolicySysctlAuditData.verdict.verdict === 'panic_on_oom_set'
+                    ? "# Disable kernel panic on OOM (desktops should reclaim, not reboot)\necho 0 | sudo tee /proc/sys/vm/panic_on_oom\n# Persist :\nsudo tee /etc/sysctl.d/99-oom-policy.conf <<'EOF'\nvm.panic_on_oom = 0\nEOF\nsudo sysctl --system"
+                  : oomPolicySysctlAuditData.verdict.verdict === 'kill_allocating_task'
+                    ? "# Restore default OOM victim selection (heaviest, not caller)\necho 0 | sudo tee /proc/sys/vm/oom_kill_allocating_task\n# Persist :\nsudo tee /etc/sysctl.d/99-oom-policy.conf <<'EOF'\nvm.oom_kill_allocating_task = 0\nEOF\nsudo sysctl --system"
+                  : oomPolicySysctlAuditData.verdict.verdict === 'dump_tasks_disabled'
+                    ? "# Re-enable per-task RSS dump on OOM (post-mortems)\necho 1 | sudo tee /proc/sys/vm/oom_dump_tasks\n# Persist :\nsudo tee /etc/sysctl.d/99-oom-policy.conf <<'EOF'\nvm.oom_dump_tasks = 1\nEOF\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #99.4 rseq kernel posture (UI sprint 90) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.rseq.title")}</h4>
+        <p class="muted">{i18n.t("integrations.rseq.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadRseqKernelAudit}>{i18n.t("integrations.rseq.refresh")}</button>
+          {#if rseqKernelAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={rseqKernelAuditData.verdict.verdict === 'rseq_kernel_disabled' ? 'var(--warn)' :
+                             rseqKernelAuditData.verdict.verdict === 'futex_pi_disabled' ? 'var(--accent)' :
+                             rseqKernelAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              RSEQ={rseqKernelAuditData.CONFIG_RSEQ ?? '—'} · FUTEX_PI={rseqKernelAuditData.CONFIG_FUTEX_PI ?? '—'} · {i18n.t("integrations.rseq.verdict")} : <b>{rseqKernelAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if rseqKernelAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        rseqKernelAuditData.verdict.verdict === 'rseq_kernel_disabled' ? 'var(--warn)' :
+                        rseqKernelAuditData.verdict.verdict === 'futex_pi_disabled' ? 'var(--accent)' :
+                        rseqKernelAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{rseqKernelAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(rseqKernelAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.rseq.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  rseqKernelAuditData.verdict.verdict === 'rseq_kernel_disabled'
+                    ? "# Kernel built without CONFIG_RSEQ — switch to a distro kernel that has it\n# Verify current config :\ngrep -E 'CONFIG_RSEQ' /boot/config-$(uname -r) || \\\n  zgrep CONFIG_RSEQ /proc/config.gz\n# Install a stock distro kernel (Ubuntu/Debian) :\nsudo apt install -y linux-image-generic\nsudo update-grub && sudo reboot\n# Or for self-built kernels, set in .config :\nscripts/config -e CONFIG_RSEQ\nmake -j$(nproc) && sudo make modules_install install"
+                  : rseqKernelAuditData.verdict.verdict === 'futex_pi_disabled'
+                    ? "# CONFIG_FUTEX_PI=n — required for low-latency audio (JACK/PipeWire RT)\n# Verify :\ngrep -E 'CONFIG_FUTEX' /boot/config-$(uname -r) || \\\n  zgrep CONFIG_FUTEX /proc/config.gz\n# Rebuild kernel with :\nscripts/config -e CONFIG_FUTEX_PI\nmake -j$(nproc) && sudo make modules_install install"
                   : ""
                 }</pre>
               </details>
