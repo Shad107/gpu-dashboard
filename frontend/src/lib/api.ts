@@ -5641,4 +5641,44 @@ export const api = {
       reject_compress_poor: number | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #101 (UI sprint 92) ──
+  kfenceRuntimeAuditStatus: () =>
+    fetch("/api/kfence-runtime-audit").then(jsonOf<{
+      ok: boolean;
+      sample_interval: number | null;
+      skip_covered_thresh: number | null;
+      config_sample_interval: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  netQdiscDefaultAuditStatus: () =>
+    fetch("/api/net-qdisc-default-audit").then(jsonOf<{
+      ok: boolean;
+      default_qdisc: string | null;
+      netdev_budget: number | null;
+      netdev_max_backlog: number | null;
+      netdev_budget_usecs: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  fscacheCachefilesAuditStatus: () =>
+    fetch("/api/fscache-cachefiles-audit").then(jsonOf<{
+      ok: boolean;
+      module_loaded: boolean;
+      cache_count: number;
+      nfs_fsc_mount_count: number;
+      cachefiles_backend_present: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  ksmAdvisorAuditStatus: () =>
+    fetch("/api/ksm-advisor-audit").then(jsonOf<{
+      ok: boolean;
+      run: number | null;
+      advisor_mode: string | null;
+      smart_scan: number | null;
+      advisor_target_scan_time: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

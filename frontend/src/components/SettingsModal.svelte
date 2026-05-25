@@ -2877,6 +2877,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #101 (UI sprint 92) ───────────────────────────────────────────
+  let kfenceRuntimeAuditData              = $state<Awaited<ReturnType<typeof api.kfenceRuntimeAuditStatus>>              | null>(null);
+  let netQdiscDefaultAuditData            = $state<Awaited<ReturnType<typeof api.netQdiscDefaultAuditStatus>>            | null>(null);
+  let fscacheCachefilesAuditData          = $state<Awaited<ReturnType<typeof api.fscacheCachefilesAuditStatus>>          | null>(null);
+  let ksmAdvisorAuditData                 = $state<Awaited<ReturnType<typeof api.ksmAdvisorAuditStatus>>                 | null>(null);
+  async function loadKfenceRuntimeAudit() {
+    try { kfenceRuntimeAuditData = await api.kfenceRuntimeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNetQdiscDefaultAudit() {
+    try { netQdiscDefaultAuditData = await api.netQdiscDefaultAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFscacheCachefilesAudit() {
+    try { fscacheCachefilesAuditData = await api.fscacheCachefilesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKsmAdvisorAudit() {
+    try { ksmAdvisorAuditData = await api.ksmAdvisorAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3379,6 +3401,11 @@
       if (!bqlStallCountersAuditData)           loadBqlStallCountersAudit();
       if (!perfSamplingLimitsAuditData)         loadPerfSamplingLimitsAudit();
       if (!zswapDeepPoolAuditData)              loadZswapDeepPoolAudit();
+      // R&D #101 cards
+      if (!kfenceRuntimeAuditData)              loadKfenceRuntimeAudit();
+      if (!netQdiscDefaultAuditData)            loadNetQdiscDefaultAudit();
+      if (!fscacheCachefilesAuditData)          loadFscacheCachefilesAudit();
+      if (!ksmAdvisorAuditData)                 loadKsmAdvisorAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -18137,6 +18164,180 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# Enable exclusive_loads to drop the duplicate after fault-in\necho Y | sudo tee /sys/module/zswap/parameters/exclusive_loads\n# Persist via modprobe :\necho 'options zswap exclusive_loads=Y' | \\\n  sudo tee /etc/modprobe.d/zswap.conf"
                   : zswapDeepPoolAuditData.verdict.verdict === 'zswap_shrinker_disabled'
                     ? "# Enable the zswap shrinker so MM can reclaim pool pages\necho Y | sudo tee /sys/module/zswap/parameters/shrinker_enabled\n# Persist :\necho 'options zswap shrinker_enabled=Y' | \\\n  sudo tee /etc/modprobe.d/zswap.conf"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #101.1 KFENCE runtime (UI sprint 92) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.kfence.title")}</h4>
+        <p class="muted">{i18n.t("integrations.kfence.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKfenceRuntimeAudit}>{i18n.t("integrations.kfence.refresh")}</button>
+          {#if kfenceRuntimeAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={kfenceRuntimeAuditData.verdict.verdict === 'kfence_disabled' ? 'var(--warn)' :
+                             kfenceRuntimeAuditData.verdict.verdict === 'kfence_sample_interval_high' ? 'var(--accent)' :
+                             kfenceRuntimeAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              sample={kfenceRuntimeAuditData.sample_interval ?? '—'}ms · cfg={kfenceRuntimeAuditData.config_sample_interval ?? '—'} · {i18n.t("integrations.kfence.verdict")} : <b>{kfenceRuntimeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kfenceRuntimeAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        kfenceRuntimeAuditData.verdict.verdict === 'kfence_disabled' ? 'var(--warn)' :
+                        kfenceRuntimeAuditData.verdict.verdict === 'kfence_sample_interval_high' ? 'var(--accent)' :
+                        kfenceRuntimeAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{kfenceRuntimeAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(kfenceRuntimeAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.kfence.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  kfenceRuntimeAuditData.verdict.verdict === 'kfence_disabled'
+                    ? "# Enable KFENCE at boot (cmdline) :\n# Edit /etc/default/grub, append to GRUB_CMDLINE_LINUX :\n#   kfence.sample_interval=100\nsudo sed -i 's/\\(GRUB_CMDLINE_LINUX=\"[^\"]*\\)\"/\\1 kfence.sample_interval=100\"/' \\\\\n  /etc/default/grub\nsudo update-grub && sudo reboot\n# Verify after reboot (root) :\nsudo cat /sys/module/kfence/parameters/sample_interval"
+                  : kfenceRuntimeAuditData.verdict.verdict === 'kfence_sample_interval_high'
+                    ? "# Tighten sample_interval (root) :\necho 200 | sudo tee /sys/module/kfence/parameters/sample_interval\n# Persist via cmdline :\nsudo sed -i 's/kfence.sample_interval=[0-9]\\+/kfence.sample_interval=200/' \\\\\n  /etc/default/grub\nsudo update-grub"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #101.2 net qdisc default (UI sprint 92) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.qdisc.title")}</h4>
+        <p class="muted">{i18n.t("integrations.qdisc.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNetQdiscDefaultAudit}>{i18n.t("integrations.qdisc.refresh")}</button>
+          {#if netQdiscDefaultAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={netQdiscDefaultAuditData.verdict.verdict === 'pfifo_fast_default' ? 'var(--err)' :
+                             netQdiscDefaultAuditData.verdict.verdict === 'netdev_budget_low' ? 'var(--warn)' :
+                             netQdiscDefaultAuditData.verdict.verdict === 'noqueue_default' ? 'var(--accent)' :
+                             netQdiscDefaultAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              qdisc={netQdiscDefaultAuditData.default_qdisc ?? '—'} · budget={netQdiscDefaultAuditData.netdev_budget ?? '—'} · {i18n.t("integrations.qdisc.verdict")} : <b>{netQdiscDefaultAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if netQdiscDefaultAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        netQdiscDefaultAuditData.verdict.verdict === 'pfifo_fast_default' ? 'var(--err)' :
+                        netQdiscDefaultAuditData.verdict.verdict === 'netdev_budget_low' ? 'var(--warn)' :
+                        netQdiscDefaultAuditData.verdict.verdict === 'noqueue_default' ? 'var(--accent)' :
+                        netQdiscDefaultAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{netQdiscDefaultAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(netQdiscDefaultAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.qdisc.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  netQdiscDefaultAuditData.verdict.verdict === 'pfifo_fast_default'
+                    ? "# Switch default qdisc to fq_codel (fair pacing, kills bufferbloat)\necho fq_codel | sudo tee /proc/sys/net/core/default_qdisc\n# Persist :\nsudo tee /etc/sysctl.d/99-qdisc.conf <<'EOF'\nnet.core.default_qdisc = fq_codel\nEOF\nsudo sysctl --system\n# Apply to existing ifaces :\nfor i in $(ls /sys/class/net | grep -v lo); do\n  sudo tc qdisc replace dev $i root fq_codel\ndone"
+                  : netQdiscDefaultAuditData.verdict.verdict === 'netdev_budget_low'
+                    ? "# Bump netdev_budget to the default 300\necho 300 | sudo tee /proc/sys/net/core/netdev_budget\nsudo tee /etc/sysctl.d/99-qdisc.conf <<'EOF'\nnet.core.netdev_budget = 300\nEOF\nsudo sysctl --system"
+                  : netQdiscDefaultAuditData.verdict.verdict === 'noqueue_default'
+                    ? "# noqueue is fine on virtio-net but odd on bare metal\n# Switch to fq_codel for desktop / homelab :\necho fq_codel | sudo tee /proc/sys/net/core/default_qdisc\nsudo tee /etc/sysctl.d/99-qdisc.conf <<'EOF'\nnet.core.default_qdisc = fq_codel\nEOF\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #101.3 fscache cachefiles (UI sprint 92) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fscache.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fscache.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFscacheCachefilesAudit}>{i18n.t("integrations.fscache.refresh")}</button>
+          {#if fscacheCachefilesAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={fscacheCachefilesAuditData.verdict.verdict === 'fscache_caches_culling' ? 'var(--err)' :
+                             fscacheCachefilesAuditData.verdict.verdict === 'nfs_fsc_without_backend' ? 'var(--warn)' :
+                             fscacheCachefilesAuditData.verdict.verdict === 'fscache_loaded_no_caches' ? 'var(--accent)' :
+                             fscacheCachefilesAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              mod={fscacheCachefilesAuditData.module_loaded ? 'on' : 'off'} · caches={fscacheCachefilesAuditData.cache_count} · fsc_mnt={fscacheCachefilesAuditData.nfs_fsc_mount_count} · {i18n.t("integrations.fscache.verdict")} : <b>{fscacheCachefilesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fscacheCachefilesAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        fscacheCachefilesAuditData.verdict.verdict === 'fscache_caches_culling' ? 'var(--err)' :
+                        fscacheCachefilesAuditData.verdict.verdict === 'nfs_fsc_without_backend' ? 'var(--warn)' :
+                        fscacheCachefilesAuditData.verdict.verdict === 'fscache_loaded_no_caches' ? 'var(--accent)' :
+                        fscacheCachefilesAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{fscacheCachefilesAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(fscacheCachefilesAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fscache.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  fscacheCachefilesAuditData.verdict.verdict === 'fscache_caches_culling'
+                    ? "# Cache is wedged — inspect + restart cachefilesd\nsudo cat /proc/fs/fscache/caches\nsudo systemctl status cachefilesd\n# Restart the service :\nsudo systemctl restart cachefilesd\n# If stuck, clear the cache dir :\nsudo systemctl stop cachefilesd\nsudo rm -rf /var/cache/fscache/*\nsudo systemctl start cachefilesd"
+                  : fscacheCachefilesAuditData.verdict.verdict === 'nfs_fsc_without_backend'
+                    ? "# NFS mount has fsc but no cachefiles backend — install + enable\nsudo apt install -y cachefilesd        # Debian/Ubuntu\nsudo systemctl enable --now cachefilesd\n# Verify :\nls /sys/fs/cachefiles/\nsudo cat /proc/fs/fscache/caches"
+                  : fscacheCachefilesAuditData.verdict.verdict === 'fscache_loaded_no_caches'
+                    ? "# fscache module loaded but no caches — either unload or set up cachefilesd\nsudo modprobe -r fscache    # if unused\n# OR set up the backend :\nsudo apt install -y cachefilesd\nsudo systemctl enable --now cachefilesd"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #101.4 KSM advisor (UI sprint 92) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ksmadv.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ksmadv.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKsmAdvisorAudit}>{i18n.t("integrations.ksmadv.refresh")}</button>
+          {#if ksmAdvisorAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ksmAdvisorAuditData.verdict.verdict === 'ksm_running_no_advisor' ? 'var(--warn)' :
+                             (ksmAdvisorAuditData.verdict.verdict === 'ksm_smart_scan_off' || ksmAdvisorAuditData.verdict.verdict === 'ksm_target_too_aggressive') ? 'var(--accent)' :
+                             ksmAdvisorAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              run={ksmAdvisorAuditData.run ?? '—'} · advisor={ksmAdvisorAuditData.advisor_mode ?? '—'} · smart={ksmAdvisorAuditData.smart_scan ?? '—'} · {i18n.t("integrations.ksmadv.verdict")} : <b>{ksmAdvisorAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ksmAdvisorAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ksmAdvisorAuditData.verdict.verdict === 'ksm_running_no_advisor' ? 'var(--warn)' :
+                        (ksmAdvisorAuditData.verdict.verdict === 'ksm_smart_scan_off' || ksmAdvisorAuditData.verdict.verdict === 'ksm_target_too_aggressive') ? 'var(--accent)' :
+                        ksmAdvisorAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{ksmAdvisorAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(ksmAdvisorAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ksmadv.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  ksmAdvisorAuditData.verdict.verdict === 'ksm_running_no_advisor'
+                    ? "# Switch to scan-time advisor for adaptive pacing\necho scan-time | sudo tee /sys/kernel/mm/ksm/advisor_mode\n# Verify :\ncat /sys/kernel/mm/ksm/advisor_mode\n# Or stop KSM if you don't need page merging :\necho 0 | sudo tee /sys/kernel/mm/ksm/run"
+                  : ksmAdvisorAuditData.verdict.verdict === 'ksm_smart_scan_off'
+                    ? "# Enable smart_scan to skip non-mergeable pages\necho 1 | sudo tee /sys/kernel/mm/ksm/smart_scan\n# Verify :\ncat /sys/kernel/mm/ksm/smart_scan"
+                  : ksmAdvisorAuditData.verdict.verdict === 'ksm_target_too_aggressive'
+                    ? "# Bump target_scan_time to reduce idle CPU burn\necho 200 | sudo tee /sys/kernel/mm/ksm/advisor_target_scan_time\n# Verify :\ncat /sys/kernel/mm/ksm/advisor_target_scan_time"
                   : ""
                 }</pre>
               </details>
