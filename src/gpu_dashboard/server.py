@@ -2247,6 +2247,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_perf_sampling_limits_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/zswap-deep-pool-audit":
+                # R&D #100.4 — zswap newer-knob + debugfs counters
+                code, body = api.handle_zswap_deep_pool_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
