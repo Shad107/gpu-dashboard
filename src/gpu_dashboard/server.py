@@ -2112,6 +2112,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_bpf_jit_xdp_busy_poll_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hwpoison-memory-failure-audit":
+                # R&D #94.1 — DRAM hwpoison / memory_failure
+                code, body = api.handle_hwpoison_memory_failure_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
