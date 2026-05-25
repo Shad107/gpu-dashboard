@@ -2987,6 +2987,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #106 (UI sprint 97) ───────────────────────────────────────────
+  let ioDelayTypeAuditData                = $state<Awaited<ReturnType<typeof api.ioDelayTypeAuditStatus>>                | null>(null);
+  let printkPacingAuditData               = $state<Awaited<ReturnType<typeof api.printkPacingAuditStatus>>               | null>(null);
+  let cacheL2ImbalanceAuditData           = $state<Awaited<ReturnType<typeof api.cacheL2ImbalanceAuditStatus>>           | null>(null);
+  let cpufreqSetspeedDriftAuditData       = $state<Awaited<ReturnType<typeof api.cpufreqSetspeedDriftAuditStatus>>       | null>(null);
+  async function loadIoDelayTypeAudit() {
+    try { ioDelayTypeAuditData = await api.ioDelayTypeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPrintkPacingAudit() {
+    try { printkPacingAuditData = await api.printkPacingAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCacheL2ImbalanceAudit() {
+    try { cacheL2ImbalanceAuditData = await api.cacheL2ImbalanceAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpufreqSetspeedDriftAudit() {
+    try { cpufreqSetspeedDriftAuditData = await api.cpufreqSetspeedDriftAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3514,6 +3536,11 @@
       if (!drmGtLoadStatusAuditData)            loadDrmGtLoadStatusAudit();
       if (!powerAsyncSuspendAuditData)          loadPowerAsyncSuspendAudit();
       if (!vmCompactionProactiveAuditData)      loadVmCompactionProactiveAudit();
+      // R&D #106 cards
+      if (!ioDelayTypeAuditData)                loadIoDelayTypeAudit();
+      if (!printkPacingAuditData)               loadPrintkPacingAudit();
+      if (!cacheL2ImbalanceAuditData)           loadCacheL2ImbalanceAudit();
+      if (!cpufreqSetspeedDriftAuditData)       loadCpufreqSetspeedDriftAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -19150,6 +19177,171 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# Restore default per-cpu pagelist sizing (kernel auto)\nsudo sysctl -w vm.percpu_pagelist_high_fraction=0"
                   : vmCompactionProactiveAuditData.verdict.verdict === 'compact_unevictable_disabled'
                     ? "# Re-allow compaction of mlock'd pages\nsudo sysctl -w vm.compact_unevictable_allowed=1"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #106.1 io_delay_type (UI sprint 97) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.iodelay.title")}</h4>
+        <p class="muted">{i18n.t("integrations.iodelay.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIoDelayTypeAudit}>{i18n.t("integrations.iodelay.refresh")}</button>
+          {#if ioDelayTypeAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={ioDelayTypeAuditData.verdict.verdict === 'io_delay_none_risky' ? 'var(--warn)' :
+                             ioDelayTypeAuditData.verdict.verdict === 'io_delay_legacy_slow' ? 'var(--accent)' :
+                             ioDelayTypeAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              type={ioDelayTypeAuditData.io_delay_type ?? '—'} · {i18n.t("integrations.iodelay.verdict")} : <b>{ioDelayTypeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if ioDelayTypeAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        ioDelayTypeAuditData.verdict.verdict === 'io_delay_none_risky' ? 'var(--warn)' :
+                        ioDelayTypeAuditData.verdict.verdict === 'io_delay_legacy_slow' ? 'var(--accent)' :
+                        ioDelayTypeAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{ioDelayTypeAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(ioDelayTypeAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.iodelay.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  ioDelayTypeAuditData.verdict.verdict === 'io_delay_none_risky'
+                    ? "# Restore safe udelay-based pacing for legacy port-I/O\necho 1 | sudo tee /proc/sys/kernel/io_delay_type\nsudo tee /etc/sysctl.d/99-io-delay.conf <<'EOF'\nkernel.io_delay_type = 1\nEOF"
+                  : ioDelayTypeAuditData.verdict.verdict === 'io_delay_legacy_slow'
+                    ? "# Switch to modern udelay pacing (default on modern x86)\necho 1 | sudo tee /proc/sys/kernel/io_delay_type"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #106.2 printk pacing (UI sprint 97) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.printkpace.title")}</h4>
+        <p class="muted">{i18n.t("integrations.printkpace.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPrintkPacingAudit}>{i18n.t("integrations.printkpace.refresh")}</button>
+          {#if printkPacingAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={(printkPacingAuditData.verdict.verdict === 'printk_delay_set' || printkPacingAuditData.verdict.verdict === 'printk_devkmsg_off') ? 'var(--warn)' :
+                             printkPacingAuditData.verdict.verdict === 'ratelimit_burst_tiny' ? 'var(--accent)' :
+                             printkPacingAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              delay={printkPacingAuditData.printk_delay_ms ?? '—'}ms · devkmsg={printkPacingAuditData.printk_devkmsg ?? '—'} · {i18n.t("integrations.printkpace.verdict")} : <b>{printkPacingAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if printkPacingAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        (printkPacingAuditData.verdict.verdict === 'printk_delay_set' || printkPacingAuditData.verdict.verdict === 'printk_devkmsg_off') ? 'var(--warn)' :
+                        printkPacingAuditData.verdict.verdict === 'ratelimit_burst_tiny' ? 'var(--accent)' :
+                        printkPacingAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{printkPacingAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(printkPacingAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.printkpace.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  printkPacingAuditData.verdict.verdict === 'printk_delay_set'
+                    ? "# Disable per-line printk delay\nsudo sysctl -w kernel.printk_delay=0\nsudo tee /etc/sysctl.d/99-printk.conf <<'EOF'\nkernel.printk_delay = 0\nEOF\nsudo sysctl --system"
+                  : printkPacingAuditData.verdict.verdict === 'printk_devkmsg_off'
+                    ? "# Re-enable userspace dmesg readers\nsudo sysctl -w kernel.printk_devkmsg=on\nsudo tee /etc/sysctl.d/99-printk.conf <<'EOF'\nkernel.printk_devkmsg = on\nEOF"
+                  : printkPacingAuditData.verdict.verdict === 'ratelimit_burst_tiny'
+                    ? "# Restore default ratelimit burst (10)\nsudo sysctl -w kernel.printk_ratelimit_burst=10"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #106.3 L2 cache imbalance (UI sprint 97) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.l2cache.title")}</h4>
+        <p class="muted">{i18n.t("integrations.l2cache.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCacheL2ImbalanceAudit}>{i18n.t("integrations.l2cache.refresh")}</button>
+          {#if cacheL2ImbalanceAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cacheL2ImbalanceAuditData.verdict.verdict === 'l2_island_imbalance' ? 'var(--accent)' :
+                             cacheL2ImbalanceAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cacheL2ImbalanceAuditData.cpu_count} CPU · sizes={cacheL2ImbalanceAuditData.l2_sizes_kib.join(',')}KiB · {i18n.t("integrations.l2cache.verdict")} : <b>{cacheL2ImbalanceAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cacheL2ImbalanceAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cacheL2ImbalanceAuditData.verdict.verdict === 'l2_island_imbalance' ? 'var(--accent)' :
+                        cacheL2ImbalanceAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cacheL2ImbalanceAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(cacheL2ImbalanceAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.l2cache.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{`# Pin LLM threads to the larger-L2 cluster
+# Find which CPUs have the bigger L2 :
+for c in /sys/devices/system/cpu/cpu*/cache/index2/size; do
+  cpu=$(echo $c | grep -oE 'cpu[0-9]+')
+  echo "$cpu : $(cat $c)"
+done | sort -t= -k2 -rn | head
+# Run a workload pinned to a specific cluster :
+taskset -c 0-7 python -m llama_cpp.server`}</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #106.4 cpufreq setspeed drift (UI sprint 97) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.setspeed.title")}</h4>
+        <p class="muted">{i18n.t("integrations.setspeed.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpufreqSetspeedDriftAudit}>{i18n.t("integrations.setspeed.refresh")}</button>
+          {#if cpufreqSetspeedDriftAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpufreqSetspeedDriftAuditData.verdict.verdict === 'setspeed_pinned_low' ? 'var(--warn)' :
+                             cpufreqSetspeedDriftAuditData.verdict.verdict === 'setspeed_unused' ? 'var(--accent)' :
+                             cpufreqSetspeedDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cpufreqSetspeedDriftAuditData.cpu_count} CPU · cpufreq={cpufreqSetspeedDriftAuditData.cpufreq_present ? 'on' : 'off'} · {i18n.t("integrations.setspeed.verdict")} : <b>{cpufreqSetspeedDriftAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpufreqSetspeedDriftAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpufreqSetspeedDriftAuditData.verdict.verdict === 'setspeed_pinned_low' ? 'var(--warn)' :
+                        cpufreqSetspeedDriftAuditData.verdict.verdict === 'setspeed_unused' ? 'var(--accent)' :
+                        cpufreqSetspeedDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpufreqSetspeedDriftAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(cpufreqSetspeedDriftAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.setspeed.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cpufreqSetspeedDriftAuditData.verdict.verdict === 'setspeed_pinned_low'
+                    ? "# Restore the dynamic governor + clear setspeed pin\nfor c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do\n  echo schedutil | sudo tee $c\ndone"
+                  : cpufreqSetspeedDriftAuditData.verdict.verdict === 'setspeed_unused'
+                    ? "# Clear the leftover setspeed value (cosmetic ; not actually applied)\n# Most kernels reject writes when governor != userspace, so this is informational"
                   : ""
                 }</pre>
               </details>

@@ -5855,4 +5855,37 @@ export const api = {
       thp_enabled: string | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #106 (UI sprint 97) ──
+  ioDelayTypeAuditStatus: () =>
+    fetch("/api/io-delay-type-audit").then(jsonOf<{
+      ok: boolean;
+      io_delay_type: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  printkPacingAuditStatus: () =>
+    fetch("/api/printk-pacing-audit").then(jsonOf<{
+      ok: boolean;
+      printk_delay_ms: number | null;
+      printk_devkmsg: string | null;
+      printk_ratelimit_burst: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cacheL2ImbalanceAuditStatus: () =>
+    fetch("/api/cache-l2-imbalance-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      l2_sizes_kib: number[];
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cpufreqSetspeedDriftAuditStatus: () =>
+    fetch("/api/cpufreq-setspeed-drift-audit").then(jsonOf<{
+      ok: boolean;
+      cpu_count: number;
+      cpufreq_present: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
