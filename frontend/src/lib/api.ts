@@ -5393,4 +5393,39 @@ export const api = {
       xdp_attached_ifaces: string[];
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #94 (UI sprint 85) ──
+  hwpoisonMemoryFailureAuditStatus: () =>
+    fetch("/api/hwpoison-memory-failure-audit").then(jsonOf<{
+      ok: boolean;
+      hardware_corrupted_kib: number | null;
+      hwpoison_counter_count: number;
+      edac_present: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  fsAioFanotifyLimitsAuditStatus: () =>
+    fetch("/api/fs-aio-fanotify-limits-audit").then(jsonOf<{
+      ok: boolean;
+      limits: Record<string, number | null>;
+      mem_total: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  drmTtmPagePoolAuditStatus: () =>
+    fetch("/api/drm-ttm-page-pool-audit").then(jsonOf<{
+      ok: boolean;
+      ttm_present: boolean;
+      params: Record<string, number | null>;
+      mem_available: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  lockdepLockstatAuditStatus: () =>
+    fetch("/api/lockdep-lockstat-audit").then(jsonOf<{
+      ok: boolean;
+      lockdep_present: boolean;
+      lockdep_dead: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

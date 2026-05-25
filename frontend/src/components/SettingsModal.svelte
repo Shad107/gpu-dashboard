@@ -2723,6 +2723,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #94 (UI sprint 85) ────────────────────────────────────────────
+  let hwpoisonMemoryFailureAuditData      = $state<Awaited<ReturnType<typeof api.hwpoisonMemoryFailureAuditStatus>>      | null>(null);
+  let fsAioFanotifyLimitsAuditData        = $state<Awaited<ReturnType<typeof api.fsAioFanotifyLimitsAuditStatus>>        | null>(null);
+  let drmTtmPagePoolAuditData             = $state<Awaited<ReturnType<typeof api.drmTtmPagePoolAuditStatus>>             | null>(null);
+  let lockdepLockstatAuditData            = $state<Awaited<ReturnType<typeof api.lockdepLockstatAuditStatus>>            | null>(null);
+  async function loadHwpoisonMemoryFailureAudit() {
+    try { hwpoisonMemoryFailureAuditData = await api.hwpoisonMemoryFailureAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFsAioFanotifyLimitsAudit() {
+    try { fsAioFanotifyLimitsAuditData = await api.fsAioFanotifyLimitsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDrmTtmPagePoolAudit() {
+    try { drmTtmPagePoolAuditData = await api.drmTtmPagePoolAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadLockdepLockstatAudit() {
+    try { lockdepLockstatAuditData = await api.lockdepLockstatAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3190,6 +3212,11 @@
       if (!cgroupV2MemoryPeakAuditData)         loadCgroupV2MemoryPeakAudit();
       if (!nfsMountstatsAuditData)              loadNfsMountstatsAudit();
       if (!bpfJitXdpBusyPollAuditData)          loadBpfJitXdpBusyPollAudit();
+      // R&D #94 cards
+      if (!hwpoisonMemoryFailureAuditData)      loadHwpoisonMemoryFailureAudit();
+      if (!fsAioFanotifyLimitsAuditData)        loadFsAioFanotifyLimitsAudit();
+      if (!drmTtmPagePoolAuditData)             loadDrmTtmPagePoolAudit();
+      if (!lockdepLockstatAuditData)            loadLockdepLockstatAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -16702,6 +16729,171 @@ sudo kill <PID>`}</pre>
                     ? "# XDP attached unexpectedly — identify + detach\nfor n in /sys/class/net/*/xdp; do\n  test -e $n || continue\n  echo \"=== $n ===\"\n  cat $n 2>/dev/null\ndone\n# If a leftover from bpftrace/docker, detach :\nsudo ip link set dev <iface> xdp off\n# Or via xdp-loader / cilium / etc as appropriate"
                   : bpfJitXdpBusyPollAuditData.verdict.verdict === 'busy_poll_active'
                     ? "# busy_poll > 0 — only useful with SO_BUSY_POLL apps\ngrep -H . /proc/sys/net/core/busy_poll /proc/sys/net/core/busy_read\n# If no app uses it, reset to 0 (default) :\necho 0 | sudo tee /proc/sys/net/core/busy_poll\necho 0 | sudo tee /proc/sys/net/core/busy_read"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #94.1 hwpoison / memory failure (UI sprint 85) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.hwpoison.title")}</h4>
+        <p class="muted">{i18n.t("integrations.hwpoison.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadHwpoisonMemoryFailureAudit}>{i18n.t("integrations.hwpoison.refresh")}</button>
+          {#if hwpoisonMemoryFailureAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={hwpoisonMemoryFailureAuditData.verdict.verdict === 'hwpoison_active' ? 'var(--err)' :
+                             hwpoisonMemoryFailureAuditData.verdict.verdict === 'hwpoison_failed_recoveries' ? 'var(--warn)' :
+                             hwpoisonMemoryFailureAuditData.verdict.verdict === 'edac_present_no_hwpoison' ? 'var(--accent)' :
+                             hwpoisonMemoryFailureAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              HardwareCorrupted={hwpoisonMemoryFailureAuditData.hardware_corrupted_kib ?? '?'} kB · {i18n.t("integrations.hwpoison.verdict")} : <b>{hwpoisonMemoryFailureAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if hwpoisonMemoryFailureAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        hwpoisonMemoryFailureAuditData.verdict.verdict === 'hwpoison_active' ? 'var(--err)' :
+                        hwpoisonMemoryFailureAuditData.verdict.verdict === 'hwpoison_failed_recoveries' ? 'var(--warn)' :
+                        hwpoisonMemoryFailureAuditData.verdict.verdict === 'edac_present_no_hwpoison' ? 'var(--accent)' :
+                        hwpoisonMemoryFailureAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{hwpoisonMemoryFailureAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(hwpoisonMemoryFailureAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.hwpoison.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  hwpoisonMemoryFailureAuditData.verdict.verdict === 'hwpoison_active'
+                    ? "# DRAM bit-rot retired pages — replace failing DIMMs\ngrep HardwareCorrupted /proc/meminfo\n# Identify the offending bank via EDAC :\nfor f in /sys/devices/system/edac/mc/mc*/ce_count; do\n  echo \"$f : $(cat $f)\"\ndone\n# Cross-ref with dmesg :\nsudo dmesg -T | grep -iE 'EDAC|mce|hwpoison|hardware error' | tail -20\n# Replace the DIMM in the highest-CE slot."
+                  : hwpoisonMemoryFailureAuditData.verdict.verdict === 'hwpoison_failed_recoveries'
+                    ? "# hwpoison failed to isolate poisoned pages — escalate\ngrep -E '^(hwpoison|memory_failure)' /proc/vmstat\n# Inspect kernel log for unrecovered events :\nsudo dmesg -T | grep -iE 'hwpoison|memory_failure' | tail -20"
+                  : hwpoisonMemoryFailureAuditData.verdict.verdict === 'edac_present_no_hwpoison'
+                    ? "# EDAC present but CONFIG_MEMORY_FAILURE off — rebuild kernel\n# (Most distros enable this by default ; check :\ngrep CONFIG_MEMORY_FAILURE /boot/config-$(uname -r)\n# If =n, page-level ECC isolation is off and corrupted pages\n# can keep getting allocated to user processes."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #94.2 fs.aio + fanotify limits (UI sprint 85) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.aiofanotify.title")}</h4>
+        <p class="muted">{i18n.t("integrations.aiofanotify.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFsAioFanotifyLimitsAudit}>{i18n.t("integrations.aiofanotify.refresh")}</button>
+          {#if fsAioFanotifyLimitsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={fsAioFanotifyLimitsAuditData.verdict.verdict === 'fanotify_marks_low' ? 'var(--warn)' :
+                             fsAioFanotifyLimitsAuditData.verdict.verdict === 'aio_max_default_low' ? 'var(--accent)' :
+                             fsAioFanotifyLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              aio-max-nr={fsAioFanotifyLimitsAuditData.limits.aio_max_nr ?? '?'} · marks={fsAioFanotifyLimitsAuditData.limits.max_user_marks ?? '?'} · {i18n.t("integrations.aiofanotify.verdict")} : <b>{fsAioFanotifyLimitsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fsAioFanotifyLimitsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        fsAioFanotifyLimitsAuditData.verdict.verdict === 'fanotify_marks_low' ? 'var(--warn)' :
+                        fsAioFanotifyLimitsAuditData.verdict.verdict === 'aio_max_default_low' ? 'var(--accent)' :
+                        fsAioFanotifyLimitsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{fsAioFanotifyLimitsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(fsAioFanotifyLimitsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.aiofanotify.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  fsAioFanotifyLimitsAuditData.verdict.verdict === 'fanotify_marks_low'
+                    ? "# fanotify max_user_marks too low — bump\necho 1048576 | sudo tee /proc/sys/fs/fanotify/max_user_marks\necho 'fs.fanotify.max_user_marks = 1048576' | sudo tee /etc/sysctl.d/99-fanotify.conf\nsudo sysctl --system"
+                  : fsAioFanotifyLimitsAuditData.verdict.verdict === 'aio_max_default_low'
+                    ? "# aio-max-nr at kernel default 65 536 — bump for io_uring/Docker\necho 1048576 | sudo tee /proc/sys/fs/aio-max-nr\necho 'fs.aio-max-nr = 1048576' | sudo tee /etc/sysctl.d/99-aio.conf\nsudo sysctl --system\n# Verify current utilization with :\ncat /proc/sys/fs/aio-nr"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #94.3 DRM TTM page pool (UI sprint 85) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.ttmpool.title")}</h4>
+        <p class="muted">{i18n.t("integrations.ttmpool.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDrmTtmPagePoolAudit}>{i18n.t("integrations.ttmpool.refresh")}</button>
+          {#if drmTtmPagePoolAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={drmTtmPagePoolAuditData.verdict.verdict === 'ttm_pool_uncapped' ? 'var(--accent)' :
+                             drmTtmPagePoolAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              ttm={drmTtmPagePoolAuditData.ttm_present ? 'yes' : 'no'} · pool_size={drmTtmPagePoolAuditData.params.page_pool_size ?? '?'} · {i18n.t("integrations.ttmpool.verdict")} : <b>{drmTtmPagePoolAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if drmTtmPagePoolAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        drmTtmPagePoolAuditData.verdict.verdict === 'ttm_pool_uncapped' ? 'var(--accent)' :
+                        drmTtmPagePoolAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{drmTtmPagePoolAuditData.verdict.reason}</p>
+            {#if drmTtmPagePoolAuditData.verdict.verdict === 'ttm_pool_uncapped'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.ttmpool.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{`# Tune TTM page pool explicitly to bound host-RAM mirror
+# Set pages_limit to bound TTM total at ~2 GiB (524288 pages
+# at 4 KiB each) :
+echo 524288 | sudo tee /sys/module/ttm/parameters/pages_limit
+# Make permanent via modprobe :
+echo 'options ttm pages_limit=524288' | \\
+  sudo tee /etc/modprobe.d/ttm.conf
+# Verify by reloading the GPU driver (or reboot)`}</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #94.4 lockdep / lock_stat (UI sprint 85) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.lockdep.title")}</h4>
+        <p class="muted">{i18n.t("integrations.lockdep.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadLockdepLockstatAudit}>{i18n.t("integrations.lockdep.refresh")}</button>
+          {#if lockdepLockstatAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={lockdepLockstatAuditData.verdict.verdict === 'lockdep_dead' ? 'var(--err)' :
+                             lockdepLockstatAuditData.verdict.verdict === 'lockdep_enabled_in_prod' ? 'var(--accent)' :
+                             'var(--text-dim)'}>
+              lockdep={lockdepLockstatAuditData.lockdep_present ? 'yes' : 'no'} · dead={lockdepLockstatAuditData.lockdep_dead ? 'yes' : 'no'} · {i18n.t("integrations.lockdep.verdict")} : <b>{lockdepLockstatAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if lockdepLockstatAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        lockdepLockstatAuditData.verdict.verdict === 'lockdep_dead' ? 'var(--err)' :
+                        lockdepLockstatAuditData.verdict.verdict === 'lockdep_enabled_in_prod' ? 'var(--accent)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{lockdepLockstatAuditData.verdict.reason}</p>
+            {#if ['lockdep_dead','lockdep_enabled_in_prod'].includes(lockdepLockstatAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.lockdep.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  lockdepLockstatAuditData.verdict.verdict === 'lockdep_dead'
+                    ? "# lockdep self-disabled — reboot to reset (no way to revive at runtime)\nsudo cat /proc/lockdep_stats | head -20\nsudo dmesg | grep -iE 'lockdep|debug_locks|max_lockdep' | tail\n# Plan a reboot. To avoid recurrence on the next kernel\n# install, switch to a non-debug build (or bump\n# CONFIG_LOCKDEP_BITS_PER_LONG)."
+                  : lockdepLockstatAuditData.verdict.verdict === 'lockdep_enabled_in_prod'
+                    ? "# Lockdep enabled — runtime perf cost of 5-10%\n# Verify the kernel build :\nuname -r\ngrep CONFIG_PROVE_LOCKING /boot/config-$(uname -r)\n# Switch to a non-debug kernel for prod (the distro\n# usually ships both *-generic and *-generic-debug):\nsudo apt install linux-image-generic   # or your distro's\nsudo reboot"
                   : ""
                 }</pre>
               </details>
