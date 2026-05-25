@@ -588,3 +588,4 @@ from .cpuset_v2_partition_audit import handle_cpuset_v2_partition_audit_status  
 from .tracing_instances_audit import handle_tracing_instances_audit_status  # noqa: F401,F811
 from .block_holders_stack_audit import handle_block_holders_stack_audit_status  # noqa: F401,F811
 from .kvm_mmu_audit import handle_kvm_mmu_audit_status  # noqa: F401,F811
+from .zfs_arc_audit import handle_zfs_arc_audit_status  # noqa: F401,F811
