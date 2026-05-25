@@ -2337,6 +2337,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_power_async_suspend_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/vm-compaction-proactive-audit":
+                # R&D #105.4 — vm.compaction_proactiveness + pagelist
+                code, body = api.handle_vm_compaction_proactive_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

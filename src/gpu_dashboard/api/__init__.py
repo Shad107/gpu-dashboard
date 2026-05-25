@@ -620,3 +620,4 @@ from .hung_task_drift_audit import handle_hung_task_drift_audit_status  # noqa: 
 from .firmware_loader_policy_audit import handle_firmware_loader_policy_audit_status  # noqa: F401,F811
 from .ima_measurement_freshness_audit import handle_ima_measurement_freshness_audit_status  # noqa: F401,F811
 from .power_async_suspend_audit import handle_power_async_suspend_audit_status  # noqa: F401,F811
+from .vm_compaction_proactive_audit import handle_vm_compaction_proactive_audit_status  # noqa: F401,F811
