@@ -136,6 +136,23 @@ def test_aggregate_basic_stats():
     assert a["module_count"] == 3
     assert a["total_ms"] == 60.0
     assert a["slowest_ms"] == 30.0
+    # No expected_slow keys set → optimizable equals total.
+    assert a["optimizable_total_ms"] == 60.0
+    assert a["expected_slow_total_ms"] == 0.0
+
+
+def test_aggregate_splits_intrinsic_from_optimizable():
+    results = [
+        {"name": "fast", "elapsed_ms": 50.0,
+            "status": "ok", "expected_slow": False},
+        {"name": "intrinsic", "elapsed_ms": 2000.0,
+            "status": "ok", "expected_slow": True},
+        {"name": "other", "elapsed_ms": 100.0,
+            "status": "ok", "expected_slow": False}]
+    a = mod.aggregate(results)
+    assert a["total_ms"] == 2150.0
+    assert a["expected_slow_total_ms"] == 2000.0
+    assert a["optimizable_total_ms"] == 150.0
 
 
 # --- classify -----------------------------------------------------
@@ -165,6 +182,40 @@ def test_classify_collection_slow_no_individual_offender():
                  "status": "ok"} for i in range(30)]
     v = mod.classify(results, mod.aggregate(results))
     assert v["verdict"] == "collection_slow"
+
+
+def test_classify_intrinsic_total_does_not_trigger_collection_slow():
+    """If aggregate exceeds budget purely because of EXPECTED_SLOW
+    modules, do NOT fire collection_slow — the user can't fix it."""
+    results = (
+        [{"name": "intrinsic_a", "elapsed_ms": 3000.0,
+            "status": "ok", "expected_slow": True},
+         {"name": "intrinsic_b", "elapsed_ms": 3000.0,
+            "status": "ok", "expected_slow": True}] +
+        [{"name": f"fast{i}", "elapsed_ms": 5.0,
+            "status": "ok", "expected_slow": False}
+         for i in range(20)])
+    agg = mod.aggregate(results)
+    assert agg["total_ms"] >= 5000.0  # over the budget...
+    assert agg["optimizable_total_ms"] < 5000.0  # ...but only intrinsic
+    v = mod.classify(results, agg)
+    assert v["verdict"] == "ok"
+
+
+def test_classify_optimizable_over_budget_still_triggers():
+    """If optimizable total exceeds budget, fire even when
+    expected_slow modules also contribute."""
+    results = (
+        [{"name": "intrinsic", "elapsed_ms": 3000.0,
+            "status": "ok", "expected_slow": True}] +
+        [{"name": f"med{i}", "elapsed_ms": 200.0,
+            "status": "ok", "expected_slow": False}
+         for i in range(30)])  # 30×200 = 6000 ms optimizable
+    agg = mod.aggregate(results)
+    assert agg["optimizable_total_ms"] >= 5000.0
+    v = mod.classify(results, agg)
+    assert v["verdict"] == "collection_slow"
+    assert "intrinsic" in v["reason"]
 
 
 def test_classify_module_too_slow_beats_collection_slow():

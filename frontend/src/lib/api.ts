@@ -6040,6 +6040,8 @@ export const api = {
       ok: boolean;
       module_count: number;
       total_ms: number;
+      optimizable_total_ms: number;
+      expected_slow_total_ms: number;
       p50_ms: number | null;
       p95_ms: number | null;
       slowest_ms: number | null;

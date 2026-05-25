@@ -135,12 +135,19 @@ def aggregate(results: List[dict]) -> dict:
     n = len(times)
     if not n:
         return {"module_count": 0, "total_ms": 0.0,
+                "optimizable_total_ms": 0.0,
+                "expected_slow_total_ms": 0.0,
                 "p50_ms": None, "p95_ms": None,
                 "slowest_ms": None}
     total = sum(times)
+    expected_total = sum(r["elapsed_ms"] for r in ok
+                          if r.get("expected_slow"))
+    optimizable_total = total - expected_total
     p50 = times[int(0.50 * (n - 1))]
     p95 = times[int(0.95 * (n - 1))]
     return {"module_count": n, "total_ms": total,
+            "optimizable_total_ms": optimizable_total,
+            "expected_slow_total_ms": expected_total,
             "p50_ms": p50, "p95_ms": p95,
             "slowest_ms": times[-1]}
 
@@ -169,19 +176,26 @@ def classify(results: List[dict], agg: dict,
                            f"{slow_module_ms:.0f} ms per-module "
                            f"budget: {sample}."),
                 "recommendation": _recipe_slow_module()}
-    if agg["total_ms"] >= slow_total_ms:
+    if agg["optimizable_total_ms"] >= slow_total_ms:
         return {"verdict": "collection_slow",
-                "reason": (f"Aggregate cold-start collection "
-                           f"time {agg['total_ms']:.0f} ms ≥ "
-                           f"{slow_total_ms:.0f} ms budget across "
-                           f"{agg['module_count']} modules. "
-                           f"slowest={agg['slowest_ms']:.0f} ms, "
+                "reason": (f"Optimizable cold-start collection "
+                           f"time {agg['optimizable_total_ms']:.0f} ms "
+                           f"≥ {slow_total_ms:.0f} ms budget across "
+                           f"{agg['module_count']} modules "
+                           f"(total {agg['total_ms']:.0f} ms minus "
+                           f"{agg['expected_slow_total_ms']:.0f} ms "
+                           f"intrinsic). slowest="
+                           f"{agg['slowest_ms']:.0f} ms, "
                            f"p95={agg['p95_ms']:.0f} ms."),
                 "recommendation": _recipe_collection_slow()}
     return {"verdict": "ok",
             "reason": (f"{agg['module_count']} modules collected in "
                        f"{agg['total_ms']:.0f} ms "
-                       f"(p50={agg['p50_ms']:.0f}, "
+                       f"(optimizable "
+                       f"{agg['optimizable_total_ms']:.0f} ms, "
+                       f"intrinsic "
+                       f"{agg['expected_slow_total_ms']:.0f} ms ; "
+                       f"p50={agg['p50_ms']:.0f}, "
                        f"p95={agg['p95_ms']:.0f}, "
                        f"slowest={agg['slowest_ms']:.0f}). "
                        f"All under budget."),
@@ -200,6 +214,8 @@ def status(cfg=None) -> dict:
     return {"ok": True,
             "module_count": agg["module_count"],
             "total_ms": agg["total_ms"],
+            "optimizable_total_ms": agg["optimizable_total_ms"],
+            "expected_slow_total_ms": agg["expected_slow_total_ms"],
             "p50_ms": agg["p50_ms"],
             "p95_ms": agg["p95_ms"],
             "slowest_ms": agg["slowest_ms"],

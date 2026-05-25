@@ -20056,7 +20056,8 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
                              collectionProfileAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
                              'var(--text-dim)'}>
               {collectionProfileAuditData.module_count} mods ·
-              {collectionProfileAuditData.total_ms.toFixed(0)} ms total ·
+              {collectionProfileAuditData.optimizable_total_ms.toFixed(0)} ms optimizable
+              (+{collectionProfileAuditData.expected_slow_total_ms.toFixed(0)} ms intrinsic) ·
               {i18n.t("integrations.collprof.verdict")} : <b>{collectionProfileAuditData.verdict.verdict}</b>
             </span>
           {/if}
