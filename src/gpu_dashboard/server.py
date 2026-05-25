@@ -2347,6 +2347,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ima_digest_lists_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/drm-gt-load-status-audit":
+                # R&D #105.2 — i915/amdgpu GT firmware + wedge
+                code, body = api.handle_drm_gt_load_status_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
