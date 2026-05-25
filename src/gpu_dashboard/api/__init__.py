@@ -611,3 +611,4 @@ from .intel_uncore_freq_audit import handle_intel_uncore_freq_audit_status  # no
 from .modprobe_blacklist_drift_audit import handle_modprobe_blacklist_drift_audit_status  # noqa: F401,F811
 from .module_sig_enforce_audit import handle_module_sig_enforce_audit_status  # noqa: F401,F811
 from .bpf_jit_harden_audit import handle_bpf_jit_harden_audit_status  # noqa: F401,F811
+from .kernel_oops_warn_counter_audit import handle_kernel_oops_warn_counter_audit_status  # noqa: F401,F811
