@@ -2745,6 +2745,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #95 (UI sprint 86) ────────────────────────────────────────────
+  let mdioPhyEeeAuditData                 = $state<Awaited<ReturnType<typeof api.mdioPhyEeeAuditStatus>>                 | null>(null);
+  let kernelModuleRefcntAuditData         = $state<Awaited<ReturnType<typeof api.kernelModuleRefcntAuditStatus>>         | null>(null);
+  let tracingBufferFootprintAuditData     = $state<Awaited<ReturnType<typeof api.tracingBufferFootprintAuditStatus>>     | null>(null);
+  let perDeviceWakeupAttributionAuditData = $state<Awaited<ReturnType<typeof api.perDeviceWakeupAttributionAuditStatus>> | null>(null);
+  async function loadMdioPhyEeeAudit() {
+    try { mdioPhyEeeAuditData = await api.mdioPhyEeeAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKernelModuleRefcntAudit() {
+    try { kernelModuleRefcntAuditData = await api.kernelModuleRefcntAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadTracingBufferFootprintAudit() {
+    try { tracingBufferFootprintAuditData = await api.tracingBufferFootprintAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPerDeviceWakeupAttributionAudit() {
+    try { perDeviceWakeupAttributionAuditData = await api.perDeviceWakeupAttributionAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3217,6 +3239,11 @@
       if (!fsAioFanotifyLimitsAuditData)        loadFsAioFanotifyLimitsAudit();
       if (!drmTtmPagePoolAuditData)             loadDrmTtmPagePoolAudit();
       if (!lockdepLockstatAuditData)            loadLockdepLockstatAudit();
+      // R&D #95 cards
+      if (!mdioPhyEeeAuditData)                 loadMdioPhyEeeAudit();
+      if (!kernelModuleRefcntAuditData)         loadKernelModuleRefcntAudit();
+      if (!tracingBufferFootprintAuditData)     loadTracingBufferFootprintAudit();
+      if (!perDeviceWakeupAttributionAuditData) loadPerDeviceWakeupAttributionAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -16896,6 +16923,189 @@ echo 'options ttm pages_limit=524288' | \\
                     ? "# Lockdep enabled — runtime perf cost of 5-10%\n# Verify the kernel build :\nuname -r\ngrep CONFIG_PROVE_LOCKING /boot/config-$(uname -r)\n# Switch to a non-debug kernel for prod (the distro\n# usually ships both *-generic and *-generic-debug):\nsudo apt install linux-image-generic   # or your distro's\nsudo reboot"
                   : ""
                 }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #95.1 MDIO PHY + EEE (UI sprint 86) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.mdiophy.title")}</h4>
+        <p class="muted">{i18n.t("integrations.mdiophy.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadMdioPhyEeeAudit}>{i18n.t("integrations.mdiophy.refresh")}</button>
+          {#if mdioPhyEeeAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={mdioPhyEeeAuditData.verdict.verdict === 'phy_no_link_carrier_up' ? 'var(--err)' :
+                             mdioPhyEeeAuditData.verdict.verdict === 'eee_active_but_disabled' ? 'var(--warn)' :
+                             mdioPhyEeeAuditData.verdict.verdict === 'duplex_half_on_gbit_phy' ? 'var(--accent)' :
+                             mdioPhyEeeAuditData.verdict.verdict === 'phy_clean' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {mdioPhyEeeAuditData.phy_iface_count} PHY · {i18n.t("integrations.mdiophy.verdict")} : <b>{mdioPhyEeeAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if mdioPhyEeeAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        mdioPhyEeeAuditData.verdict.verdict === 'phy_no_link_carrier_up' ? 'var(--err)' :
+                        mdioPhyEeeAuditData.verdict.verdict === 'eee_active_but_disabled' ? 'var(--warn)' :
+                        mdioPhyEeeAuditData.verdict.verdict === 'duplex_half_on_gbit_phy' ? 'var(--accent)' :
+                        mdioPhyEeeAuditData.verdict.verdict === 'phy_clean' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{mdioPhyEeeAuditData.verdict.reason}</p>
+            {#if !['phy_clean','unknown','requires_root'].includes(mdioPhyEeeAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.mdiophy.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  mdioPhyEeeAuditData.verdict.verdict === 'phy_no_link_carrier_up'
+                    ? "# Force PHY autoneg restart to resync MAC-PHY state\n# (replace eth0 with the offending iface)\nsudo ethtool -r eth0\n# Or bounce the interface :\nsudo ip link set eth0 down && sudo ip link set eth0 up\n# Verify :\ngrep -H . /sys/class/net/eth0/phydev/link /sys/class/net/eth0/carrier"
+                  : mdioPhyEeeAuditData.verdict.verdict === 'eee_active_but_disabled'
+                    ? "# Resync EEE state via ethtool\nsudo ethtool --set-eee eth0 eee on\nsudo ethtool --set-eee eth0 eee off  # toggle off again if desired\n# Inspect :\nsudo ethtool --show-eee eth0"
+                  : mdioPhyEeeAuditData.verdict.verdict === 'duplex_half_on_gbit_phy'
+                    ? "# Half-duplex on a gigabit-capable PHY — check cable + force\nsudo ethtool eth0\n# Force full-duplex auto-neg :\nsudo ethtool -s eth0 speed 1000 duplex full autoneg on\n# If that fails, replace the cable + check for crushed RJ45"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #95.2 kernel module refcnt (UI sprint 86) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.modrefcnt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.modrefcnt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKernelModuleRefcntAudit}>{i18n.t("integrations.modrefcnt.refresh")}</button>
+          {#if kernelModuleRefcntAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={kernelModuleRefcntAuditData.verdict.verdict === 'initstate_unloading_stuck' ? 'var(--err)' :
+                             kernelModuleRefcntAuditData.verdict.verdict === 'zero_refcnt_with_holders' ? 'var(--warn)' :
+                             kernelModuleRefcntAuditData.verdict.verdict === 'excessive_refcnt' ? 'var(--accent)' :
+                             kernelModuleRefcntAuditData.verdict.verdict === 'modules_consistent' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {kernelModuleRefcntAuditData.module_count} module(s) · {i18n.t("integrations.modrefcnt.verdict")} : <b>{kernelModuleRefcntAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kernelModuleRefcntAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        kernelModuleRefcntAuditData.verdict.verdict === 'initstate_unloading_stuck' ? 'var(--err)' :
+                        kernelModuleRefcntAuditData.verdict.verdict === 'zero_refcnt_with_holders' ? 'var(--warn)' :
+                        kernelModuleRefcntAuditData.verdict.verdict === 'excessive_refcnt' ? 'var(--accent)' :
+                        kernelModuleRefcntAuditData.verdict.verdict === 'modules_consistent' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{kernelModuleRefcntAuditData.verdict.reason}</p>
+            {#if !['modules_consistent','unknown','requires_root'].includes(kernelModuleRefcntAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.modrefcnt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  kernelModuleRefcntAuditData.verdict.verdict === 'initstate_unloading_stuck'
+                    ? "# Module stuck in unloading state — find what's holding it\nfor m in /sys/module/*; do\n  st=$(cat $m/initstate 2>/dev/null)\n  rc=$(cat $m/refcnt 2>/dev/null)\n  [ \"$st\" = going ] && [ \"$rc\" -gt 0 ] && echo \"$(basename $m): refcnt=$rc\" && ls $m/holders\ndone\n# Try lsmod | grep <mod> to see exactly who's using it.\n# Reboot is the only reliable fix."
+                  : kernelModuleRefcntAuditData.verdict.verdict === 'zero_refcnt_with_holders'
+                    ? "# Stale holders/ entries — usually safe to ignore\nfor m in /sys/module/*; do\n  rc=$(cat $m/refcnt 2>/dev/null)\n  [ \"$rc\" = 0 ] && [ -n \"$(ls $m/holders 2>/dev/null)\" ] && \\\n    echo \"$(basename $m): refcnt=0 holders=$(ls $m/holders)\"\ndone\n# Try modprobe -r if you need to unload (will usually succeed)."
+                  : kernelModuleRefcntAuditData.verdict.verdict === 'excessive_refcnt'
+                    ? "# Excessive refcnt — find the leaking caller (top offenders)\nfor m in /sys/module/*; do\n  rc=$(cat $m/refcnt 2>/dev/null)\n  [ -n \"$rc\" ] && [ \"$rc\" -gt 50 ] && \\\n    echo \"$(basename $m): refcnt=$rc holders=$(ls $m/holders | head -5 | tr '\\n' ' ')\"\ndone\n# Typically a user-side handle-leak (audio service, video\n# driver, kvm). Restart the offending service to release."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #95.3 ftrace buffer footprint (UI sprint 86) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.tracingbuf.title")}</h4>
+        <p class="muted">{i18n.t("integrations.tracingbuf.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTracingBufferFootprintAudit}>{i18n.t("integrations.tracingbuf.refresh")}</button>
+          {#if tracingBufferFootprintAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={tracingBufferFootprintAuditData.verdict.verdict === 'buffer_overrun_active' ? 'var(--err)' :
+                             tracingBufferFootprintAuditData.verdict.verdict === 'buffer_total_over_512mb' ? 'var(--warn)' :
+                             tracingBufferFootprintAuditData.verdict.verdict === 'trace_clock_local_with_smp' ? 'var(--accent)' :
+                             tracingBufferFootprintAuditData.verdict.verdict === 'trace_buffer_sane' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              total={tracingBufferFootprintAuditData.buffer_total_size_kb ?? '?'} KB · clock={tracingBufferFootprintAuditData.trace_clock || '?'} · {i18n.t("integrations.tracingbuf.verdict")} : <b>{tracingBufferFootprintAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if tracingBufferFootprintAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        tracingBufferFootprintAuditData.verdict.verdict === 'buffer_overrun_active' ? 'var(--err)' :
+                        tracingBufferFootprintAuditData.verdict.verdict === 'buffer_total_over_512mb' ? 'var(--warn)' :
+                        tracingBufferFootprintAuditData.verdict.verdict === 'trace_clock_local_with_smp' ? 'var(--accent)' :
+                        tracingBufferFootprintAuditData.verdict.verdict === 'trace_buffer_sane' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{tracingBufferFootprintAuditData.verdict.reason}</p>
+            {#if !['trace_buffer_sane','unknown','requires_root'].includes(tracingBufferFootprintAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.tracingbuf.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  tracingBufferFootprintAuditData.verdict.verdict === 'buffer_overrun_active'
+                    ? "# Events dropping — bump buffer or reduce event rate\nsudo cat /sys/kernel/tracing/per_cpu/cpu*/stats | grep overrun\n# Bump buffer to 32 MB per CPU :\necho 32768 | sudo tee /sys/kernel/tracing/buffer_size_kb\n# Or stop tracing if not actively debugging :\necho 0 | sudo tee /sys/kernel/tracing/tracing_on"
+                  : tracingBufferFootprintAuditData.verdict.verdict === 'buffer_total_over_512mb'
+                    ? "# Large ftrace buffer — reclaim RAM\ncat /sys/kernel/tracing/buffer_total_size_kb\n# Shrink per-CPU buffer to 4 MB :\necho 4096 | sudo tee /sys/kernel/tracing/buffer_size_kb\n# Verify reclaim :\ngrep MemAvailable /proc/meminfo"
+                  : tracingBufferFootprintAuditData.verdict.verdict === 'trace_clock_local_with_smp'
+                    ? "# Local trace_clock on SMP — switch to global/x86-tsc\necho global | sudo tee /sys/kernel/tracing/trace_clock\n# Or for low-overhead high-precision (Intel) :\necho x86-tsc | sudo tee /sys/kernel/tracing/trace_clock"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #95.4 per-device wakeup attribution (UI sprint 86) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pdwakeup.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pdwakeup.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPerDeviceWakeupAttributionAudit}>{i18n.t("integrations.pdwakeup.refresh")}</button>
+          {#if perDeviceWakeupAttributionAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={perDeviceWakeupAttributionAuditData.verdict.verdict === 'wakeup_storm_blocking_suspend' ? 'var(--err)' :
+                             perDeviceWakeupAttributionAuditData.verdict.verdict === 'wakeup_aborts_climbing' ? 'var(--warn)' :
+                             perDeviceWakeupAttributionAuditData.verdict.verdict === 'wakeup_enabled_on_unused_device' ? 'var(--accent)' :
+                             perDeviceWakeupAttributionAuditData.verdict.verdict === 'wakeup_attribution_clean' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {perDeviceWakeupAttributionAuditData.enabled_count}/{perDeviceWakeupAttributionAuditData.device_count} enabled · {i18n.t("integrations.pdwakeup.verdict")} : <b>{perDeviceWakeupAttributionAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if perDeviceWakeupAttributionAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        perDeviceWakeupAttributionAuditData.verdict.verdict === 'wakeup_storm_blocking_suspend' ? 'var(--err)' :
+                        perDeviceWakeupAttributionAuditData.verdict.verdict === 'wakeup_aborts_climbing' ? 'var(--warn)' :
+                        perDeviceWakeupAttributionAuditData.verdict.verdict === 'wakeup_enabled_on_unused_device' ? 'var(--accent)' :
+                        perDeviceWakeupAttributionAuditData.verdict.verdict === 'wakeup_attribution_clean' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{perDeviceWakeupAttributionAuditData.verdict.reason}</p>
+            {#if !['wakeup_attribution_clean','unknown','requires_root'].includes(perDeviceWakeupAttributionAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pdwakeup.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{`# Inspect top wakeup offenders
+for f in $(find /sys/devices -name wakeup_count -type f 2>/dev/null); do
+  d=$(dirname $f); count=$(cat $f 2>/dev/null); max=$(cat $d/wakeup_max_time_ms 2>/dev/null)
+  [ -z "$count" ] || [ "$count" = 0 ] && continue
+  echo "$(dirname $d): count=$count max_ms=$max"
+done | sort -t= -k2 -rn | head -10
+# Disable wakeup on a specific device :
+echo disabled | sudo tee /sys/devices/<path>/power/wakeup
+# For USB devices :
+for d in /sys/bus/usb/devices/*/power/wakeup; do
+  echo "$d : $(cat $d 2>/dev/null)"
+done`}</pre>
               </details>
             {/if}
           </div>

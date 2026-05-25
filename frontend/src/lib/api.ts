@@ -5428,4 +5428,37 @@ export const api = {
       lockdep_dead: boolean;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #95 (UI sprint 86) ──
+  mdioPhyEeeAuditStatus: () =>
+    fetch("/api/mdio-phy-eee-audit").then(jsonOf<{
+      ok: boolean;
+      phy_iface_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  kernelModuleRefcntAuditStatus: () =>
+    fetch("/api/kernel-module-refcnt-audit").then(jsonOf<{
+      ok: boolean;
+      module_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  tracingBufferFootprintAuditStatus: () =>
+    fetch("/api/tracing-buffer-footprint-audit").then(jsonOf<{
+      ok: boolean;
+      buffer_total_size_kb: number | null;
+      trace_clock: string;
+      tracing_on: number | null;
+      total_overrun: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  perDeviceWakeupAttributionAuditStatus: () =>
+    fetch("/api/per-device-wakeup-attribution-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      enabled_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
