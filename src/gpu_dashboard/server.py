@@ -2277,6 +2277,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_intel_uncore_freq_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/modprobe-blacklist-drift-audit":
+                # R&D #102.2 — modprobe.d blacklist / install drift
+                code, body = api.handle_modprobe_blacklist_drift_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
