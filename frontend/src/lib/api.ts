@@ -195,7 +195,7 @@ export async function safeFetch(
 }
 
 export const api = {
-  state: (gpu = 0) => fetch("/api/state" + (gpu ? `?gpu_index=${gpu}` : ""), { cache: "no-store" }).then(jsonOf<State>),
+  state: (gpu = 0) => safeFetch("/api/state" + (gpu ? `?gpu_index=${gpu}` : ""), { cache: "no-store" }).then(jsonOf<State>),
 
   setPowerLimit: (watts: number) =>
     fetch("/api/set-power-limit", {
@@ -1573,7 +1573,7 @@ export const api = {
 
   // ── R&D #24 (UI sprint 15) ─────────────────────────────────────────────
   dkmsStatus: () =>
-    fetch("/api/dkms-status").then(jsonOf<{
+    safeFetch("/api/dkms-status").then(jsonOf<{
       ok: boolean;
       reason?: string;
       running_kernel: string;
@@ -2356,7 +2356,7 @@ export const api = {
     }>),
 
   cpuMicrocodeStatus: () =>
-    fetch("/api/cpu-microcode").then(jsonOf<{
+    safeFetch("/api/cpu-microcode").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2939,7 +2939,7 @@ export const api = {
 
   // ── R&D #46 (UI sprint 37) ──
   keyringAuditStatus: () =>
-    fetch("/api/keyring-audit").then(jsonOf<{
+    safeFetch("/api/keyring-audit").then(jsonOf<{
       ok: boolean;
       user_count?: number; key_count?: number;
       users: Array<{
@@ -6099,7 +6099,7 @@ export const api = {
       q.set("slow_total_ms", String(opts.slow_total_ms));
     }
     const qs = q.toString();
-    return fetch("/api/collection-profile-audit" + (qs ? "?" + qs : "")).then(jsonOf<{
+    return safeFetch("/api/collection-profile-audit" + (qs ? "?" + qs : "")).then(jsonOf<{
       ok: boolean;
       module_count: number;
       total_ms: number;
