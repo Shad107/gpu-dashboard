@@ -48,6 +48,16 @@ DEFAULT_BPF_FS = "/sys/fs/bpf"
 DEFAULT_PROC = "/proc"
 DEFAULT_MOUNTS = "/proc/mounts"
 
+# Honored by collection_profile_audit (hardening #13): walks
+# /proc/<pid>/fdinfo/* for every PID. Cost is O(processes ×
+# fds-per-process) — ~500 ms on a small VM, multiple seconds on a
+# desktop with browsers + IDEs running. There is no way to surface
+# the BPF user-mode reference inventory without this walk; not
+# optimizable in isolation. A future shared /proc fdinfo cache
+# across modules (bpf, inotify, drm_fdinfo, fdinfo_kinds) would
+# amortize the cost — deferred.
+EXPECTED_SLOW = True
+
 # Thresholds
 _PIN_OVERFLOW = 50
 _USER_REF_OVERFLOW = 50
