@@ -6033,4 +6033,23 @@ export const api = {
       }>;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── Hardening #2 (UI sprint 103) — fleet cold-start profile ──
+  collectionProfileAuditStatus: () =>
+    fetch("/api/collection-profile-audit").then(jsonOf<{
+      ok: boolean;
+      module_count: number;
+      total_ms: number;
+      p50_ms: number | null;
+      p95_ms: number | null;
+      slowest_ms: number | null;
+      top_slowest: Array<{
+        name: string;
+        elapsed_ms: number;
+        expected_slow: boolean;
+      }>;
+      skipped_count: number;
+      error_count: number;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

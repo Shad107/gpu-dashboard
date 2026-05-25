@@ -3087,6 +3087,17 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── Hardening #2 (UI sprint 103) — collection_profile_audit ──
+  // Lazy load only: collecting the fleet takes ~8 s. NO autoload.
+  let collectionProfileAuditData          = $state<Awaited<ReturnType<typeof api.collectionProfileAuditStatus>>          | null>(null);
+  let collectionProfileAuditLoading       = $state(false);
+  async function loadCollectionProfileAudit() {
+    collectionProfileAuditLoading = true;
+    try { collectionProfileAuditData = await api.collectionProfileAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+    finally { collectionProfileAuditLoading = false; }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -20021,6 +20032,70 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
                 <summary class="muted">{i18n.t("integrations.xfslog.recommend")}</summary>
                 <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
                              border-radius: 4px; overflow-x: auto;">{`# XFS stats files unreadable — re-run as root or sample directly\nsudo cat /sys/fs/xfs/*/stats/stats | head -20\n# Or use the userspace tool :\nsudo xfs_stats_calc 1   # need xfsprogs installed`}</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Hardening #2 / UI sprint 103 — collection_profile_audit (lazy load only) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.collprof.title")}</h4>
+        <p class="muted">{i18n.t("integrations.collprof.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCollectionProfileAudit}
+                  disabled={collectionProfileAuditLoading}>
+            {collectionProfileAuditLoading
+              ? i18n.t("integrations.collprof.running")
+              : i18n.t("integrations.collprof.refresh")}
+          </button>
+          {#if collectionProfileAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={collectionProfileAuditData.verdict.verdict === 'module_too_slow' ? 'var(--warn)' :
+                             collectionProfileAuditData.verdict.verdict === 'collection_slow' ? 'var(--accent)' :
+                             collectionProfileAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {collectionProfileAuditData.module_count} mods ·
+              {collectionProfileAuditData.total_ms.toFixed(0)} ms total ·
+              {i18n.t("integrations.collprof.verdict")} : <b>{collectionProfileAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if collectionProfileAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        collectionProfileAuditData.verdict.verdict === 'module_too_slow' ? 'var(--warn)' :
+                        collectionProfileAuditData.verdict.verdict === 'collection_slow' ? 'var(--accent)' :
+                        collectionProfileAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p class="muted" style="margin: 4px 0; font-size: 0.85em;">
+              p50={(collectionProfileAuditData.p50_ms ?? 0).toFixed(1)} ms ·
+              p95={(collectionProfileAuditData.p95_ms ?? 0).toFixed(1)} ms ·
+              slowest={(collectionProfileAuditData.slowest_ms ?? 0).toFixed(0)} ms ·
+              skipped={collectionProfileAuditData.skipped_count} ·
+              errors={collectionProfileAuditData.error_count}
+            </p>
+            <p style="margin: 4px 0;">{collectionProfileAuditData.verdict.reason}</p>
+            <details style="margin-top: 4px;" open>
+              <summary class="muted">{i18n.t("integrations.collprof.topslowest")}</summary>
+              <ul style="font-size: 0.85em; margin: 4px 0; padding-left: 20px;
+                          font-family: monospace;">
+                {#each collectionProfileAuditData.top_slowest as r}
+                  <li>
+                    {r.elapsed_ms.toFixed(0).padStart(5)} ms
+                    {#if r.expected_slow}<span class="muted">[expected]</span>{/if}
+                    {r.name}
+                  </li>
+                {/each}
+              </ul>
+            </details>
+            {#if collectionProfileAuditData.verdict.recommendation}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.collprof.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{collectionProfileAuditData.verdict.recommendation}</pre>
+                <button class="btn btn-small"
+                        onclick={() => copyToClipboard(collectionProfileAuditData!.verdict.recommendation)}>📋 Copy</button>
               </details>
             {/if}
           </div>
