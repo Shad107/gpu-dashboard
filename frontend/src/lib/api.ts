@@ -5461,4 +5461,34 @@ export const api = {
       enabled_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #96 (UI sprint 87) ──
+  blockDiscardCapsAuditStatus: () =>
+    fetch("/api/block-discard-caps-audit").then(jsonOf<{
+      ok: boolean;
+      device_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  cpusetV2PartitionAuditStatus: () =>
+    fetch("/api/cpuset-v2-partition-audit").then(jsonOf<{
+      ok: boolean;
+      non_default_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  tracingInstancesAuditStatus: () =>
+    fetch("/api/tracing-instances-audit").then(jsonOf<{
+      ok: boolean;
+      instance_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  blockHoldersStackAuditStatus: () =>
+    fetch("/api/block-holders-stack-audit").then(jsonOf<{
+      ok: boolean;
+      dm_count: number;
+      md_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

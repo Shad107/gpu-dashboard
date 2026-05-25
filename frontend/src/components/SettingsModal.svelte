@@ -2767,6 +2767,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #96 (UI sprint 87) ────────────────────────────────────────────
+  let blockDiscardCapsAuditData           = $state<Awaited<ReturnType<typeof api.blockDiscardCapsAuditStatus>>           | null>(null);
+  let cpusetV2PartitionAuditData          = $state<Awaited<ReturnType<typeof api.cpusetV2PartitionAuditStatus>>          | null>(null);
+  let tracingInstancesAuditData           = $state<Awaited<ReturnType<typeof api.tracingInstancesAuditStatus>>           | null>(null);
+  let blockHoldersStackAuditData          = $state<Awaited<ReturnType<typeof api.blockHoldersStackAuditStatus>>          | null>(null);
+  async function loadBlockDiscardCapsAudit() {
+    try { blockDiscardCapsAuditData = await api.blockDiscardCapsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadCpusetV2PartitionAudit() {
+    try { cpusetV2PartitionAuditData = await api.cpusetV2PartitionAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadTracingInstancesAudit() {
+    try { tracingInstancesAuditData = await api.tracingInstancesAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadBlockHoldersStackAudit() {
+    try { blockHoldersStackAuditData = await api.blockHoldersStackAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3244,6 +3266,11 @@
       if (!kernelModuleRefcntAuditData)         loadKernelModuleRefcntAudit();
       if (!tracingBufferFootprintAuditData)     loadTracingBufferFootprintAudit();
       if (!perDeviceWakeupAttributionAuditData) loadPerDeviceWakeupAttributionAudit();
+      // R&D #96 cards
+      if (!blockDiscardCapsAuditData)           loadBlockDiscardCapsAudit();
+      if (!cpusetV2PartitionAuditData)          loadCpusetV2PartitionAudit();
+      if (!tracingInstancesAuditData)           loadTracingInstancesAudit();
+      if (!blockHoldersStackAuditData)          loadBlockHoldersStackAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -17106,6 +17133,186 @@ echo disabled | sudo tee /sys/devices/<path>/power/wakeup
 for d in /sys/bus/usb/devices/*/power/wakeup; do
   echo "$d : $(cat $d 2>/dev/null)"
 done`}</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #96.1 block discard caps (UI sprint 87) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.discardcaps.title")}</h4>
+        <p class="muted">{i18n.t("integrations.discardcaps.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBlockDiscardCapsAudit}>{i18n.t("integrations.discardcaps.refresh")}</button>
+          {#if blockDiscardCapsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={blockDiscardCapsAuditData.verdict.verdict === 'discard_disabled_on_ssd' ? 'var(--err)' :
+                             blockDiscardCapsAuditData.verdict.verdict === 'provisioning_mode_full' ? 'var(--warn)' :
+                             blockDiscardCapsAuditData.verdict.verdict === 'discard_granularity_huge' ? 'var(--accent)' :
+                             blockDiscardCapsAuditData.verdict.verdict === 'discard_sane' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {blockDiscardCapsAuditData.device_count} dev · {i18n.t("integrations.discardcaps.verdict")} : <b>{blockDiscardCapsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if blockDiscardCapsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        blockDiscardCapsAuditData.verdict.verdict === 'discard_disabled_on_ssd' ? 'var(--err)' :
+                        blockDiscardCapsAuditData.verdict.verdict === 'provisioning_mode_full' ? 'var(--warn)' :
+                        blockDiscardCapsAuditData.verdict.verdict === 'discard_granularity_huge' ? 'var(--accent)' :
+                        blockDiscardCapsAuditData.verdict.verdict === 'discard_sane' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{blockDiscardCapsAuditData.verdict.reason}</p>
+            {#if !['discard_sane','unknown','requires_root'].includes(blockDiscardCapsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.discardcaps.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  blockDiscardCapsAuditData.verdict.verdict === 'discard_disabled_on_ssd'
+                    ? "# SSD with TRIM disabled — inspect driver / firmware\nfor d in /sys/block/*/queue/discard_max_bytes; do\n  dev=$(basename $(dirname $(dirname $d)))\n  echo \"$dev: max=$(cat $d) rot=$(cat $(dirname $d)/rotational)\"\ndone | grep ' max=0 rot=0$'\n# Some virtio-blk / RAID controllers strip discard ;\n# check the host hypervisor or controller driver.\n# Verify model supports TRIM :\nsudo hdparm -I /dev/<dev> | grep -i trim"
+                  : blockDiscardCapsAuditData.verdict.verdict === 'provisioning_mode_full'
+                    ? "# SCSI provisioning_mode=full silently disables TRIM\n# Switch to unmap (per-device, may not survive reboot) :\nfor f in /sys/block/*/device/scsi_disk/*/provisioning_mode; do\n  [ \"$(cat $f)\" = full ] && echo unmap | sudo tee $f\ndone\n# Persist via udev rule :\nsudo tee /etc/udev/rules.d/99-scsi-trim.rules <<'EOF'\nACTION==\"add|change\", SUBSYSTEM==\"scsi\", \\\\\n  ATTR{provisioning_mode}=\"unmap\"\nEOF"
+                  : blockDiscardCapsAuditData.verdict.verdict === 'discard_granularity_huge'
+                    ? "# Huge discard granularity — chunk fstrim manually\nfor d in /sys/block/*/queue/discard_granularity; do\n  g=$(cat $d)\n  [ $g -ge $((1024*1024)) ] && echo \"$(basename $(dirname $(dirname $d))): $g\"\ndone\n# Run fstrim in offset/length chunks to avoid stalls :\nsudo fstrim --verbose --offset $((1024**3)) \\\\\n  --length $((4*1024**3)) /mnt"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #96.2 cpuset v2 partition (UI sprint 87) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.cpusetv2.title")}</h4>
+        <p class="muted">{i18n.t("integrations.cpusetv2.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadCpusetV2PartitionAudit}>{i18n.t("integrations.cpusetv2.refresh")}</button>
+          {#if cpusetV2PartitionAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={cpusetV2PartitionAuditData.verdict.verdict === 'cpuset_effective_empty' ? 'var(--err)' :
+                             cpusetV2PartitionAuditData.verdict.verdict === 'partition_invalid' ? 'var(--warn)' :
+                             cpusetV2PartitionAuditData.verdict.verdict === 'cpuset_drift' ? 'var(--accent)' :
+                             cpusetV2PartitionAuditData.verdict.verdict === 'cpuset_sane' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {cpusetV2PartitionAuditData.non_default_count} non-default · {i18n.t("integrations.cpusetv2.verdict")} : <b>{cpusetV2PartitionAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if cpusetV2PartitionAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        cpusetV2PartitionAuditData.verdict.verdict === 'cpuset_effective_empty' ? 'var(--err)' :
+                        cpusetV2PartitionAuditData.verdict.verdict === 'partition_invalid' ? 'var(--warn)' :
+                        cpusetV2PartitionAuditData.verdict.verdict === 'cpuset_drift' ? 'var(--accent)' :
+                        cpusetV2PartitionAuditData.verdict.verdict === 'cpuset_sane' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{cpusetV2PartitionAuditData.verdict.reason}</p>
+            {#if !['cpuset_sane','unknown','requires_root'].includes(cpusetV2PartitionAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.cpusetv2.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  cpusetV2PartitionAuditData.verdict.verdict === 'cpuset_effective_empty'
+                    ? "# Find cgroups with empty effective cpus despite request\nfor f in $(find /sys/fs/cgroup -name cpuset.cpus -type f); do\n  d=$(dirname $f); req=$(cat $f); eff=$(cat $d/cpuset.cpus.effective)\n  [ -z \"$req\" ] && continue\n  [ -z \"$eff\" ] && echo \"$d: req=$req eff=(empty)\"\ndone\n# Fix: widen cpuset.cpus to overlap with isolated/online :\necho '0-11' | sudo tee /sys/fs/cgroup/<path>/cpuset.cpus"
+                  : cpusetV2PartitionAuditData.verdict.verdict === 'partition_invalid'
+                    ? "# Find invalid partition states + fix\nfor f in $(find /sys/fs/cgroup -name cpuset.cpus.partition); do\n  v=$(cat $f); case \"$v\" in *invalid*) echo \"$(dirname $f): $v\";; esac\ndone\n# Reset partition to member or re-apply with valid mask :\necho member | sudo tee /sys/fs/cgroup/<path>/cpuset.cpus.partition"
+                  : cpusetV2PartitionAuditData.verdict.verdict === 'cpuset_drift'
+                    ? "# Compare requested vs effective\nfor f in $(find /sys/fs/cgroup -name cpuset.cpus); do\n  d=$(dirname $f); req=$(cat $f); eff=$(cat $d/cpuset.cpus.effective)\n  [ -z \"$req\" ] && continue\n  [ \"$req\" != \"$eff\" ] && echo \"$d: req=$req eff=$eff\"\ndone\n# Likely: cpu hotplug took CPUs offline, or isolcpus stripped\n# them. Restart the cgroup's parent so reservation refreshes."
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #96.3 tracing instances (UI sprint 87) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.traceinst.title")}</h4>
+        <p class="muted">{i18n.t("integrations.traceinst.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadTracingInstancesAudit}>{i18n.t("integrations.traceinst.refresh")}</button>
+          {#if tracingInstancesAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={tracingInstancesAuditData.verdict.verdict === 'orphan_instance_burning_ram' ? 'var(--err)' :
+                             tracingInstancesAuditData.verdict.verdict === 'instance_left_armed' ? 'var(--warn)' :
+                             tracingInstancesAuditData.verdict.verdict === 'many_instances' ? 'var(--accent)' :
+                             tracingInstancesAuditData.verdict.verdict === 'instances_clean' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {tracingInstancesAuditData.instance_count} instance(s) · {i18n.t("integrations.traceinst.verdict")} : <b>{tracingInstancesAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if tracingInstancesAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        tracingInstancesAuditData.verdict.verdict === 'orphan_instance_burning_ram' ? 'var(--err)' :
+                        tracingInstancesAuditData.verdict.verdict === 'instance_left_armed' ? 'var(--warn)' :
+                        tracingInstancesAuditData.verdict.verdict === 'many_instances' ? 'var(--accent)' :
+                        tracingInstancesAuditData.verdict.verdict === 'instances_clean' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{tracingInstancesAuditData.verdict.reason}</p>
+            {#if !['instances_clean','unknown','requires_root'].includes(tracingInstancesAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.traceinst.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{`# List instances with their footprint
+sudo ls -la /sys/kernel/tracing/instances/
+for d in /sys/kernel/tracing/instances/*; do
+  echo "$d : size=$(sudo cat $d/buffer_size_kb)KB tracer=$(sudo cat $d/current_tracer) on=$(sudo cat $d/tracing_on)"
+done
+# Stop a runaway instance + tear it down :
+sudo bash -c 'echo 0 > /sys/kernel/tracing/instances/<name>/tracing_on'
+sudo bash -c 'echo nop > /sys/kernel/tracing/instances/<name>/current_tracer'
+sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #96.4 block holders/dm-stack (UI sprint 87) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.blockstack.title")}</h4>
+        <p class="muted">{i18n.t("integrations.blockstack.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadBlockHoldersStackAudit}>{i18n.t("integrations.blockstack.refresh")}</button>
+          {#if blockHoldersStackAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={blockHoldersStackAuditData.verdict.verdict === 'dm_suspended_with_mount' ? 'var(--err)' :
+                             blockHoldersStackAuditData.verdict.verdict === 'md_degraded_no_resync' ? 'var(--warn)' :
+                             blockHoldersStackAuditData.verdict.verdict === 'orphan_dm_device' ? 'var(--accent)' :
+                             blockHoldersStackAuditData.verdict.verdict === 'block_stack_sane' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {blockHoldersStackAuditData.dm_count} dm · {blockHoldersStackAuditData.md_count} md · {i18n.t("integrations.blockstack.verdict")} : <b>{blockHoldersStackAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if blockHoldersStackAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        blockHoldersStackAuditData.verdict.verdict === 'dm_suspended_with_mount' ? 'var(--err)' :
+                        blockHoldersStackAuditData.verdict.verdict === 'md_degraded_no_resync' ? 'var(--warn)' :
+                        blockHoldersStackAuditData.verdict.verdict === 'orphan_dm_device' ? 'var(--accent)' :
+                        blockHoldersStackAuditData.verdict.verdict === 'block_stack_sane' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{blockHoldersStackAuditData.verdict.reason}</p>
+            {#if !['block_stack_sane','unknown','requires_root'].includes(blockHoldersStackAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.blockstack.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  blockHoldersStackAuditData.verdict.verdict === 'dm_suspended_with_mount'
+                    ? "# dm device suspended while mounted — resume\nsudo dmsetup info -c | head\n# Identify suspended-but-mounted :\nfor d in /sys/block/dm-*/dm; do\n  s=$(cat $d/suspended); n=$(cat $d/name)\n  [ \"$s\" = 1 ] && echo \"$n is suspended\"\ndone\n# Resume :\nsudo dmsetup resume <name>"
+                  : blockHoldersStackAuditData.verdict.verdict === 'md_degraded_no_resync'
+                    ? "# md degraded with no active resync — inspect + kick\ncat /proc/mdstat\nfor d in /sys/block/md*/md; do\n  [ \"$(cat $d/degraded 2>/dev/null)\" -gt 0 ] && \\\n    echo \"$(dirname $d): degraded=$(cat $d/degraded) sync_action=$(cat $d/sync_action)\"\ndone\n# Add a spare :\nsudo mdadm --add /dev/md0 /dev/sdX\n# Or trigger a repair pass :\necho repair | sudo tee /sys/block/md0/md/sync_action"
+                  : blockHoldersStackAuditData.verdict.verdict === 'orphan_dm_device'
+                    ? "# Orphan dm device — list + remove\nsudo dmsetup ls\n# Inspect each suspect (no holders, not mounted) :\nfor d in /sys/block/dm-*; do\n  name=$(cat $d/dm/name)\n  holders=$(ls $d/holders 2>/dev/null | wc -l)\n  [ $holders = 0 ] && echo \"$name (no holders)\"\ndone\n# Remove confirmed orphans :\nsudo dmsetup remove <name>"
+                  : ""
+                }</pre>
               </details>
             {/if}
           </div>
