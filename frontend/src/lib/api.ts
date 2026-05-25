@@ -5812,4 +5812,47 @@ export const api = {
       has_boot_aggregate: boolean;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #105 (UI sprint 96) ──
+  imaDigestListsAuditStatus: () =>
+    fetch("/api/ima-digest-lists-audit").then(jsonOf<{
+      ok: boolean;
+      digest_lists_loaded: number | null;
+      digest_list_file_count: number;
+      ima_appraise_active: boolean;
+      evm_enforced: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  drmGtLoadStatusAuditStatus: () =>
+    fetch("/api/drm-gt-load-status-audit").then(jsonOf<{
+      ok: boolean;
+      card_count: number;
+      intel_present: boolean;
+      amd_present: boolean;
+      guc_status: string | null;
+      huc_status: string | null;
+      amdgpu_recovery: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  powerAsyncSuspendAuditStatus: () =>
+    fetch("/api/power-async-suspend-audit").then(jsonOf<{
+      ok: boolean;
+      pm_async: number | null;
+      pm_freeze_timeout_ms: number | null;
+      sync_on_suspend: number | null;
+      pm_print_times: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  vmCompactionProactiveAuditStatus: () =>
+    fetch("/api/vm-compaction-proactive-audit").then(jsonOf<{
+      ok: boolean;
+      compaction_proactiveness: number | null;
+      compact_unevictable_allowed: number | null;
+      percpu_pagelist_high_fraction: number | null;
+      thp_enabled: string | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

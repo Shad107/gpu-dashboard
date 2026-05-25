@@ -2965,6 +2965,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #105 (UI sprint 96) ───────────────────────────────────────────
+  let imaDigestListsAuditData             = $state<Awaited<ReturnType<typeof api.imaDigestListsAuditStatus>>             | null>(null);
+  let drmGtLoadStatusAuditData            = $state<Awaited<ReturnType<typeof api.drmGtLoadStatusAuditStatus>>            | null>(null);
+  let powerAsyncSuspendAuditData          = $state<Awaited<ReturnType<typeof api.powerAsyncSuspendAuditStatus>>          | null>(null);
+  let vmCompactionProactiveAuditData      = $state<Awaited<ReturnType<typeof api.vmCompactionProactiveAuditStatus>>      | null>(null);
+  async function loadImaDigestListsAudit() {
+    try { imaDigestListsAuditData = await api.imaDigestListsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDrmGtLoadStatusAudit() {
+    try { drmGtLoadStatusAuditData = await api.drmGtLoadStatusAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadPowerAsyncSuspendAudit() {
+    try { powerAsyncSuspendAuditData = await api.powerAsyncSuspendAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadVmCompactionProactiveAudit() {
+    try { vmCompactionProactiveAuditData = await api.vmCompactionProactiveAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3487,6 +3509,11 @@
       if (!hungTaskDriftAuditData)              loadHungTaskDriftAudit();
       if (!firmwareLoaderPolicyAuditData)       loadFirmwareLoaderPolicyAudit();
       if (!imaMeasurementFreshnessAuditData)    loadImaMeasurementFreshnessAudit();
+      // R&D #105 cards
+      if (!imaDigestListsAuditData)             loadImaDigestListsAudit();
+      if (!drmGtLoadStatusAuditData)            loadDrmGtLoadStatusAudit();
+      if (!powerAsyncSuspendAuditData)          loadPowerAsyncSuspendAudit();
+      if (!vmCompactionProactiveAuditData)      loadVmCompactionProactiveAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -18945,6 +18972,184 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# No PCR10 anchor — IMA policy isn't measuring boot path\n# Inspect policy :\nsudo cat /sys/kernel/security/ima/policy\n# Apply a tcb policy (sample) :\nsudo tee /etc/ima/ima-policy <<'EOF'\nmeasure func=BPRM_CHECK\nmeasure func=FILE_MMAP mask=MAY_EXEC\nmeasure func=MODULE_CHECK\nEOF\nsudo systemctl reload integrity-update.service 2>/dev/null || sudo reboot"
                   : imaMeasurementFreshnessAuditData.verdict.verdict === 'ima_log_empty'
                     ? "# IMA loaded but nothing measured — check policy\nsudo cat /sys/kernel/security/ima/policy | head\n# Apply or extend policy ; re-exec the workload to trigger measurements"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #105.1 IMA digest_lists (UI sprint 96) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.imadigest.title")}</h4>
+        <p class="muted">{i18n.t("integrations.imadigest.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadImaDigestListsAudit}>{i18n.t("integrations.imadigest.refresh")}</button>
+          {#if imaDigestListsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={imaDigestListsAuditData.verdict.verdict === 'appraisal_no_digest_lists' ? 'var(--err)' :
+                             (imaDigestListsAuditData.verdict.verdict === 'digest_lists_world_readable_drift' || imaDigestListsAuditData.verdict.verdict === 'digest_lists_absent_evm_off') ? 'var(--accent)' :
+                             imaDigestListsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              loaded={imaDigestListsAuditData.digest_lists_loaded ?? '—'} · files={imaDigestListsAuditData.digest_list_file_count} · {i18n.t("integrations.imadigest.verdict")} : <b>{imaDigestListsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if imaDigestListsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        imaDigestListsAuditData.verdict.verdict === 'appraisal_no_digest_lists' ? 'var(--err)' :
+                        (imaDigestListsAuditData.verdict.verdict === 'digest_lists_world_readable_drift' || imaDigestListsAuditData.verdict.verdict === 'digest_lists_absent_evm_off') ? 'var(--accent)' :
+                        imaDigestListsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{imaDigestListsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(imaDigestListsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.imadigest.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  imaDigestListsAuditData.verdict.verdict === 'appraisal_no_digest_lists'
+                    ? "# IMA-appraise is enforcing but no digest lists loaded — boots will deny all execs\n# Option A: load proper digest lists from your distro's IMA tooling\nsudo systemctl status ima-policy-loader 2>/dev/null\nls -la /sys/kernel/security/integrity/digest_lists/\n# Option B: temporarily relax IMA policy (root)\necho 'measure func=BPRM_CHECK' | sudo tee /sys/kernel/security/ima/policy"
+                  : imaDigestListsAuditData.verdict.verdict === 'digest_lists_world_readable_drift'
+                    ? "# Permission drift across digest list files — make consistent\nsudo chmod 0600 /sys/kernel/security/integrity/digest_lists/*"
+                  : imaDigestListsAuditData.verdict.verdict === 'digest_lists_absent_evm_off'
+                    ? "# Informational only — IMA-appraisal isn't in use on this host.\n# Enable EVM + load digest lists only if you want strict execv verification :\nsudo sysctl -w kernel.integrity_audit=1\n# Then load distro IMA tooling per OS docs"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #105.2 DRM GT load status (UI sprint 96) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.drmgt.title")}</h4>
+        <p class="muted">{i18n.t("integrations.drmgt.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDrmGtLoadStatusAudit}>{i18n.t("integrations.drmgt.refresh")}</button>
+          {#if drmGtLoadStatusAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={drmGtLoadStatusAuditData.verdict.verdict === 'guc_not_loaded' ? 'var(--err)' :
+                             (drmGtLoadStatusAuditData.verdict.verdict === 'huc_load_failed' || drmGtLoadStatusAuditData.verdict.verdict === 'amdgpu_recovery_off') ? 'var(--warn)' :
+                             drmGtLoadStatusAuditData.verdict.verdict === 'firmware_version_mismatch' ? 'var(--accent)' :
+                             drmGtLoadStatusAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              cards={drmGtLoadStatusAuditData.card_count} · guc={drmGtLoadStatusAuditData.guc_status ?? '—'} · huc={drmGtLoadStatusAuditData.huc_status ?? '—'} · {i18n.t("integrations.drmgt.verdict")} : <b>{drmGtLoadStatusAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if drmGtLoadStatusAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        drmGtLoadStatusAuditData.verdict.verdict === 'guc_not_loaded' ? 'var(--err)' :
+                        (drmGtLoadStatusAuditData.verdict.verdict === 'huc_load_failed' || drmGtLoadStatusAuditData.verdict.verdict === 'amdgpu_recovery_off') ? 'var(--warn)' :
+                        drmGtLoadStatusAuditData.verdict.verdict === 'firmware_version_mismatch' ? 'var(--accent)' :
+                        drmGtLoadStatusAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{drmGtLoadStatusAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(drmGtLoadStatusAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.drmgt.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  drmGtLoadStatusAuditData.verdict.verdict === 'guc_not_loaded'
+                    ? "# Intel GuC failed to load — reinstall firmware + reload i915\nsudo dmesg | grep -iE 'guc.*fail|GuC.*ERROR' | head\nsudo apt install --reinstall linux-firmware    # Debian/Ubuntu\nsudo modprobe -r i915 && sudo modprobe i915\n# Or check for GuC enablement flag :\ncat /sys/module/i915/parameters/enable_guc   # should be 3 (GuC+HuC)"
+                  : drmGtLoadStatusAuditData.verdict.verdict === 'huc_load_failed'
+                    ? "# Intel HuC failed — HEVC/AV1 hardware decode is off, software fallback used\nsudo dmesg | grep -iE 'HuC' | head\n# Ensure firmware package is current :\nsudo apt install --reinstall linux-firmware\n# Force enable_guc=3 :\necho 'options i915 enable_guc=3' | sudo tee /etc/modprobe.d/i915.conf"
+                  : drmGtLoadStatusAuditData.verdict.verdict === 'amdgpu_recovery_off'
+                    ? "# Enable amdgpu auto-recovery for shader hangs\necho 1 | sudo tee /sys/class/drm/card*/device/gpu_recovery 2>/dev/null\n# Persist :\necho 'options amdgpu gpu_recovery=1' | sudo tee /etc/modprobe.d/amdgpu.conf"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #105.3 power_async suspend (UI sprint 96) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.pmasync.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pmasync.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPowerAsyncSuspendAudit}>{i18n.t("integrations.pmasync.refresh")}</button>
+          {#if powerAsyncSuspendAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={(powerAsyncSuspendAuditData.verdict.verdict === 'sync_on_suspend_off_data_risk' || powerAsyncSuspendAuditData.verdict.verdict === 'pm_async_off_slow_resume') ? 'var(--warn)' :
+                             (powerAsyncSuspendAuditData.verdict.verdict === 'freeze_timeout_short_nvidia' || powerAsyncSuspendAuditData.verdict.verdict === 'pm_print_times_on_dmesg_noisy') ? 'var(--accent)' :
+                             powerAsyncSuspendAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              async={powerAsyncSuspendAuditData.pm_async ?? '—'} · freeze={powerAsyncSuspendAuditData.pm_freeze_timeout_ms ?? '—'}ms · sync={powerAsyncSuspendAuditData.sync_on_suspend ?? '—'} · {i18n.t("integrations.pmasync.verdict")} : <b>{powerAsyncSuspendAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if powerAsyncSuspendAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        (powerAsyncSuspendAuditData.verdict.verdict === 'sync_on_suspend_off_data_risk' || powerAsyncSuspendAuditData.verdict.verdict === 'pm_async_off_slow_resume') ? 'var(--warn)' :
+                        (powerAsyncSuspendAuditData.verdict.verdict === 'freeze_timeout_short_nvidia' || powerAsyncSuspendAuditData.verdict.verdict === 'pm_print_times_on_dmesg_noisy') ? 'var(--accent)' :
+                        powerAsyncSuspendAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{powerAsyncSuspendAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(powerAsyncSuspendAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.pmasync.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  powerAsyncSuspendAuditData.verdict.verdict === 'sync_on_suspend_off_data_risk'
+                    ? "# Re-enable filesystem sync before suspend\necho 1 | sudo tee /sys/power/sync_on_suspend\n# Persist via tmpfiles :\nsudo tee /etc/tmpfiles.d/pm-sync.conf <<'EOF'\nw /sys/power/sync_on_suspend - - - - 1\nEOF"
+                  : powerAsyncSuspendAuditData.verdict.verdict === 'pm_async_off_slow_resume'
+                    ? "# Re-enable parallel device suspend / resume\necho 1 | sudo tee /sys/power/pm_async\nsudo tee /etc/tmpfiles.d/pm-async.conf <<'EOF'\nw /sys/power/pm_async - - - - 1\nEOF"
+                  : powerAsyncSuspendAuditData.verdict.verdict === 'freeze_timeout_short_nvidia'
+                    ? "# Bump freeze timeout to 60s for nvidia.ko / zfs.ko hosts\necho 60000 | sudo tee /sys/power/pm_freeze_timeout\nsudo tee /etc/tmpfiles.d/pm-freeze.conf <<'EOF'\nw /sys/power/pm_freeze_timeout - - - - 60000\nEOF"
+                  : powerAsyncSuspendAuditData.verdict.verdict === 'pm_print_times_on_dmesg_noisy'
+                    ? "# Disable per-device suspend timing prints\necho 0 | sudo tee /sys/power/pm_print_times"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #105.4 vm compaction proactive (UI sprint 96) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vmcompact.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vmcompact.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVmCompactionProactiveAudit}>{i18n.t("integrations.vmcompact.refresh")}</button>
+          {#if vmCompactionProactiveAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={vmCompactionProactiveAuditData.verdict.verdict === 'proactive_off_thp_always' ? 'var(--warn)' :
+                             (vmCompactionProactiveAuditData.verdict.verdict === 'proactive_aggressive_jank' || vmCompactionProactiveAuditData.verdict.verdict === 'pagelist_fraction_extreme' || vmCompactionProactiveAuditData.verdict.verdict === 'compact_unevictable_disabled') ? 'var(--accent)' :
+                             vmCompactionProactiveAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              proact={vmCompactionProactiveAuditData.compaction_proactiveness ?? '—'} · THP={vmCompactionProactiveAuditData.thp_enabled ?? '—'} · {i18n.t("integrations.vmcompact.verdict")} : <b>{vmCompactionProactiveAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vmCompactionProactiveAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        vmCompactionProactiveAuditData.verdict.verdict === 'proactive_off_thp_always' ? 'var(--warn)' :
+                        (vmCompactionProactiveAuditData.verdict.verdict === 'proactive_aggressive_jank' || vmCompactionProactiveAuditData.verdict.verdict === 'pagelist_fraction_extreme' || vmCompactionProactiveAuditData.verdict.verdict === 'compact_unevictable_disabled') ? 'var(--accent)' :
+                        vmCompactionProactiveAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{vmCompactionProactiveAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(vmCompactionProactiveAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.vmcompact.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  vmCompactionProactiveAuditData.verdict.verdict === 'proactive_off_thp_always'
+                    ? "# Enable proactive compaction (default 20) for smoother THP collapse\nsudo sysctl -w vm.compaction_proactiveness=20\nsudo tee /etc/sysctl.d/99-compact.conf <<'EOF'\nvm.compaction_proactiveness = 20\nEOF\nsudo sysctl --system"
+                  : vmCompactionProactiveAuditData.verdict.verdict === 'proactive_aggressive_jank'
+                    ? "# Compactor too aggressive — back off to default\nsudo sysctl -w vm.compaction_proactiveness=20"
+                  : vmCompactionProactiveAuditData.verdict.verdict === 'pagelist_fraction_extreme'
+                    ? "# Restore default per-cpu pagelist sizing (kernel auto)\nsudo sysctl -w vm.percpu_pagelist_high_fraction=0"
+                  : vmCompactionProactiveAuditData.verdict.verdict === 'compact_unevictable_disabled'
+                    ? "# Re-allow compaction of mlock'd pages\nsudo sysctl -w vm.compact_unevictable_allowed=1"
                   : ""
                 }</pre>
               </details>
