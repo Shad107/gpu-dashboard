@@ -3089,11 +3089,19 @@
 
   // ── Hardening #2 (UI sprint 103) — collection_profile_audit ──
   // Lazy load only: collecting the fleet takes ~8 s. NO autoload.
+  // Hardening #14 — user-supplied budget overrides.
   let collectionProfileAuditData          = $state<Awaited<ReturnType<typeof api.collectionProfileAuditStatus>>          | null>(null);
   let collectionProfileAuditLoading       = $state(false);
+  let collectionProfileSlowModuleMs       = $state<number | null>(null);
+  let collectionProfileSlowTotalMs        = $state<number | null>(null);
   async function loadCollectionProfileAudit() {
     collectionProfileAuditLoading = true;
-    try { collectionProfileAuditData = await api.collectionProfileAuditStatus(); }
+    try {
+      collectionProfileAuditData = await api.collectionProfileAuditStatus({
+        slow_module_ms: collectionProfileSlowModuleMs ?? undefined,
+        slow_total_ms: collectionProfileSlowTotalMs ?? undefined,
+      });
+    }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
     finally { collectionProfileAuditLoading = false; }
   }
@@ -20042,13 +20050,27 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       <div class="card-form" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.collprof.title")}</h4>
         <p class="muted">{i18n.t("integrations.collprof.desc")}</p>
-        <div class="form-row">
+        <div class="form-row" style="gap: 6px; align-items: center; flex-wrap: wrap;">
           <button class="btn" onclick={loadCollectionProfileAudit}
                   disabled={collectionProfileAuditLoading}>
             {collectionProfileAuditLoading
               ? i18n.t("integrations.collprof.running")
               : i18n.t("integrations.collprof.refresh")}
           </button>
+          <label class="muted" style="font-size: 0.85em;">
+            {i18n.t("integrations.collprof.budget_module")}
+            <input type="number" min="1" step="50"
+                   bind:value={collectionProfileSlowModuleMs}
+                   placeholder="500"
+                   style="width: 5em; margin-left: 4px;" />
+          </label>
+          <label class="muted" style="font-size: 0.85em;">
+            {i18n.t("integrations.collprof.budget_total")}
+            <input type="number" min="1" step="500"
+                   bind:value={collectionProfileSlowTotalMs}
+                   placeholder="5000"
+                   style="width: 6em; margin-left: 4px;" />
+          </label>
           {#if collectionProfileAuditData}
             <span class="kv" style="margin-left: 12px;"
                   style:color={collectionProfileAuditData.verdict.verdict === 'module_too_slow' ? 'var(--warn)' :
@@ -20059,6 +20081,9 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
               {collectionProfileAuditData.optimizable_total_ms.toFixed(0)} ms optimizable
               (+{collectionProfileAuditData.expected_slow_total_ms.toFixed(0)} ms intrinsic) ·
               {i18n.t("integrations.collprof.verdict")} : <b>{collectionProfileAuditData.verdict.verdict}</b>
+              <span class="muted" style="font-size: 0.85em;">
+                · budgets {collectionProfileAuditData.slow_module_ms_budget}/{collectionProfileAuditData.slow_total_ms_budget} ms
+              </span>
             </span>
           {/if}
         </div>

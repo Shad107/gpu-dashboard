@@ -6087,8 +6087,19 @@ export const api = {
     }>),
 
   // ── Hardening #2 (UI sprint 103) — fleet cold-start profile ──
-  collectionProfileAuditStatus: () =>
-    fetch("/api/collection-profile-audit").then(jsonOf<{
+  // Hardening #14 — optional per-call budget overrides.
+  collectionProfileAuditStatus: (
+    opts?: { slow_module_ms?: number; slow_total_ms?: number },
+  ) => {
+    const q = new URLSearchParams();
+    if (opts?.slow_module_ms != null && opts.slow_module_ms > 0) {
+      q.set("slow_module_ms", String(opts.slow_module_ms));
+    }
+    if (opts?.slow_total_ms != null && opts.slow_total_ms > 0) {
+      q.set("slow_total_ms", String(opts.slow_total_ms));
+    }
+    const qs = q.toString();
+    return fetch("/api/collection-profile-audit" + (qs ? "?" + qs : "")).then(jsonOf<{
       ok: boolean;
       module_count: number;
       total_ms: number;
@@ -6104,6 +6115,9 @@ export const api = {
       }>;
       skipped_count: number;
       error_count: number;
+      slow_module_ms_budget: number;
+      slow_total_ms_budget: number;
       verdict: { verdict: string; reason: string; recommendation: string };
-    }>),
+    }>);
+  },
 };

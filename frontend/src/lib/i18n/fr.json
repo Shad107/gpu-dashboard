@@ -2446,6 +2446,8 @@
   "integrations.collprof.running": "Collecte…",
   "integrations.collprof.verdict": "Verdict",
   "integrations.collprof.topslowest": "Top 10 les plus lents",
+  "integrations.collprof.budget_module": "budget par module ms",
+  "integrations.collprof.budget_total": "budget fleet ms",
   "integrations.collprof.recommend": "Action",
   "diagnostics.title": "Diagnostics — log viewer",
   "diagnostics.description": "Lit le log du dashboard (LOG_FILE) ou l'unité journalctl (JOURNALCTL_UNIT) configurés dans config.env. Utile pour self-debug d'un souci d'install.",
