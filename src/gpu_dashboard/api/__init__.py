@@ -605,3 +605,4 @@ from .perf_sampling_limits_audit import handle_perf_sampling_limits_audit_status
 from .zswap_deep_pool_audit import handle_zswap_deep_pool_audit_status  # noqa: F401,F811
 from .kfence_runtime_audit import handle_kfence_runtime_audit_status  # noqa: F401,F811
 from .net_qdisc_default_audit import handle_net_qdisc_default_audit_status  # noqa: F401,F811
+from .fscache_cachefiles_audit import handle_fscache_cachefiles_audit_status  # noqa: F401,F811

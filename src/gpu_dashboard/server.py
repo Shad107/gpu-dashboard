@@ -2262,6 +2262,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_net_qdisc_default_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/fscache-cachefiles-audit":
+                # R&D #101.3 — fscache + cachefiles health
+                code, body = api.handle_fscache_cachefiles_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
