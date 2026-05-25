@@ -2132,6 +2132,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_lockdep_lockstat_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/mdio-phy-eee-audit":
+                # R&D #95.1 — Ethernet PHY + EEE state desync
+                code, body = api.handle_mdio_phy_eee_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
