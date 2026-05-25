@@ -2187,6 +2187,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cgroup_delegate_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pci-d3cold-runtime-audit":
+                # R&D #97.4 — GPU D3cold cascade + runtime PM
+                code, body = api.handle_pci_d3cold_runtime_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
