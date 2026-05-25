@@ -2402,6 +2402,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_overlay_module_params_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/dm-mod-params-audit":
+                # R&D #108.3 — dm_mod driver-global posture
+                code, body = api.handle_dm_mod_params_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
