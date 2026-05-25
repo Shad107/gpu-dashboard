@@ -33,6 +33,18 @@ def test_parse_auxv_handles_trailing_partial():
     assert out == {mod._AT_HWCAP: 1}
 
 
+def test_parse_auxv_extracts_secure_random_base():
+    blob = struct.pack("<QQ", mod._AT_HWCAP, 1)
+    blob += struct.pack("<QQ", mod._AT_SECURE, 1)
+    blob += struct.pack("<QQ", mod._AT_RANDOM, 0x7fffaabb0000)
+    blob += struct.pack("<QQ", mod._AT_BASE, 0x7f0000000000)
+    blob += struct.pack("<QQ", 0, 0)
+    out = mod.parse_auxv(blob)
+    assert out[mod._AT_SECURE] == 1
+    assert out[mod._AT_RANDOM] == 0x7fffaabb0000
+    assert out[mod._AT_BASE] == 0x7f0000000000
+
+
 # --- read_state -------------------------------------------------
 
 def _mk_proc(root, pid, *, state="R", wchan="0",
@@ -187,6 +199,36 @@ def test_priority_hwcap_over_timerslack():
     assert v["verdict"] == "hwcap_drift"
 
 
+def test_classify_unexpected_secure_mode():
+    v = mod.classify(
+        [{"pid": 1, "state": "S", "wchan": "0",
+            "syscall": "-1", "timerslack_ns": 50000}],
+        {mod._AT_HWCAP: 1, mod._AT_SECURE: 1},
+        "x86_64", False, True)
+    assert v["verdict"] == "unexpected_secure_mode"
+    assert "AT_SECURE=1" in v["reason"]
+
+
+def test_classify_secure_zero_is_ok():
+    v = mod.classify(
+        [{"pid": 1, "state": "S", "wchan": "0",
+            "syscall": "-1", "timerslack_ns": 50000}],
+        {mod._AT_HWCAP: 1, mod._AT_SECURE: 0},
+        "x86_64", False, True)
+    assert v["verdict"] == "ok"
+
+
+def test_classify_secure_below_timerslack_priority():
+    # Battery discharging + timerslack=0 + AT_SECURE=1 → timerslack
+    # wins (higher severity than informational accent).
+    v = mod.classify(
+        [{"pid": 1, "state": "S", "wchan": "0",
+            "syscall": "-1", "timerslack_ns": 0}],
+        {mod._AT_HWCAP: 1, mod._AT_SECURE: 1},
+        "x86_64", True, True)
+    assert v["verdict"] == "timerslack_battery_hostile"
+
+
 # --- status integration -----------------------------------------
 
 def test_status_smoke_live():
@@ -194,8 +236,13 @@ def test_status_smoke_live():
     out = mod.status(None)
     assert out["sample_count"] > 0
     assert "verdict" in out
+    # New fields exposed by R&D #111.1 deepening.
+    assert "own_secure" in out
+    assert "own_at_base" in out
+    assert "own_at_random_set" in out
     # On a live workstation/VM, we expect ok unless something's
     # genuinely wrong.
     assert out["verdict"]["verdict"] in (
         "ok", "syscall_hang_long", "hwcap_drift",
-        "timerslack_battery_hostile", "unknown")
+        "timerslack_battery_hostile",
+        "unexpected_secure_mode", "unknown")

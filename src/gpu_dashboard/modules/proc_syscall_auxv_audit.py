@@ -34,6 +34,10 @@ Verdicts (priority order) :
                               sampled PID has timerslack_ns == 0
                               (high-precision timer = CPU wake
                               storm).
+  unexpected_secure_mode      Own process started in AT_SECURE=1
+                              mode (setuid / file caps active).
+                              Informational — surfaces whether
+                              file-caps landed on the daemon.
   ok                          everything quiet.
   unknown                     /proc/self/{syscall,auxv} unreadable
                               (rare — disabled by yama / chroot).
@@ -53,9 +57,12 @@ NAME = "proc_syscall_auxv_audit"
 _PROC = "/proc"
 _POWER_SUPPLY = "/sys/class/power_supply"
 
+_AT_BASE = 7
 _AT_PAGESZ = 6
 _AT_PLATFORM = 15
 _AT_HWCAP = 16
+_AT_SECURE = 23
+_AT_RANDOM = 25
 _AT_HWCAP2 = 26
 
 
@@ -258,9 +265,22 @@ def classify(samples: List[dict],
                     "recommendation":
                             _recipe_timerslack_battery()}
 
+    # 4) unexpected_secure_mode — own process started with
+    # AT_SECURE=1 (setuid bit honored, file caps in effect, or
+    # ld.so secure-execution mode). Informational accent : the
+    # operator may or may not have intended this.
+    secure = own_auxv.get(_AT_SECURE, 0)
+    if own_readable and secure:
+        return {"verdict": "unexpected_secure_mode",
+                "reason": (f"Daemon's own AT_SECURE={secure} — "
+                          f"process is running with setuid bit or "
+                          f"file caps active. Verify intent."),
+                "recommendation": _recipe_unexpected_secure()}
+
     return {"verdict": "ok",
             "reason": (f"Sampled {len(samples)} PID(s) ; "
                       f"AT_HWCAP=0x{hwcap:x} ; "
+                      f"AT_SECURE={secure} ; "
                       f"battery_discharging={battery_discharging}."),
             "recommendation": ""}
 
@@ -291,6 +311,9 @@ def status(config=None,
               "own_hwcap": own_auxv.get(_AT_HWCAP),
               "own_hwcap2": own_auxv.get(_AT_HWCAP2),
               "own_pagesz": own_auxv.get(_AT_PAGESZ),
+              "own_secure": own_auxv.get(_AT_SECURE),
+              "own_at_base": own_auxv.get(_AT_BASE),
+              "own_at_random_set": _AT_RANDOM in own_auxv,
               "arch": arch,
               "battery_discharging": discharging,
               "verdict": verdict}
@@ -323,3 +346,12 @@ def _recipe_timerslack_battery() -> str:
             "  v=$(cat \"$f\" 2>/dev/null) || continue\n"
             "  [ \"$v\" = 0 ] && echo \"$f $v\"\n"
             "done\n")
+
+
+def _recipe_unexpected_secure() -> str:
+    return ("# Inspect file capabilities on the dashboard binary :\n"
+            "getcap $(readlink /proc/self/exe)\n"
+            "# Check setuid bit / owner :\n"
+            "ls -l $(readlink /proc/self/exe)\n"
+            "# To drop file caps once intent is confirmed :\n"
+            "sudo setcap -r $(readlink /proc/self/exe)\n")
