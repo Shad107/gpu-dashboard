@@ -615,3 +615,4 @@ from .kernel_oops_warn_counter_audit import handle_kernel_oops_warn_counter_audi
 from .ephemeral_port_range_audit import handle_ephemeral_port_range_audit_status  # noqa: F401,F811
 from .zram_writeback_recompress_audit import handle_zram_writeback_recompress_audit_status  # noqa: F401,F811
 from .cgroup_v2_uclamp_audit import handle_cgroup_v2_uclamp_audit_status  # noqa: F401,F811
+from .hwp_dynamic_boost_audit import handle_hwp_dynamic_boost_audit_status  # noqa: F401,F811

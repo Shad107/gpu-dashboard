@@ -2312,6 +2312,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cgroup_v2_uclamp_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/hwp-dynamic-boost-audit":
+                # R&D #104.1 — Intel HWP dynamic_boost posture
+                code, body = api.handle_hwp_dynamic_boost_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
