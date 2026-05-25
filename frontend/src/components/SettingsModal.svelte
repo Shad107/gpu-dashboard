@@ -2679,6 +2679,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #92 (UI sprint 83) ────────────────────────────────────────────
+  let iommuDmaStrictAuditData             = $state<Awaited<ReturnType<typeof api.iommuDmaStrictAuditStatus>>             | null>(null);
+  let kernelLockupWatchdogAuditData       = $state<Awaited<ReturnType<typeof api.kernelLockupWatchdogAuditStatus>>       | null>(null);
+  let khugepagedPressureAuditData         = $state<Awaited<ReturnType<typeof api.khugepagedPressureAuditStatus>>         | null>(null);
+  let drmFdinfoEngineUsageAuditData       = $state<Awaited<ReturnType<typeof api.drmFdinfoEngineUsageAuditStatus>>       | null>(null);
+  async function loadIommuDmaStrictAudit() {
+    try { iommuDmaStrictAuditData = await api.iommuDmaStrictAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKernelLockupWatchdogAudit() {
+    try { kernelLockupWatchdogAuditData = await api.kernelLockupWatchdogAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKhugepagedPressureAudit() {
+    try { khugepagedPressureAuditData = await api.khugepagedPressureAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadDrmFdinfoEngineUsageAudit() {
+    try { drmFdinfoEngineUsageAuditData = await api.drmFdinfoEngineUsageAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3136,6 +3158,11 @@
       if (!dmaBufBufinfoAuditData)              loadDmaBufBufinfoAudit();
       if (!nvmeHmbFeaturesAuditData)            loadNvmeHmbFeaturesAudit();
       if (!vmstatReclaimPressureAuditData)      loadVmstatReclaimPressureAudit();
+      // R&D #92 cards
+      if (!iommuDmaStrictAuditData)             loadIommuDmaStrictAudit();
+      if (!kernelLockupWatchdogAuditData)       loadKernelLockupWatchdogAudit();
+      if (!khugepagedPressureAuditData)         loadKhugepagedPressureAudit();
+      if (!drmFdinfoEngineUsageAuditData)       loadDrmFdinfoEngineUsageAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -16288,6 +16315,188 @@
                     ? "# watermark_scale_factor still default 10 on a big-RAM box\n# Bump for tighter kswapd reaction :\necho 200 | sudo tee /proc/sys/vm/watermark_scale_factor\n# Persist via sysctl :\necho 'vm.watermark_scale_factor = 200' | sudo tee /etc/sysctl.d/99-watermarks.conf\nsudo sysctl --system"
                   : ""
                 }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #92.1 IOMMU strict/lazy DMA (UI sprint 83) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.iommustrict.title")}</h4>
+        <p class="muted">{i18n.t("integrations.iommustrict.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadIommuDmaStrictAudit}>{i18n.t("integrations.iommustrict.refresh")}</button>
+          {#if iommuDmaStrictAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={iommuDmaStrictAuditData.verdict.verdict === 'iommu_passthrough_with_pcie_devices' ? 'var(--err)' :
+                             iommuDmaStrictAuditData.verdict.verdict === 'iommu_lazy_mode_active' ? 'var(--warn)' :
+                             iommuDmaStrictAuditData.verdict.verdict === 'mixed_group_types' ? 'var(--accent)' :
+                             iommuDmaStrictAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {i18n.t("integrations.iommustrict.verdict")} : <b>{iommuDmaStrictAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if iommuDmaStrictAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        iommuDmaStrictAuditData.verdict.verdict === 'iommu_passthrough_with_pcie_devices' ? 'var(--err)' :
+                        iommuDmaStrictAuditData.verdict.verdict === 'iommu_lazy_mode_active' ? 'var(--warn)' :
+                        iommuDmaStrictAuditData.verdict.verdict === 'mixed_group_types' ? 'var(--accent)' :
+                        iommuDmaStrictAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{iommuDmaStrictAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(iommuDmaStrictAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.iommustrict.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  iommuDmaStrictAuditData.verdict.verdict === 'iommu_passthrough_with_pcie_devices'
+                    ? "# cmdline forces IOMMU passthrough — disable for security\ncat /proc/cmdline | tr ' ' '\\n' | grep -i iommu\n# Remove iommu=pt / iommu.passthrough=1 from GRUB :\nsudo sed -i 's/iommu=pt//; s/iommu.passthrough=1//' /etc/default/grub\nsudo update-grub && sudo reboot\n# (Leave the rest of intel_iommu=on / amd_iommu=on in place)"
+                  : iommuDmaStrictAuditData.verdict.verdict === 'iommu_lazy_mode_active'
+                    ? "# Lazy IOTLB invalidation active — re-enable strict for production\n# Live :\necho 1 | sudo tee /sys/module/intel_iommu/parameters/strict 2>/dev/null\necho 1 | sudo tee /sys/module/iommu/parameters/strict 2>/dev/null\n# Persist via cmdline :\nsudo sed -i 's/iommu.strict=0/iommu.strict=1/' /etc/default/grub\nsudo update-grub && sudo reboot"
+                  : iommuDmaStrictAuditData.verdict.verdict === 'mixed_group_types'
+                    ? "# Both DMA and identity group types — audit drift\nfor g in /sys/kernel/iommu_groups/*/type; do\n  echo \"$(dirname $g): $(cat $g)\"\ndone | sort | uniq -c -f1\n# Re-establish DMA for any group that shouldn't be passthrough :\nfor g in /sys/kernel/iommu_groups/*/type; do\n  [ \"$(cat $g)\" = identity ] && echo DMA | sudo tee $g\ndone"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #92.2 kernel lockup detector (UI sprint 83) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.lockupwatchdog.title")}</h4>
+        <p class="muted">{i18n.t("integrations.lockupwatchdog.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKernelLockupWatchdogAudit}>{i18n.t("integrations.lockupwatchdog.refresh")}</button>
+          {#if kernelLockupWatchdogAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={kernelLockupWatchdogAuditData.verdict.verdict === 'watchdog_fully_disabled' ? 'var(--err)' :
+                             kernelLockupWatchdogAuditData.verdict.verdict === 'nmi_watchdog_disabled' ? 'var(--warn)' :
+                             kernelLockupWatchdogAuditData.verdict.verdict === 'watchdog_thresh_high' ? 'var(--accent)' :
+                             kernelLockupWatchdogAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              wd={kernelLockupWatchdogAuditData.watchdog ?? '?'}/nmi={kernelLockupWatchdogAuditData.nmi_watchdog ?? '?'} · thresh={kernelLockupWatchdogAuditData.watchdog_thresh ?? '?'}s · {i18n.t("integrations.lockupwatchdog.verdict")} : <b>{kernelLockupWatchdogAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if kernelLockupWatchdogAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        kernelLockupWatchdogAuditData.verdict.verdict === 'watchdog_fully_disabled' ? 'var(--err)' :
+                        kernelLockupWatchdogAuditData.verdict.verdict === 'nmi_watchdog_disabled' ? 'var(--warn)' :
+                        kernelLockupWatchdogAuditData.verdict.verdict === 'watchdog_thresh_high' ? 'var(--accent)' :
+                        kernelLockupWatchdogAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{kernelLockupWatchdogAuditData.verdict.reason}</p>
+            {#if !['ok','unknown'].includes(kernelLockupWatchdogAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.lockupwatchdog.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  kernelLockupWatchdogAuditData.verdict.verdict === 'watchdog_fully_disabled'
+                    ? "# Lockup detector fully off — re-enable\necho 1 | sudo tee /proc/sys/kernel/watchdog\necho 1 | sudo tee /proc/sys/kernel/nmi_watchdog\n# Persist :\ncat <<EOF | sudo tee /etc/sysctl.d/99-watchdog.conf\nkernel.watchdog = 1\nkernel.nmi_watchdog = 1\nEOF\nsudo sysctl --system"
+                  : kernelLockupWatchdogAuditData.verdict.verdict === 'nmi_watchdog_disabled'
+                    ? "# NMI watchdog off where HW supports it — enable\necho 1 | sudo tee /proc/sys/kernel/nmi_watchdog\n# Persist :\necho 'kernel.nmi_watchdog = 1' | sudo tee -a /etc/sysctl.d/99-watchdog.conf\nsudo sysctl --system\n# Verify : look for 'nmi_watchdog' in /proc/interrupts after a few seconds"
+                  : kernelLockupWatchdogAuditData.verdict.verdict === 'watchdog_thresh_high'
+                    ? "# watchdog_thresh too loose — tighten to 10 s (desktop default)\necho 10 | sudo tee /proc/sys/kernel/watchdog_thresh\necho 'kernel.watchdog_thresh = 10' | sudo tee -a /etc/sysctl.d/99-watchdog.conf\nsudo sysctl --system"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #92.3 khugepaged pressure (UI sprint 83) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.khugepaged.title")}</h4>
+        <p class="muted">{i18n.t("integrations.khugepaged.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKhugepagedPressureAudit}>{i18n.t("integrations.khugepaged.refresh")}</button>
+          {#if khugepagedPressureAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={khugepagedPressureAuditData.verdict.verdict === 'collapse_failing_hot' ? 'var(--err)' :
+                             khugepagedPressureAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              prev={khugepagedPressureAuditData.has_prev_snapshot ? 'yes' : 'no'} · max_ptes_none={khugepagedPressureAuditData.max_ptes_none ?? '?'} · {i18n.t("integrations.khugepaged.verdict")} : <b>{khugepagedPressureAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if khugepagedPressureAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        khugepagedPressureAuditData.verdict.verdict === 'collapse_failing_hot' ? 'var(--err)' :
+                        khugepagedPressureAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{khugepagedPressureAuditData.verdict.reason}</p>
+            {#if khugepagedPressureAuditData.verdict.verdict === 'collapse_failing_hot'}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.khugepaged.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{`# khugepaged thrashing — mitigate
+# Inspect current collapse counters :
+grep -E '^thp_(collapse|fault_fallback)' /proc/vmstat
+# Force a compaction round before the next model-load :
+echo 1 | sudo tee /proc/sys/vm/compact_memory
+# Or temporarily disable khugepaged to skip the storm :
+echo never | sudo tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag
+# (re-enable later : 'always' or 'madvise')
+# Permanent: defer fragmentation defrag, scan less aggressively :
+echo defer+madvise | sudo tee /sys/kernel/mm/transparent_hugepage/defrag
+echo 60000 | sudo tee /sys/kernel/mm/transparent_hugepage/khugepaged/scan_sleep_millisecs`}</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #92.4 DRM fdinfo per-client VRAM (UI sprint 83) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.drmfdinfo.title")}</h4>
+        <p class="muted">{i18n.t("integrations.drmfdinfo.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadDrmFdinfoEngineUsageAudit}>{i18n.t("integrations.drmfdinfo.refresh")}</button>
+          {#if drmFdinfoEngineUsageAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={drmFdinfoEngineUsageAuditData.verdict.verdict === 'vram_overcommit_per_client' ? 'var(--err)' :
+                             drmFdinfoEngineUsageAuditData.verdict.verdict === 'vram_top3_concentrated' ? 'var(--warn)' :
+                             drmFdinfoEngineUsageAuditData.verdict.verdict === 'many_drm_clients' ? 'var(--accent)' :
+                             drmFdinfoEngineUsageAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {drmFdinfoEngineUsageAuditData.drm_client_count} client(s) · {(drmFdinfoEngineUsageAuditData.total_vram_bytes / 2**30).toFixed(2)} GiB · {i18n.t("integrations.drmfdinfo.verdict")} : <b>{drmFdinfoEngineUsageAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if drmFdinfoEngineUsageAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        drmFdinfoEngineUsageAuditData.verdict.verdict === 'vram_overcommit_per_client' ? 'var(--err)' :
+                        drmFdinfoEngineUsageAuditData.verdict.verdict === 'vram_top3_concentrated' ? 'var(--warn)' :
+                        drmFdinfoEngineUsageAuditData.verdict.verdict === 'many_drm_clients' ? 'var(--accent)' :
+                        drmFdinfoEngineUsageAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{drmFdinfoEngineUsageAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(drmFdinfoEngineUsageAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.drmfdinfo.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{`# Inspect per-client VRAM attribution
+sudo bash -c '
+for d in /proc/*/fdinfo; do
+  for f in "$d"/*; do
+    grep -q "^drm-pdev:" "$f" 2>/dev/null || continue
+    pid=$(basename $(dirname $d))
+    vram=$(awk "/^drm-memory-vram:/{print \\$2 \\" \\" \\$3}" "$f")
+    cmd=$(cat /proc/$pid/comm 2>/dev/null)
+    echo "$pid ($cmd): $vram"
+  done
+done' | sort | uniq | sort -k3 -rn | head -10
+# Identified the offender? Kill or restart it :
+sudo kill <PID>`}</pre>
               </details>
             {/if}
           </div>

@@ -5318,4 +5318,47 @@ export const api = {
       watermark_scale_factor: number | null;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #92 (UI sprint 83) ──
+  iommuDmaStrictAuditStatus: () =>
+    fetch("/api/iommu-dma-strict-audit").then(jsonOf<{
+      ok: boolean;
+      strict_intel: string | null;
+      strict_amd: string | null;
+      strict_generic: string | null;
+      cmdline_passthrough: boolean;
+      cmdline_strict: string | null;
+      group_type_sample: string[];
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  kernelLockupWatchdogAuditStatus: () =>
+    fetch("/api/kernel-lockup-watchdog-audit").then(jsonOf<{
+      ok: boolean;
+      watchdog: number | null;
+      nmi_watchdog: number | null;
+      watchdog_thresh: number | null;
+      nmi_hw_supported: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  khugepagedPressureAuditStatus: () =>
+    fetch("/api/khugepaged-pressure-audit").then(jsonOf<{
+      ok: boolean;
+      has_prev_snapshot: boolean;
+      khugepaged_present: boolean;
+      max_ptes_none: number | null;
+      scan_sleep_ms: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  drmFdinfoEngineUsageAuditStatus: () =>
+    fetch("/api/drm-fdinfo-engine-usage-audit").then(jsonOf<{
+      ok: boolean;
+      drm_client_count: number;
+      total_vram_bytes: number;
+      readable_files: number;
+      unreadable_files: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
