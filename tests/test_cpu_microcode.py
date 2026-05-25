@@ -170,6 +170,31 @@ def test_status_uses_sys_microcode_version_when_present(tmp_path, monkeypatch):
     assert s["sys_microcode_version"] == "0x426"
 
 
+def test_status_extracts_processor_flags(tmp_path, monkeypatch):
+    bi = tmp_path / "cpuinfo"
+    _mk_cpuinfo(bi, _LIVE_CPUINFO)
+    sys_dir = tmp_path / "sys_microcode"
+    sys_dir.mkdir()
+    (sys_dir / "version").write_text("0x426\n")
+    (sys_dir / "processor_flags").write_text("0x5\n")
+    monkeypatch.setattr(cpu_microcode, "_CPUINFO", str(bi))
+    monkeypatch.setattr(cpu_microcode, "_SYS_MICROCODE", str(sys_dir))
+    s = cpu_microcode.status()
+    assert s["sys_processor_flags"] == "0x5"
+    assert s["sys_microcode_dir_present"] is True
+
+
+def test_status_processor_flags_absent_on_vm(tmp_path, monkeypatch):
+    bi = tmp_path / "cpuinfo"
+    _mk_cpuinfo(bi, _LIVE_CPUINFO)
+    monkeypatch.setattr(cpu_microcode, "_CPUINFO", str(bi))
+    monkeypatch.setattr(cpu_microcode, "_SYS_MICROCODE",
+                          str(tmp_path / "absent_dir"))
+    s = cpu_microcode.status()
+    assert s["sys_processor_flags"] is None
+    assert s["sys_microcode_dir_present"] is False
+
+
 def test_status_no_microcode_field_returns_missing(tmp_path, monkeypatch):
     bi = tmp_path / "cpuinfo"
     _mk_cpuinfo(bi, _NO_MICROCODE)

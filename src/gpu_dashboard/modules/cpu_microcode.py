@@ -131,6 +131,11 @@ def status(cfg=None) -> dict:
     sys_version = _read(os.path.join(_SYS_MICROCODE, "version"))
     if sys_version:
         sys_version = sys_version.strip()
+    proc_flags = _read(os.path.join(_SYS_MICROCODE,
+                                          "processor_flags"))
+    if proc_flags:
+        proc_flags = proc_flags.strip()
+    sys_microcode_present = os.path.isdir(_SYS_MICROCODE)
     verdict = classify(info["microcodes"], info["vendor_id"])
     return {
         "ok": True,
@@ -142,5 +147,7 @@ def status(cfg=None) -> dict:
         "microcodes": info["microcodes"],
         "distinct_microcodes": sorted(set(info["microcodes"])),
         "sys_microcode_version": sys_version,
+        "sys_processor_flags": proc_flags,
+        "sys_microcode_dir_present": sys_microcode_present,
         "verdict": verdict,
     }
