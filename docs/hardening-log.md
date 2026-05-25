@@ -20,7 +20,9 @@ why. "No change shipped" entries are deliberate — recording that we
 | 10 | 44efb55 | Split aggregate cost                  | `collection_slow` now gates on `optimizable_total_ms` (excludes EXPECTED_SLOW). Verdict flipped from always-firing to honest `ok`. |
 | 11 | 6de1d23 | BackendOfflineError                   | `safeFetch` + 502/503/504 detection in api.ts. Replaces cryptic "HTTP 502" / "Unexpected token" toasts. |
 | 12 | 471b04b | Budget query-param overrides          | `/api/collection-profile-audit?slow_module_ms=N&slow_total_ms=N` with input validation. Useful on slow hardware. **Side observation:** `bpf_program_inventory_audit` and `inotify_audit` vary 380–580 ms across runs on this VM — borderline. Worth a future investigation as queued H13. |
-| 13 | (this)  | Borderline module investigation       | Both `bpf_program_inventory_audit` and `inotify_audit` walk `/proc/<pid>/fdinfo/*` — cost is intrinsic to the data they surface. Marked both `EXPECTED_SLOW`. Identified four-module fdinfo-walker family (bpf / inotify / drm_fdinfo / fdinfo_kinds) sharing the same scan; future shared cache could amortize across all four — deferred. |
+| 13 | f83c92a | Borderline module investigation       | Both `bpf_program_inventory_audit` and `inotify_audit` walk `/proc/<pid>/fdinfo/*` — cost is intrinsic to the data they surface. Marked both `EXPECTED_SLOW`. Identified four-module fdinfo-walker family (bpf / inotify / drm_fdinfo / fdinfo_kinds) sharing the same scan; future shared cache could amortize across all four — deferred. |
+| 14 | 8fbf3c6 | UI inputs for budget overrides        | Two number inputs in the collection_profile card pipe through to `?slow_module_ms=N&slow_total_ms=N`. Round-trip verified. |
+| 15 | (this)  | Shared fdinfo cache — design only     | **No code shipped.** Designed `_proc_fd_cache.py` shape + refactor plan in docs/fdinfo-shared-cache.md. Defer triggers documented (5th fdinfo walker, user-reported slowness, optimizable >4000 ms). Saving would be ~750 ms across 4 walkers; verdict is already `ok` so no correctness motivation. |
 
 ## H9 details
 
