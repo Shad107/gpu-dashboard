@@ -596,3 +596,4 @@ from .fs_quota_projid_audit import handle_fs_quota_projid_audit_status  # noqa: 
 from .fuse_connections_audit import handle_fuse_connections_audit_status  # noqa: F401,F811
 from .keyring_lifecycle_audit import handle_keyring_lifecycle_audit_status  # noqa: F401,F811
 from .umwait_control_audit import handle_umwait_control_audit_status  # noqa: F401,F811
+from .split_lock_detect_audit import handle_split_lock_detect_audit_status  # noqa: F401,F811
