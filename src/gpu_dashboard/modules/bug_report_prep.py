@@ -30,6 +30,12 @@ from typing import Optional
 
 NAME = "bug_report_prep"
 
+# Honored by collection_profile_audit (hardening #2): this module is
+# a pure aggregator that fans out to ~6 sibling-module status()
+# calls. Its cost is the sum of the data it collects, not its own
+# work. Excluded from the per-module budget.
+EXPECTED_SLOW = True
+
 
 def _safe_call(callable_, *args, **kwargs):
     """Call a sibling-module function, return None on any exception."""

@@ -85,9 +85,12 @@ def time_status(fn) -> float:
 
 def profile_modules(pkg=None) -> List[dict]:
     """Walk the modules package and time every audit ``status()``
-    call. Returns a list of ``{name, elapsed_ms, status}`` dicts,
-    one per module. status is one of ``ok`` / ``skipped`` /
-    ``error: <type>``."""
+    call. Returns a list of ``{name, elapsed_ms, status,
+    expected_slow}`` dicts, one per module. status is one of
+    ``ok`` / ``skipped`` / ``error: <type>``. ``expected_slow``
+    reflects the module's ``EXPECTED_SLOW`` attribute — flagged
+    modules do not trigger ``module_too_slow`` but are still
+    surfaced in ``top_slowest``."""
     if pkg is None:
         import gpu_dashboard.modules as pkg  # type: ignore
     out: List[dict] = []
@@ -98,25 +101,30 @@ def profile_modules(pkg=None) -> List[dict]:
         except Exception as e:  # noqa: BLE001
             out.append({"name": name, "elapsed_ms": None,
                         "status": f"import-error:"
-                                  f"{type(e).__name__}"})
+                                  f"{type(e).__name__}",
+                        "expected_slow": False})
             continue
+        expected = bool(getattr(mod, "EXPECTED_SLOW", False))
         fn = getattr(mod, "status", None)
         if not callable(fn):
             out.append({"name": name, "elapsed_ms": None,
-                        "status": "no-status"})
+                        "status": "no-status",
+                        "expected_slow": expected})
             continue
         if not _status_takes_zero_required_args(fn):
             out.append({"name": name, "elapsed_ms": None,
-                        "status": "skipped"})
+                        "status": "skipped",
+                        "expected_slow": expected})
             continue
         try:
             elapsed = time_status(fn)
         except Exception as e:  # noqa: BLE001
             out.append({"name": name, "elapsed_ms": None,
-                        "status": f"error:{type(e).__name__}"})
+                        "status": f"error:{type(e).__name__}",
+                        "expected_slow": expected})
             continue
         out.append({"name": name, "elapsed_ms": elapsed,
-                    "status": "ok"})
+                    "status": "ok", "expected_slow": expected})
     return out
 
 
@@ -149,7 +157,8 @@ def classify(results: List[dict], agg: dict,
     hot = [r for r in results
             if r["status"] == "ok"
                and r["elapsed_ms"] is not None
-               and r["elapsed_ms"] >= slow_module_ms]
+               and r["elapsed_ms"] >= slow_module_ms
+               and not r.get("expected_slow")]
     if hot:
         sample = ", ".join(
             f"{r['name']}={r['elapsed_ms']:.0f}ms"
@@ -195,7 +204,8 @@ def status(cfg=None) -> dict:
             "p95_ms": agg["p95_ms"],
             "slowest_ms": agg["slowest_ms"],
             "top_slowest": [
-                {"name": r["name"], "elapsed_ms": r["elapsed_ms"]}
+                {"name": r["name"], "elapsed_ms": r["elapsed_ms"],
+                 "expected_slow": r.get("expected_slow", False)}
                 for r in top_n],
             "skipped_count": sum(1 for r in results
                                   if r["status"] == "skipped"),

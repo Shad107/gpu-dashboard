@@ -29,6 +29,12 @@ from typing import Optional
 
 NAME = "dkms_status"
 
+# Honored by collection_profile_audit (hardening #2): this module
+# shells out to `dkms status`, which itself walks the DKMS tree.
+# Subprocess + tree-walk is intrinsically not sub-500ms on most
+# Ubuntu hosts. Excluded from the per-module budget.
+EXPECTED_SLOW = True
+
 
 def running_kernel() -> str:
     """Return uname.release."""

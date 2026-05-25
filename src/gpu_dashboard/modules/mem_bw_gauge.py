@@ -29,6 +29,13 @@ from typing import Optional
 
 NAME = "mem_bw_gauge"
 
+# Honored by collection_profile_audit (hardening #2): this module
+# intentionally samples nvidia-smi over a ~2.5 s window for the
+# gpu/mem ratio. Single-shot would race nvidia-smi's own poll
+# interval. Excluded from the per-module budget; still tracked in
+# top_slowest.
+EXPECTED_SLOW = True
+
 
 def query_utilization_pair(timeout: float = 2.0) -> Optional[dict]:
     """Single sample of {gpu_util, mem_util} from nvidia-smi."""

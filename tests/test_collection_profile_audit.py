@@ -176,6 +176,41 @@ def test_classify_module_too_slow_beats_collection_slow():
     assert v["verdict"] == "module_too_slow"
 
 
+def test_classify_expected_slow_does_not_trigger():
+    """A module marked EXPECTED_SLOW must not fire the
+    module_too_slow verdict — intentional sampling work."""
+    results = [
+        {"name": "fast", "elapsed_ms": 50.0,
+            "status": "ok", "expected_slow": False},
+        {"name": "mem_bw_gauge", "elapsed_ms": 2500.0,
+            "status": "ok", "expected_slow": True}]
+    v = mod.classify(results, mod.aggregate(results))
+    assert v["verdict"] == "ok"
+
+
+def test_classify_unmarked_slow_still_triggers():
+    """If a module is slow AND not marked expected, we must
+    still fire the warn."""
+    results = [
+        {"name": "fast", "elapsed_ms": 50.0,
+            "status": "ok", "expected_slow": False},
+        {"name": "regression", "elapsed_ms": 800.0,
+            "status": "ok", "expected_slow": False}]
+    v = mod.classify(results, mod.aggregate(results))
+    assert v["verdict"] == "module_too_slow"
+
+
+def test_profile_modules_records_expected_slow_flag(monkeypatch):
+    """Live: confirm the EXPECTED_SLOW attr on a sub-module flows
+    into the per-row dict."""
+    pkg, submods = _mk_synthetic_pkg(fast=True, slow=False)
+    submods["fast"].EXPECTED_SLOW = True
+    _install_synth(monkeypatch, pkg, submods)
+    results = mod.profile_modules(pkg=pkg)
+    r = next(r for r in results if r["name"] == "fast")
+    assert r["expected_slow"] is True
+
+
 # --- status integration ------------------------------------------
 
 def test_status_live_smoke():
