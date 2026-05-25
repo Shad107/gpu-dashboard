@@ -2227,6 +2227,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_oom_policy_sysctl_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/rseq-kernel-audit":
+                # R&D #99.4 — rseq + futex_pi kernel posture
+                code, body = api.handle_rseq_kernel_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

@@ -598,3 +598,4 @@ from .keyring_lifecycle_audit import handle_keyring_lifecycle_audit_status  # no
 from .umwait_control_audit import handle_umwait_control_audit_status  # noqa: F401,F811
 from .split_lock_detect_audit import handle_split_lock_detect_audit_status  # noqa: F401,F811
 from .oom_policy_sysctl_audit import handle_oom_policy_sysctl_audit_status  # noqa: F401,F811
+from .rseq_kernel_audit import handle_rseq_kernel_audit_status  # noqa: F401,F811
