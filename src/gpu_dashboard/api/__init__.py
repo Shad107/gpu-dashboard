@@ -573,3 +573,4 @@ from .khugepaged_pressure_audit import handle_khugepaged_pressure_audit_status  
 from .drm_fdinfo_engine_usage_audit import handle_drm_fdinfo_engine_usage_audit_status  # noqa: F401,F811
 from .pipe_mqueue_limits_audit import handle_pipe_mqueue_limits_audit_status  # noqa: F401,F811
 from .cgroup_v2_memory_peak_audit import handle_cgroup_v2_memory_peak_audit_status  # noqa: F401,F811
+from .nfs_mountstats_audit import handle_nfs_mountstats_audit_status  # noqa: F401,F811

@@ -2102,6 +2102,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_cgroup_v2_memory_peak_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/nfs-mountstats-audit":
+                # R&D #93.3 — NFS RPC transport health
+                code, body = api.handle_nfs_mountstats_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
