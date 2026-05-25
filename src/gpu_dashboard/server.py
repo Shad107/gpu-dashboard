@@ -2307,6 +2307,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_zram_writeback_recompress_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cgroup-v2-uclamp-audit":
+                # R&D #103.4 — cgroup v2 uclamp + memory.zswap posture
+                code, body = api.handle_cgroup_v2_uclamp_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

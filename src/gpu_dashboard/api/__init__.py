@@ -614,3 +614,4 @@ from .bpf_jit_harden_audit import handle_bpf_jit_harden_audit_status  # noqa: F4
 from .kernel_oops_warn_counter_audit import handle_kernel_oops_warn_counter_audit_status  # noqa: F401,F811
 from .ephemeral_port_range_audit import handle_ephemeral_port_range_audit_status  # noqa: F401,F811
 from .zram_writeback_recompress_audit import handle_zram_writeback_recompress_audit_status  # noqa: F401,F811
+from .cgroup_v2_uclamp_audit import handle_cgroup_v2_uclamp_audit_status  # noqa: F401,F811
