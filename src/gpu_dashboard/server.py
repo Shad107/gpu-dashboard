@@ -2427,6 +2427,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_acpi_tables_inventory_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pci-numa-pinning-audit":
+                # R&D #109.4 — PCI device NUMA distribution
+                code, body = api.handle_pci_numa_pinning_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
