@@ -589,3 +589,4 @@ from .tracing_instances_audit import handle_tracing_instances_audit_status  # no
 from .block_holders_stack_audit import handle_block_holders_stack_audit_status  # noqa: F401,F811
 from .kvm_mmu_audit import handle_kvm_mmu_audit_status  # noqa: F401,F811
 from .zfs_arc_audit import handle_zfs_arc_audit_status  # noqa: F401,F811
+from .cgroup_delegate_audit import handle_cgroup_delegate_audit_status  # noqa: F401,F811

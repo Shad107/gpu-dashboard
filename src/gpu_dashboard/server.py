@@ -2182,6 +2182,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_zfs_arc_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cgroup-delegate-audit":
+                # R&D #97.3 — cgroup slice delegation + freeze
+                code, body = api.handle_cgroup_delegate_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
