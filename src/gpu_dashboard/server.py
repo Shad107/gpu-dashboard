@@ -2287,6 +2287,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_module_sig_enforce_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/bpf-jit-harden-audit":
+                # R&D #102.4 — BPF JIT hardening posture
+                code, body = api.handle_bpf_jit_harden_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
