@@ -14,6 +14,14 @@ export default defineConfig({
     emptyOutDir: true,
     assetsDir: "assets",
     sourcemap: false,
+    // SettingsModal.svelte bundles ~386 integration cards (one per audit
+    // module — R&D #1 through #112 + hardening sprints). The component
+    // file is ~1.39 MB raw → ~1.75 MB JS bundle / ~403 kB gzip. Above
+    // vite's 500 kB warning threshold but acceptable for a LAN-served
+    // homelab dashboard (loaded once, kept open, no CDN round-trip).
+    // See docs/bundle-size.md for the full analysis and the future
+    // dynamic-import lazy-section refactor recommendation.
+    chunkSizeWarningLimit: 2000,
   },
   server: {
     port: 5173,
