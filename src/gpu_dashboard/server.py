@@ -2172,6 +2172,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_block_holders_stack_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/kvm-mmu-audit":
+                # R&D #97.1 — KVM MMU + NX-huge + EPT/NPT posture
+                code, body = api.handle_kvm_mmu_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
