@@ -582,3 +582,4 @@ from .lockdep_lockstat_audit import handle_lockdep_lockstat_audit_status  # noqa
 from .mdio_phy_eee_audit import handle_mdio_phy_eee_audit_status  # noqa: F401,F811
 from .kernel_module_refcnt_audit import handle_kernel_module_refcnt_audit_status  # noqa: F401,F811
 from .tracing_buffer_footprint_audit import handle_tracing_buffer_footprint_audit_status  # noqa: F401,F811
+from .per_device_wakeup_attribution_audit import handle_per_device_wakeup_attribution_audit_status  # noqa: F401,F811

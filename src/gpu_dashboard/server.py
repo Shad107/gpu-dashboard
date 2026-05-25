@@ -2147,6 +2147,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_tracing_buffer_footprint_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/per-device-wakeup-attribution-audit":
+                # R&D #95.4 — per-device wakeup attribution
+                code, body = api.handle_per_device_wakeup_attribution_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
