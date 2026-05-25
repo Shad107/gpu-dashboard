@@ -5525,4 +5525,41 @@ export const api = {
       upstream_count: number;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #98 (UI sprint 89) ──
+  psiIrqFullAuditStatus: () =>
+    fetch("/api/psi-irq-full-audit").then(jsonOf<{
+      ok: boolean;
+      irq_present: boolean;
+      cpu_full: { a10?: number; a60?: number; a300?: number; total?: number };
+      irq_full: { a10?: number; a60?: number; a300?: number; total?: number };
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  fsQuotaProjidAuditStatus: () =>
+    fetch("/api/fs-quota-projid-audit").then(jsonOf<{
+      ok: boolean;
+      quota_mount_count: number;
+      overlay_count: number;
+      projects_present: boolean;
+      tools_present: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  fuseConnectionsAuditStatus: () =>
+    fetch("/api/fuse-connections-audit").then(jsonOf<{
+      ok: boolean;
+      connection_count: number;
+      max_waiting: number;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  keyringLifecycleAuditStatus: () =>
+    fetch("/api/keyring-lifecycle-audit").then(jsonOf<{
+      ok: boolean;
+      gc_delay: number | null;
+      persistent_keyring_expiry: number | null;
+      uid_count: number;
+      verdict: { verdict: string; reason: string };
+    }>),
 };

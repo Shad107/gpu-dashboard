@@ -2811,6 +2811,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #98 (UI sprint 89) ────────────────────────────────────────────
+  let psiIrqFullAuditData                 = $state<Awaited<ReturnType<typeof api.psiIrqFullAuditStatus>>                 | null>(null);
+  let fsQuotaProjidAuditData              = $state<Awaited<ReturnType<typeof api.fsQuotaProjidAuditStatus>>              | null>(null);
+  let fuseConnectionsAuditData            = $state<Awaited<ReturnType<typeof api.fuseConnectionsAuditStatus>>            | null>(null);
+  let keyringLifecycleAuditData           = $state<Awaited<ReturnType<typeof api.keyringLifecycleAuditStatus>>           | null>(null);
+  async function loadPsiIrqFullAudit() {
+    try { psiIrqFullAuditData = await api.psiIrqFullAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFsQuotaProjidAudit() {
+    try { fsQuotaProjidAuditData = await api.fsQuotaProjidAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadFuseConnectionsAudit() {
+    try { fuseConnectionsAuditData = await api.fuseConnectionsAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadKeyringLifecycleAudit() {
+    try { keyringLifecycleAuditData = await api.keyringLifecycleAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3298,6 +3320,11 @@
       if (!zfsArcAuditData)                     loadZfsArcAudit();
       if (!cgroupDelegateAuditData)             loadCgroupDelegateAudit();
       if (!pciD3coldRuntimeAuditData)           loadPciD3coldRuntimeAudit();
+      // R&D #98 cards
+      if (!psiIrqFullAuditData)                 loadPsiIrqFullAudit();
+      if (!fsQuotaProjidAuditData)              loadFsQuotaProjidAudit();
+      if (!fuseConnectionsAuditData)            loadFuseConnectionsAudit();
+      if (!keyringLifecycleAuditData)           loadKeyringLifecycleAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -17524,6 +17551,182 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
                     ? "# autosuspend_delay_ms unset — driver may not wire runtime PM\nGPU=$(basename $(readlink -f /sys/class/drm/card0/device))\nls /sys/bus/pci/devices/$GPU/power/\n# Try forcing a sane default (5s) :\necho 5000 | sudo tee /sys/bus/pci/devices/$GPU/power/autosuspend_delay_ms\n# If still IO error, check NVIDIA runpm config :\ncat /sys/module/nvidia/parameters/NVreg_DynamicPowerManagement"
                   : pciD3coldRuntimeAuditData.verdict.verdict === 'suspended_active_ratio_low'
                     ? "# GPU rarely auto-suspends — find what holds it awake\nGPU=$(basename $(readlink -f /sys/class/drm/card0/device))\ncat /sys/bus/pci/devices/$GPU/power/{runtime_status,runtime_suspended_time,runtime_active_time}\n# Common culprits :\nsudo systemctl status nvidia-persistenced 2>/dev/null\nfuser -v /dev/nvidia* 2>/dev/null\n# Stop persistenced if not needed :\nsudo systemctl stop nvidia-persistenced\n# Disable nvidia-powerd if it's polling :\nsudo systemctl stop nvidia-powerd"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #98.1 PSI irq + cpu.full (UI sprint 89) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.psiirq.title")}</h4>
+        <p class="muted">{i18n.t("integrations.psiirq.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPsiIrqFullAudit}>{i18n.t("integrations.psiirq.refresh")}</button>
+          {#if psiIrqFullAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={psiIrqFullAuditData.verdict.verdict === 'irq_full_stall' ? 'var(--err)' :
+                             psiIrqFullAuditData.verdict.verdict === 'cpu_full_stall' ? 'var(--warn)' :
+                             psiIrqFullAuditData.verdict.verdict === 'psi_irq_absent' ? 'var(--accent)' :
+                             psiIrqFullAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              irq PSI {psiIrqFullAuditData.irq_present ? 'on' : 'off'} · {i18n.t("integrations.psiirq.verdict")} : <b>{psiIrqFullAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if psiIrqFullAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        psiIrqFullAuditData.verdict.verdict === 'irq_full_stall' ? 'var(--err)' :
+                        psiIrqFullAuditData.verdict.verdict === 'cpu_full_stall' ? 'var(--warn)' :
+                        psiIrqFullAuditData.verdict.verdict === 'psi_irq_absent' ? 'var(--accent)' :
+                        psiIrqFullAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{psiIrqFullAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(psiIrqFullAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.psiirq.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  psiIrqFullAuditData.verdict.verdict === 'irq_full_stall'
+                    ? "# Find the CPU drowning in hardirq/softirq\nfor i in 0 1 2 3 4 5 6 7; do\n  echo CPU$i: $(grep -c $i /proc/interrupts) interrupts\ndone\n# Inspect /proc/interrupts for the line monopolising one CPU :\ngrep -E ' (NIC|nvme|i915|amdgpu)' /proc/interrupts\n# Re-pin the offending IRQ to a different CPU :\necho 4 | sudo tee /proc/irq/<irqnum>/smp_affinity"
+                  : psiIrqFullAuditData.verdict.verdict === 'cpu_full_stall'
+                    ? "# A CPU is fully stalled — find the hot process\ntop -b -n1 -o %CPU | head -20\n# Or sample with perf top :\nsudo perf top -d 1\n# Inspect per-cpu run-queue :\nfor i in $(seq 0 $(nproc --ignore=1)); do\n  echo CPU$i load=$(taskset -c $i ps -eo pcpu | awk 'NR>1{s+=$1}END{print s}')\ndone"
+                  : psiIrqFullAuditData.verdict.verdict === 'psi_irq_absent'
+                    ? "# Rebuild kernel with CONFIG_PSI_IRQ=y to expose irq pressure\nzgrep CONFIG_PSI /proc/config.gz 2>/dev/null || \\\n  cat /boot/config-$(uname -r) | grep PSI\n# For Ubuntu / Debian, requires custom kernel build.\n# Workaround: monitor /proc/interrupts deltas instead :\nwatch -n 1 'grep -E \"NMI|LOC|RES\" /proc/interrupts'"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #98.2 FS quota / projid (UI sprint 89) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fsquota.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fsquota.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFsQuotaProjidAudit}>{i18n.t("integrations.fsquota.refresh")}</button>
+          {#if fsQuotaProjidAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={fsQuotaProjidAuditData.verdict.verdict === 'overlay_upper_on_quota_fs' ? 'var(--warn)' :
+                             (fsQuotaProjidAuditData.verdict.verdict === 'orphan_quota_config' || fsQuotaProjidAuditData.verdict.verdict === 'quota_enabled_no_tools') ? 'var(--accent)' :
+                             fsQuotaProjidAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {fsQuotaProjidAuditData.quota_mount_count} quota mnt · {fsQuotaProjidAuditData.overlay_count} overlay · {i18n.t("integrations.fsquota.verdict")} : <b>{fsQuotaProjidAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fsQuotaProjidAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        fsQuotaProjidAuditData.verdict.verdict === 'overlay_upper_on_quota_fs' ? 'var(--warn)' :
+                        (fsQuotaProjidAuditData.verdict.verdict === 'orphan_quota_config' || fsQuotaProjidAuditData.verdict.verdict === 'quota_enabled_no_tools') ? 'var(--accent)' :
+                        fsQuotaProjidAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{fsQuotaProjidAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(fsQuotaProjidAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fsquota.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  fsQuotaProjidAuditData.verdict.verdict === 'overlay_upper_on_quota_fs'
+                    ? "# Overlay upperdir on quota-enabled FS — container writes can EDQUOT\n# Identify which overlay :\ngrep -E ' overlay ' /proc/mounts | awk '{print $2}'\n# Find upperdir in mountinfo :\ngrep -E 'overlay ' /proc/self/mountinfo\n# Check quota usage on the offending FS :\nsudo xfs_quota -x -c 'report -h -p' /data    # xfs prjquota\nsudo quota -u $USER                          # usrquota\n# Either move the upper to a non-quota'd FS, or raise the project limit :\nsudo xfs_quota -x -c 'limit -p bhard=100g <projname>' /data"
+                  : fsQuotaProjidAuditData.verdict.verdict === 'orphan_quota_config'
+                    ? "# prjquota enabled but /etc/projects is missing — set one up\nsudo tee /etc/projects <<'EOF'\n100:/data/docker\n101:/data/checkpoints\nEOF\nsudo tee /etc/projid <<'EOF'\ndocker:100\nckpt:101\nEOF\n# Apply :\nsudo xfs_quota -x -c 'project -s docker' /data\nsudo xfs_quota -x -c 'project -s ckpt' /data"
+                  : fsQuotaProjidAuditData.verdict.verdict === 'quota_enabled_no_tools'
+                    ? "# Quotas enabled but no userspace tools installed\nsudo apt install -y quota xfsprogs   # Debian/Ubuntu\nsudo dnf install -y quota xfsprogs   # Fedora/RHEL\n# After install, inspect :\nsudo quota -u $USER\nsudo xfs_quota -x -c 'report -h' /data    # if xfs"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #98.3 FUSE connections (UI sprint 89) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.fuse.title")}</h4>
+        <p class="muted">{i18n.t("integrations.fuse.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadFuseConnectionsAudit}>{i18n.t("integrations.fuse.refresh")}</button>
+          {#if fuseConnectionsAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={fuseConnectionsAuditData.verdict.verdict === 'fuse_connection_wedged' ? 'var(--err)' :
+                             fuseConnectionsAuditData.verdict.verdict === 'fuse_connection_count_high' ? 'var(--warn)' :
+                             fuseConnectionsAuditData.verdict.verdict === 'congestion_threshold_low' ? 'var(--accent)' :
+                             fuseConnectionsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {fuseConnectionsAuditData.connection_count} conn · max waiting={fuseConnectionsAuditData.max_waiting} · {i18n.t("integrations.fuse.verdict")} : <b>{fuseConnectionsAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if fuseConnectionsAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        fuseConnectionsAuditData.verdict.verdict === 'fuse_connection_wedged' ? 'var(--err)' :
+                        fuseConnectionsAuditData.verdict.verdict === 'fuse_connection_count_high' ? 'var(--warn)' :
+                        fuseConnectionsAuditData.verdict.verdict === 'congestion_threshold_low' ? 'var(--accent)' :
+                        fuseConnectionsAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{fuseConnectionsAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(fuseConnectionsAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.fuse.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  fuseConnectionsAuditData.verdict.verdict === 'fuse_connection_wedged'
+                    ? "# Find the wedged FUSE connection(s)\nfor d in /sys/fs/fuse/connections/*; do\n  w=$(cat $d/waiting)\n  [ \"$w\" -gt 5 ] && echo \"$d : waiting=$w\"\ndone\n# Abort the stuck one (frees processes hanging in D-state) :\nsudo bash -c 'echo 1 > /sys/fs/fuse/connections/<id>/abort'\n# Then identify and restart the userspace server :\nps auxf | grep -E 'fuse|sshfs|gvfsd|mtpfs'\n# Last resort: lazy unmount the mountpoint :\nmount | grep fuse\nsudo umount -l <mountpoint>"
+                  : fuseConnectionsAuditData.verdict.verdict === 'fuse_connection_count_high'
+                    ? "# Too many FUSE connections — list + clean orphans\nls /sys/fs/fuse/connections/ | wc -l\n# Match connections to processes :\nfor pid in $(pgrep -f 'fuse|sshfs|gvfsd'); do\n  echo \"$pid : $(readlink /proc/$pid/exe)\"\ndone\n# Drop stale gvfs sessions :\nsystemctl --user restart gvfs-daemon\n# Or kill orphan sshfs :\npkill -9 sshfs && for d in ~/mnt/*; do fusermount -uz \"$d\" 2>/dev/null; done"
+                  : fuseConnectionsAuditData.verdict.verdict === 'congestion_threshold_low'
+                    ? "# Connection has congestion_threshold tuned aggressively low\nfor d in /sys/fs/fuse/connections/*; do\n  ct=$(cat $d/congestion_threshold)\n  [ \"$ct\" -lt 4 ] && echo \"$d : ct=$ct (default ~9)\"\ndone\n# Bump to a sane value (root) :\necho 12 | sudo tee /sys/fs/fuse/connections/<id>/congestion_threshold"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #98.4 Keyring lifecycle (UI sprint 89) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.keyringlife.title")}</h4>
+        <p class="muted">{i18n.t("integrations.keyringlife.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadKeyringLifecycleAudit}>{i18n.t("integrations.keyringlife.refresh")}</button>
+          {#if keyringLifecycleAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={(keyringLifecycleAuditData.verdict.verdict === 'ns_leak_unknown_uid' || keyringLifecycleAuditData.verdict.verdict === 'persistent_keyring_no_expiry') ? 'var(--warn)' :
+                             keyringLifecycleAuditData.verdict.verdict === 'gc_delay_too_high' ? 'var(--accent)' :
+                             keyringLifecycleAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              gc={keyringLifecycleAuditData.gc_delay ?? '—'}s · exp={keyringLifecycleAuditData.persistent_keyring_expiry ?? '—'}s · {i18n.t("integrations.keyringlife.verdict")} : <b>{keyringLifecycleAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if keyringLifecycleAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        (keyringLifecycleAuditData.verdict.verdict === 'ns_leak_unknown_uid' || keyringLifecycleAuditData.verdict.verdict === 'persistent_keyring_no_expiry') ? 'var(--warn)' :
+                        keyringLifecycleAuditData.verdict.verdict === 'gc_delay_too_high' ? 'var(--accent)' :
+                        keyringLifecycleAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{keyringLifecycleAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(keyringLifecycleAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.keyringlife.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  keyringLifecycleAuditData.verdict.verdict === 'ns_leak_unknown_uid'
+                    ? "# A uid owns keyrings but isn't in /etc/passwd — likely container leak\nsudo awk '{print $6}' /proc/keys | sort -u\ngetent passwd 1000  # check each suspicious uid\n# Inspect the keys :\nsudo cat /proc/keys | awk -v u=<uid> '$6==u'\n# Clean up leaked container processes :\npodman ps -a   # or docker ps -a\npodman system prune --all"
+                  : keyringLifecycleAuditData.verdict.verdict === 'persistent_keyring_no_expiry'
+                    ? "# Persistent keyrings never expire — set a sane TTL (3 days)\necho 259200 | sudo tee /proc/sys/kernel/keys/persistent_keyring_expiry\n# Persist :\nsudo tee /etc/sysctl.d/99-keyring.conf <<'EOF'\nkernel.keys.persistent_keyring_expiry = 259200\nEOF\nsudo sysctl --system"
+                  : keyringLifecycleAuditData.verdict.verdict === 'gc_delay_too_high'
+                    ? "# gc_delay set absurdly high — revoked keyrings linger\n# Default is 300s (5 min). Reset :\necho 300 | sudo tee /proc/sys/kernel/keys/gc_delay\n# Persist :\nsudo tee /etc/sysctl.d/99-keyring.conf <<'EOF'\nkernel.keys.gc_delay = 300\nEOF\nsudo sysctl --system"
                   : ""
                 }</pre>
               </details>
