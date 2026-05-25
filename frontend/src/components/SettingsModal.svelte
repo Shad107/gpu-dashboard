@@ -3009,6 +3009,28 @@
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
 
+  // ── R&D #107 (UI sprint 98) ───────────────────────────────────────────
+  let vmNumaPolicyAuditData               = $state<Awaited<ReturnType<typeof api.vmNumaPolicyAuditStatus>>               | null>(null);
+  let sysrqCadPoweroffAuditData           = $state<Awaited<ReturnType<typeof api.sysrqCadPoweroffAuditStatus>>           | null>(null);
+  let vmDirtyBytesDriftAuditData          = $state<Awaited<ReturnType<typeof api.vmDirtyBytesDriftAuditStatus>>          | null>(null);
+  let numaBalancingScanTuningAuditData    = $state<Awaited<ReturnType<typeof api.numaBalancingScanTuningAuditStatus>>    | null>(null);
+  async function loadVmNumaPolicyAudit() {
+    try { vmNumaPolicyAuditData = await api.vmNumaPolicyAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadSysrqCadPoweroffAudit() {
+    try { sysrqCadPoweroffAuditData = await api.sysrqCadPoweroffAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadVmDirtyBytesDriftAudit() {
+    try { vmDirtyBytesDriftAuditData = await api.vmDirtyBytesDriftAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  async function loadNumaBalancingScanTuningAudit() {
+    try { numaBalancingScanTuningAuditData = await api.numaBalancingScanTuningAuditStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -3541,6 +3563,11 @@
       if (!printkPacingAuditData)               loadPrintkPacingAudit();
       if (!cacheL2ImbalanceAuditData)           loadCacheL2ImbalanceAudit();
       if (!cpufreqSetspeedDriftAuditData)       loadCpufreqSetspeedDriftAudit();
+      // R&D #107 cards
+      if (!vmNumaPolicyAuditData)               loadVmNumaPolicyAudit();
+      if (!sysrqCadPoweroffAuditData)           loadSysrqCadPoweroffAudit();
+      if (!vmDirtyBytesDriftAuditData)          loadVmDirtyBytesDriftAudit();
+      if (!numaBalancingScanTuningAuditData)    loadNumaBalancingScanTuningAudit();
       // Dedup is on-demand only (scan is expensive)
     }
   });
@@ -19342,6 +19369,172 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
                     ? "# Restore the dynamic governor + clear setspeed pin\nfor c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do\n  echo schedutil | sudo tee $c\ndone"
                   : cpufreqSetspeedDriftAuditData.verdict.verdict === 'setspeed_unused'
                     ? "# Clear the leftover setspeed value (cosmetic ; not actually applied)\n# Most kernels reject writes when governor != userspace, so this is informational"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #107.1 vm numa policy (UI sprint 98) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.vmnuma.title")}</h4>
+        <p class="muted">{i18n.t("integrations.vmnuma.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVmNumaPolicyAudit}>{i18n.t("integrations.vmnuma.refresh")}</button>
+          {#if vmNumaPolicyAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={vmNumaPolicyAuditData.verdict.verdict === 'numa_stat_disabled' ? 'var(--warn)' :
+                             vmNumaPolicyAuditData.verdict.verdict === 'legacy_zonelist_node' ? 'var(--accent)' :
+                             vmNumaPolicyAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              stat={vmNumaPolicyAuditData.numa_stat ?? '—'} · order={vmNumaPolicyAuditData.numa_zonelist_order ?? '—'} · {i18n.t("integrations.vmnuma.verdict")} : <b>{vmNumaPolicyAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vmNumaPolicyAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        vmNumaPolicyAuditData.verdict.verdict === 'numa_stat_disabled' ? 'var(--warn)' :
+                        vmNumaPolicyAuditData.verdict.verdict === 'legacy_zonelist_node' ? 'var(--accent)' :
+                        vmNumaPolicyAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{vmNumaPolicyAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(vmNumaPolicyAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.vmnuma.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  vmNumaPolicyAuditData.verdict.verdict === 'numa_stat_disabled'
+                    ? "# Re-enable per-node counters\nsudo sysctl -w vm.numa_stat=1\nsudo tee /etc/sysctl.d/99-numa.conf <<'EOF'\nvm.numa_stat = 1\nEOF"
+                  : vmNumaPolicyAuditData.verdict.verdict === 'legacy_zonelist_node'
+                    ? "# Switch to Default zonelist order (let kernel pick)\nsudo sysctl -w vm.numa_zonelist_order=default"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #107.2 sysrq CAD poweroff (UI sprint 98) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.sysrqcad.title")}</h4>
+        <p class="muted">{i18n.t("integrations.sysrqcad.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadSysrqCadPoweroffAudit}>{i18n.t("integrations.sysrqcad.refresh")}</button>
+          {#if sysrqCadPoweroffAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={sysrqCadPoweroffAuditData.verdict.verdict === 'cad_hard_reboot' ? 'var(--warn)' :
+                             sysrqCadPoweroffAuditData.verdict.verdict === 'poweroff_cmd_overridden' ? 'var(--accent)' :
+                             sysrqCadPoweroffAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              cad={sysrqCadPoweroffAuditData.ctrl_alt_del ?? '—'} · cmd={sysrqCadPoweroffAuditData.poweroff_cmd ?? '—'} · {i18n.t("integrations.sysrqcad.verdict")} : <b>{sysrqCadPoweroffAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if sysrqCadPoweroffAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        sysrqCadPoweroffAuditData.verdict.verdict === 'cad_hard_reboot' ? 'var(--warn)' :
+                        sysrqCadPoweroffAuditData.verdict.verdict === 'poweroff_cmd_overridden' ? 'var(--accent)' :
+                        sysrqCadPoweroffAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{sysrqCadPoweroffAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(sysrqCadPoweroffAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.sysrqcad.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  sysrqCadPoweroffAuditData.verdict.verdict === 'cad_hard_reboot'
+                    ? "# Restore soft Ctrl-Alt-Del (kernel notifies init)\nsudo sysctl -w kernel.ctrl-alt-del=0"
+                  : sysrqCadPoweroffAuditData.verdict.verdict === 'poweroff_cmd_overridden'
+                    ? "# Audit the override path\ncat /proc/sys/kernel/poweroff_cmd\n# Reset to default if unintended\necho /sbin/poweroff | sudo tee /proc/sys/kernel/poweroff_cmd"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #107.3 vm dirty_bytes drift (UI sprint 98) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.dirtybytes.title")}</h4>
+        <p class="muted">{i18n.t("integrations.dirtybytes.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadVmDirtyBytesDriftAudit}>{i18n.t("integrations.dirtybytes.refresh")}</button>
+          {#if vmDirtyBytesDriftAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={(vmDirtyBytesDriftAuditData.verdict.verdict === 'dirty_bytes_overrides_ratio' || vmDirtyBytesDriftAuditData.verdict.verdict === 'dirty_bg_bytes_overrides_ratio') ? 'var(--warn)' :
+                             vmDirtyBytesDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              bytes={vmDirtyBytesDriftAuditData.dirty_bytes ?? '—'} · bg={vmDirtyBytesDriftAuditData.dirty_background_bytes ?? '—'} · {i18n.t("integrations.dirtybytes.verdict")} : <b>{vmDirtyBytesDriftAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if vmDirtyBytesDriftAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        (vmDirtyBytesDriftAuditData.verdict.verdict === 'dirty_bytes_overrides_ratio' || vmDirtyBytesDriftAuditData.verdict.verdict === 'dirty_bg_bytes_overrides_ratio') ? 'var(--warn)' :
+                        vmDirtyBytesDriftAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{vmDirtyBytesDriftAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(vmDirtyBytesDriftAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.dirtybytes.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  vmDirtyBytesDriftAuditData.verdict.verdict === 'dirty_bytes_overrides_ratio'
+                    ? "# Clear dirty_bytes so dirty_ratio takes effect again\nsudo sysctl -w vm.dirty_bytes=0\nsudo tee /etc/sysctl.d/99-dirty.conf <<'EOF'\nvm.dirty_bytes = 0\nEOF"
+                  : vmDirtyBytesDriftAuditData.verdict.verdict === 'dirty_bg_bytes_overrides_ratio'
+                    ? "# Clear dirty_background_bytes\nsudo sysctl -w vm.dirty_background_bytes=0\nsudo tee /etc/sysctl.d/99-dirty.conf <<'EOF'\nvm.dirty_background_bytes = 0\nEOF"
+                  : ""
+                }</pre>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- R&D #107.4 numa balancing scan tuning (UI sprint 98) -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>{i18n.t("integrations.numascan.title")}</h4>
+        <p class="muted">{i18n.t("integrations.numascan.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadNumaBalancingScanTuningAudit}>{i18n.t("integrations.numascan.refresh")}</button>
+          {#if numaBalancingScanTuningAuditData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={(numaBalancingScanTuningAuditData.verdict.verdict === 'aggressive_scan' || numaBalancingScanTuningAuditData.verdict.verdict === 'lethargic_scan') ? 'var(--warn)' :
+                             (numaBalancingScanTuningAuditData.verdict.verdict === 'tiny_scan_chunk' || numaBalancingScanTuningAuditData.verdict.verdict === 'drifted_from_defaults') ? 'var(--accent)' :
+                             numaBalancingScanTuningAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              numa={numaBalancingScanTuningAuditData.numa_balancing ?? '—'} · {i18n.t("integrations.numascan.verdict")} : <b>{numaBalancingScanTuningAuditData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if numaBalancingScanTuningAuditData}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        (numaBalancingScanTuningAuditData.verdict.verdict === 'aggressive_scan' || numaBalancingScanTuningAuditData.verdict.verdict === 'lethargic_scan') ? 'var(--warn)' :
+                        (numaBalancingScanTuningAuditData.verdict.verdict === 'tiny_scan_chunk' || numaBalancingScanTuningAuditData.verdict.verdict === 'drifted_from_defaults') ? 'var(--accent)' :
+                        numaBalancingScanTuningAuditData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                        'var(--text-dim)'};">
+            <p style="margin: 4px 0;">{numaBalancingScanTuningAuditData.verdict.reason}</p>
+            {#if !['ok','unknown','requires_root'].includes(numaBalancingScanTuningAuditData.verdict.verdict)}
+              <details style="margin-top: 4px;">
+                <summary class="muted">{i18n.t("integrations.numascan.recommend")}</summary>
+                <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-2);
+                             border-radius: 4px; overflow-x: auto;">{
+                  numaBalancingScanTuningAuditData.verdict.verdict === 'aggressive_scan'
+                    ? "# Restore default min period (1000 ms)\nsudo sysctl -w kernel.numa_balancing_scan_period_min_ms=1000"
+                  : numaBalancingScanTuningAuditData.verdict.verdict === 'lethargic_scan'
+                    ? "# Cap max period at default 60 s\nsudo sysctl -w kernel.numa_balancing_scan_period_max_ms=60000"
+                  : numaBalancingScanTuningAuditData.verdict.verdict === 'tiny_scan_chunk'
+                    ? "# Restore default scan chunk (256 MB)\nsudo sysctl -w kernel.numa_balancing_scan_size_mb=256"
+                  : numaBalancingScanTuningAuditData.verdict.verdict === 'drifted_from_defaults'
+                    ? "# Multiple knobs differ from default — review explicitly\ngrep -H . /proc/sys/kernel/numa_balancing_scan_*"
                   : ""
                 }</pre>
               </details>

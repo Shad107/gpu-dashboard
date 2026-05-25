@@ -5888,4 +5888,43 @@ export const api = {
       cpufreq_present: boolean;
       verdict: { verdict: string; reason: string };
     }>),
+
+  // ── R&D #107 (UI sprint 98) ──
+  vmNumaPolicyAuditStatus: () =>
+    fetch("/api/vm-numa-policy-audit").then(jsonOf<{
+      ok: boolean;
+      numa_stat: number | null;
+      numa_zonelist_order: string | null;
+      multi_node: boolean;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  sysrqCadPoweroffAuditStatus: () =>
+    fetch("/api/sysrq-cad-poweroff-audit").then(jsonOf<{
+      ok: boolean;
+      ctrl_alt_del: number | null;
+      poweroff_cmd: string | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  vmDirtyBytesDriftAuditStatus: () =>
+    fetch("/api/vm-dirty-bytes-drift-audit").then(jsonOf<{
+      ok: boolean;
+      dirty_bytes: number | null;
+      dirty_background_bytes: number | null;
+      dirty_ratio: number | null;
+      dirty_background_ratio: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
+
+  numaBalancingScanTuningAuditStatus: () =>
+    fetch("/api/numa-balancing-scan-tuning-audit").then(jsonOf<{
+      ok: boolean;
+      numa_balancing: number | null;
+      scan_delay_ms: number | null;
+      scan_period_min_ms: number | null;
+      scan_period_max_ms: number | null;
+      scan_size_mb: number | null;
+      verdict: { verdict: string; reason: string };
+    }>),
 };
