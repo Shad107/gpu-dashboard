@@ -591,3 +591,4 @@ from .kvm_mmu_audit import handle_kvm_mmu_audit_status  # noqa: F401,F811
 from .zfs_arc_audit import handle_zfs_arc_audit_status  # noqa: F401,F811
 from .cgroup_delegate_audit import handle_cgroup_delegate_audit_status  # noqa: F401,F811
 from .pci_d3cold_runtime_audit import handle_pci_d3cold_runtime_audit_status  # noqa: F401,F811
+from .psi_irq_full_audit import handle_psi_irq_full_audit_status  # noqa: F401,F811
