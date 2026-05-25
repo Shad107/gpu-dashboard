@@ -2362,6 +2362,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_printk_pacing_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/cache-l2-imbalance-audit":
+                # R&D #106.3 — hybrid P/E L2 cache imbalance
+                code, body = api.handle_cache_l2_imbalance_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
