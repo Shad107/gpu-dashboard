@@ -17,6 +17,9 @@ why. "No change shipped" entries are deliberate — recording that we
 | 7 | df814f7 | ok=False return-shape contract         | 67 modules return ok=False; 0 degenerate. Contract codified. |
 | 8 | 77f61f3 | Bundle-size investigation              | 1.75 MB / 403 kB gzip. Refactor deferred — LAN deployment, no CDN. Vite warning silenced; analysis in docs/bundle-size.md. |
 | 9 | (this)  | EXPECTED_SLOW re-audit                 | **No change shipped.** Top 10 re-checked; the 7 unflagged candidates are all under budget (highest is bpf_program_inventory_audit at 383 ms). No new intrinsic-slow modules to mark. |
+| 10 | 44efb55 | Split aggregate cost                  | `collection_slow` now gates on `optimizable_total_ms` (excludes EXPECTED_SLOW). Verdict flipped from always-firing to honest `ok`. |
+| 11 | 6de1d23 | BackendOfflineError                   | `safeFetch` + 502/503/504 detection in api.ts. Replaces cryptic "HTTP 502" / "Unexpected token" toasts. |
+| 12 | (this)  | Budget query-param overrides          | `/api/collection-profile-audit?slow_module_ms=N&slow_total_ms=N` with input validation. Useful on slow hardware. **Side observation:** `bpf_program_inventory_audit` and `inotify_audit` vary 380–580 ms across runs on this VM — borderline. Worth a future investigation as queued H13. |
 
 ## H9 details
 

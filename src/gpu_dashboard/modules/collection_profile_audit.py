@@ -202,7 +202,17 @@ def classify(results: List[dict], agg: dict,
             "recommendation": ""}
 
 
-def status(cfg=None) -> dict:
+def status(cfg=None,
+            slow_module_ms: float = _DEFAULT_SLOW_MODULE_MS,
+            slow_total_ms: float = _DEFAULT_SLOW_TOTAL_MS) -> dict:
+    """Per-module timing pass over the fleet.
+
+    ``slow_module_ms`` / ``slow_total_ms`` are the verdict
+    thresholds. Defaults match the per-module 500 ms and per-fleet
+    5000 ms budgets used everywhere else in the codebase. The HTTP
+    handler accepts query-string overrides so users on slow
+    hardware can recalibrate without editing the source.
+    """
     results = profile_modules()
     agg = aggregate(results)
     ok_results = [r for r in results if r["status"] == "ok"
@@ -210,12 +220,16 @@ def status(cfg=None) -> dict:
     top = sorted(ok_results,
                   key=lambda x: -(x["elapsed_ms"] or 0))
     top_n = top[:_DEFAULT_TOP_N]
-    verdict = classify(results, agg)
+    verdict = classify(results, agg,
+                          slow_module_ms=slow_module_ms,
+                          slow_total_ms=slow_total_ms)
     return {"ok": True,
             "module_count": agg["module_count"],
             "total_ms": agg["total_ms"],
             "optimizable_total_ms": agg["optimizable_total_ms"],
             "expected_slow_total_ms": agg["expected_slow_total_ms"],
+            "slow_module_ms_budget": slow_module_ms,
+            "slow_total_ms_budget": slow_total_ms,
             "p50_ms": agg["p50_ms"],
             "p95_ms": agg["p95_ms"],
             "slowest_ms": agg["slowest_ms"],

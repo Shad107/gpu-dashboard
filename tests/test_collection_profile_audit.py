@@ -264,6 +264,73 @@ def test_profile_modules_records_expected_slow_flag(monkeypatch):
 
 # --- status integration ------------------------------------------
 
+def test_status_kwargs_threaded_to_classify(monkeypatch):
+    """Hardening #12: user-supplied budgets should change the
+    verdict outcome."""
+    # Build a synthetic results list via monkeypatch — 3 modules
+    # each at 300 ms (total 900 ms, well under default 5000 ms
+    # budget). With slow_total_ms lowered to 800, collection_slow
+    # should fire.
+    synth_results = [
+        {"name": f"m{i}", "elapsed_ms": 300.0,
+            "status": "ok", "expected_slow": False}
+        for i in range(3)]
+    monkeypatch.setattr(mod, "profile_modules",
+                          lambda pkg=None: synth_results)
+    # Default budget — ok.
+    out = mod.status()
+    assert out["verdict"]["verdict"] == "ok"
+    # Tightened total budget — collection_slow.
+    out = mod.status(slow_total_ms=800.0)
+    assert out["verdict"]["verdict"] == "collection_slow"
+    # Tightened per-module budget — module_too_slow.
+    out = mod.status(slow_module_ms=200.0)
+    assert out["verdict"]["verdict"] == "module_too_slow"
+
+
+def test_status_surfaces_active_budgets():
+    out = mod.status(slow_module_ms=777.0, slow_total_ms=8888.0)
+    assert out["slow_module_ms_budget"] == 777.0
+    assert out["slow_total_ms_budget"] == 8888.0
+
+
+# --- handler param validation ----------------------------------
+
+def test_handler_parses_valid_budget_params(monkeypatch):
+    from gpu_dashboard.api import collection_profile_audit as h
+    captured: dict = {}
+    def fake_status(cfg=None, **kw):
+        captured.update(kw)
+        return {"ok": True, "verdict": {"verdict": "ok"}}
+    monkeypatch.setattr(mod, "status", fake_status)
+    code, body = h.handle_collection_profile_audit_status(
+        {"config": None},
+        params={"slow_module_ms": "750", "slow_total_ms": "8000"})
+    assert code == 200
+    assert captured == {"slow_module_ms": 750.0,
+                          "slow_total_ms": 8000.0}
+
+
+def test_handler_rejects_garbage(monkeypatch):
+    from gpu_dashboard.api import collection_profile_audit as h
+    captured: dict = {}
+    def fake_status(cfg=None, **kw):
+        captured.update(kw)
+        return {"ok": True, "verdict": {"verdict": "ok"}}
+    monkeypatch.setattr(mod, "status", fake_status)
+    # Garbage, negative, and over-cap all silently fall back to
+    # defaults (handler does not pass the kw at all).
+    h.handle_collection_profile_audit_status(
+        {"config": None},
+        params={"slow_module_ms": "abc",
+                  "slow_total_ms": "-100"})
+    assert captured == {}
+    h.handle_collection_profile_audit_status(
+        {"config": None},
+        params={"slow_module_ms": "999999999"})
+    assert captured == {}
+
+
 def test_status_live_smoke():
     """Actually walks the real modules package — slow but
     proves end-to-end works."""

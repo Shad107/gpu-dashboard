@@ -2443,8 +2443,9 @@ def make_handler(ctx: dict):
                 self._send_json(code, body)
                 return
             if path == "/api/collection-profile-audit":
-                # Hardening #2 — self-observability cold-start profile
-                code, body = api.handle_collection_profile_audit_status(ctx)
+                # Hardening #2 — self-observability cold-start profile.
+                # Hardening #12 — accepts ?slow_module_ms=N&slow_total_ms=N.
+                code, body = api.handle_collection_profile_audit_status(ctx, params)
                 self._send_json(code, body)
                 return
             if path == "/api/tdp-auto/evaluate":
