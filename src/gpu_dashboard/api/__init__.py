@@ -571,3 +571,4 @@ from .iommu_dma_strict_audit import handle_iommu_dma_strict_audit_status  # noqa
 from .kernel_lockup_watchdog_audit import handle_kernel_lockup_watchdog_audit_status  # noqa: F401,F811
 from .khugepaged_pressure_audit import handle_khugepaged_pressure_audit_status  # noqa: F401,F811
 from .drm_fdinfo_engine_usage_audit import handle_drm_fdinfo_engine_usage_audit_status  # noqa: F401,F811
+from .pipe_mqueue_limits_audit import handle_pipe_mqueue_limits_audit_status  # noqa: F401,F811
