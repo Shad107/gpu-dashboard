@@ -2272,6 +2272,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_ksm_advisor_audit_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/intel-uncore-freq-audit":
+                # R&D #102.1 — Intel uncore (LLC) freq posture
+                code, body = api.handle_intel_uncore_freq_audit_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

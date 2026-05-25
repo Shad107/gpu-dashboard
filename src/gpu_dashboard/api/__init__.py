@@ -607,3 +607,4 @@ from .kfence_runtime_audit import handle_kfence_runtime_audit_status  # noqa: F4
 from .net_qdisc_default_audit import handle_net_qdisc_default_audit_status  # noqa: F401,F811
 from .fscache_cachefiles_audit import handle_fscache_cachefiles_audit_status  # noqa: F401,F811
 from .ksm_advisor_audit import handle_ksm_advisor_audit_status  # noqa: F401,F811
+from .intel_uncore_freq_audit import handle_intel_uncore_freq_audit_status  # noqa: F401,F811
