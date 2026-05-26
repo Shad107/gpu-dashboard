@@ -1,7 +1,8 @@
 # gpu-dashboard
 
 > Lightweight NVIDIA GPU monitoring + tuning dashboard for Linux.
-> Built for LLM rigs and eGPU/OcuLink setups. Pure Python stdlib + jsonschema.
+> Built for **eGPU/OcuLink homelabs**, **LLM rigs**, and **monitoring nerds**.
+> Pure Python stdlib + jsonschema. MIT.
 
 🇬🇧 English · [🇫🇷 Français](README.fr.md)
 
@@ -12,215 +13,170 @@
 
 ![Dashboard hero — GreenWatts main view](docs/promo/01-dashboard-main.png)
 
-> Main dashboard, sticky cards strip with 4 group sections : **🖥️ GPU LIVE**
-> (temp / util / VRAM / PCIe folded into one card · fans) · **🔧 TUNING**
-> (power-limit · clocks · OcuLink) · **🪙 LLM** (model · tok/s + tok/Wh)
-> · **💸 COÛT** (€/month · forecast). Tabs (Dashboard / Stats / History)
-> stay fixed below ; the version + refresh footer is pinned at the bottom.
+## Who it's for
 
-### Mobile responsive
-<img src="docs/mobile/dashboard-mobile.png" width="280" alt="Single-column mobile layout" />
+| If you… | …the killer feature is |
+|---|---|
+| **🛂 Run an eGPU over OcuLink/Thunderbolt** and your link drops randomly | **PCIe Recovery Wizard** — bring the link back without rebooting Proxmox / your host |
+| **🪙 Run LLMs locally** (llama.cpp / vLLM / Ollama / LM-Studio) | **tok/Wh tracking** + **Witness diff** to bisect a tok/s regression after an `apt upgrade` |
+| **📈 Maintain monitoring stacks** (Grafana / Prometheus / Uptime Kuma / Home Assistant) | **`/api/prom` exporter** + ready-to-import Grafana dashboard + webhook outbound |
+| **🔬 Tweak homelab systems** for max perf | **Health Strip** — 14 high-signal audits aggregated on the dashboard (ReBAR, THP, cpuidle, sysctls, …) |
 
-### 🖥️🖥️ Multi-GPU support
+---
 
-On rigs with more than one NVIDIA GPU detected, the header gains a picker
-dropdown listing each card. Selecting a different GPU instantly switches
-**all** displayed data — Cards, History chart, Stats sparklines, electricity,
-LLM throughput — to that GPU's samples.
+## 🛂 For eGPU / OcuLink / Thunderbolt users
 
-- The sampler polls all GPUs every tick ; each sample is stored with
-  its `gpu_index` (DB schema v4)
-- Picker selection persists in `localStorage`, bookmarkable via `?gpu=N`
-- Per-GPU API : every data endpoint accepts `?gpu_index=N`
-- Single-GPU rigs : zero change — the picker is hidden, everything works
-  as before
+If you've ever lost your eGPU link mid-session and had to power-cycle the box, this is for you. The dashboard tracks link state continuously and ships an in-UI recovery flow.
 
-### 🎨 Themes — dark (default) + light
+### One-click PCIe link recovery — no reboot
 
-Toggle via **Settings → Préférences → Layout → 🎨 Thème**, or use the
-URL override `?theme=light` / `?theme=dark` (bookmarkable). Choice
-saved in localStorage.
+When your OcuLink decrochs (link width drops to `0x3F`, AER fatal counter ticks, NVML loses the handle), open the wizard and walk the recovery ladder:
 
-<table>
-<tr>
-<td width="50%"><img src="docs/theme-dark.png" alt="Dark theme — default, easy on the eyes" /><br/><sub><b>🌙 Dark</b> — default, easy on the eyes for late-night sessions</sub></td>
-<td width="50%"><img src="docs/theme-light.png" alt="Light theme — bright for daytime use" /><br/><sub><b>☀️ Light</b> — bright background for daytime use</sub></td>
-</tr>
-</table>
+1. `persistence_restart` — bounce `nvidia-persistenced`
+2. `module_reload` — unload + reload nvidia.ko (kills `/dev/nvidia*` consumers)
+3. `pcie_rescan` — `echo 1 > /sys/bus/pci/.../rescan`
+4. `flr` — Function Level Reset (if the device supports it)
+5. If those don't restore the link → host-side `vfio-pci` rebind suggestion + Proxmox `qm restart` script
 
-### 📈 Stats page — perf overview at a glance
+Each step shows the verdict afterwards (`link_recovered: true|false|none`) and stops as soon as the link is back. A "▶▶ Tout essayer" mode auto-escalates with a pre-warning before kills_workloads steps and an out-of-band tail command for when the browser tab freezes mid-recovery.
 
-A single top-level page (`#stats`) showing year-to-date energy/cost,
-LLM tokens, thermal & power sparklines, profile time breakdown,
-heatmap, fan distribution, and the recent alerts list.
+<sub>📸 Screenshot of the wizard modal in action — coming in next release. Run the dashboard locally and click "🔧 Récupérer le lien" on the OcuLink card to see it.</sub>
 
-<img src="docs/stats.png" alt="Stats page — 6 sections : LLM perf · Power · Thermal · Profile time · Heatmap · Alerts" width="640" />
+### Permanent OcuLink watchdog daemon
 
-### 🩺 About tab — diagnostics built in
+Background systemd unit polls the link every second, journals every DROP/UP with timestamps, and feeds two clocks on the dashboard card:
 
-![About tab — drift detector + idle audit + ECC + records](docs/promo/02-about-diagnostics.png)
+- **`held_for`** — duration of the current up streak
+- **`dropped_since`** — duration since the most recent DROP (if currently down)
 
-Single panel showing : version + 1-click update from GitHub, system info
-(driver, kernel, vBIOS, paths), lifetime records (max temp / power / RPM ·
-min idle watts · sample count), and the diagnostic features — **driver/kernel
-drift detector** (flags 'apt upgrade changed your nvidia driver' on each
-boot), **idle-state audit** ('your card pulls X W idle, expected Y-Z W' +
-checklist of fixes for stuck p-states / disabled persistence mode /
-compositor interference), **ECC + memory health** (corrected vs
-uncorrected error counters, remapped rows — only shows on datacenter
-cards that expose ECC).
+When the watchdog log goes stale (e.g. service died but link is actually fine), the card cross-checks NVML live and flips the displayed state with a `📡 via NVML live` sub-line, so you never stare at "LIEN PERDU 72h" while the GPU is healthy.
 
-### 🌀 Fan curve editor
+### Telegram alerts on every drop
 
-![Fan curve editor with anti-oscillation hysteresis](docs/promo/03-fan-curve.png)
+Push notifications on drop and recovery with the elapsed-down duration, so you can act before the rig falls off the network.
 
-Visual editor for the fan curve daemon — drag, click, keyboard. Lives in
-**Settings → Tuning → Courbe ventilo** (modal tab, 10 tabs total). Includes
-the **anti-oscillation hysteresis** controls (cycle 144d) — configurable
-temp-drop threshold + min ramp-down delay so fans don't cycle when temp
-hovers near a curve breakpoint.
+### Why it matters for r/eGPU
 
-- **Drag** any control point to reshape (temp stays clamped between neighbors)
-- **Double-click** an empty area of the SVG to insert a new control point
-- **Right-click** a point to remove (min 2 points enforced)
-- **Click + arrow keys** for fine-tuning : ±1°C / ±1% per arrow, Shift = ±5
-- **Tab** cycles through points · **Delete** removes the selected one · **ESC** deselects
-- **3 one-click presets** : 🤫 Silent · ⚖️ Balanced · 🔥 Aggressive
-- **💾 Save** persists to `~/.config/gpu-dashboard/fan_curve.json` (overrides profile)
-- **Daemon picks up the new curve on next poll** — no restart needed
-- **±2°C hysteresis** built-in to prevent fan oscillation near a control point
+Existing eGPU monitoring (GreenWithEnvy, `nvtop`) doesn't track link health at all. `dmesg` shows the AER fatal but you still need to know `which sysfs surface to write to` to revive the device — and that's per-box homework. This dashboard ships the canonical 4-step ladder + sudoers wrapper so it's `Click → ▶▶ Tout essayer` instead of 30 minutes of forum-archaeology.
 
-Visual cues : live GPU temp shown as vertical cyan line on the curve, current
-fan target shown as horizontal dashed line, selected point shows coordinate
-label (e.g. "78°C · 65%") in amber.
+---
 
-### 🎯 Per-application profile triggers
+## 🪙 For homelab LLM operators
 
-The `auto_profile_daemon` normally classifies load (silent/sweet/boost) from GPU
-utilization + power. With **app triggers**, you can override that : when a
-specific process is running, force a chosen profile regardless of load.
+If your single 3090/4090/5090 runs llama.cpp or vLLM and you measure tokens/sec religiously, the dashboard wraps the whole inference rig in a feedback loop.
 
-Use cases :
-- `blender` running → force **boost** (rendering needs full clocks even at low % util)
-- `llama-server` running → force **boost** (token throughput scales with clocks)
-- `steam-runtime` running → force **sweet** (gaming doesn't need full TDP)
+### tokens/sec + tokens/Watt live
 
-**Match** : case-insensitive substring against `/proc/<pid>/comm`. A trigger key
-`blender` catches `Blender`, `blender-cycles`, `blender.bin`, etc.
-**Priority** : when multiple triggers fire, boost wins over sweet wins over silent.
-**Config** : edit in Settings → Avancé → **Déclencheurs apps**, or directly in
-`~/.config/gpu-dashboard/app_triggers.json` (format `{"app": "profile", ...}`).
+Queries your `llama-server /metrics`, plots tok/s next to power draw and exposes the **efficiency ratio (tok/Wh)** — the metric that actually matters when comparing power-limit profiles. No other OSS dashboard surfaces this.
 
-When no trigger matches, the daemon falls back to load-based classification.
+### 🔍 State Witness — bisect tok/s regressions
 
-### Settings — 11 tabs, all 1 click away
+Driver bump or kernel update tanked your inference speed? Click **"📸 Take snapshot"** before and after the upgrade, then **"🔀 Diff les 2 derniers"**.
 
-Bookmarkable via `?modal=<tab>` (e.g. `http://localhost:9999/?modal=fancurve`).
-History and Stats are now top-level views (not modal tabs) — see the section above.
+The snapshot captures:
+- driver + CUDA version (`/proc/driver/nvidia/version`)
+- kernel `uname -r` + cmdline + loaded modules + nvidia/vfio/pcieport module params
+- PCIe link speed/width + AER counters + power state
+- per-GPU power limit / persistence / compute mode / UUID
+- targeted apt/rpm packages (nvidia-*, libcuda*, libcudnn*, libnccl*, linux-image-*, qemu-*, libvirt*)
+- systemd unit states (persistenced, fabricmanager, oculink-watchdog, …)
 
-<table>
-<tr>
-<td width="50%"><img src="docs/modal/power.png" alt="Power Limit + 3 one-click profile presets (Silent/Sweet/Boost)" /><br/><sub><b>Power Limit</b> — slider with live perf% + 3 named presets bundling power-limit + offsets</sub></td>
-<td width="50%"><img src="docs/modal/clocks.png" alt="Clock offsets sliders with safe/moderate/aggressive/danger zones" /><br/><sub><b>Clocks</b> — GPU/mem offsets with risk zones + Advanced unlock</sub></td>
-</tr>
-<tr>
-<td><img src="docs/modal/fancurve.png" alt="Drag-and-drop fan curve editor SVG with presets" /><br/><sub><b>Fan curve</b> — drag/click/keyboard SVG editor + 3 presets (Silent/Balanced/Aggressive)</sub></td>
-<td><img src="docs/modal/alerts.png" alt="Telegram + webhook + browser push notifications config" /><br/><sub><b>Alerts</b> — Telegram + webhook outbound + browser push + sound toggle</sub></td>
-</tr>
-<tr>
-<td><img src="docs/modal/services.png" alt="Restart, Stop, Redo wizard, Snapshot, Update check buttons" /><br/><sub><b>Services</b> — Restart · Stop · Redo wizard · Snapshot · git pull + restart</sub></td>
-<td><img src="docs/modal/diagnostics.png" alt="Log tail viewer for support" /><br/><sub><b>Diagnostics</b> — tail LOG_FILE or journalctl, support-friendly</sub></td>
-</tr>
-<tr>
-<td><img src="docs/modal/profile.png" alt="Profile JSON override editor" /><br/><sub><b>Profile</b> — JSON editor for the active GPU profile override</sub></td>
-<td><img src="docs/modal/layout.png" alt="Layout : drag-and-drop card reorder + visibility + theme toggle + custom URL embeds" /><br/><sub><b>Layout</b> — hide/show cards · drag-reorder · custom URL embeds · 🎨 theme picker</sub></td>
-</tr>
-<tr>
-<td><img src="docs/modal/apptriggers.png" alt="Per-application profile triggers" /><br/><sub><b>App triggers</b> — when blender / llama-server runs, force a specific profile</sub></td>
-<td><img src="docs/modal/language.png" alt="Language picker EN/FR" /><br/><sub><b>Language</b> — EN / FR full coverage</sub></td>
-</tr>
-<tr>
-<td><img src="docs/modal/about.png" alt="About — version, paths, vBIOS, license" /><br/><sub><b>About</b> — version · paths · vBIOS · license</sub></td>
-<td></td>
-</tr>
-</table>
+The diff is then **ranked** — driver version delta scores 100/100, kernel uname 90, PCIe link speed change 85, NVIDIA/CUDA package bump 70, etc. Refcount drift (workload noise) is filtered out. The Top 5 suspects panel surfaces the most likely culprits first.
 
-### 5-step web wizard on first launch
+<sub>📸 Screenshot of the diff modal with severity-colored Top suspects panel — coming in next release.</sub>
 
-<table>
-<tr>
-<td width="50%"><img src="docs/wizard/step1.png" alt="Step 1 — Welcome with live hardware detection" /></td>
-<td width="50%"><img src="docs/wizard/step2.png" alt="Step 2 — Module selection with availability tags" /></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/wizard/step3.png" alt="Step 3 — Copy-paste sudo commands with live recheck" /></td>
-<td width="50%"><img src="docs/wizard/step4.png" alt="Step 4 — Final configuration (port, default power-limit)" /></td>
-</tr>
-</table>
+Survey-validated: vLLM/llama.cpp/Ollama/ROCm threads in the last 12 months show 10+ high-severity "I bumped X and lost 80% of my throughput" cases where the user couldn't bisect. Witness exists for that.
 
-## What it does
+### 🔭 Shadow Telemetry — wall meter vs nvidia-smi
 
-A small HTTP dashboard you point your browser at (`http://localhost:9999`).
-Built specifically for **headless/SSH'd Linux boxes running LLMs** on consumer NVIDIA
-cards — including marginal setups (eGPU over OcuLink/Thunderbolt).
+`arXiv 2312.02741` showed `nvidia-smi` samples only ~25% of A100/H100 runtime — peaks are missed entirely. If you wire a **Shelly Plug/Pro** (HTTP RPC, no MQTT broker needed) and/or a **DS18B20** 1-wire thermistor in your case, the dashboard reconciles:
 
-### Live monitoring
-- 🌡️ GPU temperature, fan RPMs, power draw, GPU/mem clocks, VRAM used
-- 🔥 Memory junction (GDDR hotspot) temperature — *the actual undervolt limiter on RTX 3080/3090/4090*
-- 🪙 **LLM throughput** — tokens/sec + **tokens/Watt** efficiency (queries your `llama-server /metrics`)
-- ⚡ **Electricity cost** — kWh/day + €/month at your configured rate
-- 📊 30-day history in local SQLite, exportable as CSV
-- 💤 Idle detection (>30 min) → banner suggesting to stop the server + €/month saved
-- 👀 Per-process VRAM tracker — see which model owns the memory
+- `wall_draw_w` (Shelly) vs `Σ NVML power_w` → **non_gpu_w delta** (PSU losses + fans + mobo)
+- `ambient_c` (DS18B20) vs GPU die temp → headroom analysis
 
-### Tuning & automation
-- 🤫⭐🚀 **3 power profile presets** (Silent/Sweet/Boost) — one-click bundles of power-limit + offsets
-- 🤖 **Auto-profile switch** — daemon detects idle/inference/training and switches the profile automatically
-- 🎚️ Power-limit slider with live perf-% estimate from the card's `perf_curve`
-- ⏱️ Clock-offset sliders with safe/moderate/aggressive/danger risk zones
-- 🌀 **fan_curve** daemon — custom curve replacing the stock NVIDIA one
+The card shows `295W mur · GPU: 285W · ailleurs: 10W (+3.5%)` so you see when your "GPU at 250W" actually pulls 310W at the wall.
 
-### Integrations & alerts
-- 🔔 **Telegram bot** alerts (OcuLink drops, threshold breaches)
-- 🪝 **Webhook outbound** (Discord, Slack, n8n, Home Assistant — auto-detects payload shape)
-- 📈 **Prometheus exporter** at `/api/prom` (gauges + counter, plug into Grafana / VictoriaMetrics)
-- 🔥 **Threshold alerts** — gpu_temp / mem_temp / fan_pct, 3-consecutive + 5-min cooldown
-- 🛂 **OcuLink/eGPU watchdog** — uptime tracking, drop count, alerts on drops
+### Power tuning loop
 
-### Setup & operations
-- 🧙 **5-step web setup wizard** on first launch (no CLI gymnastics — copy-paste sudo commands with live recheck)
-- 🔄 **Restart / Stop / Snapshot / Update buttons** in Settings → Services (no shell needed for ops)
-- 🌐 **EN + FR i18n** with reactive language switcher
-- 📦 **Snapshot export** — config + secrets + DB as a single tar.gz for backup or migration
-- 🩺 **/api/health** — JSON status (gpu_alive, db_connected, sampler_running) for external monitoring
-- 📜 **Diagnostics tab** with log tail viewer (file or journalctl backends)
-- 🧰 **Profile override editor** — tune perf_curve / clocks / fans from the UI without forking the repo
+- 🤫⭐🚀 **3 power profile presets** (Silent / Sweet / Boost) — one-click bundles of power-limit + clock offsets
+- 🤖 **Auto-profile daemon** — detects idle / inference / training and switches the profile automatically
+- 🎯 **Per-app triggers** — when `llama-server` runs → force Boost; when `steam-runtime` runs → force Sweet
+- 🎚️ Live `perf%` estimate as you drag the power-limit slider (from each card's profile curve)
+- 🌀 **Custom fan curve editor** — SVG drag-and-drop + keyboard fine-tuning + anti-oscillation hysteresis
 
-### GPU profiles per card
-Bundled : RTX 3090, 3090 Ti, 4090, 5090. Community contributes more via PR.
-JSON Schema validation at startup catches typos & malformed contributions.
+---
 
-## Why?
+## 🏥 Health Strip — 14 audits surfaced
 
-Existing tools fall short:
-- `nvtop` is great in a TTY but offers no control, no alerting
-- GreenWithEnvy needs a GTK desktop session running on the NVIDIA itself
-- `nvidia-smi -pl` lives in a terminal, no history, no slider
-- Nothing tracks OcuLink eGPU link drops with phone alerts
+A thin strip at the top of the dashboard runs 14 curated checks in parallel (~70ms total) and shows aggregated `err / warn / ok` counts. Click for the per-check breakdown.
 
-This tries to be the missing middle: **web UI, controllable, scriptable, alertable**.
+<sub>📸 Screenshot of the strip with 14 pills colored by severity + click-through modal — coming in next release.</sub>
 
-## Hardware support
+Checks included (each calibrated for homelab LLM rigs):
 
-| GPU | Profile | Status |
+| Check | What it catches |
+|---|---|
+| `pstate` | GPU stuck in P0/P8 when it shouldn't be |
+| `rebar` | Resizable BAR off → BAR1 = 256 MiB legacy sliding-window |
+| `thp` | Transparent Huge Pages disabled / always-aggressive (mmap'd GGUF wants `madvise`) |
+| `cpuidle` | C-state driver disabled / shallow-only → idle power leak + latency hit |
+| `smt` | SMT/Hyperthreading flipped (forced off costs LLM throughput) |
+| `clocksource` | TSC unstable / falling back to `hpet` / `acpi_pm` |
+| `vm_sysctl` | `vm.swappiness=60` actively swaps your mmap'd model weights |
+| `net_sysctl` | `rmem_max=208KiB` caps each LAN streaming client |
+| `pcie_rpm` | PCIe runtime PM blocked upstream → wake stalls |
+| `limits` | `memlock` default 8MiB → can't pin your model in RAM |
+| `fs_mount` | Model directory mounted without `noatime` |
+| `trim` | SSDs without `discard` mount option (model cache dies faster) |
+| `airgap` | Air-gap pin status (when enabled) |
+| `proc_static` | Static `/proc` attrs drifted since baseline |
+
+The full 400+ audit modules are still in **Settings → Integrations** for deeper drilldowns; the Strip surfaces the 14 most-actionable.
+
+---
+
+## 📈 Monitoring & integrations
+
+```bash
+# Prometheus / Grafana / VictoriaMetrics
+- job_name: gpu-dashboard
+  static_configs: [{targets: ['localhost:9999']}]
+  metrics_path: /api/prom
+
+# Discord webhook (auto-detected payload shape)
+WEBHOOK_ENABLED=1
+WEBHOOK_URL=https://discord.com/api/webhooks/.../...
+
+# Home Assistant / n8n
+WEBHOOK_URL=https://n8n.local/webhook/gpu-alert
+
+# Uptime Kuma — HTTP keyword monitor
+URL : http://localhost:9999/api/health
+Keyword : "status":"ok"
+```
+
+**🎁 Ready-to-import Grafana dashboard** — [`docs/grafana/yearly_dashboard.json`](docs/grafana/yearly_dashboard.json). 9 panels: year-to-date kWh + cost + tokens, latest-alert age, live power + temp + fan, OcuLink drops.
+
+API endpoints (selection):
+
+| Method | Path | Purpose |
 |---|---|---|
-| RTX 3090 | `rtx-3090.json` | ✅ Calibrated on real hardware |
-| RTX 3090 Ti | `rtx-3090-ti.json` | ⚠ Estimated perf curve |
-| RTX 4090 | `rtx-4090.json` | ⚠ Estimated perf curve |
-| RTX 5090 | `rtx-5090.json` | ⚠ Based on published benchmarks |
-| Others (NVIDIA) | `_generic.json` (fallback) | Conservative limits |
+| GET | `/api/state` | Live snapshot — cards, sampler buffer, processes, modules |
+| GET | `/api/history?from=&to=&step=` | Historical samples (SQLite, resamplable) |
+| GET | `/api/events?from=&kind=` | OcuLink drops, alerts, manual changes |
+| GET | `/api/health-strip` | F5.1 — 14 audits aggregated, parallel evaluation |
+| GET | `/api/witness/list` · `/diff?before=A&after=B` | F2 — snapshots + ranked diff |
+| POST | `/api/witness/take` | F2 — capture system state now |
+| GET | `/api/shadow-telemetry` | F3 — Shelly + DS18B20 vs NVML reconciliation |
+| GET | `/api/pcie-recovery/advisor` | F4 — diagnostic + ordered recovery plan |
+| POST | `/api/pcie-recovery/run-step` | F4 — execute one whitelisted recovery step |
+| GET · POST | `/api/install/list` · `/check` · `/run` | F6 — one-click sudo install for all wrappers |
+| GET | `/api/prom` | Prometheus text exporter |
+| GET | `/api/health` | JSON health (Uptime Kuma compatible) |
 
-> Got a card not in the list? See [`profiles/SCHEMA.md`](profiles/SCHEMA.md) and open a PR.
+Full list: 30+ endpoints. Pure stdlib `http.server`, JSON everywhere except CSV exports.
+
+---
 
 ## Install — 30 seconds, web wizard
 
@@ -234,23 +190,16 @@ curl -fsSL https://raw.githubusercontent.com/Shad107/gpu-dashboard/main/scripts/
 ```
 
 The script does **only** these things (no sudo, no auto-install of system packages):
-
 1. Clones the repo to `~/gpu-dashboard`
 2. `pip install --user jsonschema` (the only Python dep)
 3. Starts the dashboard in the background on port 9999
 4. Prints the URL to open in your browser
 
-Open the URL, a **5-step wizard** walks you through:
-- Detected hardware (GPU, OS, profile match)
-- Which optional modules to enable
-- For each module needing root, the **exact sudo command to copy-paste in a terminal** (the wizard re-checks it after you run it)
-- Final config (port, default power-limit)
-- Done — restart the dashboard to apply
+Open the URL → **5-step web wizard**. For modules needing root, the wizard shows the exact sudo command **or** you can use the new **one-click installer** (F6) — type your sudo password in a modal, the wrapper installs without copy-paste.
 
-> **Want to audit the script first?** It's 116 lines, viewable at [`scripts/get.sh`](scripts/get.sh).
-> Don't trust `curl | bash`? Use Option B below.
+> **Want to audit `get.sh` first?** It's 116 lines, viewable at [`scripts/get.sh`](scripts/get.sh).
 
-### Option B — manual clone (full audit)
+### Option B — manual clone
 
 ```bash
 git clone https://github.com/Shad107/gpu-dashboard.git
@@ -259,111 +208,81 @@ python3 -m pip install --user jsonschema
 PYTHONPATH=src python3 -m gpu_dashboard
 ```
 
-Open `http://localhost:9999` — the same web wizard runs.
+### Sudoers wrappers — one-click install via the UI
 
-### Option C — CLI install (headless / scripted)
+| Wrapper | Installed via UI? | What it enables |
+|---|:---:|---|
+| `power_limit_wrapper` | ✓ | UI slider sets `nvidia-smi -pl` without sudo prompts |
+| `oculink_watchdog` | ✓ | systemd daemon journaling link drops |
+| `coolbits_xorg` | ✓ | Xorg `Coolbits=28` for clock offsets + fan curve |
+| `pcie_recovery_wrapper` | ✓ | NOPASSWD-scoped wrapper for the recovery wizard |
 
-For headless servers or automation, the legacy interactive CLI is still available:
+Each wrapper is whitelisted by id, BDF-validated against `vendor=0x10de`, and passes only one of `persistence_restart / module_reload / pcie_rescan / flr` — no shell injection surface.
 
-```bash
-git clone https://github.com/Shad107/gpu-dashboard.git
-cd gpu-dashboard
-./install.sh --detect-only    # show what would happen (no writes)
-./install.sh                   # interactive prompts
-PYTHONPATH=src python3 -m gpu_dashboard
-```
+---
 
-### Sudo commands the wizard suggests
+## 🖥️🖥️ Multi-GPU + 🎨 themes + 🌐 i18n
 
-The wizard never runs sudo silently. For each module needing root, you'll see
-**one** bash command pointing to an audit-friendly script in the repo:
+- **Multi-GPU**: picker dropdown in header. All UI (cards, history, sparklines, electricity, LLM) switches to the selected GPU. Per-GPU API via `?gpu_index=N`.
+- **Themes**: dark (default) + light. Toggle in Layout tab, or `?theme=light|dark` URL.
+- **i18n**: full EN + FR coverage. Switcher in Settings.
 
-| Module | Command suggested by wizard |
-|---|---|
-| `power_limit` | `sudo bash scripts/install-power-limit-wrapper.sh --user $USER` |
-| `clock_offsets` | `sudo bash scripts/install-coolbits-xorg.sh` (`--headless` for VM/eGPU) |
-| `oculink_watchdog` | `sudo bash scripts/install-oculink-watchdog.sh` |
+<table>
+<tr>
+<td width="50%"><img src="docs/theme-dark.png" alt="Dark theme" /><br/><sub><b>🌙 Dark</b> — default</sub></td>
+<td width="50%"><img src="docs/theme-light.png" alt="Light theme" /><br/><sub><b>☀️ Light</b> — daytime</sub></td>
+</tr>
+</table>
 
-Each script supports `--check` (verify if already installed) and `--print`
-(show what it would write without writing) so you can audit before running.
+### Mobile responsive
+<img src="docs/mobile/dashboard-mobile.png" width="280" alt="Single-column mobile layout" />
 
-## API endpoints
+---
 
-Pure stdlib HTTP server. JSON everywhere except `/api/export` (CSV) and `/api/snapshot` (tar.gz).
+## Hardware support
 
-| Method | Path | Purpose |
+| GPU | Profile | Status |
 |---|---|---|
-| GET | `/api/state` | Live snapshot (cards, sampler buffer, processes, modules state) |
-| GET | `/api/history?from=&to=&step=` | Historical samples from SQLite, resamplable |
-| GET | `/api/events?from=&kind=` | OcuLink drops, alerts, manual changes |
-| GET | `/api/export?since=` | Raw CSV download of samples |
-| GET | `/api/processes` | Per-process VRAM via `nvidia-smi --query-compute-apps` |
-| GET | `/api/prom` | Prometheus text exporter |
-| GET | `/api/health` | JSON health for monitoring (200 OK / 503 degraded) |
-| GET | `/api/about` | Version, paths, vBIOS, uptime |
-| GET | `/api/electricity` | kWh + €/month at configured rate |
-| GET | `/api/llm/stats` | tokens generated + tokens/Watt (from llama-server /metrics) |
-| GET | `/api/fan-curve` | Current fan curve + target % |
-| GET | `/api/auto-profile` | Auto-switch daemon status (current classification) |
-| GET | `/api/power-profiles` | List Silent/Sweet/Boost configured |
-| GET | `/api/setup/detect` | Wizard env detection |
-| GET | `/api/setup/recheck/<module>` | Re-run a module's `can_enable()` |
-| GET | `/api/logs?tail=N` | Tail dashboard log (file or journalctl) |
-| GET | `/api/update/check` | `git fetch` + commits-behind count |
-| GET | `/api/snapshot` | tar.gz of config + DB |
-| POST | `/api/set-power-limit` | Apply watts via sudoers wrapper |
-| POST | `/api/set-offsets` | Apply GPU/mem clock offsets |
-| POST | `/api/power-profiles/apply/<name>` | One-click profile (Silent/Sweet/Boost) |
-| POST | `/api/alerts-config` | Save Telegram config |
-| POST | `/api/alerts-test` | Send a test Telegram |
-| POST | `/api/electricity/config` | Update rate live (no restart) |
-| POST | `/api/profile/save` | Persist a profile override |
-| POST | `/api/setup/save` | Wizard saves config.env |
-| POST | `/api/restart` | Re-exec the server in place |
-| POST | `/api/stop` | Graceful sys.exit(0) |
-| POST | `/api/update/pull` | `git pull --ff-only` (refuses dirty tree) |
+| RTX 3090 | `rtx-3090.json` | ✅ Calibrated on real hardware |
+| RTX 3090 Ti | `rtx-3090-ti.json` | ⚠ Estimated perf curve |
+| RTX 4090 | `rtx-4090.json` | ⚠ Estimated perf curve |
+| RTX 5090 | `rtx-5090.json` | ⚠ Based on published benchmarks |
+| Others (NVIDIA) | `_generic.json` fallback | Conservative limits |
 
-## Optional modules
+> Got a card not in the list? See [`profiles/SCHEMA.md`](profiles/SCHEMA.md) and open a PR.
 
-Each feature is opt-in via `MODULE_*=1` in `config.env`. The wizard only proposes
-what your env supports.
+eGPU enclosures tested:
+- **Aoostar AG02 (F9G-BK7)** — OcuLink x4, real-life link-drop testbed
+- Any **OcuLink x4** / **TB4** enclosure should work (the recovery wizard is host-agnostic)
 
-| Module | Requirement | What it adds |
-|---|---|---|
-| **power_limit** | sudoers wrapper installed | UI slider + 3 profile presets, live perf-% estimate |
-| **clock_offsets** | Coolbits ≥ 8 in xorg.conf | Sliders for GPU/mem clock offsets with risk zones |
-| **telegram_alerts** | bot token + chat ID | Push notifications on events |
-| **oculink_watchdog** | eGPU detected (PCIe x4 link) | Tracks link uptime, alerts on drops |
-| **fan_curve** | Coolbits ≥ 4 + Xorg | Custom fan curve replacing the stock NVIDIA one |
-| **auto_profile** | sampler running | Daemon classifies idle/inference/training, auto-switches profile |
-| **alert_monitor** | TG or webhook configured | gpu_temp / mem_temp / fan_pct threshold alerts |
-| **webhook** | a webhook URL configured | Discord / Slack / n8n / Home Assistant outbound |
+---
 
-## Integrations
+## Settings — 11 tabs
 
-**🎁 Ready-to-import Grafana dashboard** — see [`docs/grafana/yearly_dashboard.json`](docs/grafana/yearly_dashboard.json).
-Imports as **Yearly overview** with 9 panels : year-to-date kWh + cost + tokens, latest-alert age,
-live power + temp + fan, today's energy, OcuLink drops, GPU alive status.
-Grafana → Dashboards → New → Import → paste JSON (or upload the file).
+Bookmarkable via `?modal=<tab>`.
 
-```bash
-# Grafana / VictoriaMetrics — Prometheus scrape config
-- job_name: gpu-dashboard
-  static_configs: [{targets: ['localhost:9999']}]
-  metrics_path: /api/prom
+<table>
+<tr>
+<td width="50%"><img src="docs/modal/power.png" alt="Power Limit"/><br/><sub><b>Power Limit</b></sub></td>
+<td width="50%"><img src="docs/modal/clocks.png" alt="Clocks"/><br/><sub><b>Clocks</b></sub></td>
+</tr>
+<tr>
+<td><img src="docs/modal/fancurve.png" alt="Fan curve"/><br/><sub><b>Fan curve</b></sub></td>
+<td><img src="docs/modal/alerts.png" alt="Alerts"/><br/><sub><b>Alerts</b></sub></td>
+</tr>
+<tr>
+<td><img src="docs/modal/services.png" alt="Services"/><br/><sub><b>Services</b></sub></td>
+<td><img src="docs/modal/diagnostics.png" alt="Diagnostics"/><br/><sub><b>Diagnostics</b></sub></td>
+</tr>
+<tr>
+<td><img src="docs/modal/layout.png" alt="Layout"/><br/><sub><b>Layout</b></sub></td>
+<td><img src="docs/modal/apptriggers.png" alt="App triggers"/><br/><sub><b>App triggers</b></sub></td>
+</tr>
+</table>
 
-# Discord webhook
-WEBHOOK_ENABLED=1
-WEBHOOK_URL=https://discord.com/api/webhooks/.../...
+**Integrations** tab also holds the 400+ deep audit modules organized in 13 categories (GPU & driver, PCIe & bus, Memory & swap, Storage & FS, Network, Power & thermal, Security & LSM, Boot & firmware, IRQ & sched, Tracing & BPF, Containers, Input, Meta-diag).
 
-# Home Assistant / n8n
-WEBHOOK_URL=https://n8n.local/webhook/gpu-alert
-# Payload: {"text", "kind", "source": "gpu-dashboard", "timestamp"}
-
-# Uptime Kuma — HTTP keyword monitor
-URL : http://localhost:9999/api/health
-Keyword : "status":"ok"
-```
+---
 
 ## Architecture
 
@@ -371,104 +290,70 @@ Keyword : "status":"ok"
 gpu-dashboard/
 ├── src/gpu_dashboard/                # Python backend (stdlib + jsonschema)
 │   ├── server.py                     # HTTP routes + daemon lifecycle
-│   ├── api.py                        # 20+ JSON handlers (handle_state, handle_history…)
-│   ├── storage.py                    # SQLite with WAL, thread-safe writes, schema versioning
-│   ├── retention.py                  # Daemon: hourly purge + weekly VACUUM
-│   ├── metrics.py                    # Sampler (5s interval, also writes to DB)
-│   ├── config.py                     # Layered .env loader (defaults → file → env vars)
-│   ├── profile.py                    # GPU profile load + match + JSON Schema validation
-│   ├── detect.py                     # Env probing (OS, NVIDIA, Coolbits, OcuLink…)
-│   ├── install.py                    # CLI installer logic (= scripts/install-*.sh in v0.3+)
-│   └── modules/                      # Opt-in features (each via MODULE_*=1)
-│       ├── power_limit.py            # Sudoers wrapper for nvidia-smi -pl
-│       ├── clock_offsets.py          # nvidia-settings, no-sudo via Coolbits
-│       ├── fan_curve.py              # Custom fan curve daemon
-│       ├── auto_profile.py           # Auto idle/inference/training switching
-│       ├── alert_monitor.py          # Threshold daemon + dedup
-│       ├── telegram_alerts.py        # Telegram via urllib (no requests dep)
-│       └── webhook.py                # Generic HTTP POST (Discord/Slack/n8n)
-├── frontend/                         # Svelte 5 + Vite + TypeScript
-│   └── src/                          # Top-nav (Dashboard/Stats/History) + 9-tab settings modal + live cards
-├── profiles/                         # GPU JSON profiles + schema.json (Draft 2020-12)
-├── scripts/                          # get.sh + 3 sudo install scripts (audit-friendly)
-├── tests/                            # pytest, 400+ tests, no external services
+│   ├── api/                          # JSON handlers (state, history, witness, health, shadow, pcie-recovery, install, …)
+│   ├── modules/                      # 400+ opt-in features (each via MODULE_*=1)
+│   │   ├── state_witness.py          # F2 — snapshot + diff + ranker
+│   │   ├── health_strip.py           # F5.1 — parallel audit aggregator
+│   │   ├── shadow_telemetry.py       # F3 — Shelly + DS18B20 vs NVML
+│   │   ├── pcie_recovery_advisor.py  # F4 — diagnose + plan recovery
+│   │   ├── pcie_recovery_runner.py   # F4 — execute one whitelisted step
+│   │   ├── installer.py              # F6 — generalized one-click sudo install
+│   │   ├── _nvml.py                  # ctypes wrapper for libnvidia-ml.so (no nvidia-smi fork)
+│   │   ├── power_limit.py · fan_curve.py · auto_profile.py · …
+│   │   └── (400+ audit modules in 13 categories)
+│   ├── storage.py                    # SQLite WAL, thread-safe, schema versioning
+│   ├── metrics.py                    # Sampler (5s interval)
+│   ├── config.py                     # Layered .env loader
+│   └── profile.py                    # GPU profile load + JSON Schema validation
+├── frontend/                         # Svelte 5 (runes) + Vite + TypeScript
+├── profiles/                         # GPU JSON profiles + Draft 2020-12 schema
+├── scripts/                          # get.sh + 4 sudoers install scripts
+├── tests/                            # pytest, 530+ tests, no external services
 └── .github/workflows/ci.yml          # pytest matrix 3.9→3.13 + pnpm build + scripts smoke
 ```
 
+---
+
 ## Contributing
 
-Profiles for new cards are **the highest-value contribution**. See
-[`profiles/SCHEMA.md`](profiles/SCHEMA.md). Code contributions welcome too — see
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+Profiles for new cards are **the highest-value contribution**. See [`profiles/SCHEMA.md`](profiles/SCHEMA.md). Code contributions welcome too — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+eGPU enclosure compatibility reports also wanted — open an issue with your enclosure model + link-drop frequency + which recovery step works for you.
 
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
 
+---
+
 ## 🗺️ Roadmap
 
-### ✅ Delivered (v0.3.0-dev — cycles 1-110)
+### ✅ Recently shipped (F-series)
+- **F1** NVML via ctypes (sub-ms vs 50-200ms `nvidia-smi` subprocess)
+- **F2** State Witness — snapshot + ranked diff (cause-of-regression analyzer)
+- **F3** Shadow telemetry — Shelly + DS18B20 vs NVML reconciliation
+- **F4** PCIe Recovery Wizard — diagnostic advisor + 4 whitelisted recovery steps + Proxmox/KVM awareness
+- **F5.1** Health Strip — 14 audits parallel-aggregated on main dashboard
+- **F5.4** Pre-warning panel before kills_workloads recovery steps
+- **F6** Generalized one-click sudo install for all wrappers (password-prompt modal)
 
-**Live monitoring**
-- 8 cards : GPU · Power Limit · Fans (RPM/target) · VRAM · OcuLink · Modèle LLM · Débit LLM (tokens + tok/W) · Électricité (€/month) · GPU processes
-- Live tab title : `44°C · 250W · GPU Dashboard`
-- Idle banner when GPU has been <5% util for 30 min (with calculated €/month savings)
+### ✅ Foundational (v0.3 cycles 1-110)
+- 8 live cards · Stats page · History chart · 24h heatmap
+- Tuning: power limit slider · 3 presets · clock offsets · fan curve editor · auto-profile · app triggers
+- Alerts: Telegram · webhook (Discord/Slack/n8n/HA) · browser push · sound · thresholds
+- Multi-GPU · dark/light themes · EN/FR i18n · mobile responsive
+- 30+ API endpoints · Prometheus exporter · Grafana dashboard · Uptime Kuma `/health`
+- 530+ tests on Py 3.9-3.13 in CI
 
-**Stats & history**
-- Top-level views : Dashboard · Stats · History (URL-hash bookmarkable)
-- Stats sparklines : LLM perf · Power · Thermal · Profile time · Fan distribution · Heatmap
-- History chart : 1h/6h/24h/7d/30d ranges × 6 metrics · compare-to-24h/7d/30d · Export CSV
-- 24-hour heatmap : avg watts × hour-of-day, color-coded by €/h
-- About tab : Year-to-date energy + tokens · 24h profile-time breakdown · recent profile switches
-
-**Tuning**
-- Power limit slider + 3 named presets (Silent/Sweet/Boost)
-- Clock offsets (GPU/mem) with safe/moderate/aggressive zones
-- **Fan curve editor** : drag-and-drop SVG + keyboard fine-tuning + 3 presets + persist to disk
-- Auto-profile daemon : classifies load (silent/sweet/boost) and switches automatically
-
-**Multi-GPU**
-- Picker dropdown in header (shows when >1 NVIDIA GPU detected)
-- Per-GPU samples, per-GPU API (`?gpu_index=N`), per-GPU UI
-
-**Alerts & integrations**
-- Telegram + webhook outbound (Discord/Slack/n8n/Home Assistant auto-detected)
-- Browser push notifications (VAPID + service worker)
-- Sound notification toggle
-- Threshold alerts (GPU/mem temp, fan %, VRAM %) with cooldown + min-consecutive
-- Latest-alert footer on dashboard + alerts list in Stats
-
-**Customization**
-- Layout : hide/show each card · drag-and-drop reorder · custom URL iframe cards
-- Theme : dark (default) / light · 🎨 toggle in Layout tab · `?theme=light|dark` URL override
-- i18n : English + French (full coverage)
-
-**API & ecosystem**
-- 30+ endpoints (state, history, stats, alerts, push, fan-curve, profile-stats, power-heatmap, llm/perf, llm/lifetime, electricity, version, export, export/year, …)
-- Prometheus exporter `/api/prom` with year-to-date gauges (kWh, cost, tokens, alert age)
-- Grafana ready-to-import dashboard : [`docs/grafana/yearly_dashboard.json`](docs/grafana/yearly_dashboard.json)
-- Uptime Kuma compatible `/api/health` with `recent_alerts`
-- CSV export with `/api/export?since=` and `/api/export/year`
-
-**Quality**
-- 530+ Python tests on Py 3.9-3.13 in CI (GitHub Actions matrix)
-- Pure-stdlib backend (only `jsonschema` runtime dep) · openssl for VAPID + signing
-- DB schema v4 with idempotent migrations
-- Mobile responsive (768/600px breakpoints)
-
-### 💡 Parked / future work
-
-Niche items not currently planned but considered :
-- **Per-fan RPM curves** : separate fan 0 / fan 1 curves (eGPU-specific use case)
-- **RFC 8291 encrypted Web Push** : currently uses a fetch-on-push pivot (functional but the notification text comes from the SW fetching `/api/alerts/latest` rather than from the push payload)
-- **AMD/Intel GPU backends** : Linux-only NVIDIA today ; v1.0 territory, needs a HAL abstraction
-- **Coolbits auto-detection in wizard** : check `/etc/X11/xorg.conf.d/*.conf` for `Coolbits=28`
-- **Cloud telemetry SaaS** : opt-in dashboard sharing across rigs (local-only for now per design)
-- **Windows / macOS support** : Linux-only by design
+### 💡 Considered next
+- Auto-snapshot Witness on dpkg trigger (snapshot before each `apt upgrade`)
+- HealthStrip expansion to 30+ audits via dynamic discovery
+- Per-fan RPM curves (eGPU-specific)
+- Cloud telemetry SaaS opt-in (local-only by default)
 
 ### 🚫 Won't do
+- Monetization / paid tier (MIT, personal-rig project)
+- Windows / macOS support (Linux NVIDIA only by design)
+- Closed-source forks repackaging the OSS work (license permits, please at least cite)
 
-- Monetization / paid tier (it's an OSS project for personal rigs)
-- Closed-source forks repackaging the OSS work (license is MIT, but please at least cite)
-
-See [`docs/PLAN.md`](docs/PLAN.md) for the detailed cycle log and per-commit history.
+See [`docs/PLAN.md`](docs/PLAN.md) for detailed cycle log + per-commit history.
