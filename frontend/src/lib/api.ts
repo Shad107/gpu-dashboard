@@ -48,7 +48,20 @@ export type Tuning = {
 
 export type Watchdog =
   | { available: false }
-  | { available: true; drops: number; last_uptime: string };
+  | {
+      available: true;
+      drops: number;
+      // Two separate clocks — "tenu X / tombé depuis Y" — instead of
+      // the single growing counter that was the F4-followup bug.
+      current_state: "up" | "down" | "unknown";
+      held_for_s: number | null;        // duration of last up streak (seconds)
+      dropped_since_s: number | null;   // time since last DROP (null if currently up)
+      held_for: string | null;          // formatted XhYYm / YYmZZs / ZZs
+      dropped_since: string | null;
+      // Back-compat: still surfaced. Reflects whichever clock is
+      // currently primary (dropped_since when down, held_for when up).
+      last_uptime: string;
+    };
 
 export type GpuInfo = {
   index: number;

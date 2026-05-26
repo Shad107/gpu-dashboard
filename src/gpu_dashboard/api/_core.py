@@ -214,40 +214,119 @@ def _tuning_state(cfg) -> dict:
     return {"clocks": clocks, "offsets": offsets}
 
 
+_TS_RE = __import__("re").compile(
+    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
+
+
+def _fmt_duration(seconds: float) -> str:
+    """Format seconds as `XhYYm` (>=1h), `YYmZZs` (<1h, >=1m),
+    or `ZZs` (<1m)."""
+    s = int(max(0, seconds))
+    h, rem = divmod(s, 3600)
+    m, sec = divmod(rem, 60)
+    if h:
+        return f"{h}h{m:02d}m"
+    if m:
+        return f"{m}m{sec:02d}s"
+    return f"{sec}s"
+
+
 def _watchdog_state(cfg) -> dict:
-    """Parse the OcuLink watchdog log for uptime + drop count. Returns {available: False} if disabled."""
+    """Parse the OcuLink watchdog log to surface the two clocks
+    users actually want:
+
+      held_for      duration of the *last* up streak (alive→drop,
+                    or alive→now if currently up)
+      dropped_since duration since the most recent DROP, if the
+                    link is currently down. None if currently up.
+
+    Returns {available: False} if disabled or log missing.
+
+    Bug fixed by F4-followup: previous version showed a single
+    `last_uptime` clock computed as `now - last_recovered_ts`,
+    which kept growing both when the link was alive AND when it
+    was down — so a user staring at "72h08m" couldn't tell if the
+    link had been stable for 72h or had been broken for 72h."""
     if not cfg.get_bool("MODULE_OCULINK_WATCHDOG"):
         return {"available": False}
-    log = cfg.get("OCULINK_WATCHDOG_LOG", os.path.expanduser("~/gpu-watchdog.log"))
+    log = cfg.get("OCULINK_WATCHDOG_LOG",
+                  os.path.expanduser("~/gpu-watchdog.log"))
     import re, datetime
     drops = 0
-    last_heartbeat = ""
     last_up_ts = None
+    last_drop_ts = None
+    # Track ordered events to know the *current* state from the
+    # most recent transition.
+    last_event_kind = None  # 'up' | 'down' | None
     try:
         with open(log) as f:
             for line in f:
                 line = line.rstrip()
-                if "DROP" in line.upper() or "DÉCROCHAGE" in line:
-                    drops += 1
-                if "heartbeat" in line:
-                    last_heartbeat = line
-                m_up = re.match(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(?:state.*up|GPU recovered|recover)", line, re.IGNORECASE)
-                if m_up:
+                m_ts = _TS_RE.match(line)
+                ts = None
+                if m_ts:
                     try:
-                        last_up_ts = datetime.datetime.strptime(m_up.group(1), "%Y-%m-%d %H:%M:%S")
+                        ts = datetime.datetime.strptime(
+                            m_ts.group(1), "%Y-%m-%d %H:%M:%S")
                     except ValueError:
-                        pass
+                        ts = None
+                is_drop = ("DROP" in line.upper() or
+                           "DÉCROCHAGE" in line)
+                is_up = bool(re.search(
+                    r"state.*up|GPU recovered|recover",
+                    line, re.IGNORECASE))
+                if is_drop:
+                    drops += 1
+                    if ts:
+                        last_drop_ts = ts
+                        last_event_kind = "down"
+                if is_up:
+                    if ts:
+                        last_up_ts = ts
+                        last_event_kind = "up"
     except FileNotFoundError:
         return {"available": False}
 
-    if last_up_ts:
-        delta = (datetime.datetime.now() - last_up_ts).total_seconds()
-        h, mn = int(delta // 3600), int((delta % 3600) // 60)
-        uptime = f"{h}h{mn:02d}m"
+    now = datetime.datetime.now()
+    held_for_s = None
+    dropped_since_s = None
+    current_state = "unknown"
+
+    if last_event_kind == "down" and last_drop_ts:
+        current_state = "down"
+        dropped_since_s = (now - last_drop_ts).total_seconds()
+        # Held-for = duration of the up streak that just ended,
+        # i.e. last_drop_ts - last_up_ts (if we saw an up before).
+        if last_up_ts and last_up_ts < last_drop_ts:
+            held_for_s = (last_drop_ts - last_up_ts).total_seconds()
+    elif last_event_kind == "up" and last_up_ts:
+        current_state = "up"
+        held_for_s = (now - last_up_ts).total_seconds()
+        # dropped_since_s stays None — link is currently up
+    elif last_up_ts:
+        # No drops ever recorded but we have an up event.
+        current_state = "up"
+        held_for_s = (now - last_up_ts).total_seconds()
+
+    out = {"available": True,
+           "drops": drops,
+           "current_state": current_state,
+           "held_for_s": held_for_s,
+           "dropped_since_s": dropped_since_s,
+           "held_for": (_fmt_duration(held_for_s)
+                          if held_for_s is not None else None),
+           "dropped_since": (_fmt_duration(dropped_since_s)
+                             if dropped_since_s is not None else None)}
+    # Back-compat alias: old field name still surfaced so any
+    # external consumer doesn't break, but it now reflects the
+    # current state (down → time since drop; up → up duration).
+    if current_state == "down" and dropped_since_s is not None:
+        out["last_uptime"] = _fmt_duration(dropped_since_s)
+    elif held_for_s is not None:
+        out["last_uptime"] = _fmt_duration(held_for_s)
     else:
-        m = re.search(r"depuis (\d+h\d+m)|since (\d+h\d+m)", last_heartbeat)
-        uptime = (m.group(1) or m.group(2)) if m else "?"
-    return {"available": True, "drops": drops, "last_uptime": uptime}
+        out["last_uptime"] = "?"
+    return out
 
 
 def _services_state(cfg) -> dict:

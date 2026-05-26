@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { live, toast } from "../lib/stores.svelte";
+  import { live, toast, modal } from "../lib/stores.svelte";
   import { layout } from "../lib/layout.svelte";
   import { i18n } from "../lib/i18n/index.svelte";
   import { tempColor, perfEstimate } from "../lib/charts";
@@ -355,13 +355,34 @@
     {#if d?.watchdog?.available && layout.visible("oculink")}
       <div class="card">
         <h2>{i18n.t("card.oculink")}</h2>
-        {#if !alive}
+        {#if !alive || d.watchdog.current_state === "down"}
           <div class="sub bad" style="font-weight:600;margin-bottom:.2em">⚠ {i18n.t("oculink.link_lost")}</div>
+          <div class="big bad">
+            {d.watchdog.dropped_since ?? d.watchdog.last_uptime}
+          </div>
+          <div class="sub">{i18n.t("oculink.dropped_since")}</div>
+          {#if d.watchdog.held_for}
+            <div class="sub muted" style="margin-top:.3em">
+              {i18n.t("oculink.held_for")}: {d.watchdog.held_for}
+            </div>
+          {/if}
+          <div class="sub" style="margin-top:.4em">
+            {d.watchdog.drops} {i18n.t("oculink.drops")}
+          </div>
+          <button class="btn btn-small"
+                  style="margin-top:.5em;width:100%"
+                  onclick={() => modal.show("integrations")}>
+            🔧 {i18n.t("oculink.recover_button")}
+          </button>
+        {:else}
+          <div class="big" class:warn={d.watchdog.drops > 0} class:ok={d.watchdog.drops === 0}>
+            {d.watchdog.held_for ?? d.watchdog.last_uptime}
+          </div>
+          <div class="sub">{i18n.t("oculink.held_for")}</div>
+          <div class="sub muted" style="margin-top:.3em">
+            {d.watchdog.drops} {i18n.t("oculink.drops")}
+          </div>
         {/if}
-        <div class="big" class:bad={!alive} class:warn={alive && d.watchdog.drops > 0} class:ok={alive && d.watchdog.drops === 0}>
-          {d.watchdog.last_uptime}
-        </div>
-        <div class="sub">{d.watchdog.drops} {i18n.t("oculink.drops")}</div>
       </div>
     {/if}
 
