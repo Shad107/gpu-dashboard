@@ -84,14 +84,18 @@
     </span>
     <span class="counts">
       {#if data.summary.err > 0}
-        <span class="count err">✗ {data.summary.err}</span>
+        <span class="count err">✗ {data.summary.err}/{data.summary.total}</span>
+        <span class="muted small">err</span>
       {/if}
       {#if data.summary.warn > 0}
-        <span class="count warn">⚠ {data.summary.warn}</span>
+        <span class="count warn">⚠ {data.summary.warn}/{data.summary.total}</span>
+        <span class="muted small">warn</span>
       {/if}
-      <span class="count ok">✓ {data.summary.ok}</span>
+      <span class="count ok">✓ {data.summary.ok}/{data.summary.total}</span>
+      <span class="muted small">ok</span>
       {#if data.summary.unknown > 0}
-        <span class="count unknown">? {data.summary.unknown}</span>
+        <span class="count unknown">? {data.summary.unknown}/{data.summary.total}</span>
+        <span class="muted small">?</span>
       {/if}
     </span>
     <span class="pills">
