@@ -2856,6 +2856,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_recovery_run_step(ctx, payload)
                 self._send_json(code, body)
                 return
+            if self.path == "/api/pcie-recovery/install-wrapper":
+                # F4.4 — one-click install: pipe password to sudo -S
+                code, body = api.handle_pcie_recovery_install_wrapper(ctx, payload)
+                self._send_json(code, body)
+                return
             if self.path == "/api/set-offsets":
                 code, body = api.handle_set_offsets(ctx, payload)
                 self._send_json(code, body)

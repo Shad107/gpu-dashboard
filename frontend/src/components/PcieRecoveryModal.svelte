@@ -29,6 +29,11 @@
   let results = $state<Record<string, StepResult>>({});
   let recovered = $state<boolean | null>(null);
 
+  // F4.4 — one-click install state
+  let installPassword = $state("");
+  let installing = $state(false);
+  let installError = $state<string | null>(null);
+
   // Steps that the wrapper can actually execute. The advisor's full
   // plan includes host-side and manual steps which we cannot run from
   // the dashboard.
@@ -39,6 +44,37 @@
       checkWrapper();
     }
   });
+
+  async function runInstall() {
+    if (!installPassword || installing) return;
+    installing = true;
+    installError = null;
+    try {
+      const r = await fetch("/api/pcie-recovery/install-wrapper", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: installPassword }),
+      }).then((x) => x.json());
+      // Scrub immediately client-side too.
+      installPassword = "";
+      if (r.ok) {
+        wrapperAvailable = true;
+        toast.emit("✓ " + (i18n.t("pcierec.install_ok") ?? "Wrapper installé"), "ok");
+      } else {
+        installError = r.message ?? r.error ?? "install failed";
+        if (r.error === "wrong_password") {
+          toast.emit("✗ " + (i18n.t("pcierec.wrong_password") ?? "Mot de passe incorrect"), "err");
+        } else {
+          toast.emit("✗ " + installError, "err");
+        }
+      }
+    } catch (e) {
+      installError = (e as Error).message;
+      toast.emit("✗ " + installError, "err");
+    } finally {
+      installing = false;
+    }
+  }
 
   async function checkWrapper() {
     try {
@@ -224,14 +260,55 @@
 
     {#if wrapperAvailable === false}
       <section class="install-cta">
-        <p>
-          ⚠ {i18n.t("pcierec.wrapper_missing") ?? "Le wrapper sudoers n'est pas installé. Les steps exécutables ne fonctionneront pas tant qu'il n'est pas en place."}
+        <p style="font-weight:600;margin:0 0 8px;">
+          ⚠ {i18n.t("pcierec.wrapper_missing") ?? "Le wrapper sudoers n'est pas installé."}
         </p>
-        <pre>sudo bash scripts/install-pcie-recovery-wrapper.sh</pre>
-        <button class="btn btn-small" onclick={() => copyCmd("sudo bash scripts/install-pcie-recovery-wrapper.sh")}
-          >📋 Copy</button
+        <p class="muted small" style="margin:0 0 10px;">
+          {i18n.t("pcierec.install_explain") ?? "Une étape root est nécessaire une fois. Saisis ton mot de passe sudo pour installer maintenant, ou copie la commande pour la lancer dans un terminal."}
+        </p>
+
+        <form
+          onsubmit={(e) => { e.preventDefault(); runInstall(); }}
+          style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;"
         >
-        <button class="btn btn-small" onclick={checkWrapper}>{i18n.t("pcierec.recheck") ?? "Re-vérifier"}</button>
+          <input
+            type="password"
+            placeholder={i18n.t("pcierec.install_password") ?? "Mot de passe sudo"}
+            bind:value={installPassword}
+            disabled={installing}
+            autocomplete="current-password"
+            style="flex:1;min-width:200px;padding:6px 10px;
+                   background:var(--bg-1);color:var(--text);
+                   border:1px solid var(--border);border-radius:4px;"
+          />
+          <button
+            type="submit"
+            class="btn"
+            disabled={installing || !installPassword}
+            style="background:var(--accent);color:var(--bg-1);font-weight:600;"
+          >
+            {installing
+              ? "⏳ " + (i18n.t("pcierec.install_running") ?? "Installation...")
+              : "🔧 " + (i18n.t("pcierec.install_now") ?? "Installer")}
+          </button>
+        </form>
+
+        {#if installError}
+          <p style="color:var(--err);font-size:0.85em;margin:4px 0;">
+            ✗ {installError}
+          </p>
+        {/if}
+
+        <details style="margin-top:8px;">
+          <summary class="muted small">
+            {i18n.t("pcierec.install_terminal_fallback") ?? "Ou installer depuis un terminal"}
+          </summary>
+          <pre style="font-size:0.78em;padding:6px;background:var(--bg-1);border-radius:4px;margin:6px 0;">sudo bash scripts/install-pcie-recovery-wrapper.sh --user $USER</pre>
+          <button class="btn btn-small"
+                  onclick={() => copyCmd("sudo bash scripts/install-pcie-recovery-wrapper.sh --user $USER")}
+            >📋 Copy</button>
+          <button class="btn btn-small" onclick={checkWrapper}>{i18n.t("pcierec.recheck") ?? "Re-vérifier"}</button>
+        </details>
       </section>
     {/if}
 
