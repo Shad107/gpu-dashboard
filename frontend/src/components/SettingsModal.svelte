@@ -203,10 +203,11 @@
   // curl/JSON friction that bit the first beta user.
   let detectingChatId = $state(false);
   // Persistent deep link shown when getUpdates is empty AND we
-  // were able to resolve the bot's username via getMe. Clicking it
-  // opens the bot in Telegram (web/app/desktop) — critical for
-  // users who aren't logged into Telegram on the dashboard machine.
-  let botDeepLink = $state<string | null>(null);
+  // were able to resolve the bot's username via getMe. Two
+  // flavors: web (always works in browser), app (better UX on
+  // machines with native Telegram installed).
+  let botWebLink = $state<string | null>(null);
+  let botAppLink = $state<string | null>(null);
   let botUsername = $state<string | null>(null);
 
   async function detectChatId() {
@@ -217,7 +218,8 @@
       return;
     }
     detectingChatId = true;
-    botDeepLink = null;
+    botWebLink = null;
+    botAppLink = null;
     botUsername = null;
     try {
       const r = await fetch("/api/alerts/detect-chat-id", {
@@ -228,7 +230,8 @@
       if (!r.ok) {
         toast.emit("✗ " + (r.message ?? r.error ?? "detect failed"), "err");
       } else if (!r.chat_id) {
-        botDeepLink = r.bot_deep_link ?? null;
+        botWebLink = r.bot_web_link ?? r.bot_deep_link ?? null;
+        botAppLink = r.bot_app_link ?? null;
         botUsername = r.bot_username ?? null;
         toast.emit("ℹ " + (r.hint ?? (i18n.t("alerts.detect_no_msg") ?? "Aucun message — envoie d'abord /start à ton bot dans Telegram")), "warn");
       } else {
@@ -236,7 +239,8 @@
         const cand = (r.candidates ?? [])[0];
         const who = cand?.name ? ` (${cand.name})` : "";
         toast.emit("✓ chat_id " + r.chat_id + who, "ok");
-        botDeepLink = null; // clear once we have a chat_id
+        botWebLink = null;
+        botAppLink = null;
       }
     } catch (e) {
       toast.emit("✗ " + (e as Error).message, "err");
@@ -4182,15 +4186,23 @@
               </button>
             </span>
           </div>
-          {#if botDeepLink}
+          {#if botWebLink || botAppLink}
             <div class="form-row" style="margin-top:-.4em">
               <span class="form-lbl"></span>
-              <span class="form-val" style="font-size:.85em">
-                <a href={botDeepLink} target="_blank" rel="noopener"
-                   style="color:var(--accent);font-weight:600">
-                  💬 {i18n.t("alerts.open_bot") ?? "Ouvrir"} @{botUsername} {i18n.t("alerts.in_telegram") ?? "dans Telegram"}
-                </a>
-                <span class="muted small" style="margin-left:.5em">
+              <span class="form-val" style="font-size:.85em;display:flex;flex-wrap:wrap;gap:.6em;align-items:center">
+                {#if botWebLink}
+                  <a href={botWebLink} target="_blank" rel="noopener"
+                     style="color:var(--accent);font-weight:600">
+                    🌐 {i18n.t("alerts.open_web") ?? "Web"} @{botUsername}
+                  </a>
+                {/if}
+                {#if botAppLink}
+                  <a href={botAppLink} target="_blank" rel="noopener"
+                     style="color:var(--text-dim);font-size:.95em">
+                    📱 {i18n.t("alerts.open_app") ?? "App native"}
+                  </a>
+                {/if}
+                <span class="muted small">
                   → /start → {i18n.t("alerts.then_detect") ?? "re-clique Détecter"}
                 </span>
               </span>

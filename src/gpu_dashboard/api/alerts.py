@@ -162,11 +162,27 @@ def handle_alerts_detect_chat_id(ctx: dict, payload: dict) -> Response:
                 bot_username = (me.get("result") or {}).get("username")
         except Exception:  # noqa: BLE001 — getMe is best-effort
             pass
-        deep_link = (f"https://t.me/{bot_username}?start=hello"
-                      if bot_username else None)
+        # We expose two flavors of deep link:
+        #   - web_link    : forces the web client (works without
+        #                   Telegram desktop/app installed; user
+        #                   logs in via QR from their phone). The
+        #                   *only* reliable option on Linux boxes
+        #                   where xdg-open has no tg:// handler.
+        #   - app_link    : tries to launch a native Telegram app
+        #                   first; falls back to t.me landing page
+        #                   if no handler is registered. Better UX
+        #                   on Win/Mac where the app is usually
+        #                   installed.
+        # Frontend can present both side-by-side.
+        web_link = (f"https://web.telegram.org/k/#@{bot_username}"
+                     if bot_username else None)
+        app_link = (f"https://t.me/{bot_username}"
+                     if bot_username else None)
         return 200, {"ok": True, "chat_id": None, "candidates": [],
                       "bot_username": bot_username,
-                      "bot_deep_link": deep_link,
+                      "bot_deep_link": web_link,  # primary (back-compat)
+                      "bot_web_link": web_link,
+                      "bot_app_link": app_link,
                       "hint": ("No messages found. Send any message "
                                "to your bot in Telegram first, then "
                                "click Detect again.")}

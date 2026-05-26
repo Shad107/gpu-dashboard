@@ -2519,6 +2519,8 @@
   "alerts.open_bot": "Open",
   "alerts.in_telegram": "in Telegram",
   "alerts.then_detect": "re-click Detect",
+  "alerts.open_web": "Web",
+  "alerts.open_app": "Native app",
   "installer.pcie_recovery_wrapper.label": "PCIe Recovery wrapper",
   "installer.pcie_recovery_wrapper.description": "Sudoers wrapper for the PCIe recovery wizard. Allows execute-mode recovery from the OcuLink card.",
   "installer.oculink_watchdog.label": "OcuLink watchdog daemon",
