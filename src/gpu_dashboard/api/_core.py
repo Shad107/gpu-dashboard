@@ -217,6 +217,14 @@ def _tuning_state(cfg) -> dict:
 _TS_RE = __import__("re").compile(
     r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
 
+# F5.5b — when the watchdog log lies (says down while NVML reports
+# healthy), we synthesize a "recovered" moment to anchor held_for.
+# Module-level state lives for the lifetime of the dashboard process.
+# Reset to None when the log eventually catches up (recovered entry
+# appears, so log_says_down flips false) OR when NVML itself flips
+# unhealthy (real new drop).
+_NVML_OVERRIDE_FIRST_SEEN = None  # type: ignore[var-annotated]
+
 
 def _fmt_duration(seconds: float) -> str:
     """Format seconds as `XhYYm` (>=1h), `YYmZZs` (<1h, >=1m),
@@ -329,22 +337,24 @@ def _watchdog_state(cfg) -> dict:
     except Exception:  # noqa: BLE001 — best-effort cross-check
         gpu_live_ok = None
     log_says_down = (current_state == "down")
+    global _NVML_OVERRIDE_FIRST_SEEN
     if gpu_live_ok is True and log_says_down:
         # Reality wins. Flip to "up" but remember the watchdog said
         # otherwise — surfaced via `state_source` so the UI can
         # show a subtle "live" hint instead of pretending nothing
         # happened.
         current_state = "up"
-        # We don't know exactly when the GPU came back — best
-        # estimate is "since this dashboard process started seeing
-        # NVML report healthy". Use a small held_for so the UI
-        # shows "tenu depuis quelques secondes" not "tenu depuis 0".
-        held_for_s = held_for_s if (held_for_s is not None
-                                      and current_state == "up") else 5.0
-        # The drop event still happened historically — surface
-        # dropped_since for the log timeline but mark it past.
-        # Keep dropped_since_s populated so the UI can show
-        # "down for X earlier, back since".
+        # We don't know exactly when the GPU came back — anchor to
+        # the first moment WE noticed (this dashboard process).
+        # Subsequent polls keep using the same anchor so the
+        # held-for clock actually ticks up.
+        if _NVML_OVERRIDE_FIRST_SEEN is None:
+            _NVML_OVERRIDE_FIRST_SEEN = now
+        held_for_s = (now - _NVML_OVERRIDE_FIRST_SEEN).total_seconds()
+    else:
+        # If conditions don't hold (log caught up OR NVML went bad),
+        # forget the anchor so the next override starts fresh.
+        _NVML_OVERRIDE_FIRST_SEEN = None
 
     out = {"available": True,
            "drops": drops,
