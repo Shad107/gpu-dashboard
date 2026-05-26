@@ -743,8 +743,9 @@ def handle_setup_recheck(ctx: dict, module_name: str) -> Response:
                 return 200, {"ok": True, "reason": "service active"}
         except (FileNotFoundError, subprocess.SubprocessError, OSError):
             pass
-        # Fallback: log file exists at the configured path
-        log = os.path.expanduser(ctx["config"].get("OCULINK_WATCHDOG_LOG", "~/gpu-watchdog.log"))
+        # Fallback: log file exists at any of the canonical locations
+        from ._core import _resolve_watchdog_log
+        log = _resolve_watchdog_log(ctx["config"])
         if os.path.isfile(log):
             return 200, {"ok": True, "reason": f"watchdog log present at {log}"}
         return 200, {"ok": False, "reason": "service not active and no watchdog log found"}

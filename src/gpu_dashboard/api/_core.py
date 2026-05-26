@@ -226,6 +226,28 @@ _TS_RE = __import__("re").compile(
 _NVML_OVERRIDE_FIRST_SEEN = None  # type: ignore[var-annotated]
 
 
+def _resolve_watchdog_log(cfg) -> str:
+    """Pick which watchdog log to read.
+
+    The install script (scripts/install-oculink-watchdog.sh) writes
+    to /var/log/gpu-oculink-watchdog.log, but legacy installs used
+    ~/gpu-watchdog.log. The fallback chain checks the configured
+    path first, then both canonical locations, and returns whichever
+    exists. If none exists, returns the explicitly-configured path
+    (or the canonical install path) so error messages mention a
+    sensible location."""
+    candidates = []
+    configured = (cfg.get("OCULINK_WATCHDOG_LOG", "") or "").strip()
+    if configured:
+        candidates.append(os.path.expanduser(configured))
+    candidates.append("/var/log/gpu-oculink-watchdog.log")
+    candidates.append(os.path.expanduser("~/gpu-watchdog.log"))
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return candidates[0]
+
+
 def _fmt_duration(seconds: float) -> str:
     """Format seconds as `XhYYm` (>=1h), `YYmZZs` (<1h, >=1m),
     or `ZZs` (<1m)."""
@@ -257,8 +279,7 @@ def _watchdog_state(cfg) -> dict:
     link had been stable for 72h or had been broken for 72h."""
     if not cfg.get_bool("MODULE_OCULINK_WATCHDOG"):
         return {"available": False}
-    log = cfg.get("OCULINK_WATCHDOG_LOG",
-                  os.path.expanduser("~/gpu-watchdog.log"))
+    log = _resolve_watchdog_log(cfg)
     import re, datetime
     drops = 0
     last_up_ts = None
