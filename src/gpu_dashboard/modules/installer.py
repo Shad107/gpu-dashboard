@@ -93,6 +93,16 @@ SCRIPT_REGISTRY: Dict[str, dict] = {
                          "and clock offsets."),
         "needs_user_flag": False,
     },
+    "link_stable_wrapper": {
+        "filename": "install-link-stable-wrapper.sh",
+        "label": "Link Stable Mode wrapper",
+        "description": ("Sudoers wrapper that lets the dashboard "
+                         "clock-lock the GPU. Used to keep the PCIe "
+                         "link at sustained Gen 2 instead of "
+                         "flapping Gen 1 / Gen 4 on cheap OcuLink "
+                         "retimers."),
+        "needs_user_flag": True,
+    },
     "witness_dpkg_hook": {
         "filename": "install-witness-dpkg-hook.sh",
         "label": "Witness — auto-snapshot on apt",

@@ -11,6 +11,7 @@
   import InstallPromptModal from "./InstallPromptModal.svelte";
   import WitnessCard from "./WitnessCard.svelte";
   import ShadowTelemetryCard from "./ShadowTelemetryCard.svelte";
+  import LinkStableCard from "./LinkStableCard.svelte";
   import HealthStrip from "./HealthStrip.svelte";
 
   // F6 — track which scripts are installed (poll at mount + after
@@ -462,6 +463,9 @@
     {/if}
     {#if layout.visible("shadow")}
       <ShadowTelemetryCard />
+    {/if}
+    {#if layout.visible("link_stable")}
+      <LinkStableCard />
     {/if}
 
   </div></div>

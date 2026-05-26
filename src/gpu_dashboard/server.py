@@ -2498,6 +2498,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_health_strip(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/link-stable/status":
+                # F7 — Link Stable Mode status (link speed + clock lock)
+                code, body = api.handle_link_stable_status(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
@@ -2904,6 +2909,16 @@ def make_handler(ctx: dict):
             if self.path == "/api/witness/take":
                 # F2 — take a fresh system-state snapshot
                 code, body = api.handle_witness_take(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/link-stable/enable":
+                # F7 — enable clock-lock + persistence
+                code, body = api.handle_link_stable_enable(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/link-stable/disable":
+                # F7 — reset clocks back to auto
+                code, body = api.handle_link_stable_disable(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/set-offsets":

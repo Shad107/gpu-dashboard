@@ -662,3 +662,8 @@ from .witness import (  # noqa: F401,F811
 )
 from .shadow import handle_shadow_telemetry  # noqa: F401,F811
 from .health import handle_health_strip  # noqa: F401,F811
+from .link import (  # noqa: F401,F811
+    handle_link_stable_status,
+    handle_link_stable_enable,
+    handle_link_stable_disable,
+)
