@@ -117,7 +117,8 @@ def epoll_watch_count(fdinfo_text: str) -> int:
                   if ln.startswith("tfd:"))
 
 
-def scan_pid(pid: str, proc_root: str = _PROC) -> dict:
+def scan_pid(pid: str, proc_root: str = _PROC,
+              cache_entry: Optional[dict] = None) -> dict:
     """Returns dict with :
       - kinds_count: {kind: int}
       - fdinfo_readable: int (count of fdinfo files we could read)
@@ -125,23 +126,29 @@ def scan_pid(pid: str, proc_root: str = _PROC) -> dict:
       - io_uring_count: int
       - eventfd_count: int
       - uid: int or None
+
+    Hardening #15: when ``cache_entry`` is provided (a row from
+    `_proc_fd_cache.scan_proc_fd`), reuses its pre-walked
+    fd_links + fdinfo instead of re-scanning the filesystem. The
+    list_pids/scan_pid entry points kept the per-PID-string
+    signature for callers (and tests) that pass them directly.
     """
-    fd_dir = os.path.join(proc_root, pid, "fd")
-    fdinfo_dir = os.path.join(proc_root, pid, "fdinfo")
     counts: Dict[str, int] = {}
     eventpoll_max = 0
     fdinfo_readable = 0
-    try:
-        entries = os.listdir(fd_dir)
-    except OSError:
+    if cache_entry is None:
+        from . import _proc_fd_cache
+        snapshot = _proc_fd_cache.scan_proc_fd(proc_root)
+        cache_entry = snapshot.get(pid)
+    if cache_entry is None:
         return {"kinds_count": counts,
                   "fdinfo_readable": 0,
                   "eventpoll_max_watch": 0,
                   "io_uring_count": 0,
                   "eventfd_count": 0,
                   "uid": _proc_uid(pid, proc_root)}
-    for f in entries:
-        target = _readlink(os.path.join(fd_dir, f))
+    fdinfo = cache_entry["fdinfo"]
+    for fd, target in cache_entry["fd_links"]:
         if not target:
             continue
         kind = kind_of(target)
@@ -149,14 +156,14 @@ def scan_pid(pid: str, proc_root: str = _PROC) -> dict:
             continue
         counts[kind] = counts.get(kind, 0) + 1
         if kind == "[eventpoll]":
-            txt = _read(os.path.join(fdinfo_dir, f))
+            txt = fdinfo.get(fd)
             if txt is not None:
                 fdinfo_readable += 1
                 n = epoll_watch_count(txt)
                 if n > eventpoll_max:
                     eventpoll_max = n
         elif kind == "[io_uring]":
-            if _read(os.path.join(fdinfo_dir, f)) is not None:
+            if fdinfo.get(fd) is not None:
                 fdinfo_readable += 1
     return {"kinds_count": counts,
               "fdinfo_readable": fdinfo_readable,
@@ -266,8 +273,14 @@ def status(config=None, proc_root: str = _PROC) -> dict:
     proc_present = os.path.isdir(proc_root)
     scans: Dict[str, dict] = {}
     if proc_present:
+        # Hardening #15: pull one snapshot from the shared cache
+        # and feed each scan_pid() call directly, avoiding a
+        # per-PID re-scan when the cache TTL is hot.
+        from . import _proc_fd_cache
+        snapshot = _proc_fd_cache.scan_proc_fd(proc_root)
         for pid in list_pids(proc_root):
-            scans[pid] = scan_pid(pid, proc_root)
+            scans[pid] = scan_pid(pid, proc_root,
+                                       cache_entry=snapshot.get(pid))
     agg = aggregate(scans)
     verdict = classify(agg, proc_present)
 

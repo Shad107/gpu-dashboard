@@ -124,32 +124,34 @@ def _read_uid(status_text: str) -> Optional[int]:
 
 
 def scan_processes(proc_root: str = _PROC) -> list:
-    """Walk /proc/*/fdinfo/* — best-effort, skips unreadable PIDs."""
+    """Walk /proc/*/fdinfo/* — best-effort, skips unreadable PIDs.
+
+    Hardening #15: fdinfo walks delegate to `_proc_fd_cache`,
+    shared with three other modules. /proc/<pid>/{comm,status}
+    are still read directly per PID — they are not in the cache
+    because no other module needs them.
+    """
+    from . import _proc_fd_cache
     out: list = []
-    try:
-        names = os.listdir(proc_root)
-    except OSError:
-        return out
-    for n in names:
-        if not n.isdigit():
+    snapshot = _proc_fd_cache.scan_proc_fd(proc_root)
+    for n, entry in snapshot.items():
+        if not entry["fdinfo"]:
+            # No readable fdinfo for this PID — match the prior
+            # behavior of skipping it (the unreadable case fell
+            # through the `os.listdir(fdinfo_dir) → OSError`
+            # path).
             continue
-        pid = int(n)
-        fdinfo_dir = os.path.join(proc_root, n, "fdinfo")
+        pid = entry["pid"]
         comm_text = _read(os.path.join(proc_root, n, "comm")) or ""
         comm = comm_text.strip()
         status_text = _read(os.path.join(proc_root, n, "status")) or ""
         uid = _read_uid(status_text)
-        try:
-            fds = os.listdir(fdinfo_dir)
-        except OSError:
-            continue
         inotify_instances = 0
         inotify_watches = 0
         fanotify_instances = 0
         fanotify_watches = 0
-        for fd in fds:
-            text = _read(os.path.join(fdinfo_dir, fd)) or ""
-            parsed = count_inotify_fd(text)
+        for text in entry["fdinfo"].values():
+            parsed = count_inotify_fd(text or "")
             if parsed["kind"] == "inotify":
                 inotify_instances += 1
                 inotify_watches += parsed["watches"]

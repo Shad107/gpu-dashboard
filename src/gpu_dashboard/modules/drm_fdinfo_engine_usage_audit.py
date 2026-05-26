@@ -135,7 +135,12 @@ def walk_fdinfo(proc_root: str = DEFAULT_PROC) -> dict:
       'readable_files': int,
       'unreadable_files': int,
     }
+
+    Hardening #15: delegates the filesystem walk to
+    `_proc_fd_cache.scan_proc_fd`, shared across the four fdinfo
+    walker modules.
     """
+    from . import _proc_fd_cache
     pid_vram: dict = {}
     pid_clients: dict = {}
     total_vram = 0
@@ -146,36 +151,19 @@ def walk_fdinfo(proc_root: str = DEFAULT_PROC) -> dict:
         return {"pid_vram": {}, "pid_clients": {},
                 "total_vram": 0, "total_clients": 0,
                 "readable_files": 0, "unreadable_files": 0}
-    try:
-        entries = os.listdir(proc_root)
-    except OSError:
-        return {"pid_vram": {}, "pid_clients": {},
-                "total_vram": 0, "total_clients": 0,
-                "readable_files": 0, "unreadable_files": 0}
-    for name in entries:
-        if not name.isdigit():
-            continue
-        fdinfo_dir = os.path.join(proc_root, name, "fdinfo")
-        try:
-            fd_names = os.listdir(fdinfo_dir)
-        except (OSError, PermissionError):
-            continue
-        for fd in fd_names:
-            path = os.path.join(fdinfo_dir, fd)
-            try:
-                with open(path, "r",
-                          encoding="utf-8") as fh:
-                    text = fh.read()
-                readable += 1
-            except (OSError, PermissionError):
+    snapshot = _proc_fd_cache.scan_proc_fd(proc_root)
+    for pid_str, entry in snapshot.items():
+        pid = entry["pid"]
+        for text in entry["fdinfo"].values():
+            if text is None:
                 unreadable += 1
                 continue
+            readable += 1
             client = parse_fdinfo_drm(text)
             if client is None:
                 continue
             total_clients += 1
             total_vram += client["vram"]
-            pid = int(name)
             pid_vram[pid] = (
                 pid_vram.get(pid, 0) + client["vram"])
             pid_clients[pid] = pid_clients.get(pid, 0) + 1

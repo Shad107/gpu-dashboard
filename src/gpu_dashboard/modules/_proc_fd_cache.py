@@ -33,7 +33,12 @@ from typing import Dict, List, Optional, Tuple
 
 
 _DEFAULT_PROC = "/proc"
-_DEFAULT_TTL_S = 1.0
+# Hardening #15: TTL needs to span a full collection_profile_audit
+# cycle so the four walkers — which fire alphabetically across the
+# ~8 s sweep of 411 modules, not back-to-back — share one scan.
+# 15 s is long enough for any reasonable cycle and short enough
+# that user-triggered refreshes still see recent data.
+_DEFAULT_TTL_S = 15.0
 
 
 # (timestamp, cached_result) — process-local, never persisted.

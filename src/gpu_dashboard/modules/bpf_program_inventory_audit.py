@@ -119,28 +119,24 @@ def scan_user_fdinfo(proc_root: str = DEFAULT_PROC
     """Walks /proc/<pid>/fdinfo/* for prog_id / map_id
     lines that only appear on BPF file descriptors.
 
-    Returns (prog_ids, map_ids, pids_scanned)."""
+    Returns (prog_ids, map_ids, pids_scanned).
+
+    Hardening #15: delegates the filesystem walk to
+    `_proc_fd_cache.scan_proc_fd`, which is shared with three
+    other modules that need the same data. tmp-path roots bypass
+    the cache so existing tests stay isolated.
+    """
+    from . import _proc_fd_cache
     prog_ids: set[int] = set()
     map_ids: set[int] = set()
     pids_scanned = 0
-    try:
-        pid_entries = os.listdir(proc_root)
-    except OSError:
-        return (prog_ids, map_ids, 0)
-    for name in pid_entries:
-        if not name.isdigit():
-            continue
-        fdinfo_dir = os.path.join(proc_root, name, "fdinfo")
-        try:
-            fd_entries = os.listdir(fdinfo_dir)
-        except (OSError, PermissionError):
-            continue
-        pids_scanned += 1
-        for fd in fd_entries:
-            path = os.path.join(fdinfo_dir, fd)
-            text = _read_text(path)
+    snapshot = _proc_fd_cache.scan_proc_fd(proc_root)
+    for entry in snapshot.values():
+        had_readable = False
+        for text in entry["fdinfo"].values():
             if text is None:
                 continue
+            had_readable = True
             for line in text.splitlines():
                 m = _FDINFO_PROG.match(line)
                 if m:
@@ -149,6 +145,8 @@ def scan_user_fdinfo(proc_root: str = DEFAULT_PROC
                 m = _FDINFO_MAP.match(line)
                 if m:
                     map_ids.add(int(m.group(1)))
+        if had_readable:
+            pids_scanned += 1
     return (prog_ids, map_ids, pids_scanned)
 
 
