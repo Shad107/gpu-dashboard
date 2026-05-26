@@ -100,36 +100,22 @@
   </button>
 
   {#if snapshots.length === 0}
-    <div class="sub muted small" style="text-align:center">
-      {i18n.t("witness.empty") ??
-        "Pas encore de snapshot. Prends-en un avant chaque upgrade driver/kernel."}
+    <div class="sub muted small" title={i18n.t("witness.empty") ??
+        "Pas encore de snapshot. Prends-en un avant chaque upgrade driver/kernel."}>
+      {i18n.t("witness.empty_short") ?? "Pas encore de snapshot"}
     </div>
   {:else}
-    <div class="sub muted small" style="margin-bottom:.3em">
+    <div class="sub muted small"
+         title={snapshots.slice(0, 5).map(s => `${fmtAge(s.taken_at)} · ${s.reason ?? "?"}`).join("\n")}>
       {snapshots.length} {i18n.t("witness.count_suffix") ?? "snapshot(s)"}
+      · {i18n.t("witness.last") ?? "dernier"}: {fmtAge(snapshots[0].taken_at)}
     </div>
-    <ul class="snap-list">
-      {#each snapshots.slice(0, 4) as s}
-        <li>
-          <span class="age">{fmtAge(s.taken_at)}</span>
-          <span class="reason muted">{s.reason ?? "?"}</span>
-        </li>
-      {/each}
-      {#if snapshots.length > 4}
-        <li class="muted small">… {snapshots.length - 4} {i18n.t("witness.more") ?? "de plus"}</li>
-      {/if}
-    </ul>
     {#if snapshots.length >= 2}
       <button class="btn btn-small"
               style="width:100%;margin-top:.4em"
               onclick={diffLastTwo}>
         🔀 {i18n.t("witness.diff_last_two") ?? "Diff les 2 derniers"}
       </button>
-    {:else}
-      <div class="sub muted small" style="text-align:center;margin-top:.3em">
-        {i18n.t("witness.need_second") ??
-          "Prends-en un autre pour activer le diff"}
-      </div>
     {/if}
   {/if}
 </div>
@@ -141,24 +127,5 @@
 <style>
   .witness-card h2 {
     cursor: help;
-  }
-  .snap-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    font-size: 0.85em;
-  }
-  .snap-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: 2px 0;
-    border-bottom: 1px solid var(--border, #2a2f36);
-  }
-  .snap-list li:last-child { border-bottom: none; }
-  .age {
-    font-weight: 600;
-  }
-  .reason {
-    font-style: italic;
   }
 </style>

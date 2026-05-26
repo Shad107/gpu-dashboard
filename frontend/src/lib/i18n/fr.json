@@ -2511,6 +2511,8 @@
   "witness.take": "Prendre un snapshot",
   "witness.tooltip": "Snapshot du driver, des modules, des paquets et du sysfs PCIe. Diff entre deux snapshots pour bisect une régression tok/s après une mise à jour.",
   "witness.empty": "Pas encore de snapshot. Prends-en un avant chaque upgrade driver/kernel.",
+  "witness.empty_short": "Pas encore de snapshot",
+  "witness.last": "dernier",
   "witness.snapshot_taken": "Snapshot pris",
   "witness.count_suffix": "snapshot(s)",
   "witness.more": "de plus",
