@@ -55,6 +55,7 @@
   "pcierec.install_ok": "Wrapper installé",
   "pcierec.install_terminal_fallback": "Ou installer depuis un terminal",
   "pcierec.wrong_password": "Mot de passe incorrect",
+  "pcierec.running_step": "Étape en cours",
   "tuning.memory": "Mémoire",
   "tuning.pstate": "P-state",
   "tuning.gpu_offset": "Offset GPU",
