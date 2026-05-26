@@ -216,6 +216,7 @@ PYTHONPATH=src python3 -m gpu_dashboard
 | `oculink_watchdog` | ✓ | systemd daemon journaling link drops |
 | `coolbits_xorg` | ✓ | Xorg `Coolbits=28` for clock offsets + fan curve |
 | `pcie_recovery_wrapper` | ✓ | NOPASSWD-scoped wrapper for the recovery wizard |
+| `witness_dpkg_hook` | ✓ | apt dpkg hook → Witness snapshot before/after every `apt upgrade` (auto-baseline for tok/s regression diffs) |
 
 Each wrapper is whitelisted by id, BDF-validated against `vendor=0x10de`, and passes only one of `persistence_restart / module_reload / pcie_rescan / flr` — no shell injection surface.
 
@@ -252,8 +253,8 @@ Each wrapper is whitelisted by id, BDF-validated against `vendor=0x10de`, and pa
 > Got a card not in the list? See [`profiles/SCHEMA.md`](profiles/SCHEMA.md) and open a PR.
 
 eGPU enclosures tested:
-- **Aoostar AG02 (F9G-BK7)** — OcuLink x4, real-life link-drop testbed
-- Any **OcuLink x4** / **TB4** enclosure should work (the recovery wizard is host-agnostic)
+- **F9G-BK7** (Aliexpress no-name OcuLink x4 dock) — real-life link-drop testbed
+- Any **OcuLink x4** / **TB4** enclosure should work in theory (the recovery wizard reads sysfs directly; nothing is enclosure-vendor-specific)
 
 ---
 
@@ -331,6 +332,7 @@ MIT. See [`LICENSE`](LICENSE).
 ### ✅ Recently shipped (F-series)
 - **F1** NVML via ctypes (sub-ms vs 50-200ms `nvidia-smi` subprocess)
 - **F2** State Witness — snapshot + ranked diff (cause-of-regression analyzer)
+- **F2.3** Witness auto-snapshot on `apt` (dpkg Pre+Post-Invoke hook)
 - **F3** Shadow telemetry — Shelly + DS18B20 vs NVML reconciliation
 - **F4** PCIe Recovery Wizard — diagnostic advisor + 4 whitelisted recovery steps + Proxmox/KVM awareness
 - **F5.1** Health Strip — 14 audits parallel-aggregated on main dashboard

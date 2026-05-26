@@ -93,6 +93,16 @@ SCRIPT_REGISTRY: Dict[str, dict] = {
                          "and clock offsets."),
         "needs_user_flag": False,
     },
+    "witness_dpkg_hook": {
+        "filename": "install-witness-dpkg-hook.sh",
+        "label": "Witness — auto-snapshot on apt",
+        "description": ("Installs an apt dpkg hook that takes a "
+                         "Witness snapshot before AND after every "
+                         "apt operation. Gives you a guaranteed "
+                         "'before upgrade' baseline to diff against "
+                         "if tok/s tanks after the next reboot."),
+        "needs_user_flag": False,
+    },
 }
 
 
