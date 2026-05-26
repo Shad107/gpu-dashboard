@@ -47,6 +47,16 @@
   onMount(() => {
     refresh();
     timer = window.setInterval(refresh, 60_000);
+    // Screenshot mode — auto-open the detail modal so the
+    // headless-chrome capture has interesting content.
+    if (location.search.match(/[?&]screenshot=health-strip(-modal)?/)) {
+      const waitForData = setInterval(() => {
+        if (data) {
+          modalOpen = true;
+          clearInterval(waitForData);
+        }
+      }, 100);
+    }
   });
   onDestroy(() => {
     if (timer !== null) clearInterval(timer);

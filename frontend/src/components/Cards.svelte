@@ -32,6 +32,17 @@
     });
   }
 
+  // Screenshot mode — auto-open the PCIe Recovery modal so the
+  // headless-chrome capture has interesting content. The advisor
+  // call returns real diagnostic data; if the link is currently
+  // healthy the modal still shows the plan and install CTA which
+  // is what we want to showcase.
+  onMount(() => {
+    if (location.search.match(/[?&]screenshot=pcie-recovery/)) {
+      setTimeout(() => openRecoveryModal(), 500);
+    }
+  });
+
   // F4.2 — recovery modal state. Lazy-loaded when user clicks the
   // OcuLink "🔧 Récupérer le lien" button.
   let recoveryModalOpen = $state(false);

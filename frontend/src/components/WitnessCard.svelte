@@ -37,7 +37,31 @@
     }
   }
 
-  onMount(refresh);
+  onMount(async () => {
+    await refresh();
+    // Screenshot mode — ensure 2 snapshots exist, then open the diff
+    // modal for the headless-chrome capture.
+    if (location.search.match(/[?&]screenshot=witness-diff/)) {
+      if (snapshots.length < 2) {
+        await fetch("/api/witness/take", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: "screenshot_a" }),
+        });
+        await new Promise((r) => setTimeout(r, 200));
+        await fetch("/api/witness/take", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: "screenshot_b" }),
+        });
+        await refresh();
+      }
+      if (snapshots.length >= 2) {
+        // small delay so the modal mounts after the page is settled
+        setTimeout(() => diffLastTwo(), 300);
+      }
+    }
+  });
 
   async function takeSnapshot() {
     if (taking) return;

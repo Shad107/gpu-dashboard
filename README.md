@@ -40,7 +40,7 @@ When your OcuLink decrochs (link width drops to `0x3F`, AER fatal counter ticks,
 
 Each step shows the verdict afterwards (`link_recovered: true|false|none`) and stops as soon as the link is back. A "▶▶ Tout essayer" mode auto-escalates with a pre-warning before kills_workloads steps and an out-of-band tail command for when the browser tab freezes mid-recovery.
 
-<sub>📸 Screenshot of the wizard modal in action — coming in next release. Run the dashboard locally and click "🔧 Récupérer le lien" on the OcuLink card to see it.</sub>
+![PCIe Recovery Wizard — diagnostic + 4-step recovery ladder](docs/promo/04-pcie-recovery.png)
 
 ### Permanent OcuLink watchdog daemon
 
@@ -83,7 +83,7 @@ The snapshot captures:
 
 The diff is then **ranked** — driver version delta scores 100/100, kernel uname 90, PCIe link speed change 85, NVIDIA/CUDA package bump 70, etc. Refcount drift (workload noise) is filtered out. The Top 5 suspects panel surfaces the most likely culprits first.
 
-<sub>📸 Screenshot of the diff modal with severity-colored Top suspects panel — coming in next release.</sub>
+![Witness diff — Top suspects panel with severity tags + color-coded diff](docs/promo/06-witness-diff.png)
 
 Survey-validated: vLLM/llama.cpp/Ollama/ROCm threads in the last 12 months show 10+ high-severity "I bumped X and lost 80% of my throughput" cases where the user couldn't bisect. Witness exists for that.
 
@@ -110,7 +110,7 @@ The card shows `295W mur · GPU: 285W · ailleurs: 10W (+3.5%)` so you see when 
 
 A thin strip at the top of the dashboard runs 14 curated checks in parallel (~70ms total) and shows aggregated `err / warn / ok` counts. Click for the per-check breakdown.
 
-<sub>📸 Screenshot of the strip with 14 pills colored by severity + click-through modal — coming in next release.</sub>
+![Health Strip detail — 14 audits classified, sorted by severity](docs/promo/05-health-strip.png)
 
 Checks included (each calibrated for homelab LLM rigs):
 
