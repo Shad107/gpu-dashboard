@@ -285,6 +285,40 @@
             </div>
           {/if}
         </section>
+      {:else if preWarningOpen}
+        <section class="pre-warning">
+          <p style="font-weight:600;margin:0 0 6px;color:var(--warn)">
+            ⚠ {i18n.t("pcierec.kills_warning_title") ??
+              "Étapes destructives détectées"}
+          </p>
+          <p class="muted small" style="margin:0 0 10px;">
+            {i18n.t("pcierec.kills_warning_body") ??
+              "L'auto-escalade contient une étape qui tue les workloads consommant /dev/nvidia* (module_reload). Le navigateur peut geler quelques secondes pendant l'opération — c'est normal. Pour suivre ce qui se passe en parallèle, ouvre un terminal sur l'hôte et lance :"}
+          </p>
+          <pre style="font-size:0.78em;padding:6px 8px;
+                      background:var(--bg-1);border-radius:4px;
+                      margin:6px 0;border:1px solid var(--border);
+                      user-select:all">{TAIL_CMD}</pre>
+          <button class="btn btn-small"
+                  onclick={() => copyCmd(TAIL_CMD)}
+                  style="margin-bottom:10px">
+            📋 {i18n.t("pcierec.copy_tail") ?? "Copier la commande"}
+          </button>
+          <div style="display:flex;gap:8px;margin-top:6px;
+                       justify-content:flex-end;flex-wrap:wrap">
+            <button type="button" class="btn btn-small"
+                    onclick={() => (preWarningOpen = false)}>
+              {i18n.t("pcierec.cancel") ?? "Annuler"}
+            </button>
+            <button type="button" class="btn"
+                    style="background:var(--warn);color:var(--bg-1);
+                           font-weight:600"
+                    onclick={() => void runAll()}>
+              ▶▶ {i18n.t("pcierec.kills_confirm") ??
+                "Je comprends, lancer quand même"}
+            </button>
+          </div>
+        </section>
       {:else}
         <section class="auto-run">
           <button
@@ -574,6 +608,12 @@
   .install-cta {
     border-left: 3px solid var(--warn);
     padding-left: 10px;
+  }
+  .pre-warning {
+    border-left: 3px solid var(--warn);
+    background: rgba(234, 179, 8, 0.08);
+    padding: 10px 12px;
+    border-radius: 4px;
   }
   .install-cta pre {
     background: var(--bg-2);
