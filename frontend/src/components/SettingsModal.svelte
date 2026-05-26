@@ -4152,7 +4152,7 @@
             <span class="form-lbl">{i18n.t("alerts.bot_token")}</span>
             <input class="al-input" type="text" placeholder="123456789:ABC..." autocomplete="off" spellcheck="false" bind:value={alToken} />
           </label>
-          <label class="form-row">
+          <div class="form-row">
             <span class="form-lbl">{i18n.t("alerts.chat_id")}</span>
             <span class="form-val" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
               <input class="al-input" type="text"
@@ -4164,12 +4164,12 @@
                       type="button"
                       disabled={detectingChatId}
                       title={i18n.t("alerts.detect_tooltip") ?? "Envoie d'abord un message à ton bot, puis clique ici"}
-                      onclick={detectChatId}>
+                      onclick={(e) => { e.preventDefault(); e.stopPropagation(); detectChatId(); }}>
                 {detectingChatId ? "⏳" : "🔍"}
                 {i18n.t("alerts.detect_btn") ?? "Détecter"}
               </button>
             </span>
-          </label>
+          </div>
           <div class="form-row">
             <span class="form-lbl">{i18n.t("alerts.events")}</span>
             <span class="form-val">
