@@ -654,3 +654,9 @@ from .installer import (  # noqa: F401,F811
     handle_install_check,
     handle_install_run,
 )
+from .witness import (  # noqa: F401,F811
+    handle_witness_list,
+    handle_witness_take,
+    handle_witness_get,
+    handle_witness_diff,
+)

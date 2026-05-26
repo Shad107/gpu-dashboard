@@ -9,6 +9,7 @@
   import Sparkline from "./Sparkline.svelte";
   import PcieRecoveryModal from "./PcieRecoveryModal.svelte";
   import InstallPromptModal from "./InstallPromptModal.svelte";
+  import WitnessCard from "./WitnessCard.svelte";
 
   // F6 — track which scripts are installed (poll at mount + after
   // each successful install) so cards know what install CTAs to show.
@@ -438,6 +439,10 @@
           </button>
         {/if}
       </div>
+    {/if}
+
+    {#if layout.visible("witness")}
+      <WitnessCard />
     {/if}
 
   </div></div>

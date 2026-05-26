@@ -2473,6 +2473,21 @@ def make_handler(ctx: dict):
                 code, body = api.handle_install_check(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/witness/list":
+                # F2 — list saved system-state snapshots
+                code, body = api.handle_witness_list(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/witness/get":
+                # F2 — load one snapshot by id
+                code, body = api.handle_witness_get(ctx, params)
+                self._send_json(code, body)
+                return
+            if path == "/api/witness/diff":
+                # F2 — deep-diff two snapshots
+                code, body = api.handle_witness_diff(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
@@ -2874,6 +2889,11 @@ def make_handler(ctx: dict):
             if self.path == "/api/install/run":
                 # F6 — generalized install via password prompt
                 code, body = api.handle_install_run(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/witness/take":
+                # F2 — take a fresh system-state snapshot
+                code, body = api.handle_witness_take(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/set-offsets":
