@@ -660,3 +660,4 @@ from .witness import (  # noqa: F401,F811
     handle_witness_get,
     handle_witness_diff,
 )
+from .shadow import handle_shadow_telemetry  # noqa: F401,F811

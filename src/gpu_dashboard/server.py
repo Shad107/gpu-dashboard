@@ -2488,6 +2488,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_witness_diff(ctx, params)
                 self._send_json(code, body)
                 return
+            if path == "/api/shadow-telemetry":
+                # F3 — external power/temp vs NVML reconciliation
+                code, body = api.handle_shadow_telemetry(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)

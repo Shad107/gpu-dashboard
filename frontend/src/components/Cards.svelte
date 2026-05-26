@@ -10,6 +10,7 @@
   import PcieRecoveryModal from "./PcieRecoveryModal.svelte";
   import InstallPromptModal from "./InstallPromptModal.svelte";
   import WitnessCard from "./WitnessCard.svelte";
+  import ShadowTelemetryCard from "./ShadowTelemetryCard.svelte";
 
   // F6 — track which scripts are installed (poll at mount + after
   // each successful install) so cards know what install CTAs to show.
@@ -443,6 +444,9 @@
 
     {#if layout.visible("witness")}
       <WitnessCard />
+    {/if}
+    {#if layout.visible("shadow")}
+      <ShadowTelemetryCard />
     {/if}
 
   </div></div>
