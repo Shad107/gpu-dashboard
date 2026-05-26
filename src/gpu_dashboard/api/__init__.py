@@ -649,3 +649,8 @@ from .pcie_recovery_runner import (  # noqa: F401,F811
     handle_pcie_recovery_check_link,
 )
 from .pcie_recovery_installer import handle_pcie_recovery_install_wrapper  # noqa: F401,F811
+from .installer import (  # noqa: F401,F811
+    handle_install_list,
+    handle_install_check,
+    handle_install_run,
+)

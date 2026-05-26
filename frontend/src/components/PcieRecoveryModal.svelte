@@ -1,6 +1,6 @@
 <script lang="ts">
   import { api } from "../lib/api";
-  import { toast } from "../lib/stores.svelte";
+  import { toast, installPrompt } from "../lib/stores.svelte";
   import { i18n } from "../lib/i18n/index.svelte";
 
   type Step = {
@@ -28,11 +28,6 @@
   let runningStep = $state<string | null>(null);
   let results = $state<Record<string, StepResult>>({});
   let recovered = $state<boolean | null>(null);
-
-  // F4.4 — one-click install state
-  let installPassword = $state("");
-  let installing = $state(false);
-  let installError = $state<string | null>(null);
 
   // F5.3 — auto-run live progress
   let autoRunStartedAt = $state<number | null>(null);
@@ -75,37 +70,6 @@
       checkWrapper();
     }
   });
-
-  async function runInstall() {
-    if (!installPassword || installing) return;
-    installing = true;
-    installError = null;
-    try {
-      const r = await fetch("/api/pcie-recovery/install-wrapper", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: installPassword }),
-      }).then((x) => x.json());
-      // Scrub immediately client-side too.
-      installPassword = "";
-      if (r.ok) {
-        wrapperAvailable = true;
-        toast.emit("✓ " + (i18n.t("pcierec.install_ok") ?? "Wrapper installé"), "ok");
-      } else {
-        installError = r.message ?? r.error ?? "install failed";
-        if (r.error === "wrong_password") {
-          toast.emit("✗ " + (i18n.t("pcierec.wrong_password") ?? "Mot de passe incorrect"), "err");
-        } else {
-          toast.emit("✗ " + installError, "err");
-        }
-      }
-    } catch (e) {
-      installError = (e as Error).message;
-      toast.emit("✗ " + installError, "err");
-    } finally {
-      installing = false;
-    }
-  }
 
   async function checkWrapper() {
     try {
@@ -344,40 +308,17 @@
           ⚠ {i18n.t("pcierec.wrapper_missing") ?? "Le wrapper sudoers n'est pas installé."}
         </p>
         <p class="muted small" style="margin:0 0 10px;">
-          {i18n.t("pcierec.install_explain") ?? "Une étape root est nécessaire une fois. Saisis ton mot de passe sudo pour installer maintenant, ou copie la commande pour la lancer dans un terminal."}
+          {i18n.t("pcierec.install_explain") ?? "Une étape root est nécessaire une fois. Installe le wrapper sudoers maintenant — l'invite te demandera ton mot de passe sudo."}
         </p>
 
-        <form
-          onsubmit={(e) => { e.preventDefault(); runInstall(); }}
-          style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;"
+        <button
+          type="button"
+          class="btn"
+          style="background:var(--accent);color:var(--bg-1);font-weight:600;"
+          onclick={() => installPrompt.request("pcie_recovery_wrapper", checkWrapper)}
         >
-          <input
-            type="password"
-            placeholder={i18n.t("pcierec.install_password") ?? "Mot de passe sudo"}
-            bind:value={installPassword}
-            disabled={installing}
-            autocomplete="current-password"
-            style="flex:1;min-width:200px;padding:6px 10px;
-                   background:var(--bg-1);color:var(--text);
-                   border:1px solid var(--border);border-radius:4px;"
-          />
-          <button
-            type="submit"
-            class="btn"
-            disabled={installing || !installPassword}
-            style="background:var(--accent);color:var(--bg-1);font-weight:600;"
-          >
-            {installing
-              ? "⏳ " + (i18n.t("pcierec.install_running") ?? "Installation...")
-              : "🔧 " + (i18n.t("pcierec.install_now") ?? "Installer")}
-          </button>
-        </form>
-
-        {#if installError}
-          <p style="color:var(--err);font-size:0.85em;margin:4px 0;">
-            ✗ {installError}
-          </p>
-        {/if}
+          🔧 {i18n.t("pcierec.install_now") ?? "Installer le wrapper"}
+        </button>
 
         <details style="margin-top:8px;">
           <summary class="muted small">

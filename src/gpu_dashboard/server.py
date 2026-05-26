@@ -2463,6 +2463,16 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_recovery_check_link(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/install/list":
+                # F6 — inventory of installable scripts + status
+                code, body = api.handle_install_list(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/install/check":
+                # F6 — check one script's install status
+                code, body = api.handle_install_check(ctx, params)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
@@ -2859,6 +2869,11 @@ def make_handler(ctx: dict):
             if self.path == "/api/pcie-recovery/install-wrapper":
                 # F4.4 — one-click install: pipe password to sudo -S
                 code, body = api.handle_pcie_recovery_install_wrapper(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/install/run":
+                # F6 — generalized install via password prompt
+                code, body = api.handle_install_run(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/set-offsets":

@@ -111,3 +111,29 @@ class WizardStore {
 }
 
 export const wizard = new WizardStore();
+
+// F6 — shared installer prompt. Any card can request an install:
+//   import { installPrompt } from "../lib/stores.svelte";
+//   installPrompt.request("oculink_watchdog", () => refreshState());
+// The InstallPromptModal mounted at the root of Cards.svelte
+// handles the password prompt + POST + result toast. The optional
+// callback fires after a successful install so the caller can
+// refresh whatever state cared about the install status.
+class InstallPromptStore {
+  open = $state<boolean>(false);
+  scriptId = $state<string | null>(null);
+  onInstalled: (() => void) | null = null;
+
+  request(scriptId: string, onInstalled?: () => void) {
+    this.scriptId = scriptId;
+    this.onInstalled = onInstalled ?? null;
+    this.open = true;
+  }
+  close() {
+    this.open = false;
+    this.scriptId = null;
+    this.onInstalled = null;
+  }
+}
+
+export const installPrompt = new InstallPromptStore();

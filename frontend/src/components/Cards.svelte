@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { live, toast, modal } from "../lib/stores.svelte";
+  import { live, toast, modal, installPrompt } from "../lib/stores.svelte";
   import { layout } from "../lib/layout.svelte";
   import { i18n } from "../lib/i18n/index.svelte";
   import { tempColor, perfEstimate } from "../lib/charts";
@@ -8,6 +8,26 @@
   import { gpu } from "../lib/gpu.svelte";
   import Sparkline from "./Sparkline.svelte";
   import PcieRecoveryModal from "./PcieRecoveryModal.svelte";
+  import InstallPromptModal from "./InstallPromptModal.svelte";
+
+  // F6 — track which scripts are installed (poll at mount + after
+  // each successful install) so cards know what install CTAs to show.
+  let installedScripts = $state<Record<string, boolean>>({});
+  async function refreshInstalled() {
+    try {
+      const r = await fetch("/api/install/list").then((x) => x.json());
+      const out: Record<string, boolean> = {};
+      for (const s of r.scripts ?? []) out[s.id] = !!s.installed;
+      installedScripts = out;
+    } catch {}
+  }
+  onMount(() => { refreshInstalled(); });
+
+  function openInstallPrompt(scriptId: string) {
+    installPrompt.request(scriptId, () => {
+      refreshInstalled();
+    });
+  }
 
   // F4.2 — recovery modal state. Lazy-loaded when user clicks the
   // OcuLink "🔧 Récupérer le lien" button.
@@ -405,6 +425,18 @@
             {d.watchdog.drops} {i18n.t("oculink.drops")}
           </div>
         {/if}
+        {#if installedScripts.oculink_watchdog === false}
+          <button class="btn btn-small"
+                  style="margin-top:.5em;width:100%;
+                         background:transparent;
+                         border:1px dashed var(--accent);
+                         color:var(--accent);font-size:.78em"
+                  title={i18n.t("oculink.install_watchdog_hint") ??
+                    "Installer le démon watchdog systemd pour journaliser les décrochages"}
+                  onclick={() => openInstallPrompt("oculink_watchdog")}>
+            🔧 {i18n.t("oculink.install_watchdog") ?? "Installer le watchdog"}
+          </button>
+        {/if}
       </div>
     {/if}
 
@@ -567,3 +599,4 @@
 
 <!-- F4.2 — recovery modal, mounted at root so it overlays everything -->
 <PcieRecoveryModal bind:open={recoveryModalOpen} bind:advisor={recoveryAdvisor} />
+<InstallPromptModal />
