@@ -148,7 +148,25 @@ def handle_alerts_detect_chat_id(ctx: dict, payload: dict) -> Response:
         if len(seen) >= 5:
             break
     if not candidates:
+        # Friendly fallback: also fetch the bot's own username via
+        # getMe so the UI can offer a one-click deep link to open
+        # the bot in Telegram (web/app/desktop) without the user
+        # having to search for it. Critical for users who aren't
+        # logged into Telegram on the same machine as the dashboard.
+        bot_username = None
+        try:
+            me_url = f"https://api.telegram.org/bot{token}/getMe"
+            with urllib.request.urlopen(me_url, timeout=3.0) as r2:
+                me = _json.loads(r2.read().decode("utf-8"))
+            if me.get("ok"):
+                bot_username = (me.get("result") or {}).get("username")
+        except Exception:  # noqa: BLE001 — getMe is best-effort
+            pass
+        deep_link = (f"https://t.me/{bot_username}?start=hello"
+                      if bot_username else None)
         return 200, {"ok": True, "chat_id": None, "candidates": [],
+                      "bot_username": bot_username,
+                      "bot_deep_link": deep_link,
                       "hint": ("No messages found. Send any message "
                                "to your bot in Telegram first, then "
                                "click Detect again.")}

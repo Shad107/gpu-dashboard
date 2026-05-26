@@ -202,6 +202,13 @@
   // F8 — auto-detect chat_id via Telegram getUpdates. Removes the
   // curl/JSON friction that bit the first beta user.
   let detectingChatId = $state(false);
+  // Persistent deep link shown when getUpdates is empty AND we
+  // were able to resolve the bot's username via getMe. Clicking it
+  // opens the bot in Telegram (web/app/desktop) — critical for
+  // users who aren't logged into Telegram on the dashboard machine.
+  let botDeepLink = $state<string | null>(null);
+  let botUsername = $state<string | null>(null);
+
   async function detectChatId() {
     if (detectingChatId) return;
     const token = alToken.trim();
@@ -210,6 +217,8 @@
       return;
     }
     detectingChatId = true;
+    botDeepLink = null;
+    botUsername = null;
     try {
       const r = await fetch("/api/alerts/detect-chat-id", {
         method: "POST",
@@ -219,12 +228,15 @@
       if (!r.ok) {
         toast.emit("✗ " + (r.message ?? r.error ?? "detect failed"), "err");
       } else if (!r.chat_id) {
+        botDeepLink = r.bot_deep_link ?? null;
+        botUsername = r.bot_username ?? null;
         toast.emit("ℹ " + (r.hint ?? (i18n.t("alerts.detect_no_msg") ?? "Aucun message — envoie d'abord /start à ton bot dans Telegram")), "warn");
       } else {
         alChat = String(r.chat_id);
         const cand = (r.candidates ?? [])[0];
         const who = cand?.name ? ` (${cand.name})` : "";
         toast.emit("✓ chat_id " + r.chat_id + who, "ok");
+        botDeepLink = null; // clear once we have a chat_id
       }
     } catch (e) {
       toast.emit("✗ " + (e as Error).message, "err");
@@ -4170,6 +4182,20 @@
               </button>
             </span>
           </div>
+          {#if botDeepLink}
+            <div class="form-row" style="margin-top:-.4em">
+              <span class="form-lbl"></span>
+              <span class="form-val" style="font-size:.85em">
+                <a href={botDeepLink} target="_blank" rel="noopener"
+                   style="color:var(--accent);font-weight:600">
+                  💬 {i18n.t("alerts.open_bot") ?? "Ouvrir"} @{botUsername} {i18n.t("alerts.in_telegram") ?? "dans Telegram"}
+                </a>
+                <span class="muted small" style="margin-left:.5em">
+                  → /start → {i18n.t("alerts.then_detect") ?? "re-clique Détecter"}
+                </span>
+              </span>
+            </div>
+          {/if}
           <div class="form-row">
             <span class="form-lbl">{i18n.t("alerts.events")}</span>
             <span class="form-val">
