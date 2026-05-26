@@ -2933,6 +2933,11 @@ def make_handler(ctx: dict):
                 code, body = api.handle_alerts_test(ctx)
                 self._send_json(code, body)
                 return
+            if self.path == "/api/alerts/detect-chat-id":
+                # F8 — auto-detect chat_id via Telegram getUpdates
+                code, body = api.handle_alerts_detect_chat_id(ctx, payload)
+                self._send_json(code, body)
+                return
             if self.path == "/api/push/subscribe":
                 code, body = api.handle_push_subscribe(ctx, payload)
                 self._send_json(code, body)

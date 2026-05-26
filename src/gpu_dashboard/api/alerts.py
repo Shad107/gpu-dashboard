@@ -76,6 +76,94 @@ def handle_alerts_config_post(ctx: dict, payload: dict) -> Response:
         cfg.set(k, v)
     return 200, {"ok": True}
 
+def handle_alerts_detect_chat_id(ctx: dict, payload: dict) -> Response:
+    """F8 — Auto-detect the user's chat_id by polling Telegram's
+    getUpdates endpoint.
+
+    Workflow from the user's POV:
+      1. Open Telegram, send any message to your bot
+      2. Click "🔍 Detect chat_id" in the dashboard
+      3. The field auto-fills with the chat_id of whoever just messaged
+
+    Removes the curl/JSON-parse friction that bit the first user
+    during the Telegram setup flow.
+    """
+    import json as _json
+    import urllib.request
+    import urllib.error
+    import socket
+
+    cfg = ctx["config"]
+    # Accept token from the request body (so the user can detect
+    # before saving) OR fall back to the stored value.
+    token = (payload.get("token") if payload else None) or cfg.get("TG_TOKEN", "")
+    token = str(token or "").strip()
+    if not token:
+        return 400, {"ok": False, "error": "token_missing",
+                      "message": "Provide the bot token first"}
+    # Defensive format check before hitting Telegram.
+    if ":" not in token or len(token) < 30:
+        return 400, {"ok": False, "error": "token_format",
+                      "message": "Token format looks wrong (expected <bot_id>:<secret>)"}
+
+    url = f"https://api.telegram.org/bot{token}/getUpdates"
+    try:
+        with urllib.request.urlopen(url, timeout=4.0) as r:
+            data = _json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        return 502, {"ok": False, "error": "telegram_http",
+                      "message": f"Telegram returned {e.code}: "
+                                 f"check token validity"}
+    except (urllib.error.URLError, socket.timeout) as e:
+        return 502, {"ok": False, "error": "network",
+                      "message": f"Could not reach Telegram: {e}"}
+    except ValueError:
+        return 502, {"ok": False, "error": "parse",
+                      "message": "Telegram returned non-JSON"}
+
+    if not data.get("ok"):
+        return 502, {"ok": False, "error": "telegram_rejected",
+                      "message": data.get("description", "unknown")}
+
+    # Walk updates newest-first to find the most recent chat any
+    # message came from. Channel posts also count.
+    candidates = []
+    for u in (data.get("result") or [])[::-1]:
+        msg = u.get("message") or u.get("channel_post") or {}
+        chat = msg.get("chat") or {}
+        cid = chat.get("id")
+        if cid is None:
+            continue
+        candidates.append({
+            "chat_id": str(cid),
+            "type": chat.get("type"),
+            "name": (chat.get("title")
+                      or chat.get("username")
+                      or chat.get("first_name")
+                      or "?"),
+            "last_text": (msg.get("text") or "")[:60],
+        })
+        # Deduplicate by chat_id (multiple updates from same chat)
+        seen = {c["chat_id"] for c in candidates}
+        if len(seen) >= 5:
+            break
+    if not candidates:
+        return 200, {"ok": True, "chat_id": None, "candidates": [],
+                      "hint": ("No messages found. Send any message "
+                               "to your bot in Telegram first, then "
+                               "click Detect again.")}
+    # Dedupe (most recent first by virtue of reversed iteration)
+    seen: dict = {}
+    for c in candidates:
+        seen.setdefault(c["chat_id"], c)
+    unique = list(seen.values())
+    return 200, {
+        "ok": True,
+        "chat_id": unique[0]["chat_id"],  # best guess = most recent
+        "candidates": unique,
+    }
+
+
 def handle_alerts_latest(ctx: dict) -> Response:
     """Return the most-recent alert event.
 

@@ -199,6 +199,40 @@
     }
   }
 
+  // F8 — auto-detect chat_id via Telegram getUpdates. Removes the
+  // curl/JSON friction that bit the first beta user.
+  let detectingChatId = $state(false);
+  async function detectChatId() {
+    if (detectingChatId) return;
+    const token = alToken.trim();
+    if (!token) {
+      toast.emit("✗ " + (i18n.t("alerts.detect_need_token") ?? "Saisis d'abord le token"), "err");
+      return;
+    }
+    detectingChatId = true;
+    try {
+      const r = await fetch("/api/alerts/detect-chat-id", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      }).then((x) => x.json());
+      if (!r.ok) {
+        toast.emit("✗ " + (r.message ?? r.error ?? "detect failed"), "err");
+      } else if (!r.chat_id) {
+        toast.emit("ℹ " + (r.hint ?? (i18n.t("alerts.detect_no_msg") ?? "Aucun message — envoie d'abord /start à ton bot dans Telegram")), "warn");
+      } else {
+        alChat = String(r.chat_id);
+        const cand = (r.candidates ?? [])[0];
+        const who = cand?.name ? ` (${cand.name})` : "";
+        toast.emit("✓ chat_id " + r.chat_id + who, "ok");
+      }
+    } catch (e) {
+      toast.emit("✗ " + (e as Error).message, "err");
+    } finally {
+      detectingChatId = false;
+    }
+  }
+
   // ── Stats / Services derived from live state ──────────────────────────────
   const distEntries = $derived.by(() => {
     const d = live.data?.fan_dist ?? {};
@@ -4120,7 +4154,21 @@
           </label>
           <label class="form-row">
             <span class="form-lbl">{i18n.t("alerts.chat_id")}</span>
-            <input class="al-input" type="text" placeholder="123456789" autocomplete="off" spellcheck="false" bind:value={alChat} />
+            <span class="form-val" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <input class="al-input" type="text"
+                     placeholder="123456789"
+                     style="flex:1;min-width:140px"
+                     autocomplete="off" spellcheck="false"
+                     bind:value={alChat} />
+              <button class="btn btn-small"
+                      type="button"
+                      disabled={detectingChatId}
+                      title={i18n.t("alerts.detect_tooltip") ?? "Envoie d'abord un message à ton bot, puis clique ici"}
+                      onclick={detectChatId}>
+                {detectingChatId ? "⏳" : "🔍"}
+                {i18n.t("alerts.detect_btn") ?? "Détecter"}
+              </button>
+            </span>
           </label>
           <div class="form-row">
             <span class="form-lbl">{i18n.t("alerts.events")}</span>

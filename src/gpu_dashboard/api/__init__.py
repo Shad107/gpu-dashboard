@@ -74,6 +74,7 @@ from .diagnostics import (  # noqa: F401
 )
 from .alerts import (  # noqa: F401
     handle_alerts_config_get, handle_alerts_config_post,
+    handle_alerts_detect_chat_id,
     handle_alerts_latest,
     handle_notif_channels_list, handle_notif_channel_save, handle_notif_channel_test,
     handle_heartbeat_list, handle_heartbeat_ping, handle_heartbeat_config,
