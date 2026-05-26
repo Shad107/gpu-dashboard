@@ -56,6 +56,60 @@
     return { label: "✋ manuel", color: "var(--text-dim)" };
   }
 
+  // F5.2b — "Tout essayer" auto-escalation. Walks every executable
+  // step in plan order, stops as soon as the link comes back or
+  // the last step fails. Asks ONCE upfront if the user accepts
+  // kills_workloads steps (instead of confirming each one).
+  let autoRunning = $state(false);
+  async function runAll() {
+    if (!advisor?.plan || autoRunning) return;
+    const executable = advisor.plan.filter((s: Step) => EXECUTABLE_STEPS.has(s.id));
+    if (!executable.length) return;
+    const hasKills = executable.some((s) => s.safety === "kills_workloads");
+    if (hasKills) {
+      const ok = confirm(
+        "Auto-run va escalader jusqu'à FLR si nécessaire.\n\n" +
+          "Certaines étapes (module reload, PCIe rescan, FLR) tuent les workloads GPU " +
+          "(Chrome, VS Code, ollama, etc.). Continuer ?",
+      );
+      if (!ok) return;
+    }
+    autoRunning = true;
+    try {
+      for (const step of executable) {
+        runningStep = step.id;
+        try {
+          const body: Record<string, string> = { step_id: step.id };
+          if (advisor?.bdf && (step.id === "pcie_rescan" || step.id === "flr")) {
+            body.bdf = advisor.bdf;
+          }
+          const r: StepResult = await fetch("/api/pcie-recovery/run-step", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }).then((x) => x.json());
+          results = { ...results, [step.id]: r };
+          if (r.link_recovered === true) {
+            recovered = true;
+            toast.emit(`✓ Lien récupéré via ${step.label} (${(r.elapsed_ms / 1000).toFixed(1)}s)`, "ok");
+            return;
+          }
+        } catch (e) {
+          toast.emit("✗ " + (e as Error).message, "err");
+          break;
+        }
+      }
+      // Loop exited without recovery — final re-check just in case.
+      await rerunCheck();
+      if (recovered !== true) {
+        toast.emit("⚠ Auto-run terminé — lien toujours down. Étapes host nécessaires.", "warn");
+      }
+    } finally {
+      autoRunning = false;
+      runningStep = null;
+    }
+  }
+
   async function runStep(step: Step) {
     if (!EXECUTABLE_STEPS.has(step.id)) {
       toast.emit("✗ ce step n'est pas exécutable depuis le dashboard", "err");
@@ -150,6 +204,24 @@
       </section>
     {/if}
 
+    {#if wrapperAvailable === true && recovered !== true}
+      <section class="auto-run">
+        <button
+          class="btn auto-run-btn"
+          disabled={autoRunning || running}
+          onclick={runAll}
+        >
+          {autoRunning
+            ? `⏳ ${i18n.t("pcierec.auto_running") ?? "Auto-run en cours..."} (${runningStep ?? ""})`
+            : `▶▶ ${i18n.t("pcierec.run_all") ?? "Tout essayer (auto-escalade)"}`}
+        </button>
+        <p class="muted small" style="margin: 4px 0 0;">
+          {i18n.t("pcierec.run_all_help") ??
+            "Lance les 4 étapes guest dans l'ordre, s'arrête dès que le lien revient. Demande confirmation une fois si des étapes tuent les workloads."}
+        </p>
+      </section>
+    {/if}
+
     {#if wrapperAvailable === false}
       <section class="install-cta">
         <p>
@@ -227,7 +299,9 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 1900;
   }
   .recovery-modal {
@@ -238,12 +312,16 @@
     width: min(92vw, 760px);
     max-height: 90vh;
     overflow-y: auto;
-    background: var(--bg-1);
+    /* Explicit opaque fallback in case --bg-1 itself has alpha. */
+    background: var(--bg-1, #14171b);
+    color: var(--text);
     border: 1px solid var(--border);
     border-radius: 12px;
     z-index: 2000;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
     padding: 18px 22px 14px;
+    /* Belt-and-suspenders against any background-image bleed */
+    isolation: isolate;
   }
   header {
     display: flex;
@@ -275,6 +353,25 @@
   }
   .small {
     font-size: 0.85em;
+  }
+  .auto-run {
+    border-left: 3px solid var(--accent);
+    padding-left: 10px;
+    margin-bottom: 12px;
+  }
+  .auto-run-btn {
+    width: 100%;
+    padding: 10px;
+    font-weight: 600;
+    background: var(--accent);
+    color: var(--bg-1);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .auto-run-btn:disabled {
+    opacity: 0.6;
+    cursor: progress;
   }
   .install-cta {
     border-left: 3px solid var(--warn);
