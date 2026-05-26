@@ -198,30 +198,30 @@ export const api = {
   state: (gpu = 0) => safeFetch("/api/state" + (gpu ? `?gpu_index=${gpu}` : ""), { cache: "no-store" }).then(jsonOf<State>),
 
   setPowerLimit: (watts: number) =>
-    fetch("/api/set-power-limit", {
+    safeFetch("/api/set-power-limit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ watts }),
     }).then(jsonOf<{ ok: boolean; watts: number; error?: string }>),
 
   setOffsets: (gpu: number, mem: number) =>
-    fetch("/api/set-offsets", {
+    safeFetch("/api/set-offsets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ gpu, mem }),
     }).then(jsonOf<{ ok: boolean; gpu: number; mem: number; error?: string }>),
 
-  alertsConfig: () => fetch("/api/alerts-config").then(jsonOf<AlertsConfig>),
+  alertsConfig: () => safeFetch("/api/alerts-config").then(jsonOf<AlertsConfig>),
 
   saveAlertsConfig: (c: AlertsConfig) =>
-    fetch("/api/alerts-config", {
+    safeFetch("/api/alerts-config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(c),
     }).then(jsonOf<{ ok: boolean; error?: string }>),
 
   testAlert: () =>
-    fetch("/api/alerts-test", { method: "POST" }).then(
+    safeFetch("/api/alerts-test", { method: "POST" }).then(
       jsonOf<{ ok: boolean; msg?: string; error?: string }>
     ),
 
@@ -247,7 +247,7 @@ export const api = {
 
   snapshotUrl: () => "/api/snapshot",
 
-  setupDetect: () => fetch("/api/setup/detect").then(jsonOf<SetupDetect>),
+  setupDetect: () => safeFetch("/api/setup/detect").then(jsonOf<SetupDetect>),
 
   setupRecheck: (module: string) =>
     fetch(`/api/setup/recheck/${encodeURIComponent(module)}`).then(
@@ -261,19 +261,19 @@ export const api = {
     power_default?: number;
     llm_server_url?: string;
   }) =>
-    fetch("/api/setup/save", {
+    safeFetch("/api/setup/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).then(jsonOf<{ ok: boolean; path?: string; error?: string }>),
 
   restart: () =>
-    fetch("/api/restart", { method: "POST" }).then(
+    safeFetch("/api/restart", { method: "POST" }).then(
       jsonOf<{ ok: boolean; message?: string }>
     ),
 
   stop: () =>
-    fetch("/api/stop", { method: "POST" }).then(
+    safeFetch("/api/stop", { method: "POST" }).then(
       jsonOf<{ ok: boolean; message?: string }>
     ),
 
@@ -288,7 +288,7 @@ export const api = {
     }>),
 
   about: () =>
-    fetch("/api/about").then(jsonOf<{
+    safeFetch("/api/about").then(jsonOf<{
       version: string;
       uptime_seconds: number;
       python_version: string;
@@ -301,7 +301,7 @@ export const api = {
     }>),
 
   updateCheck: () =>
-    fetch("/api/update/check").then(jsonOf<{
+    safeFetch("/api/update/check").then(jsonOf<{
       ok: boolean;
       current_sha?: string;
       remote_sha?: string;
@@ -311,7 +311,7 @@ export const api = {
     }>),
 
   updatePull: () =>
-    fetch("/api/update/pull", { method: "POST" }).then(jsonOf<{
+    safeFetch("/api/update/pull", { method: "POST" }).then(jsonOf<{
       ok: boolean;
       output?: string;
       error?: string;
@@ -331,14 +331,14 @@ export const api = {
     }>),
 
   profileSave: (profile: object) =>
-    fetch("/api/profile/save", {
+    safeFetch("/api/profile/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(profile),
     }).then(jsonOf<{ ok: boolean; path?: string; model?: string; error?: string }>),
 
   powerProfilesList: () =>
-    fetch("/api/power-profiles").then(jsonOf<{
+    safeFetch("/api/power-profiles").then(jsonOf<{
       profiles: { name: "silent" | "sweet" | "boost"; watts: number; gpu_offset: number; mem_offset: number }[];
     }>),
 
@@ -355,7 +355,7 @@ export const api = {
     }>),
 
   electricityConfigSave: (price_per_kwh: number, currency: string) =>
-    fetch("/api/electricity/config", {
+    safeFetch("/api/electricity/config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ price_per_kwh, currency }),
@@ -370,7 +370,7 @@ export const api = {
   // Multi-GPU query helpers — all data endpoints accept ?gpu_index=N
 
   llmStats: (gpu = 0) =>
-    fetch("/api/llm/stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
+    safeFetch("/api/llm/stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       available: boolean;
       tokens_generated_total?: number;
       prompt_tokens_total?: number;
@@ -379,31 +379,31 @@ export const api = {
     }>),
 
   pushVapid: () =>
-    fetch("/api/push/vapid").then(jsonOf<{ ok: boolean; public_key: string }>),
+    safeFetch("/api/push/vapid").then(jsonOf<{ ok: boolean; public_key: string }>),
 
   pushStatus: () =>
-    fetch("/api/push/status").then(jsonOf<{
+    safeFetch("/api/push/status").then(jsonOf<{
       ok: boolean;
       count: number;
       vapid_public_key: string | null;
     }>),
 
   pushSubscribe: (sub: any) =>
-    fetch("/api/push/subscribe", {
+    safeFetch("/api/push/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sub),
     }).then(jsonOf<{ ok: boolean; error?: string }>),
 
   pushUnsubscribe: (endpoint: string) =>
-    fetch("/api/push/unsubscribe", {
+    safeFetch("/api/push/unsubscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endpoint }),
     }).then(jsonOf<{ ok: boolean; removed?: number }>),
 
   llmPerf: (gpu = 0) =>
-    fetch("/api/llm/perf" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
+    safeFetch("/api/llm/perf" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       available: boolean;
       now?: number;
@@ -417,7 +417,7 @@ export const api = {
     }>),
 
   thermalStats: (gpu = 0) =>
-    fetch("/api/thermal-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
+    safeFetch("/api/thermal-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       avg_temp_24h: number;
       peak_temp_24h: number;
@@ -427,7 +427,7 @@ export const api = {
     }>),
 
   powerStats: (gpu = 0) =>
-    fetch("/api/power-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
+    safeFetch("/api/power-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       avg_watts_24h: number;
       peak_watts_24h: number;
@@ -452,7 +452,7 @@ export const api = {
     }>),
 
   llmLifetime: (gpu = 0) =>
-    fetch("/api/llm/lifetime" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
+    safeFetch("/api/llm/lifetime" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       available: boolean;
       since_ts: number | null;
@@ -466,13 +466,13 @@ export const api = {
     }>),
 
   getAppTriggers: () =>
-    fetch("/api/app-triggers").then(jsonOf<{
+    safeFetch("/api/app-triggers").then(jsonOf<{
       ok: boolean;
       triggers: Record<string, string>;
     }>),
 
   setAppTriggers: (triggers: Record<string, string>) =>
-    fetch("/api/app-triggers", {
+    safeFetch("/api/app-triggers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ triggers }),
@@ -483,7 +483,7 @@ export const api = {
     }>),
 
   versionInfo: () =>
-    fetch("/api/version").then(jsonOf<{
+    safeFetch("/api/version").then(jsonOf<{
       ok: boolean;
       version: string;
       schema_version: number | null;
@@ -491,7 +491,7 @@ export const api = {
     }>),
 
   clockEvents: () =>
-    fetch("/api/clock-events").then(jsonOf<{
+    safeFetch("/api/clock-events").then(jsonOf<{
       ok: boolean;
       available: boolean;
       reasons: Array<{ key: string; label: string; hint: string }>;
@@ -499,7 +499,7 @@ export const api = {
     }>),
 
   idleAudit: () =>
-    fetch("/api/idle-audit").then(jsonOf<{
+    safeFetch("/api/idle-audit").then(jsonOf<{
       ok: boolean;
       available: boolean;
       status?: "idle" | "busy" | "unknown";
@@ -515,7 +515,7 @@ export const api = {
     }>),
 
   thermalCoach: () =>
-    fetch("/api/thermal/coach").then(jsonOf<{
+    safeFetch("/api/thermal/coach").then(jsonOf<{
       ok: boolean;
       available: boolean;
       reason?: string;
@@ -530,7 +530,7 @@ export const api = {
     }>),
 
   drift: () =>
-    fetch("/api/drift").then(jsonOf<{
+    safeFetch("/api/drift").then(jsonOf<{
       ok: boolean;
       has_baseline: boolean;
       current: Record<string, any>;
@@ -542,7 +542,7 @@ export const api = {
     }>),
 
   eccHealth: () =>
-    fetch("/api/ecc-health").then(jsonOf<{
+    safeFetch("/api/ecc-health").then(jsonOf<{
       ok: boolean;
       available: boolean;
       ecc_mode?: string | null;
@@ -557,7 +557,7 @@ export const api = {
     }>),
 
   lifetimeStats: (gpu = 0) =>
-    fetch("/api/lifetime-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
+    safeFetch("/api/lifetime-stats" + (gpu ? `?gpu_index=${gpu}` : "")).then(jsonOf<{
       ok: boolean;
       gpu_index: number;
       samples_count: number;
@@ -571,7 +571,7 @@ export const api = {
     }>),
 
   runBenchmark: (opts: { profileA: string; profileB: string; durationS: number }) =>
-    fetch("/api/benchmark/run", {
+    safeFetch("/api/benchmark/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -607,13 +607,13 @@ export const api = {
 
   // ── R&D #16 features (UI sprint cycle 7) ───────────────────────────────
   drBundleList: () =>
-    fetch("/api/dr-bundle").then(jsonOf<{
+    safeFetch("/api/dr-bundle").then(jsonOf<{
       ok: boolean;
       bundles: Array<{ name: string; path: string; size_bytes: number; ts: number }>;
     }>),
 
   drBundleBuild: () =>
-    fetch("/api/dr-bundle", {
+    safeFetch("/api/dr-bundle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{}",
@@ -630,7 +630,7 @@ export const api = {
           { method: "POST" }).then(jsonOf<{ ok: boolean; deleted?: string }>),
 
   lmStudioInventory: () =>
-    fetch("/api/lm-studio/inventory").then(jsonOf<{
+    safeFetch("/api/lm-studio/inventory").then(jsonOf<{
       ok: boolean;
       available: boolean;
       reason?: string;
@@ -646,7 +646,7 @@ export const api = {
     }>),
 
   driverVaultStatus: () =>
-    fetch("/api/driver-vault").then(jsonOf<{
+    safeFetch("/api/driver-vault").then(jsonOf<{
       ok: boolean;
       current: { package: string; version: string } | null;
       vaulted: Array<{ name: string; size_bytes: number; ts: number }>;
@@ -656,7 +656,7 @@ export const api = {
     }>),
 
   driverVaultStash: () =>
-    fetch("/api/driver-vault/stash", { method: "POST" }).then(jsonOf<{
+    safeFetch("/api/driver-vault/stash", { method: "POST" }).then(jsonOf<{
       ok: boolean;
       vaulted_path?: string;
       current?: { package: string; version: string };
@@ -670,7 +670,7 @@ export const api = {
 
   // ── R&D #15 features (UI sprint cycle 6) ───────────────────────────────
   bootProfileStatus: () =>
-    fetch("/api/boot-profile").then(jsonOf<{
+    safeFetch("/api/boot-profile").then(jsonOf<{
       ok: boolean;
       configured: boolean;
       profile: { name: string; power_limit_w?: number;
@@ -683,22 +683,22 @@ export const api = {
     }>),
 
   bootProfileSave: (payload: Record<string, any>) =>
-    fetch("/api/boot-profile", {
+    safeFetch("/api/boot-profile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).then(jsonOf<{ ok: boolean; saved_name?: string; error?: string }>),
 
   bootProfileClear: () =>
-    fetch("/api/boot-profile/clear", { method: "POST" })
+    safeFetch("/api/boot-profile/clear", { method: "POST" })
       .then(jsonOf<{ ok: boolean; deleted?: boolean }>),
 
   bootProfileApplyNow: () =>
-    fetch("/api/boot-profile/apply-now", { method: "POST" })
+    safeFetch("/api/boot-profile/apply-now", { method: "POST" })
       .then(jsonOf<{ ok: boolean; ready_probe?: any; applied?: any; errors?: any[] }>),
 
   tariffStatus: () =>
-    fetch("/api/tariff/status").then(jsonOf<{
+    safeFetch("/api/tariff/status").then(jsonOf<{
       ok: boolean;
       available: boolean;
       reason?: string;
@@ -723,7 +723,7 @@ export const api = {
       }>),
 
   hfDedupPlan: () =>
-    fetch("/api/hf-dedup/plan").then(jsonOf<{
+    safeFetch("/api/hf-dedup/plan").then(jsonOf<{
       ok: boolean;
       available: boolean;
       reason?: string;
@@ -735,7 +735,7 @@ export const api = {
     }>),
 
   hfDedupExecute: (plan: any[], dry_run = true) =>
-    fetch("/api/hf-dedup/execute", {
+    safeFetch("/api/hf-dedup/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan, dry_run }),
@@ -750,7 +750,7 @@ export const api = {
     }>),
 
   discordRpcStatus: () =>
-    fetch("/api/discord-rpc").then(jsonOf<{
+    safeFetch("/api/discord-rpc").then(jsonOf<{
       ok: boolean;
       enabled: boolean;
       discord_ipc_present: boolean;
@@ -774,7 +774,7 @@ export const api = {
     }>),
 
   hotSwapStatus: () =>
-    fetch("/api/hot-swap").then(jsonOf<{
+    safeFetch("/api/hot-swap").then(jsonOf<{
       ok: boolean;
       current: { ts: number; pci: Record<string, any>; drm: Record<string, string> };
       events: Array<{ kind: string; gpu?: string; target?: string;
@@ -784,7 +784,7 @@ export const api = {
     }>),
 
   inferenceCost: () =>
-    fetch("/api/inference-cost").then(jsonOf<{
+    safeFetch("/api/inference-cost").then(jsonOf<{
       ok: boolean;
       available: boolean;
       price_eur_per_kwh: number;
@@ -798,7 +798,7 @@ export const api = {
     }>),
 
   labUsageLive: () =>
-    fetch("/api/usage/users").then(jsonOf<{
+    safeFetch("/api/usage/users").then(jsonOf<{
       ts: number;
       total_vram_used_mib: number;
       watts_total: number | null;
@@ -811,7 +811,7 @@ export const api = {
 
   // ── R&D #13 features (UI sprint cycle 4) ───────────────────────────────
   hotGpuWizard: () =>
-    fetch("/api/hot-gpu-wizard").then(jsonOf<{
+    safeFetch("/api/hot-gpu-wizard").then(jsonOf<{
       ok: boolean;
       verdict: "pass" | "warn" | "fail" | "skip";
       steps: Array<{
@@ -826,7 +826,7 @@ export const api = {
     }>),
 
   vramQuotaStatus: () =>
-    fetch("/api/vram-quota").then(jsonOf<{
+    safeFetch("/api/vram-quota").then(jsonOf<{
       ok: boolean;
       rules: Array<{ id: string; process_regex: string; max_vram_mib: number;
                      grace_s?: number; action: string }>;
@@ -838,7 +838,7 @@ export const api = {
     }>),
 
   vramQuotaSave: (rules: any[]) =>
-    fetch("/api/vram-quota", {
+    safeFetch("/api/vram-quota", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ rules }),
@@ -853,7 +853,7 @@ export const api = {
     }>),
 
   carbon: () =>
-    fetch("/api/carbon").then(jsonOf<{
+    safeFetch("/api/carbon").then(jsonOf<{
       ok: boolean;
       available: boolean;
       reason?: string;
@@ -869,7 +869,7 @@ export const api = {
     }>),
 
   bestGpu: () =>
-    fetch("/api/best-gpu").then(jsonOf<{
+    safeFetch("/api/best-gpu").then(jsonOf<{
       ok: boolean;
       available: boolean;
       best_index?: number;
@@ -883,7 +883,7 @@ export const api = {
 
   // ── R&D #12.2 — disk health (UI sprint cycle 3) ────────────────────────
   diskHealth: () =>
-    fetch("/api/disk-health").then(jsonOf<{
+    safeFetch("/api/disk-health").then(jsonOf<{
       ok: boolean;
       available: boolean;
       reason?: string;
@@ -908,7 +908,7 @@ export const api = {
 
   // ── R&D #12.7 — air-gap mode (UI sprint cycle 3) ───────────────────────
   airgapStatus: () =>
-    fetch("/api/airgap/status").then(jsonOf<{
+    safeFetch("/api/airgap/status").then(jsonOf<{
       ok: boolean;
       enabled: boolean;
       lan_allowed: boolean;
@@ -925,7 +925,7 @@ export const api = {
 
   // ── R&D #12.1 — wall-meter (UI sprint cycle 3) ─────────────────────────
   wallMeter: () =>
-    fetch("/api/wall-meter").then(jsonOf<{
+    safeFetch("/api/wall-meter").then(jsonOf<{
       ok: boolean;
       available: boolean;
       reason?: string;
@@ -940,7 +940,7 @@ export const api = {
 
   // ── R&D #12.3 — LAN peers (UI sprint cycle 3) ──────────────────────────
   peers: () =>
-    fetch("/api/peers").then(jsonOf<{
+    safeFetch("/api/peers").then(jsonOf<{
       ok: boolean;
       count: number;
       ttl_s: number;
@@ -957,28 +957,28 @@ export const api = {
 
   // ── R&D #6.1 — Notif Hub channels (UI sprint cycle 2) ──────────────────
   notifChannelsList: () =>
-    fetch("/api/notif/channels").then(jsonOf<{
+    safeFetch("/api/notif/channels").then(jsonOf<{
       ok: boolean;
       channels: Array<Record<string, any>>;
       types_supported: string[];
     }>),
 
   notifChannelSave: (payload: Record<string, any>) =>
-    fetch("/api/notif/channels", {
+    safeFetch("/api/notif/channels", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).then(jsonOf<{ ok: boolean; id?: string; deleted?: string; error?: string }>),
 
   notifChannelDelete: (id: string) =>
-    fetch("/api/notif/channels", {
+    safeFetch("/api/notif/channels", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ delete: id }),
     }).then(jsonOf<{ ok: boolean; deleted?: string }>),
 
   notifChannelTest: (channel: Record<string, any>) =>
-    fetch("/api/notif/test", {
+    safeFetch("/api/notif/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(channel),
@@ -986,7 +986,7 @@ export const api = {
 
   // ── R&D #9.3 — Auth tokens (UI sprint cycle 2) ─────────────────────────
   authTokensList: () =>
-    fetch("/api/auth/tokens").then(jsonOf<{
+    safeFetch("/api/auth/tokens").then(jsonOf<{
       ok: boolean;
       tokens: Array<{ id: string; name: string; scope: string;
                       created_ts: number; expires_ts: number | null }>;
@@ -994,7 +994,7 @@ export const api = {
     }>),
 
   authTokenCreate: (payload: { name: string; scope: string; ttl_s?: number | null }) =>
-    fetch("/api/auth/tokens", {
+    safeFetch("/api/auth/tokens", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -1009,7 +1009,7 @@ export const api = {
     }).then(jsonOf<{ ok: boolean; deleted?: string; error?: string }>),
 
   authShareCreate: (payload: { scope: string; ttl_s: number; sub?: string }) =>
-    fetch("/api/auth/share", {
+    safeFetch("/api/auth/share", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -1020,7 +1020,7 @@ export const api = {
 
   // ── R&D #11.1b — Watchdog setup (UI sprint) ────────────────────────────
   watchdogStatus: () =>
-    fetch("/api/watchdog/status").then(jsonOf<{
+    safeFetch("/api/watchdog/status").then(jsonOf<{
       ok: boolean;
       installed: boolean;
       active: boolean;
@@ -1029,19 +1029,19 @@ export const api = {
     }>),
 
   watchdogEnable: (opts?: { strict?: boolean; interval_s?: number }) =>
-    fetch("/api/watchdog/enable", {
+    safeFetch("/api/watchdog/enable", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(opts || {}),
     }).then(jsonOf<{ ok: boolean; msg: string; installed: boolean; active: boolean }>),
 
   watchdogDisable: () =>
-    fetch("/api/watchdog/disable", { method: "POST" })
+    safeFetch("/api/watchdog/disable", { method: "POST" })
       .then(jsonOf<{ ok: boolean; msg: string; installed: boolean; active: boolean }>),
 
   // ── R&D #11.4 — Service discovery (UI sprint) ───────────────────────────
   servicesDiscovered: () =>
-    fetch("/api/services-discovered").then(jsonOf<{
+    safeFetch("/api/services-discovered").then(jsonOf<{
       ok: boolean;
       available: boolean;
       services_count: number;
@@ -1101,7 +1101,7 @@ export const api = {
 
   // ── R&D #17.5 LLM hot-swap orchestrator (UI sprint 8) ──────────────────
   llmSwapStatus: () =>
-    fetch("/api/llm-swap").then(jsonOf<{
+    safeFetch("/api/llm-swap").then(jsonOf<{
       ok: boolean;
       loaded_count: number;
       loaded: Array<{
@@ -1118,7 +1118,7 @@ export const api = {
     }>),
 
   llmSwapPin: (name: string, action: "pin" | "unpin") =>
-    fetch("/api/llm-swap/pin", {
+    safeFetch("/api/llm-swap/pin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, action }),
@@ -1138,7 +1138,7 @@ export const api = {
 
   // ── R&D #18 (UI sprint 9) ──────────────────────────────────────────────
   cudaAdvisorStatus: () =>
-    fetch("/api/cuda-advisor").then(jsonOf<{
+    safeFetch("/api/cuda-advisor").then(jsonOf<{
       ok: boolean;
       gpus: Array<{ index: number; uuid: string; name: string }>;
       gpu_count: number;
@@ -1155,7 +1155,7 @@ export const api = {
     }>),
 
   nvmeSwapStatus: () =>
-    fetch("/api/nvme-swap").then(jsonOf<{
+    safeFetch("/api/nvme-swap").then(jsonOf<{
       ok: boolean;
       llm_processes: Array<{ pid: number; comm: string;
                               cmdline_short: string;
@@ -1175,7 +1175,7 @@ export const api = {
     }>),
 
   cudaMatrixStatus: () =>
-    fetch("/api/cuda-matrix").then(jsonOf<{
+    safeFetch("/api/cuda-matrix").then(jsonOf<{
       ok: boolean;
       driver_version: string | null;
       cuda_toolkit: { version: string; name: string } | null;
@@ -1186,7 +1186,7 @@ export const api = {
     }>),
 
   pcieHistogramStatus: () =>
-    fetch("/api/pcie-histogram").then(jsonOf<{
+    safeFetch("/api/pcie-histogram").then(jsonOf<{
       ok: boolean;
       histogram_1h: {
         window_s: number; transition_count: number;
@@ -1207,7 +1207,7 @@ export const api = {
 
   // ── R&D #19 (UI sprint 10) ────────────────────────────────────────────
   throttleCauseStatus: () =>
-    fetch("/api/throttle-cause").then(jsonOf<{
+    safeFetch("/api/throttle-cause").then(jsonOf<{
       ok: boolean;
       reason?: string;
       any_throttling?: boolean;
@@ -1225,7 +1225,7 @@ export const api = {
     }>),
 
   mpsHealthStatus: () =>
-    fetch("/api/mps-health").then(jsonOf<{
+    safeFetch("/api/mps-health").then(jsonOf<{
       ok: boolean;
       state: "not_configured" | "not_running" | "stalled" | "running";
       pipe_dir: string;
@@ -1238,7 +1238,7 @@ export const api = {
     }>),
 
   processNiceStatus: () =>
-    fetch("/api/process-nice").then(jsonOf<{
+    safeFetch("/api/process-nice").then(jsonOf<{
       ok: boolean;
       reason?: string;
       needs_action_count: number;
@@ -1253,7 +1253,7 @@ export const api = {
     }>),
 
   warmupProfileStatus: () =>
-    fetch("/api/warmup-profile").then(jsonOf<{
+    safeFetch("/api/warmup-profile").then(jsonOf<{
       ok: boolean;
       tracked_count: number;
       models: Array<{
@@ -1271,7 +1271,7 @@ export const api = {
 
   warmupProfileProbe: (body: { model: string; source: "llamacpp" | "ollama";
                                  host?: string; port?: number; prompt?: string }) =>
-    fetch("/api/warmup-profile/probe", {
+    safeFetch("/api/warmup-profile/probe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -1279,7 +1279,7 @@ export const api = {
 
   // ── R&D #20 (UI sprint 11) ─────────────────────────────────────────────
   suspendGuardStatus: () =>
-    fetch("/api/suspend-guard").then(jsonOf<{
+    safeFetch("/api/suspend-guard").then(jsonOf<{
       ok: boolean;
       compute_count: number;
       compute_processes: Array<{ pid: number; name: string; vram_mib: number }>;
@@ -1291,7 +1291,7 @@ export const api = {
     }>),
 
   containerAuditStatus: () =>
-    fetch("/api/container-audit").then(jsonOf<{
+    safeFetch("/api/container-audit").then(jsonOf<{
       ok: boolean;
       reason?: string;
       docker_socket: string;
@@ -1310,7 +1310,7 @@ export const api = {
     }>),
 
   upsRuntimeStatus: () =>
-    fetch("/api/ups-runtime").then(jsonOf<{
+    safeFetch("/api/ups-runtime").then(jsonOf<{
       ok: boolean;
       ups_available: boolean;
       on_battery: boolean;
@@ -1328,7 +1328,7 @@ export const api = {
     }>),
 
   vbiosDriftStatus: () =>
-    fetch("/api/vbios-drift").then(jsonOf<{
+    safeFetch("/api/vbios-drift").then(jsonOf<{
       ok: boolean;
       reason?: string;
       drift_count: number;
@@ -1345,12 +1345,12 @@ export const api = {
     }>),
 
   vbiosDriftRebaseline: () =>
-    fetch("/api/vbios-drift/rebaseline", { method: "POST" })
+    safeFetch("/api/vbios-drift/rebaseline", { method: "POST" })
       .then(jsonOf<{ ok: boolean; baseline_size?: number }>),
 
   // ── R&D #21 (UI sprint 12) ─────────────────────────────────────────────
   pstateAuditStatus: () =>
-    fetch("/api/pstate-audit").then(jsonOf<{
+    safeFetch("/api/pstate-audit").then(jsonOf<{
       ok: boolean;
       reason?: string;
       downshift_count?: number;
@@ -1373,7 +1373,7 @@ export const api = {
     }>),
 
   persistenceModeStatus: () =>
-    fetch("/api/persistence-mode").then(jsonOf<{
+    safeFetch("/api/persistence-mode").then(jsonOf<{
       ok: boolean;
       reason?: string;
       daemon_running: boolean;
@@ -1387,7 +1387,7 @@ export const api = {
     }>),
 
   gspStatus: () =>
-    fetch("/api/gsp-status").then(jsonOf<{
+    safeFetch("/api/gsp-status").then(jsonOf<{
       ok: boolean;
       gpus: Array<{ index: number; name: string;
                      gsp_firmware_version: string }>;
@@ -1402,7 +1402,7 @@ export const api = {
     }>),
 
   sdCacheJanitorStatus: () =>
-    fetch("/api/sd-cache-janitor").then(jsonOf<{
+    safeFetch("/api/sd-cache-janitor").then(jsonOf<{
       ok: boolean;
       scanned_dirs: string[];
       scanned_count: number;
@@ -1423,7 +1423,7 @@ export const api = {
 
   // ── R&D #22 (UI sprint 13) ─────────────────────────────────────────────
   vramLeakStatus: () =>
-    fetch("/api/vram-leak").then(jsonOf<{
+    safeFetch("/api/vram-leak").then(jsonOf<{
       ok: boolean;
       window_s: number;
       process_count: number;
@@ -1442,7 +1442,7 @@ export const api = {
     }>),
 
   gpuResetStatus: () =>
-    fetch("/api/gpu-reset").then(jsonOf<{
+    safeFetch("/api/gpu-reset").then(jsonOf<{
       ok: boolean;
       card_count: number;
       cards: Array<{
@@ -1461,7 +1461,7 @@ export const api = {
     }>),
 
   cudaInventoryStatus: () =>
-    fetch("/api/cuda-inventory").then(jsonOf<{
+    safeFetch("/api/cuda-inventory").then(jsonOf<{
       ok: boolean;
       install_count: number;
       collision_count: number;
@@ -1475,7 +1475,7 @@ export const api = {
     }>),
 
   driverFlavorStatus: () =>
-    fetch("/api/driver-flavor").then(jsonOf<{
+    safeFetch("/api/driver-flavor").then(jsonOf<{
       ok: boolean;
       kernel_module_version: string | null;
       flavor: "open" | "proprietary" | "unknown";
@@ -1494,7 +1494,7 @@ export const api = {
 
   // ── R&D #23 (UI sprint 14) ─────────────────────────────────────────────
   procDeepStateStatus: () =>
-    fetch("/api/proc-deep-state").then(jsonOf<{
+    safeFetch("/api/proc-deep-state").then(jsonOf<{
       ok: boolean;
       gpu_count: number;
       drift_count: number;
@@ -1517,7 +1517,7 @@ export const api = {
     }>),
 
   pcieAspmStatus: () =>
-    fetch("/api/pcie-aspm").then(jsonOf<{
+    safeFetch("/api/pcie-aspm").then(jsonOf<{
       ok: boolean;
       policy: { active: string | null; options: string[]; raw: string } | null;
       board: { vendor: string | null; name: string | null };
@@ -1531,7 +1531,7 @@ export const api = {
     }>),
 
   fsMountAuditStatus: () =>
-    fetch("/api/fs-mount-audit").then(jsonOf<{
+    safeFetch("/api/fs-mount-audit").then(jsonOf<{
       ok: boolean;
       audit_count: number;
       warn_count: number;
@@ -1548,7 +1548,7 @@ export const api = {
     }>),
 
   batchAdvisorStatus: () =>
-    fetch("/api/batch-advisor").then(jsonOf<{
+    safeFetch("/api/batch-advisor").then(jsonOf<{
       ok: boolean;
       reason?: string;
       vram: { total_mib: number; used_mib: number; free_mib: number } | null;
@@ -1592,7 +1592,7 @@ export const api = {
     }>),
 
   pcieAerStatus: () =>
-    fetch("/api/pcie-aer").then(jsonOf<{
+    safeFetch("/api/pcie-aer").then(jsonOf<{
       ok: boolean;
       device_count: number;
       devices: Array<{
@@ -1615,7 +1615,7 @@ export const api = {
     }>),
 
   memTempDriftStatus: () =>
-    fetch("/api/mem-temp-drift").then(jsonOf<{
+    safeFetch("/api/mem-temp-drift").then(jsonOf<{
       ok: boolean;
       reason?: string;
       gpu_count?: number;
@@ -1639,7 +1639,7 @@ export const api = {
     }>),
 
   accountingStatus: () =>
-    fetch("/api/accounting").then(jsonOf<{
+    safeFetch("/api/accounting").then(jsonOf<{
       ok: boolean;
       reason?: string;
       accounting_mode: string | null;
@@ -1664,7 +1664,7 @@ export const api = {
 
   // ── R&D #25 (UI sprint 16) ─────────────────────────────────────────────
   trimAuditStatus: () =>
-    fetch("/api/trim-audit").then(jsonOf<{
+    safeFetch("/api/trim-audit").then(jsonOf<{
       ok: boolean;
       audit_count: number;
       audits: Array<{
@@ -1678,7 +1678,7 @@ export const api = {
     }>),
 
   throttleBitsStatus: () =>
-    fetch("/api/throttle-bits").then(jsonOf<{
+    safeFetch("/api/throttle-bits").then(jsonOf<{
       ok: boolean;
       reason?: string;
       any_critical?: boolean;
@@ -1693,7 +1693,7 @@ export const api = {
     }>),
 
   retiredPagesStatus: () =>
-    fetch("/api/retired-pages").then(jsonOf<{
+    safeFetch("/api/retired-pages").then(jsonOf<{
       ok: boolean;
       reason?: string;
       supported: boolean;
@@ -1709,7 +1709,7 @@ export const api = {
     }>),
 
   bugReportPrepStatus: () =>
-    fetch("/api/bug-report-prep").then(jsonOf<{
+    safeFetch("/api/bug-report-prep").then(jsonOf<{
       ok: boolean;
       context_summary: {
         kernel: string;
@@ -1725,7 +1725,7 @@ export const api = {
 
   // ── R&D #26 (UI sprint 17) ─────────────────────────────────────────────
   pcieWidthWatcherStatus: () =>
-    fetch("/api/pcie-width-watcher").then(jsonOf<{
+    safeFetch("/api/pcie-width-watcher").then(jsonOf<{
       ok: boolean;
       device_count: number;
       worst_verdict: string;
@@ -1743,7 +1743,7 @@ export const api = {
     }>),
 
   cudaCtxLeakStatus: () =>
-    fetch("/api/cuda-ctx-leak").then(jsonOf<{
+    safeFetch("/api/cuda-ctx-leak").then(jsonOf<{
       ok: boolean;
       fd_holder_count: number;
       compute_pid_count: number;
@@ -1756,7 +1756,7 @@ export const api = {
     }>),
 
   procStaticAuditStatus: () =>
-    fetch("/api/proc-static-audit").then(jsonOf<{
+    safeFetch("/api/proc-static-audit").then(jsonOf<{
       ok: boolean;
       card_count: number;
       worst_severity: string;
@@ -1772,7 +1772,7 @@ export const api = {
     }>),
 
   memBwGaugeStatus: () =>
-    fetch("/api/mem-bw-gauge").then(jsonOf<{
+    safeFetch("/api/mem-bw-gauge").then(jsonOf<{
       ok: boolean;
       reason?: string;
       total_samples?: number;
@@ -1788,7 +1788,7 @@ export const api = {
 
   // ── R&D #27 (UI sprint 18) ─────────────────────────────────────────────
   powerEnvelopeDriftStatus: () =>
-    fetch("/api/power-envelope-drift").then(jsonOf<{
+    safeFetch("/api/power-envelope-drift").then(jsonOf<{
       ok: boolean;
       reason?: string;
       gpu_count?: number;
@@ -1805,7 +1805,7 @@ export const api = {
     }>),
 
   rebarAuditStatus: () =>
-    fetch("/api/rebar-audit").then(jsonOf<{
+    safeFetch("/api/rebar-audit").then(jsonOf<{
       ok: boolean;
       card_count: number;
       worst_verdict: string;
@@ -1822,7 +1822,7 @@ export const api = {
     }>),
 
   cpuRaplStatus: () =>
-    fetch("/api/cpu-rapl").then(jsonOf<{
+    safeFetch("/api/cpu-rapl").then(jsonOf<{
       ok: boolean;
       supported: boolean;
       reason?: string;
@@ -1834,7 +1834,7 @@ export const api = {
     }>),
 
   clockGapStatus: () =>
-    fetch("/api/clock-gap").then(jsonOf<{
+    safeFetch("/api/clock-gap").then(jsonOf<{
       ok: boolean;
       reason?: string;
       any_capped?: boolean;
@@ -1851,7 +1851,7 @@ export const api = {
 
   // ── R&D #28 (UI sprint 19) ─────────────────────────────────────────────
   pcieRpmAuditStatus: () =>
-    fetch("/api/pcie-rpm-audit").then(jsonOf<{
+    safeFetch("/api/pcie-rpm-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       worst_verdict: string;
@@ -1865,7 +1865,7 @@ export const api = {
     }>),
 
   thermalZonesStatus: () =>
-    fetch("/api/thermal-zones").then(jsonOf<{
+    safeFetch("/api/thermal-zones").then(jsonOf<{
       ok: boolean;
       zone_count: number;
       summary: string;
@@ -1880,7 +1880,7 @@ export const api = {
     }>),
 
   nvrmTailStatus: () =>
-    fetch("/api/nvrm-tail").then(jsonOf<{
+    safeFetch("/api/nvrm-tail").then(jsonOf<{
       ok: boolean;
       reason?: string;
       since?: string;
@@ -1890,7 +1890,7 @@ export const api = {
     }>),
 
   nvlinkHealthStatus: () =>
-    fetch("/api/nvlink-health").then(jsonOf<{
+    safeFetch("/api/nvlink-health").then(jsonOf<{
       ok: boolean;
       reason?: string;
       supported: boolean;
@@ -1904,7 +1904,7 @@ export const api = {
 
   // ── R&D #29 (UI sprint 20) ─────────────────────────────────────────────
   kmodParamsStatus: () =>
-    fetch("/api/kmod-params").then(jsonOf<{
+    safeFetch("/api/kmod-params").then(jsonOf<{
       ok: boolean;
       reason?: string;
       param_count?: number;
@@ -1919,7 +1919,7 @@ export const api = {
     }>),
 
   d3coldPolicyStatus: () =>
-    fetch("/api/d3cold-policy").then(jsonOf<{
+    safeFetch("/api/d3cold-policy").then(jsonOf<{
       ok: boolean;
       device_count: number;
       worst_verdict: string;
@@ -1934,7 +1934,7 @@ export const api = {
     }>),
 
   thermalSlowdownKindStatus: () =>
-    fetch("/api/thermal-slowdown-kind").then(jsonOf<{
+    safeFetch("/api/thermal-slowdown-kind").then(jsonOf<{
       ok: boolean;
       reason?: string;
       any_critical?: boolean;
@@ -1949,7 +1949,7 @@ export const api = {
     }>),
 
   rlimitAuditStatus: () =>
-    fetch("/api/rlimit-audit").then(jsonOf<{
+    safeFetch("/api/rlimit-audit").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -1965,7 +1965,7 @@ export const api = {
 
   // ── R&D #30 (UI sprint 21) ─────────────────────────────────────────────
   dmiBiosStatus: () =>
-    fetch("/api/dmi-bios").then(jsonOf<{
+    safeFetch("/api/dmi-bios").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -1982,7 +1982,7 @@ export const api = {
     }>),
 
   nvmeIoschedStatus: () =>
-    fetch("/api/nvme-iosched").then(jsonOf<{
+    safeFetch("/api/nvme-iosched").then(jsonOf<{
       ok: boolean;
       device_count: number;
       worst_verdict: string;
@@ -1997,7 +1997,7 @@ export const api = {
     }>),
 
   iommuGroupsStatus: () =>
-    fetch("/api/iommu-groups").then(jsonOf<{
+    safeFetch("/api/iommu-groups").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2013,7 +2013,7 @@ export const api = {
     }>),
 
   msiInventoryStatus: () =>
-    fetch("/api/msi-inventory").then(jsonOf<{
+    safeFetch("/api/msi-inventory").then(jsonOf<{
       ok: boolean;
       device_count: number;
       worst_verdict: string;
@@ -2031,7 +2031,7 @@ export const api = {
 
   // ── R&D #31 (UI sprint 22) ─────────────────────────────────────────────
   oomPriorityStatus: () =>
-    fetch("/api/oom-priority").then(jsonOf<{
+    safeFetch("/api/oom-priority").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -2046,7 +2046,7 @@ export const api = {
     }>),
 
   cpuTopologyStatus: () =>
-    fetch("/api/cpu-topology").then(jsonOf<{
+    safeFetch("/api/cpu-topology").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       physical_cores: number;
@@ -2061,7 +2061,7 @@ export const api = {
     }>),
 
   procSmapsStatus: () =>
-    fetch("/api/proc-smaps").then(jsonOf<{
+    safeFetch("/api/proc-smaps").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -2077,7 +2077,7 @@ export const api = {
     }>),
 
   hwmonInventoryStatus: () =>
-    fetch("/api/hwmon-inventory").then(jsonOf<{
+    safeFetch("/api/hwmon-inventory").then(jsonOf<{
       ok: boolean;
       device_count: number;
       worst_verdict: string;
@@ -2096,7 +2096,7 @@ export const api = {
 
   // ── R&D #32 (UI sprint 23) ─────────────────────────────────────────────
   vmSysctlStatus: () =>
-    fetch("/api/vm-sysctl").then(jsonOf<{
+    safeFetch("/api/vm-sysctl").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2111,7 +2111,7 @@ export const api = {
     }>),
 
   psiPressureStatus: () =>
-    fetch("/api/psi-pressure").then(jsonOf<{
+    safeFetch("/api/psi-pressure").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2127,7 +2127,7 @@ export const api = {
     }>),
 
   procWchanStatus: () =>
-    fetch("/api/proc-wchan").then(jsonOf<{
+    safeFetch("/api/proc-wchan").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -2140,7 +2140,7 @@ export const api = {
     }>),
 
   cgroupMemcapStatus: () =>
-    fetch("/api/cgroup-memcap").then(jsonOf<{
+    safeFetch("/api/cgroup-memcap").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -2158,7 +2158,7 @@ export const api = {
 
   // ── R&D #33 (UI sprint 24) ─────────────────────────────────────────────
   clocksourceStatus: () =>
-    fetch("/api/clocksource").then(jsonOf<{
+    safeFetch("/api/clocksource").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2169,7 +2169,7 @@ export const api = {
     }>),
 
   nicHealthStatus: () =>
-    fetch("/api/nic-health").then(jsonOf<{
+    safeFetch("/api/nic-health").then(jsonOf<{
       ok: boolean;
       interface_count: number;
       worst_verdict: string;
@@ -2191,7 +2191,7 @@ export const api = {
     }>),
 
   procIoStatus: () =>
-    fetch("/api/proc-io").then(jsonOf<{
+    safeFetch("/api/proc-io").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -2211,7 +2211,7 @@ export const api = {
     }>),
 
   cgroupCpuioStatus: () =>
-    fetch("/api/cgroup-cpuio").then(jsonOf<{
+    safeFetch("/api/cgroup-cpuio").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -2228,7 +2228,7 @@ export const api = {
 
   // ── R&D #34 (UI sprint 25) ─────────────────────────────────────────────
   thpAuditStatus: () =>
-    fetch("/api/thp-audit").then(jsonOf<{
+    safeFetch("/api/thp-audit").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2239,7 +2239,7 @@ export const api = {
     }>),
 
   buddyinfoStatus: () =>
-    fetch("/api/buddyinfo").then(jsonOf<{
+    safeFetch("/api/buddyinfo").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2255,7 +2255,7 @@ export const api = {
     }>),
 
   procSchedStatus: () =>
-    fetch("/api/proc-sched").then(jsonOf<{
+    safeFetch("/api/proc-sched").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -2273,7 +2273,7 @@ export const api = {
     }>),
 
   oomdStatus: () =>
-    fetch("/api/oomd").then(jsonOf<{
+    safeFetch("/api/oomd").then(jsonOf<{
       ok: boolean;
       state: string;
       event_count: number;
@@ -2283,7 +2283,7 @@ export const api = {
 
   // ── R&D #35 (UI sprint 26) ─────────────────────────────────────────────
   cpuBoostStatus: () =>
-    fetch("/api/cpu-boost").then(jsonOf<{
+    safeFetch("/api/cpu-boost").then(jsonOf<{
       ok: boolean;
       mode: string;
       boost: number | null;
@@ -2294,7 +2294,7 @@ export const api = {
     }>),
 
   netSysctlStatus: () =>
-    fetch("/api/net-sysctl").then(jsonOf<{
+    safeFetch("/api/net-sysctl").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2311,7 +2311,7 @@ export const api = {
     }>),
 
   smtAuditStatus: () =>
-    fetch("/api/smt-audit").then(jsonOf<{
+    safeFetch("/api/smt-audit").then(jsonOf<{
       ok: boolean;
       smt_control: string | null;
       smt_active: number | null;
@@ -2322,7 +2322,7 @@ export const api = {
     }>),
 
   numaPlacementStatus: () =>
-    fetch("/api/numa-placement").then(jsonOf<{
+    safeFetch("/api/numa-placement").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2345,7 +2345,7 @@ export const api = {
 
   // ── R&D #36 (UI sprint 27) ─────────────────────────────────────────────
   kernelTaintStatus: () =>
-    fetch("/api/kernel-taint").then(jsonOf<{
+    safeFetch("/api/kernel-taint").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2374,7 +2374,7 @@ export const api = {
     }>),
 
   hwpEppStatus: () =>
-    fetch("/api/hwp-epp").then(jsonOf<{
+    safeFetch("/api/hwp-epp").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       prefs: string[];
@@ -2384,7 +2384,7 @@ export const api = {
     }>),
 
   cpuidleStatus: () =>
-    fetch("/api/cpuidle").then(jsonOf<{
+    safeFetch("/api/cpuidle").then(jsonOf<{
       ok: boolean;
       error?: string;
       reason?: string;
@@ -2402,7 +2402,7 @@ export const api = {
 
   // ── R&D #37 (UI sprint 28) + PAM limits (bonus) ──────────────────────
   cpuVulnsStatus: () =>
-    fetch("/api/cpu-vulns").then(jsonOf<{
+    safeFetch("/api/cpu-vulns").then(jsonOf<{
       ok: boolean;
       error?: string;
       vulnerability_count?: number;
@@ -2414,7 +2414,7 @@ export const api = {
     }>),
 
   hwWatchdogStatus: () =>
-    fetch("/api/hw-watchdog").then(jsonOf<{
+    safeFetch("/api/hw-watchdog").then(jsonOf<{
       ok: boolean;
       watchdog_count: number;
       watchdogs: Array<{
@@ -2427,7 +2427,7 @@ export const api = {
     }>),
 
   gpuCpuAffinityStatus: () =>
-    fetch("/api/gpu-cpu-affinity").then(jsonOf<{
+    safeFetch("/api/gpu-cpu-affinity").then(jsonOf<{
       ok: boolean;
       gpu_count: number;
       total_cpus: number;
@@ -2439,7 +2439,7 @@ export const api = {
     }>),
 
   cacheTopologyStatus: () =>
-    fetch("/api/cache-topology").then(jsonOf<{
+    safeFetch("/api/cache-topology").then(jsonOf<{
       ok: boolean;
       total_cpus: number;
       l3_island_count: number;
@@ -2453,7 +2453,7 @@ export const api = {
     }>),
 
   limitsAuditStatus: () =>
-    fetch("/api/limits-audit").then(jsonOf<{
+    safeFetch("/api/limits-audit").then(jsonOf<{
       ok: boolean;
       error?: string;
       files?: string[];
@@ -2464,7 +2464,7 @@ export const api = {
 
   // ── R&D #38 (UI sprint 29) ─────────────────────────────────────────────
   pcieAerTrendStatus: () =>
-    fetch("/api/pcie-aer-trend").then(jsonOf<{
+    safeFetch("/api/pcie-aer-trend").then(jsonOf<{
       ok: boolean;
       gpu_count: number;
       cards: Array<{
@@ -2479,7 +2479,7 @@ export const api = {
     }>),
 
   gpuIrqAffinityStatus: () =>
-    fetch("/api/gpu-irq-affinity").then(jsonOf<{
+    safeFetch("/api/gpu-irq-affinity").then(jsonOf<{
       ok: boolean;
       gpu_count: number;
       total_irqs: number;
@@ -2493,7 +2493,7 @@ export const api = {
     }>),
 
   modprobeAuditStatus: () =>
-    fetch("/api/modprobe-audit").then(jsonOf<{
+    safeFetch("/api/modprobe-audit").then(jsonOf<{
       ok: boolean;
       error?: string;
       on_disk?: Record<string, { options: Record<string, string>;
@@ -2505,7 +2505,7 @@ export const api = {
     }>),
 
   procMapsLibsStatus: () =>
-    fetch("/api/proc-maps-libs").then(jsonOf<{
+    safeFetch("/api/proc-maps-libs").then(jsonOf<{
       ok: boolean;
       process_count: number;
       worst_verdict: string;
@@ -2521,7 +2521,7 @@ export const api = {
 
   // ── R&D #39 (UI sprint 30) ─────────────────────────────────────────────
   cmdlineAuditStatus: () =>
-    fetch("/api/cmdline-audit").then(jsonOf<{
+    safeFetch("/api/cmdline-audit").then(jsonOf<{
       ok: boolean;
       error?: string;
       raw?: string;
@@ -2531,7 +2531,7 @@ export const api = {
     }>),
 
   coredumpStatus: () =>
-    fetch("/api/coredump").then(jsonOf<{
+    safeFetch("/api/coredump").then(jsonOf<{
       ok: boolean;
       core_pattern: string;
       core_uses_pid: boolean;
@@ -2549,7 +2549,7 @@ export const api = {
     }>),
 
   hostClassStatus: () =>
-    fetch("/api/host-class").then(jsonOf<{
+    safeFetch("/api/host-class").then(jsonOf<{
       ok: boolean;
       error?: string;
       chassis_type?: number | null;
@@ -2562,7 +2562,7 @@ export const api = {
     }>),
 
   sysctlDAuditStatus: () =>
-    fetch("/api/sysctl-d-audit").then(jsonOf<{
+    safeFetch("/api/sysctl-d-audit").then(jsonOf<{
       ok: boolean;
       on_disk_count: number;
       on_disk: Record<string, { value: string; files: string[] }>;
@@ -2574,7 +2574,7 @@ export const api = {
 
   // ── R&D #40 (UI sprint 31) ──
   ksmAdvisorStatus: () =>
-    fetch("/api/ksm-advisor").then(jsonOf<{
+    safeFetch("/api/ksm-advisor").then(jsonOf<{
       ok: boolean;
       state: Record<string, number | string>;
       process_count: number;
@@ -2588,7 +2588,7 @@ export const api = {
     }>),
 
   vmTuningDeepStatus: () =>
-    fetch("/api/vm-tuning-deep").then(jsonOf<{
+    safeFetch("/api/vm-tuning-deep").then(jsonOf<{
       ok: boolean;
       knobs: Record<string, number>;
       swap_active: boolean;
@@ -2599,7 +2599,7 @@ export const api = {
     }>),
 
   gpuPciBindStatus: () =>
-    fetch("/api/gpu-pci-bind").then(jsonOf<{
+    safeFetch("/api/gpu-pci-bind").then(jsonOf<{
       ok: boolean;
       device_count: number;
       slot_count: number;
@@ -2617,7 +2617,7 @@ export const api = {
     }>),
 
   nicQueueAffinityStatus: () =>
-    fetch("/api/nic-queue-affinity").then(jsonOf<{
+    safeFetch("/api/nic-queue-affinity").then(jsonOf<{
       ok: boolean;
       device_count: number;
       devices: Array<{
@@ -2637,7 +2637,7 @@ export const api = {
 
   // ── R&D #41 (UI sprint 32) ──
   panicPolicyStatus: () =>
-    fetch("/api/panic-policy").then(jsonOf<{
+    safeFetch("/api/panic-policy").then(jsonOf<{
       ok: boolean;
       knobs: Record<string, number>;
       host_form_factor: string | null;
@@ -2645,7 +2645,7 @@ export const api = {
     }>),
 
   edacRamEccStatus: () =>
-    fetch("/api/edac-ram-ecc").then(jsonOf<{
+    safeFetch("/api/edac-ram-ecc").then(jsonOf<{
       ok: boolean;
       controller_count?: number;
       controllers: Array<{
@@ -2663,7 +2663,7 @@ export const api = {
     }>),
 
   inotifyAuditStatus: () =>
-    fetch("/api/inotify-audit").then(jsonOf<{
+    safeFetch("/api/inotify-audit").then(jsonOf<{
       ok: boolean;
       limits: Record<string, number>;
       process_count: number;
@@ -2680,7 +2680,7 @@ export const api = {
     }>),
 
   zswapZramStatus: () =>
-    fetch("/api/zswap-zram").then(jsonOf<{
+    safeFetch("/api/zswap-zram").then(jsonOf<{
       ok: boolean;
       zswap: { available: boolean; enabled: boolean | null;
                 compressor: string | null; zpool: string | null;
@@ -2700,7 +2700,7 @@ export const api = {
 
   // ── R&D #42 (UI sprint 33) ──
   cpuEpbStatus: () =>
-    fetch("/api/cpu-epb").then(jsonOf<{
+    safeFetch("/api/cpu-epb").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       epb_exposed_count: number;
@@ -2709,7 +2709,7 @@ export const api = {
     }>),
 
   coolingDevicesStatus: () =>
-    fetch("/api/cooling-devices").then(jsonOf<{
+    safeFetch("/api/cooling-devices").then(jsonOf<{
       ok: boolean;
       cooling_device_count?: number;
       thermal_zone_count?: number;
@@ -2729,7 +2729,7 @@ export const api = {
     }>),
 
   hybridCpuTopoStatus: () =>
-    fetch("/api/hybrid-cpu-topo").then(jsonOf<{
+    safeFetch("/api/hybrid-cpu-topo").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       packages: number[];
@@ -2745,7 +2745,7 @@ export const api = {
     }>),
 
   fileLocksAuditStatus: () =>
-    fetch("/api/file-locks-audit").then(jsonOf<{
+    safeFetch("/api/file-locks-audit").then(jsonOf<{
       ok: boolean;
       lock_count: number;
       conflict_count: number;
@@ -2766,7 +2766,7 @@ export const api = {
 
   // ── R&D #43 (UI sprint 34) ──
   nicRingAuditStatus: () =>
-    fetch("/api/nic-ring-audit").then(jsonOf<{
+    safeFetch("/api/nic-ring-audit").then(jsonOf<{
       ok: boolean;
       device_count?: number;
       devices: Array<{
@@ -2782,7 +2782,7 @@ export const api = {
     }>),
 
   irqRatesAuditStatus: () =>
-    fetch("/api/irq-rates-audit").then(jsonOf<{
+    safeFetch("/api/irq-rates-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       irq_row_count: number;
@@ -2796,7 +2796,7 @@ export const api = {
     }>),
 
   zoneinfoAuditStatus: () =>
-    fetch("/api/zoneinfo-audit").then(jsonOf<{
+    safeFetch("/api/zoneinfo-audit").then(jsonOf<{
       ok: boolean;
       zone_count: number;
       zones: Array<{
@@ -2810,7 +2810,7 @@ export const api = {
     }>),
 
   blockQueueAuditStatus: () =>
-    fetch("/api/block-queue-audit").then(jsonOf<{
+    safeFetch("/api/block-queue-audit").then(jsonOf<{
       ok: boolean;
       device_count?: number;
       devices: Array<{
@@ -2834,7 +2834,7 @@ export const api = {
 
   // ── R&D #44 (UI sprint 35) ──
   watchdogInventoryStatus: () =>
-    fetch("/api/watchdog-inventory").then(jsonOf<{
+    safeFetch("/api/watchdog-inventory").then(jsonOf<{
       ok: boolean;
       device_count?: number;
       devices: Array<{
@@ -2849,7 +2849,7 @@ export const api = {
     }>),
 
   diskIoLatencyStatus: () =>
-    fetch("/api/disk-io-latency").then(jsonOf<{
+    safeFetch("/api/disk-io-latency").then(jsonOf<{
       ok: boolean;
       device_count?: number;
       devices: Array<{
@@ -2866,7 +2866,7 @@ export const api = {
     }>),
 
   netProtoCountersStatus: () =>
-    fetch("/api/net-proto-counters").then(jsonOf<{
+    safeFetch("/api/net-proto-counters").then(jsonOf<{
       ok: boolean;
       headline: Record<string, number | null>;
       sockstat: Record<string, Record<string, number>>;
@@ -2874,7 +2874,7 @@ export const api = {
     }>),
 
   slabAuditStatus: () =>
-    fetch("/api/slab-audit").then(jsonOf<{
+    safeFetch("/api/slab-audit").then(jsonOf<{
       ok: boolean;
       cache_count: number;
       top_caches: Array<{
@@ -2889,7 +2889,7 @@ export const api = {
 
   // ── R&D #45 (UI sprint 36) ──
   entropyAuditStatus: () =>
-    fetch("/api/entropy-audit").then(jsonOf<{
+    safeFetch("/api/entropy-audit").then(jsonOf<{
       ok: boolean;
       random: Record<string, number>;
       hwrng: { available: boolean; current?: string | null;
@@ -2898,7 +2898,7 @@ export const api = {
     }>),
 
   nfConntrackAuditStatus: () =>
-    fetch("/api/nf-conntrack-audit").then(jsonOf<{
+    safeFetch("/api/nf-conntrack-audit").then(jsonOf<{
       ok: boolean;
       sysctls: Record<string, number>;
       stats: Record<string, number>;
@@ -2906,7 +2906,7 @@ export const api = {
     }>),
 
   sysvipcAuditStatus: () =>
-    fetch("/api/sysvipc-audit").then(jsonOf<{
+    safeFetch("/api/sysvipc-audit").then(jsonOf<{
       ok: boolean;
       shm_count?: number; sem_count?: number; msg_count?: number;
       shm_total_bytes?: number;
@@ -2918,7 +2918,7 @@ export const api = {
     }>),
 
   mdraidHealthStatus: () =>
-    fetch("/api/mdraid-health").then(jsonOf<{
+    safeFetch("/api/mdraid-health").then(jsonOf<{
       ok: boolean;
       personalities?: string[];
       array_count?: number;
@@ -2952,7 +2952,7 @@ export const api = {
     }>),
 
   securityPostureStatus: () =>
-    fetch("/api/security-posture").then(jsonOf<{
+    safeFetch("/api/security-posture").then(jsonOf<{
       ok: boolean;
       sysctls: Record<string, number>;
       security: {
@@ -2964,7 +2964,7 @@ export const api = {
     }>),
 
   vfsLimitsAuditStatus: () =>
-    fetch("/api/vfs-limits-audit").then(jsonOf<{
+    safeFetch("/api/vfs-limits-audit").then(jsonOf<{
       ok: boolean;
       limits: {
         file_nr?: { allocated: number; free: number; max: number };
@@ -2979,7 +2979,7 @@ export const api = {
 
   // ── R&D #47 (UI sprint 38) ──
   nvidiaRmAuditStatus: () =>
-    fetch("/api/nvidia-rm-audit").then(jsonOf<{
+    safeFetch("/api/nvidia-rm-audit").then(jsonOf<{
       ok: boolean;
       driver_present: boolean;
       version_proc: string | null;
@@ -2991,7 +2991,7 @@ export const api = {
     }>),
 
   mceAuditStatus: () =>
-    fetch("/api/mce-audit").then(jsonOf<{
+    safeFetch("/api/mce-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       uniform_across_cpus: boolean;
@@ -3006,7 +3006,7 @@ export const api = {
     }>),
 
   acpiAuditStatus: () =>
-    fetch("/api/acpi-audit").then(jsonOf<{
+    safeFetch("/api/acpi-audit").then(jsonOf<{
       ok: boolean;
       platform_profile: {
         current?: string | null;
@@ -3024,7 +3024,7 @@ export const api = {
     }>),
 
   schedAuditStatus: () =>
-    fetch("/api/sched-audit").then(jsonOf<{
+    safeFetch("/api/sched-audit").then(jsonOf<{
       ok: boolean;
       schedstat_version: number | null;
       cpu_count: number;
@@ -3040,7 +3040,7 @@ export const api = {
 
   // ── R&D #48 (UI sprint 39) ──
   dmaAuditStatus: () =>
-    fetch("/api/dma-audit").then(jsonOf<{
+    safeFetch("/api/dma-audit").then(jsonOf<{
       ok: boolean;
       dma_engine_count?: number;
       dma_engines: Array<{
@@ -3056,7 +3056,7 @@ export const api = {
     }>),
 
   ftraceAuditStatus: () =>
-    fetch("/api/ftrace-audit").then(jsonOf<{
+    safeFetch("/api/ftrace-audit").then(jsonOf<{
       ok: boolean;
       state: {
         available?: boolean;
@@ -3071,7 +3071,7 @@ export const api = {
     }>),
 
   usbTopologyAuditStatus: () =>
-    fetch("/api/usb-topology-audit").then(jsonOf<{
+    safeFetch("/api/usb-topology-audit").then(jsonOf<{
       ok: boolean;
       device_count?: number;
       non_root_count?: number;
@@ -3090,7 +3090,7 @@ export const api = {
     }>),
 
   journalAuditStatus: () =>
-    fetch("/api/journal-audit").then(jsonOf<{
+    safeFetch("/api/journal-audit").then(jsonOf<{
       ok: boolean;
       config: Record<string, string>;
       journal_bytes: number;
@@ -3101,7 +3101,7 @@ export const api = {
 
   // ── R&D #49 (UI sprint 40) ──
   rtcClockAuditStatus: () =>
-    fetch("/api/rtc-clock-audit").then(jsonOf<{
+    safeFetch("/api/rtc-clock-audit").then(jsonOf<{
       ok: boolean;
       rtc_count?: number;
       rtcs: Array<{
@@ -3117,7 +3117,7 @@ export const api = {
     }>),
 
   tpmAuditStatus: () =>
-    fetch("/api/tpm-audit").then(jsonOf<{
+    safeFetch("/api/tpm-audit").then(jsonOf<{
       ok: boolean;
       tpm_count?: number;
       tpms: Array<{
@@ -3134,7 +3134,7 @@ export const api = {
     }>),
 
   wmiVendorAuditStatus: () =>
-    fetch("/api/wmi-vendor-audit").then(jsonOf<{
+    safeFetch("/api/wmi-vendor-audit").then(jsonOf<{
       ok: boolean;
       wmi_guid_count: number;
       wmi_guids: string[];
@@ -3150,7 +3150,7 @@ export const api = {
     }>),
 
   kmsgAuditStatus: () =>
-    fetch("/api/kmsg-audit").then(jsonOf<{
+    safeFetch("/api/kmsg-audit").then(jsonOf<{
       ok: boolean;
       printk: Record<string, number>;
       printk_ratelimit_sec: number | null;
@@ -3166,7 +3166,7 @@ export const api = {
 
   // ── R&D #50 (UI sprint 41) ──
   sockPoolAuditStatus: () =>
-    fetch("/api/sock-pool-audit").then(jsonOf<{
+    safeFetch("/api/sock-pool-audit").then(jsonOf<{
       ok: boolean;
       sockstat: Record<string, Record<string, number>>;
       sockstat6: Record<string, Record<string, number>>;
@@ -3178,7 +3178,7 @@ export const api = {
     }>),
 
   iioSensorAuditStatus: () =>
-    fetch("/api/iio-sensor-audit").then(jsonOf<{
+    safeFetch("/api/iio-sensor-audit").then(jsonOf<{
       ok: boolean;
       device_count?: number;
       devices: Array<{
@@ -3191,7 +3191,7 @@ export const api = {
     }>),
 
   drmAuditStatus: () =>
-    fetch("/api/drm-audit").then(jsonOf<{
+    safeFetch("/api/drm-audit").then(jsonOf<{
       ok: boolean;
       card_count?: number;
       cards: string[];
@@ -3206,7 +3206,7 @@ export const api = {
     }>),
 
   cgroupMemeventsAuditStatus: () =>
-    fetch("/api/cgroup-memevents-audit").then(jsonOf<{
+    safeFetch("/api/cgroup-memevents-audit").then(jsonOf<{
       ok: boolean;
       unit_count?: number;
       top_units: Array<{
@@ -3220,7 +3220,7 @@ export const api = {
 
   // ── R&D #51 (UI sprint 42) ──
   powerSupplyAuditStatus: () =>
-    fetch("/api/power-supply-audit").then(jsonOf<{
+    safeFetch("/api/power-supply-audit").then(jsonOf<{
       ok: boolean;
       supply_count?: number;
       supplies: Array<{
@@ -3234,7 +3234,7 @@ export const api = {
     }>),
 
   typecAuditStatus: () =>
-    fetch("/api/typec-audit").then(jsonOf<{
+    safeFetch("/api/typec-audit").then(jsonOf<{
       ok: boolean;
       port_count?: number;
       ports: Array<{
@@ -3248,7 +3248,7 @@ export const api = {
     }>),
 
   perfPmuAuditStatus: () =>
-    fetch("/api/perf-pmu-audit").then(jsonOf<{
+    safeFetch("/api/perf-pmu-audit").then(jsonOf<{
       ok: boolean;
       pmu_count?: number;
       pmus: Array<{
@@ -3261,7 +3261,7 @@ export const api = {
     }>),
 
   iomemPciAuditStatus: () =>
-    fetch("/api/iomem-pci-audit").then(jsonOf<{
+    safeFetch("/api/iomem-pci-audit").then(jsonOf<{
       ok: boolean;
       iomem: {
         region_count: number;
@@ -3280,7 +3280,7 @@ export const api = {
 
   // ── R&D #52 (UI sprint 43) ──
   ksmAuditStatus: () =>
-    fetch("/api/ksm-audit").then(jsonOf<{
+    safeFetch("/api/ksm-audit").then(jsonOf<{
       ok: boolean;
       ksm: {
         available: boolean;
@@ -3300,7 +3300,7 @@ export const api = {
     }>),
 
   i2cSmbusAuditStatus: () =>
-    fetch("/api/i2c-smbus-audit").then(jsonOf<{
+    safeFetch("/api/i2c-smbus-audit").then(jsonOf<{
       ok: boolean;
       adapter_count?: number;
       adapters: Array<{ id: string; name: string | null; driver: string | null }>;
@@ -3312,7 +3312,7 @@ export const api = {
     }>),
 
   moduleIntegrityAuditStatus: () =>
-    fetch("/api/module-integrity-audit").then(jsonOf<{
+    safeFetch("/api/module-integrity-audit").then(jsonOf<{
       ok: boolean;
       tainted_mask: number | null;
       tainted_letters: string[];
@@ -3325,7 +3325,7 @@ export const api = {
 
   // ── R&D #53 (UI sprint 44) ──
   psiPressureAuditStatus: () =>
-    fetch("/api/psi-pressure-audit").then(jsonOf<{
+    safeFetch("/api/psi-pressure-audit").then(jsonOf<{
       ok: boolean;
       pressure: {
         available: boolean;
@@ -3340,7 +3340,7 @@ export const api = {
     }>),
 
   cpuVulnerabilitiesAuditStatus: () =>
-    fetch("/api/cpu-vulnerabilities-audit").then(jsonOf<{
+    safeFetch("/api/cpu-vulnerabilities-audit").then(jsonOf<{
       ok: boolean;
       vuln_count?: number;
       vulnerabilities: Record<string, string>;
@@ -3350,7 +3350,7 @@ export const api = {
     }>),
 
   imaIntegrityAuditStatus: () =>
-    fetch("/api/ima-integrity-audit").then(jsonOf<{
+    safeFetch("/api/ima-integrity-audit").then(jsonOf<{
       ok: boolean;
       ima: {
         available: boolean;
@@ -3367,7 +3367,7 @@ export const api = {
     }>),
 
   raplPowerCapAuditStatus: () =>
-    fetch("/api/rapl-power-cap-audit").then(jsonOf<{
+    safeFetch("/api/rapl-power-cap-audit").then(jsonOf<{
       ok: boolean;
       zone_count?: number;
       zones: Array<{
@@ -3390,7 +3390,7 @@ export const api = {
 
   // ── R&D #54 (UI sprint 45) ──
   swapTunablesAuditStatus: () =>
-    fetch("/api/swap-tunables-audit").then(jsonOf<{
+    safeFetch("/api/swap-tunables-audit").then(jsonOf<{
       ok: boolean;
       vm_knobs: {
         available: boolean;
@@ -3414,7 +3414,7 @@ export const api = {
     }>),
 
   hugepagesAuditStatus: () =>
-    fetch("/api/hugepages-audit").then(jsonOf<{
+    safeFetch("/api/hugepages-audit").then(jsonOf<{
       ok: boolean;
       pools: Array<{
         size_kb: number; nr: number | null; free: number | null;
@@ -3429,7 +3429,7 @@ export const api = {
     }>),
 
   kvmMiscAuditStatus: () =>
-    fetch("/api/kvm-misc-audit").then(jsonOf<{
+    safeFetch("/api/kvm-misc-audit").then(jsonOf<{
       ok: boolean;
       kvm_module_present: boolean;
       kvm_variant: string | null;
@@ -3445,7 +3445,7 @@ export const api = {
     }>),
 
   ioUringRuntimeAuditStatus: () =>
-    fetch("/api/io-uring-runtime-audit").then(jsonOf<{
+    safeFetch("/api/io-uring-runtime-audit").then(jsonOf<{
       ok: boolean;
       kernel_release: string;
       io_uring_disabled: number | null;
@@ -3458,7 +3458,7 @@ export const api = {
 
   // ── R&D #55 (UI sprint 46) ──
   edacEccAuditStatus: () =>
-    fetch("/api/edac-ecc-audit").then(jsonOf<{
+    safeFetch("/api/edac-ecc-audit").then(jsonOf<{
       ok: boolean;
       edac_present: boolean;
       controller_count?: number;
@@ -3475,7 +3475,7 @@ export const api = {
     }>),
 
   numaTopologyAuditStatus: () =>
-    fetch("/api/numa-topology-audit").then(jsonOf<{
+    safeFetch("/api/numa-topology-audit").then(jsonOf<{
       ok: boolean;
       node_count?: number;
       nodes: Array<{ id: number; distance: string[];
@@ -3488,7 +3488,7 @@ export const api = {
     }>),
 
   hwmonSensorsAuditStatus: () =>
-    fetch("/api/hwmon-sensors-audit").then(jsonOf<{
+    safeFetch("/api/hwmon-sensors-audit").then(jsonOf<{
       ok: boolean;
       hwmon_present: boolean;
       chip_count?: number;
@@ -3502,7 +3502,7 @@ export const api = {
     }>),
 
   efiBootOrderAuditStatus: () =>
-    fetch("/api/efi-boot-order-audit").then(jsonOf<{
+    safeFetch("/api/efi-boot-order-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       BootCurrent?: number | null;
@@ -3517,7 +3517,7 @@ export const api = {
 
   // ── R&D #56 (UI sprint 47) ──
   sataLinkPmAuditStatus: () =>
-    fetch("/api/sata-link-pm-audit").then(jsonOf<{
+    safeFetch("/api/sata-link-pm-audit").then(jsonOf<{
       ok: boolean;
       host_count?: number;
       hosts: Array<{ id: string; policy: string | null }>;
@@ -3528,7 +3528,7 @@ export const api = {
     }>),
 
   bdiWritebackAuditStatus: () =>
-    fetch("/api/bdi-writeback-audit").then(jsonOf<{
+    safeFetch("/api/bdi-writeback-audit").then(jsonOf<{
       ok: boolean;
       bdi_count?: number;
       bdis: Array<{ id: string; read_ahead_kb: number | null;
@@ -3544,7 +3544,7 @@ export const api = {
     }>),
 
   procCryptoAuditStatus: () =>
-    fetch("/api/proc-crypto-audit").then(jsonOf<{
+    safeFetch("/api/proc-crypto-audit").then(jsonOf<{
       ok: boolean;
       entry_count?: number;
       name_count?: number;
@@ -3555,7 +3555,7 @@ export const api = {
     }>),
 
   wakeupSourcesAuditStatus: () =>
-    fetch("/api/wakeup-sources-audit").then(jsonOf<{
+    safeFetch("/api/wakeup-sources-audit").then(jsonOf<{
       ok: boolean;
       source_count?: number;
       top_sources: Array<{ id: string; name: string | null;
@@ -3570,7 +3570,7 @@ export const api = {
 
   // ── R&D #57 (UI sprint 48) ──
   livepatchAuditStatus: () =>
-    fetch("/api/livepatch-audit").then(jsonOf<{
+    safeFetch("/api/livepatch-audit").then(jsonOf<{
       ok: boolean;
       livepatch_present: boolean;
       patch_count?: number;
@@ -3582,7 +3582,7 @@ export const api = {
     }>),
 
   pagetypeinfoAuditStatus: () =>
-    fetch("/api/pagetypeinfo-audit").then(jsonOf<{
+    safeFetch("/api/pagetypeinfo-audit").then(jsonOf<{
       ok: boolean;
       permission_denied: boolean;
       free_page_rows: number;
@@ -3592,7 +3592,7 @@ export const api = {
     }>),
 
   backlightPwmAuditStatus: () =>
-    fetch("/api/backlight-pwm-audit").then(jsonOf<{
+    safeFetch("/api/backlight-pwm-audit").then(jsonOf<{
       ok: boolean;
       backlight_count?: number;
       backlights: Array<{ name: string; brightness: number | null;
@@ -3610,7 +3610,7 @@ export const api = {
     }>),
 
   loadavgPressureAuditStatus: () =>
-    fetch("/api/loadavg-pressure-audit").then(jsonOf<{
+    safeFetch("/api/loadavg-pressure-audit").then(jsonOf<{
       ok: boolean;
       loadavg_1m: number | null;
       loadavg_5m: number | null;
@@ -3625,7 +3625,7 @@ export const api = {
 
   // ── R&D #58 (UI sprint 49) ──
   cgroupRootAuditStatus: () =>
-    fetch("/api/cgroup-root-audit").then(jsonOf<{
+    safeFetch("/api/cgroup-root-audit").then(jsonOf<{
       ok: boolean;
       controllers: string[];
       subtree_control: string[];
@@ -3638,7 +3638,7 @@ export const api = {
     }>),
 
   kernelBuildConfigAuditStatus: () =>
-    fetch("/api/kernel-build-config-audit").then(jsonOf<{
+    safeFetch("/api/kernel-build-config-audit").then(jsonOf<{
       ok: boolean;
       release: string;
       key_count: number;
@@ -3647,7 +3647,7 @@ export const api = {
     }>),
 
   scsiTransportAuditStatus: () =>
-    fetch("/api/scsi-transport-audit").then(jsonOf<{
+    safeFetch("/api/scsi-transport-audit").then(jsonOf<{
       ok: boolean;
       disk_count?: number;
       disks: Array<{ id: string; cache_type: string | null;
@@ -3668,7 +3668,7 @@ export const api = {
     }>),
 
   alsaCardsAuditStatus: () =>
-    fetch("/api/alsa-cards-audit").then(jsonOf<{
+    safeFetch("/api/alsa-cards-audit").then(jsonOf<{
       ok: boolean;
       card_count?: number;
       cards: Array<{ index: number; id: string; driver: string;
@@ -3681,7 +3681,7 @@ export const api = {
 
   // ── R&D #59 (UI sprint 50) ──
   dmiSmbiosAuditStatus: () =>
-    fetch("/api/dmi-smbios-audit").then(jsonOf<{
+    safeFetch("/api/dmi-smbios-audit").then(jsonOf<{
       ok: boolean;
       dmi: Record<string, string | null>;
       is_vm: boolean;
@@ -3689,7 +3689,7 @@ export const api = {
     }>),
 
   iommuGroupsAuditStatus: () =>
-    fetch("/api/iommu-groups-audit").then(jsonOf<{
+    safeFetch("/api/iommu-groups-audit").then(jsonOf<{
       ok: boolean;
       group_count: number;
       groups_sample: Record<string, string[]>;
@@ -3700,7 +3700,7 @@ export const api = {
     }>),
 
   pidRlimitsAuditStatus: () =>
-    fetch("/api/pid-rlimits-audit").then(jsonOf<{
+    safeFetch("/api/pid-rlimits-audit").then(jsonOf<{
       ok: boolean;
       candidate_count: number;
       candidates: Array<{ pid: number; comm: string;
@@ -3713,7 +3713,7 @@ export const api = {
 
   // ── R&D #60 (UI sprint 51) ──
   virtGuestDetectAuditStatus: () =>
-    fetch("/api/virt-guest-detect-audit").then(jsonOf<{
+    safeFetch("/api/virt-guest-detect-audit").then(jsonOf<{
       ok: boolean;
       qemu_fw_cfg_present: boolean;
       xen_type: string | null;
@@ -3727,7 +3727,7 @@ export const api = {
 
   // ── R&D #61 (UI sprint 52) ──
   regulatorAuditStatus: () =>
-    fetch("/api/regulator-audit").then(jsonOf<{
+    safeFetch("/api/regulator-audit").then(jsonOf<{
       ok: boolean;
       regulator_count: number;
       regulators: Array<{
@@ -3743,7 +3743,7 @@ export const api = {
     }>),
 
   alsaCodecDeepAuditStatus: () =>
-    fetch("/api/alsa-codec-deep-audit").then(jsonOf<{
+    safeFetch("/api/alsa-codec-deep-audit").then(jsonOf<{
       ok: boolean;
       codec_count: number;
       codecs: Array<{
@@ -3762,7 +3762,7 @@ export const api = {
 
   // ── R&D #62 (UI sprint 53) ──
   devfreqAuditStatus: () =>
-    fetch("/api/devfreq-audit").then(jsonOf<{
+    safeFetch("/api/devfreq-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       devices: Array<{
@@ -3776,7 +3776,7 @@ export const api = {
     }>),
 
   meiIntelMeAuditStatus: () =>
-    fetch("/api/mei-intel-me-audit").then(jsonOf<{
+    safeFetch("/api/mei-intel-me-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       devices: Array<{
@@ -3790,7 +3790,7 @@ export const api = {
     }>),
 
   memoryHotplugAuditStatus: () =>
-    fetch("/api/memory-hotplug-audit").then(jsonOf<{
+    safeFetch("/api/memory-hotplug-audit").then(jsonOf<{
       ok: boolean;
       sys_memory_present: boolean;
       block_size_bytes: number | null;
@@ -3804,7 +3804,7 @@ export const api = {
     }>),
 
   procTaskAffinityAuditStatus: () =>
-    fetch("/api/proc-task-affinity-audit").then(jsonOf<{
+    safeFetch("/api/proc-task-affinity-audit").then(jsonOf<{
       ok: boolean;
       candidate_count: number;
       candidates: Array<{
@@ -3822,7 +3822,7 @@ export const api = {
 
   // ── R&D #63 (UI sprint 54) ──
   rfkillBluetoothAuditStatus: () =>
-    fetch("/api/rfkill-bluetooth-audit").then(jsonOf<{
+    safeFetch("/api/rfkill-bluetooth-audit").then(jsonOf<{
       ok: boolean;
       rfkill_count: number;
       rfkills: Array<{
@@ -3839,7 +3839,7 @@ export const api = {
     }>),
 
   ledsClassAuditStatus: () =>
-    fetch("/api/leds-class-audit").then(jsonOf<{
+    safeFetch("/api/leds-class-audit").then(jsonOf<{
       ok: boolean;
       led_count: number;
       leds: Array<{
@@ -3852,7 +3852,7 @@ export const api = {
     }>),
 
   binfmtMiscAuditStatus: () =>
-    fetch("/api/binfmt-misc-audit").then(jsonOf<{
+    safeFetch("/api/binfmt-misc-audit").then(jsonOf<{
       ok: boolean;
       binfmt_present: boolean;
       status_text?: string;
@@ -3869,7 +3869,7 @@ export const api = {
     }>),
 
   ptpClockAuditStatus: () =>
-    fetch("/api/ptp-clock-audit").then(jsonOf<{
+    safeFetch("/api/ptp-clock-audit").then(jsonOf<{
       ok: boolean;
       sys_ptp_present: boolean;
       phc_count: number;
@@ -3889,7 +3889,7 @@ export const api = {
 
   // ── R&D #64 (UI sprint 55) ──
   meiHdcpPxpAuditStatus: () =>
-    fetch("/api/mei-hdcp-pxp-audit").then(jsonOf<{
+    safeFetch("/api/mei-hdcp-pxp-audit").then(jsonOf<{
       ok: boolean;
       hdcp_count: number;
       hdcp_clients: Array<{ id: string; state: string | null;
@@ -3906,7 +3906,7 @@ export const api = {
     }>),
 
   firmwareEddMmcAuditStatus: () =>
-    fetch("/api/firmware-edd-mmc-audit").then(jsonOf<{
+    safeFetch("/api/firmware-edd-mmc-audit").then(jsonOf<{
       ok: boolean;
       edd_count: number;
       edd_entries: Array<{
@@ -3925,7 +3925,7 @@ export const api = {
     }>),
 
   devlinkSmartnicAuditStatus: () =>
-    fetch("/api/devlink-smartnic-audit").then(jsonOf<{
+    safeFetch("/api/devlink-smartnic-audit").then(jsonOf<{
       ok: boolean;
       link_count: number;
       status_histogram: Record<string, number>;
@@ -3939,7 +3939,7 @@ export const api = {
     }>),
 
   procNsMountinfoAuditStatus: () =>
-    fetch("/api/proc-ns-mountinfo-audit").then(jsonOf<{
+    safeFetch("/api/proc-ns-mountinfo-audit").then(jsonOf<{
       ok: boolean;
       self_ns: Record<string, string | null>;
       candidate_count: number;
@@ -3954,7 +3954,7 @@ export const api = {
 
   // ── R&D #65 (UI sprint 56) ──
   cpuidleResidencyAuditStatus: () =>
-    fetch("/api/cpuidle-residency-audit").then(jsonOf<{
+    safeFetch("/api/cpuidle-residency-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       state_count_per_cpu: number;
@@ -3968,7 +3968,7 @@ export const api = {
     }>),
 
   cpufreqResidencyAuditStatus: () =>
-    fetch("/api/cpufreq-residency-audit").then(jsonOf<{
+    safeFetch("/api/cpufreq-residency-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       sample_cpu_index: number | null;
@@ -3980,7 +3980,7 @@ export const api = {
     }>),
 
   efiRuntimeMapAuditStatus: () =>
-    fetch("/api/efi-runtime-map-audit").then(jsonOf<{
+    safeFetch("/api/efi-runtime-map-audit").then(jsonOf<{
       ok: boolean;
       efi_present: boolean;
       runtime_map_present: boolean;
@@ -3996,7 +3996,7 @@ export const api = {
     }>),
 
   devfreqEventAuditStatus: () =>
-    fetch("/api/devfreq-event-audit").then(jsonOf<{
+    safeFetch("/api/devfreq-event-audit").then(jsonOf<{
       ok: boolean;
       event_class_present: boolean;
       devfreq_class_present: boolean;
@@ -4009,7 +4009,7 @@ export const api = {
 
   // ── R&D #66 (UI sprint 57) ──
   mtdFlashAuditStatus: () =>
-    fetch("/api/mtd-flash-audit").then(jsonOf<{
+    safeFetch("/api/mtd-flash-audit").then(jsonOf<{
       ok: boolean;
       mtd_count: number;
       mtds: Array<{ id: string; name: string | null;
@@ -4022,7 +4022,7 @@ export const api = {
     }>),
 
   spiFirmwareLoaderAuditStatus: () =>
-    fetch("/api/spi-firmware-loader-audit").then(jsonOf<{
+    safeFetch("/api/spi-firmware-loader-audit").then(jsonOf<{
       ok: boolean;
       spi_master_count: number;
       spi_masters: Array<{ id: string }>;
@@ -4034,7 +4034,7 @@ export const api = {
     }>),
 
   procSyscallAuxvAuditStatus: () =>
-    fetch("/api/proc-syscall-auxv-audit").then(jsonOf<{
+    safeFetch("/api/proc-syscall-auxv-audit").then(jsonOf<{
       ok: boolean;
       sample_count: number;
       samples: Array<{ pid: number; state: string | null;
@@ -4054,7 +4054,7 @@ export const api = {
     }>),
 
   btfBpfAuditStatus: () =>
-    fetch("/api/btf-bpf-audit").then(jsonOf<{
+    safeFetch("/api/btf-bpf-audit").then(jsonOf<{
       ok: boolean;
       vmlinux_btf_bytes: number | null;
       module_btf_count: number;
@@ -4067,7 +4067,7 @@ export const api = {
 
   // ── R&D #67 (UI sprint 58) ──
   efiEsrtAuditStatus: () =>
-    fetch("/api/efi-esrt-audit").then(jsonOf<{
+    safeFetch("/api/efi-esrt-audit").then(jsonOf<{
       ok: boolean;
       efi_present: boolean;
       esrt_present: boolean;
@@ -4089,7 +4089,7 @@ export const api = {
     }>),
 
   vmallocinfoAuditStatus: () =>
-    fetch("/api/vmallocinfo-audit").then(jsonOf<{
+    safeFetch("/api/vmallocinfo-audit").then(jsonOf<{
       ok: boolean;
       file_present: boolean;
       permission_denied: boolean;
@@ -4102,7 +4102,7 @@ export const api = {
     }>),
 
   fdinfoKindsAuditStatus: () =>
-    fetch("/api/fdinfo-kinds-audit").then(jsonOf<{
+    safeFetch("/api/fdinfo-kinds-audit").then(jsonOf<{
       ok: boolean;
       pid_count: number;
       pids_with_anon: number;
@@ -4115,7 +4115,7 @@ export const api = {
     }>),
 
   timerListAuditStatus: () =>
-    fetch("/api/timer-list-audit").then(jsonOf<{
+    safeFetch("/api/timer-list-audit").then(jsonOf<{
       ok: boolean;
       timer_list_present: boolean;
       timer_list_permission_denied: boolean;
@@ -4131,7 +4131,7 @@ export const api = {
 
   // ── R&D #68 (UI sprint 59) ──
   pstoreCrashlogAuditStatus: () =>
-    fetch("/api/pstore-crashlog-audit").then(jsonOf<{
+    safeFetch("/api/pstore-crashlog-audit").then(jsonOf<{
       ok: boolean;
       mounted: boolean;
       backend: string | null;
@@ -4143,7 +4143,7 @@ export const api = {
     }>),
 
   lruGenMglruAuditStatus: () =>
-    fetch("/api/lru-gen-mglru-audit").then(jsonOf<{
+    safeFetch("/api/lru-gen-mglru-audit").then(jsonOf<{
       ok: boolean;
       mglru_present: boolean;
       enabled: number | null;
@@ -4155,7 +4155,7 @@ export const api = {
     }>),
 
   fsSpecificTunablesAuditStatus: () =>
-    fetch("/api/fs-specific-tunables-audit").then(jsonOf<{
+    safeFetch("/api/fs-specific-tunables-audit").then(jsonOf<{
       ok: boolean;
       ext4_present: boolean;
       xfs_present: boolean;
@@ -4179,7 +4179,7 @@ export const api = {
     }>),
 
   dtMemmapFirmwareAuditStatus: () =>
-    fetch("/api/dt-memmap-firmware-audit").then(jsonOf<{
+    safeFetch("/api/dt-memmap-firmware-audit").then(jsonOf<{
       ok: boolean;
       arch: string;
       devicetree_present: boolean;
@@ -4198,7 +4198,7 @@ export const api = {
 
   // ── R&D #69 (UI sprint 60) ──
   nvmemInventoryAuditStatus: () =>
-    fetch("/api/nvmem-inventory-audit").then(jsonOf<{
+    safeFetch("/api/nvmem-inventory-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       listable: boolean;
@@ -4214,7 +4214,7 @@ export const api = {
     }>),
 
   damonCmaAuditStatus: () =>
-    fetch("/api/damon-cma-audit").then(jsonOf<{
+    safeFetch("/api/damon-cma-audit").then(jsonOf<{
       ok: boolean;
       cma_present: boolean;
       damon_present: boolean;
@@ -4237,7 +4237,7 @@ export const api = {
     }>),
 
   kpageflagsAuditStatus: () =>
-    fetch("/api/kpageflags-audit").then(jsonOf<{
+    safeFetch("/api/kpageflags-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       readable: boolean;
@@ -4249,7 +4249,7 @@ export const api = {
     }>),
 
   procStaticKernelRegistryAuditStatus: () =>
-    fetch("/api/proc-static-kernel-registry-audit").then(jsonOf<{
+    safeFetch("/api/proc-static-kernel-registry-audit").then(jsonOf<{
       ok: boolean;
       module_count: number;
       tainting_module_count: number;
@@ -4264,7 +4264,7 @@ export const api = {
 
   // ── R&D #70 (UI sprint 61) ──
   remoteprocCoprocessorAuditStatus: () =>
-    fetch("/api/remoteproc-coprocessor-audit").then(jsonOf<{
+    safeFetch("/api/remoteproc-coprocessor-audit").then(jsonOf<{
       ok: boolean;
       path_present: boolean;
       remoteproc_count: number;
@@ -4280,7 +4280,7 @@ export const api = {
     }>),
 
   uioGpioUserlandAuditStatus: () =>
-    fetch("/api/uio-gpio-userland-audit").then(jsonOf<{
+    safeFetch("/api/uio-gpio-userland-audit").then(jsonOf<{
       ok: boolean;
       uio_present: boolean;
       gpio_present: boolean;
@@ -4309,7 +4309,7 @@ export const api = {
     }>),
 
   devcoredumpInventoryAuditStatus: () =>
-    fetch("/api/devcoredump-inventory-audit").then(jsonOf<{
+    safeFetch("/api/devcoredump-inventory-audit").then(jsonOf<{
       ok: boolean;
       capability_present: boolean;
       global_disabled: number | null;
@@ -4327,7 +4327,7 @@ export const api = {
     }>),
 
   cxlDaxMemoryAuditStatus: () =>
-    fetch("/api/cxl-dax-memory-audit").then(jsonOf<{
+    safeFetch("/api/cxl-dax-memory-audit").then(jsonOf<{
       ok: boolean;
       cxl_present: boolean;
       dax_present: boolean;
@@ -4350,7 +4350,7 @@ export const api = {
 
   // ── R&D #71 (UI sprint 62) ──
   usbRoleSwitchAuditStatus: () =>
-    fetch("/api/usb-role-switch-audit").then(jsonOf<{
+    safeFetch("/api/usb-role-switch-audit").then(jsonOf<{
       ok: boolean;
       usb_role_present: boolean;
       typec_present: boolean;
@@ -4367,7 +4367,7 @@ export const api = {
     }>),
 
   pageIdleTrackingAuditStatus: () =>
-    fetch("/api/page-idle-tracking-audit").then(jsonOf<{
+    safeFetch("/api/page-idle-tracking-audit").then(jsonOf<{
       ok: boolean;
       page_idle_present: boolean;
       bitmap_present: boolean;
@@ -4379,7 +4379,7 @@ export const api = {
     }>),
 
   edacDimmCeTrendAuditStatus: () =>
-    fetch("/api/edac-dimm-ce-trend-audit").then(jsonOf<{
+    safeFetch("/api/edac-dimm-ce-trend-audit").then(jsonOf<{
       ok: boolean;
       edac_present: boolean;
       mc_count: number;
@@ -4396,7 +4396,7 @@ export const api = {
     }>),
 
   ataPortSataAuditStatus: () =>
-    fetch("/api/ata-port-sata-audit").then(jsonOf<{
+    safeFetch("/api/ata-port-sata-audit").then(jsonOf<{
       ok: boolean;
       ata_present: boolean;
       port_count: number;
@@ -4424,7 +4424,7 @@ export const api = {
 
   // ── R&D #72 (UI sprint 63) ──
   fwCfgBlobAuditStatus: () =>
-    fetch("/api/fw-cfg-blob-audit").then(jsonOf<{
+    safeFetch("/api/fw-cfg-blob-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       rev: number | null;
@@ -4439,7 +4439,7 @@ export const api = {
     }>),
 
   ueventHelperAuditStatus: () =>
-    fetch("/api/uevent-helper-audit").then(jsonOf<{
+    safeFetch("/api/uevent-helper-audit").then(jsonOf<{
       ok: boolean;
       uevent_helper_present: boolean;
       uevent_helper_readable: boolean;
@@ -4451,7 +4451,7 @@ export const api = {
     }>),
 
   dmiEntriesRawAuditStatus: () =>
-    fetch("/api/dmi-entries-raw-audit").then(jsonOf<{
+    safeFetch("/api/dmi-entries-raw-audit").then(jsonOf<{
       ok: boolean;
       path_present: boolean;
       listable: boolean;
@@ -4471,7 +4471,7 @@ export const api = {
     }>),
 
   tracingEventsEnableAuditStatus: () =>
-    fetch("/api/tracing-events-enable-audit").then(jsonOf<{
+    safeFetch("/api/tracing-events-enable-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       subsystem_count: number;
@@ -4485,7 +4485,7 @@ export const api = {
 
   // ── R&D #73 (UI sprint 64) ──
   processIdLimitsAuditStatus: () =>
-    fetch("/api/process-id-limits-audit").then(jsonOf<{
+    safeFetch("/api/process-id-limits-audit").then(jsonOf<{
       ok: boolean;
       pid_max: number | null;
       threads_max: number | null;
@@ -4496,7 +4496,7 @@ export const api = {
     }>),
 
   sysctlDevSubtreeAuditStatus: () =>
-    fetch("/api/sysctl-dev-subtree-audit").then(jsonOf<{
+    safeFetch("/api/sysctl-dev-subtree-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       scsi_logging_level: number | null;
@@ -4507,7 +4507,7 @@ export const api = {
     }>),
 
   kernelNotesVmcoreinfoAuditStatus: () =>
-    fetch("/api/kernel-notes-vmcoreinfo-audit").then(jsonOf<{
+    safeFetch("/api/kernel-notes-vmcoreinfo-audit").then(jsonOf<{
       ok: boolean;
       notes_present: boolean;
       notes_size: number | null;
@@ -4520,7 +4520,7 @@ export const api = {
     }>),
 
   firmwareAttributesAuditStatus: () =>
-    fetch("/api/firmware-attributes-audit").then(jsonOf<{
+    safeFetch("/api/firmware-attributes-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       vendor_count: number;
@@ -4539,7 +4539,7 @@ export const api = {
 
   // ── R&D #74 (UI sprint 65) ──
   cpuIsolationAuditStatus: () =>
-    fetch("/api/cpu-isolation-audit").then(jsonOf<{
+    safeFetch("/api/cpu-isolation-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       isolated: number[];
@@ -4554,7 +4554,7 @@ export const api = {
     }>),
 
   dmaHeapAuditStatus: () =>
-    fetch("/api/dma-heap-audit").then(jsonOf<{
+    safeFetch("/api/dma-heap-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       heap_count: number;
@@ -4568,7 +4568,7 @@ export const api = {
     }>),
 
   abiCompatAuditStatus: () =>
-    fetch("/api/abi-compat-audit").then(jsonOf<{
+    safeFetch("/api/abi-compat-audit").then(jsonOf<{
       ok: boolean;
       abi_present: boolean;
       abi_knobs: Record<string, number>;
@@ -4578,7 +4578,7 @@ export const api = {
     }>),
 
   v4l2MediaAuditStatus: () =>
-    fetch("/api/v4l2-media-audit").then(jsonOf<{
+    safeFetch("/api/v4l2-media-audit").then(jsonOf<{
       ok: boolean;
       v4l_present: boolean;
       media_present: boolean;
@@ -4595,7 +4595,7 @@ export const api = {
 
   // ── R&D #75 (UI sprint 66) ──
   miscChardevAuditStatus: () =>
-    fetch("/api/misc-chardev-audit").then(jsonOf<{
+    safeFetch("/api/misc-chardev-audit").then(jsonOf<{
       ok: boolean;
       misc_count: number;
       sysfs_misc_count: number;
@@ -4609,7 +4609,7 @@ export const api = {
     }>),
 
   sgxEnclaveAuditStatus: () =>
-    fetch("/api/sgx-enclave-audit").then(jsonOf<{
+    safeFetch("/api/sgx-enclave-audit").then(jsonOf<{
       ok: boolean;
       cpu_has_sgx: boolean;
       cpu_has_sgx_lc: boolean;
@@ -4623,7 +4623,7 @@ export const api = {
     }>),
 
   lsmSubtreeAuditStatus: () =>
-    fetch("/api/lsm-subtree-audit").then(jsonOf<{
+    safeFetch("/api/lsm-subtree-audit").then(jsonOf<{
       ok: boolean;
       security_present: boolean;
       lsm_stack: string[];
@@ -4635,7 +4635,7 @@ export const api = {
     }>),
 
   ipv4ConfPerIfaceAuditStatus: () =>
-    fetch("/api/ipv4-conf-per-iface-audit").then(jsonOf<{
+    safeFetch("/api/ipv4-conf-per-iface-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       iface_count: number;
@@ -4646,7 +4646,7 @@ export const api = {
 
   // ── R&D #76 (UI sprint 67) ──
   inputDeviceAuditStatus: () =>
-    fetch("/api/input-device-audit").then(jsonOf<{
+    safeFetch("/api/input-device-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       device_count: number;
@@ -4664,7 +4664,7 @@ export const api = {
     }>),
 
   ipv6ConfPerIfaceAuditStatus: () =>
-    fetch("/api/ipv6-conf-per-iface-audit").then(jsonOf<{
+    safeFetch("/api/ipv6-conf-per-iface-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       iface_count: number;
@@ -4674,7 +4674,7 @@ export const api = {
     }>),
 
   wmiBusAuditStatus: () =>
-    fetch("/api/wmi-bus-audit").then(jsonOf<{
+    safeFetch("/api/wmi-bus-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       guid_count: number;
@@ -4695,7 +4695,7 @@ export const api = {
     }>),
 
   numaHmatAccessAuditStatus: () =>
-    fetch("/api/numa-hmat-access-audit").then(jsonOf<{
+    safeFetch("/api/numa-hmat-access-audit").then(jsonOf<{
       ok: boolean;
       present: boolean;
       node_count: number;
@@ -4714,7 +4714,7 @@ export const api = {
 
   // ── R&D #77 (UI sprint 68) ──
   cpuThermalThrottleCountersAuditStatus: () =>
-    fetch("/api/cpu-thermal-throttle-counters-audit").then(jsonOf<{
+    safeFetch("/api/cpu-thermal-throttle-counters-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       counters_by_cpu: Record<string, Record<string, number | null>>;
@@ -4722,7 +4722,7 @@ export const api = {
     }>),
 
   pciSriovPostureAuditStatus: () =>
-    fetch("/api/pci-sriov-posture-audit").then(jsonOf<{
+    safeFetch("/api/pci-sriov-posture-audit").then(jsonOf<{
       ok: boolean;
       sriov_capable_count: number;
       active_vf_count: number;
@@ -4740,7 +4740,7 @@ export const api = {
     }>),
 
   cpuCppcAuditStatus: () =>
-    fetch("/api/cpu-cppc-audit").then(jsonOf<{
+    safeFetch("/api/cpu-cppc-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       scaling_driver: string | null;
@@ -4749,7 +4749,7 @@ export const api = {
     }>),
 
   pcieAerFleetAuditStatus: () =>
-    fetch("/api/pcie-aer-fleet-audit").then(jsonOf<{
+    safeFetch("/api/pcie-aer-fleet-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       totals: { correctable: number; fatal: number; nonfatal: number };
@@ -4768,7 +4768,7 @@ export const api = {
 
   // ── R&D #78 (UI sprint 69) ──
   netIfaceCountersAuditStatus: () =>
-    fetch("/api/net-iface-counters-audit").then(jsonOf<{
+    safeFetch("/api/net-iface-counters-audit").then(jsonOf<{
       ok: boolean;
       iface_count: number;
       ifaces: string[];
@@ -4776,7 +4776,7 @@ export const api = {
     }>),
 
   netStackingTopologyAuditStatus: () =>
-    fetch("/api/net-stacking-topology-audit").then(jsonOf<{
+    safeFetch("/api/net-stacking-topology-audit").then(jsonOf<{
       ok: boolean;
       iface_count: number;
       bonds: string[];
@@ -4785,7 +4785,7 @@ export const api = {
     }>),
 
   procMapsAnomalyAuditStatus: () =>
-    fetch("/api/proc-maps-anomaly-audit").then(jsonOf<{
+    safeFetch("/api/proc-maps-anomaly-audit").then(jsonOf<{
       ok: boolean;
       pid_count_total: number;
       pid_count_scanned: number;
@@ -4794,7 +4794,7 @@ export const api = {
 
   // ── R&D #79 (UI sprint 70) ──
   softnetStatAuditStatus: () =>
-    fetch("/api/softnet-stat-audit").then(jsonOf<{
+    safeFetch("/api/softnet-stat-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       totals: {
@@ -4807,7 +4807,7 @@ export const api = {
     }>),
 
   routeTableAuditStatus: () =>
-    fetch("/api/route-table-audit").then(jsonOf<{
+    safeFetch("/api/route-table-audit").then(jsonOf<{
       ok: boolean;
       v4_route_count: number;
       v6_route_count: number;
@@ -4817,7 +4817,7 @@ export const api = {
     }>),
 
   fbVtconsoleAuditStatus: () =>
-    fetch("/api/fb-vtconsole-audit").then(jsonOf<{
+    safeFetch("/api/fb-vtconsole-audit").then(jsonOf<{
       ok: boolean;
       fb_count: number;
       fbs: Array<{ id: number; name: string }>;
@@ -4825,7 +4825,7 @@ export const api = {
     }>),
 
   schedTunablesAuditStatus: () =>
-    fetch("/api/sched-tunables-audit").then(jsonOf<{
+    safeFetch("/api/sched-tunables-audit").then(jsonOf<{
       ok: boolean;
       tunables: Record<string, number | null>;
       features_readable: boolean;
@@ -4835,7 +4835,7 @@ export const api = {
 
   // ── R&D #80 (UI sprint 71) ──
   arpNeighborAuditStatus: () =>
-    fetch("/api/arp-neighbor-audit").then(jsonOf<{
+    safeFetch("/api/arp-neighbor-audit").then(jsonOf<{
       ok: boolean;
       entries: number;
       incomplete_count: number;
@@ -4849,7 +4849,7 @@ export const api = {
     }>),
 
   snmp6IcmpAuditStatus: () =>
-    fetch("/api/snmp6-icmp-audit").then(jsonOf<{
+    safeFetch("/api/snmp6-icmp-audit").then(jsonOf<{
       ok: boolean;
       counter_count: number;
       sample: Record<string, number>;
@@ -4857,7 +4857,7 @@ export const api = {
     }>),
 
   btrfsAllocatorAuditStatus: () =>
-    fetch("/api/btrfs-allocator-audit").then(jsonOf<{
+    safeFetch("/api/btrfs-allocator-audit").then(jsonOf<{
       ok: boolean;
       fs_count: number;
       filesystems: Array<{
@@ -4868,7 +4868,7 @@ export const api = {
     }>),
 
   procStatusCapsAuditStatus: () =>
-    fetch("/api/proc-status-caps-audit").then(jsonOf<{
+    safeFetch("/api/proc-status-caps-audit").then(jsonOf<{
       ok: boolean;
       pid_count_total: number;
       pid_count_scanned: number;
@@ -4878,7 +4878,7 @@ export const api = {
 
   // ── R&D #81 (UI sprint 72) ──
   xhciCompanionAuditStatus: () =>
-    fetch("/api/xhci-companion-audit").then(jsonOf<{
+    safeFetch("/api/xhci-companion-audit").then(jsonOf<{
       ok: boolean;
       hub_count: number;
       usb3_count: number;
@@ -4895,7 +4895,7 @@ export const api = {
     }>),
 
   bpfProgramInventoryAuditStatus: () =>
-    fetch("/api/bpf-program-inventory-audit").then(jsonOf<{
+    safeFetch("/api/bpf-program-inventory-audit").then(jsonOf<{
       ok: boolean;
       bpffs_mounted: boolean;
       pin_count: number | null;
@@ -4907,7 +4907,7 @@ export const api = {
     }>),
 
   cgroupIoStatAuditStatus: () =>
-    fetch("/api/cgroup-io-stat-audit").then(jsonOf<{
+    safeFetch("/api/cgroup-io-stat-audit").then(jsonOf<{
       ok: boolean;
       cgroup_count: number;
       root_pressure: {
@@ -4923,7 +4923,7 @@ export const api = {
     }>),
 
   thermalTripDriftAuditStatus: () =>
-    fetch("/api/thermal-trip-drift-audit").then(jsonOf<{
+    safeFetch("/api/thermal-trip-drift-audit").then(jsonOf<{
       ok: boolean;
       zone_count: number;
       zones: Array<{
@@ -4938,7 +4938,7 @@ export const api = {
 
   // ── R&D #82 (UI sprint 73) ──
   sysrqMaskAuditStatus: () =>
-    fetch("/api/sysrq-mask-audit").then(jsonOf<{
+    safeFetch("/api/sysrq-mask-audit").then(jsonOf<{
       ok: boolean;
       values: {
         sysrq: number | null;
@@ -4949,7 +4949,7 @@ export const api = {
     }>),
 
   cpuDmaLatencyQosAuditStatus: () =>
-    fetch("/api/cpu-dma-latency-qos-audit").then(jsonOf<{
+    safeFetch("/api/cpu-dma-latency-qos-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       clamped_count: number;
@@ -4960,7 +4960,7 @@ export const api = {
     }>),
 
   rcuExpeditedAuditStatus: () =>
-    fetch("/api/rcu-expedited-audit").then(jsonOf<{
+    safeFetch("/api/rcu-expedited-audit").then(jsonOf<{
       ok: boolean;
       state: {
         rcu_expedited: number | null;
@@ -4975,7 +4975,7 @@ export const api = {
     }>),
 
   pageOwnerFragAuditStatus: () =>
-    fetch("/api/page-owner-frag-audit").then(jsonOf<{
+    safeFetch("/api/page-owner-frag-audit").then(jsonOf<{
       ok: boolean;
       extfrag_zones: number;
       unusable_zones: number;
@@ -4986,7 +4986,7 @@ export const api = {
 
   // ── R&D #83 (UI sprint 74) ──
   blockIntegrityAuditStatus: () =>
-    fetch("/api/block-integrity-audit").then(jsonOf<{
+    safeFetch("/api/block-integrity-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       capable_count: number;
@@ -5003,7 +5003,7 @@ export const api = {
     }>),
 
   clkSummaryAuditStatus: () =>
-    fetch("/api/clk-summary-audit").then(jsonOf<{
+    safeFetch("/api/clk-summary-audit").then(jsonOf<{
       ok: boolean;
       clock_count: number;
       read_state: string;
@@ -5011,7 +5011,7 @@ export const api = {
     }>),
 
   nfsdStatsAuditStatus: () =>
-    fetch("/api/nfsd-stats-audit").then(jsonOf<{
+    safeFetch("/api/nfsd-stats-audit").then(jsonOf<{
       ok: boolean;
       nfsd_present: boolean;
       threads: number | null;
@@ -5022,7 +5022,7 @@ export const api = {
     }>),
 
   driDebugfsAuditStatus: () =>
-    fetch("/api/dri-debugfs-audit").then(jsonOf<{
+    safeFetch("/api/dri-debugfs-audit").then(jsonOf<{
       ok: boolean;
       minor_count: number;
       read_state: string;
@@ -5037,7 +5037,7 @@ export const api = {
 
   // ── R&D #84 (UI sprint 75) ──
   suspendStatsAuditStatus: () =>
-    fetch("/api/suspend-stats-audit").then(jsonOf<{
+    safeFetch("/api/suspend-stats-audit").then(jsonOf<{
       ok: boolean;
       success: number | null;
       fail: number | null;
@@ -5048,7 +5048,7 @@ export const api = {
     }>),
 
   loopDeviceAuditStatus: () =>
-    fetch("/api/loop-device-audit").then(jsonOf<{
+    safeFetch("/api/loop-device-audit").then(jsonOf<{
       ok: boolean;
       loop_count_total: number;
       loop_count_active: number;
@@ -5062,7 +5062,7 @@ export const api = {
     }>),
 
   kernelModuleParamsDriftAuditStatus: () =>
-    fetch("/api/kernel-module-params-drift-audit").then(jsonOf<{
+    safeFetch("/api/kernel-module-params-drift-audit").then(jsonOf<{
       ok: boolean;
       scanned: number;
       drifted: number;
@@ -5078,7 +5078,7 @@ export const api = {
     }>),
 
   ttySerialConsoleAuditStatus: () =>
-    fetch("/api/tty-serial-console-audit").then(jsonOf<{
+    safeFetch("/api/tty-serial-console-audit").then(jsonOf<{
       ok: boolean;
       consoles: string[];
       usb_serial_count: number;
@@ -5091,7 +5091,7 @@ export const api = {
 
   // ── R&D #85 (UI sprint 76) ──
   dynamicDebugAuditStatus: () =>
-    fetch("/api/dynamic-debug-audit").then(jsonOf<{
+    safeFetch("/api/dynamic-debug-audit").then(jsonOf<{
       ok: boolean;
       read_state: string;
       total_sites: number;
@@ -5100,7 +5100,7 @@ export const api = {
     }>),
 
   extconStateAuditStatus: () =>
-    fetch("/api/extcon-state-audit").then(jsonOf<{
+    safeFetch("/api/extcon-state-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       devices: Array<{
@@ -5117,7 +5117,7 @@ export const api = {
     }>),
 
   unixSocketInventoryAuditStatus: () =>
-    fetch("/api/unix-socket-inventory-audit").then(jsonOf<{
+    safeFetch("/api/unix-socket-inventory-audit").then(jsonOf<{
       ok: boolean;
       total: number;
       abstract: number;
@@ -5128,7 +5128,7 @@ export const api = {
     }>),
 
   schedFeaturesDebugfsAuditStatus: () =>
-    fetch("/api/sched-features-debugfs-audit").then(jsonOf<{
+    safeFetch("/api/sched-features-debugfs-audit").then(jsonOf<{
       ok: boolean;
       read_state: string;
       feature_count: number;
@@ -5139,7 +5139,7 @@ export const api = {
 
   // ── R&D #86 (UI sprint 77) ──
   wolEthtoolAuditStatus: () =>
-    fetch("/api/wol-ethtool-audit").then(jsonOf<{
+    safeFetch("/api/wol-ethtool-audit").then(jsonOf<{
       ok: boolean;
       iface_count: number;
       interfaces: Array<{
@@ -5154,7 +5154,7 @@ export const api = {
     }>),
 
   thunderboltUsb4AuditStatus: () =>
-    fetch("/api/thunderbolt-usb4-audit").then(jsonOf<{
+    safeFetch("/api/thunderbolt-usb4-audit").then(jsonOf<{
       ok: boolean;
       bus_present: boolean;
       domain_count: number;
@@ -5174,7 +5174,7 @@ export const api = {
     }>),
 
   nvmeControllerStateAuditStatus: () =>
-    fetch("/api/nvme-controller-state-audit").then(jsonOf<{
+    safeFetch("/api/nvme-controller-state-audit").then(jsonOf<{
       ok: boolean;
       controller_count: number;
       controllers: Array<{
@@ -5189,7 +5189,7 @@ export const api = {
     }>),
 
   workqueueCpumaskAuditStatus: () =>
-    fetch("/api/workqueue-cpumask-audit").then(jsonOf<{
+    safeFetch("/api/workqueue-cpumask-audit").then(jsonOf<{
       ok: boolean;
       wq_count: number;
       global_cpumask: string;
@@ -5200,7 +5200,7 @@ export const api = {
 
   // ── R&D #87 (UI sprint 78) ──
   usbAuthorizedDefaultAuditStatus: () =>
-    fetch("/api/usb-authorized-default-audit").then(jsonOf<{
+    safeFetch("/api/usb-authorized-default-audit").then(jsonOf<{
       ok: boolean;
       hub_count: number;
       usbguard_present: boolean;
@@ -5213,7 +5213,7 @@ export const api = {
     }>),
 
   procLocksContentionAuditStatus: () =>
-    fetch("/api/proc-locks-contention-audit").then(jsonOf<{
+    safeFetch("/api/proc-locks-contention-audit").then(jsonOf<{
       ok: boolean;
       total: number;
       blocked: number;
@@ -5222,7 +5222,7 @@ export const api = {
     }>),
 
   cpuSmtControlAuditStatus: () =>
-    fetch("/api/cpu-smt-control-audit").then(jsonOf<{
+    safeFetch("/api/cpu-smt-control-audit").then(jsonOf<{
       ok: boolean;
       smt_control: string;
       smt_active: string;
@@ -5231,7 +5231,7 @@ export const api = {
     }>),
 
   interruptSkewAuditStatus: () =>
-    fetch("/api/interrupt-skew-audit").then(jsonOf<{
+    safeFetch("/api/interrupt-skew-audit").then(jsonOf<{
       ok: boolean;
       irq_count: number;
       mismatch_count: number;
@@ -5240,14 +5240,14 @@ export const api = {
 
   // ── R&D #88 (UI sprint 79) ──
   userspaceHardeningSysctlsAuditStatus: () =>
-    fetch("/api/userspace-hardening-sysctls-audit").then(jsonOf<{
+    safeFetch("/api/userspace-hardening-sysctls-audit").then(jsonOf<{
       ok: boolean;
       sysctls: Record<string, number>;
       verdict: { verdict: string; reason: string };
     }>),
 
   suspendModeSelectorAuditStatus: () =>
-    fetch("/api/suspend-mode-selector-audit").then(jsonOf<{
+    safeFetch("/api/suspend-mode-selector-audit").then(jsonOf<{
       ok: boolean;
       state: string;
       mem_sleep: string;
@@ -5258,7 +5258,7 @@ export const api = {
     }>),
 
   iommuReservedRegionsAuditStatus: () =>
-    fetch("/api/iommu-reserved-regions-audit").then(jsonOf<{
+    safeFetch("/api/iommu-reserved-regions-audit").then(jsonOf<{
       ok: boolean;
       group_count: number;
       gpu_group_count: number;
@@ -5266,7 +5266,7 @@ export const api = {
     }>),
 
   timerMigrationNohzDriftAuditStatus: () =>
-    fetch("/api/timer-migration-nohz-drift-audit").then(jsonOf<{
+    safeFetch("/api/timer-migration-nohz-drift-audit").then(jsonOf<{
       ok: boolean;
       timer_migration: number | null;
       nohz_full: number[];
@@ -5278,7 +5278,7 @@ export const api = {
 
   // ── R&D #89 (UI sprint 80) ──
   tcpCongestionControlAuditStatus: () =>
-    fetch("/api/tcp-congestion-control-audit").then(jsonOf<{
+    safeFetch("/api/tcp-congestion-control-audit").then(jsonOf<{
       ok: boolean;
       current_cc: string;
       available_cc: string[];
@@ -5287,14 +5287,14 @@ export const api = {
     }>),
 
   namespaceLimitsAuditStatus: () =>
-    fetch("/api/namespace-limits-audit").then(jsonOf<{
+    safeFetch("/api/namespace-limits-audit").then(jsonOf<{
       ok: boolean;
       limits: Record<string, number>;
       verdict: { verdict: string; reason: string };
     }>),
 
   sysvipcLimitsAuditStatus: () =>
-    fetch("/api/sysvipc-limits-audit").then(jsonOf<{
+    safeFetch("/api/sysvipc-limits-audit").then(jsonOf<{
       ok: boolean;
       limits: Record<string, number | null>;
       mem_total: number | null;
@@ -5303,7 +5303,7 @@ export const api = {
     }>),
 
   pcieLinkSpeedDriftAuditStatus: () =>
-    fetch("/api/pcie-link-speed-drift-audit").then(jsonOf<{
+    safeFetch("/api/pcie-link-speed-drift-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       linked_count: number;
@@ -5312,7 +5312,7 @@ export const api = {
 
   // ── R&D #90 (UI sprint 81) ──
   resctrlAuditStatus: () =>
-    fetch("/api/resctrl-audit").then(jsonOf<{
+    safeFetch("/api/resctrl-audit").then(jsonOf<{
       ok: boolean;
       mounted: boolean;
       ctrl_group_count: number;
@@ -5320,7 +5320,7 @@ export const api = {
     }>),
 
   procNetProtocolsAuditStatus: () =>
-    fetch("/api/proc-net-protocols-audit").then(jsonOf<{
+    safeFetch("/api/proc-net-protocols-audit").then(jsonOf<{
       ok: boolean;
       packet_socket_count: number;
       raw_socket_count: number;
@@ -5328,7 +5328,7 @@ export const api = {
     }>),
 
   cpufreqGovernorTunablesAuditStatus: () =>
-    fetch("/api/cpufreq-governor-tunables-audit").then(jsonOf<{
+    safeFetch("/api/cpufreq-governor-tunables-audit").then(jsonOf<{
       ok: boolean;
       policy_count: number;
       governors: string[];
@@ -5336,7 +5336,7 @@ export const api = {
     }>),
 
   pcieDpcAuditStatus: () =>
-    fetch("/api/pcie-dpc-audit").then(jsonOf<{
+    safeFetch("/api/pcie-dpc-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       dpc_capable_count: number;
@@ -5345,14 +5345,14 @@ export const api = {
 
   // ── R&D #91 (UI sprint 82) ──
   cgroupPidsControllerAuditStatus: () =>
-    fetch("/api/cgroup-pids-controller-audit").then(jsonOf<{
+    safeFetch("/api/cgroup-pids-controller-audit").then(jsonOf<{
       ok: boolean;
       cgroup_with_cap_count: number;
       verdict: { verdict: string; reason: string };
     }>),
 
   dmaBufBufinfoAuditStatus: () =>
-    fetch("/api/dma-buf-bufinfo-audit").then(jsonOf<{
+    safeFetch("/api/dma-buf-bufinfo-audit").then(jsonOf<{
       ok: boolean;
       exporter_count: number;
       total_bytes: number;
@@ -5361,7 +5361,7 @@ export const api = {
     }>),
 
   nvmeHmbFeaturesAuditStatus: () =>
-    fetch("/api/nvme-hmb-features-audit").then(jsonOf<{
+    safeFetch("/api/nvme-hmb-features-audit").then(jsonOf<{
       ok: boolean;
       controller_count: number;
       hmb_using_count: number;
@@ -5370,7 +5370,7 @@ export const api = {
     }>),
 
   vmstatReclaimPressureAuditStatus: () =>
-    fetch("/api/vmstat-reclaim-pressure-audit").then(jsonOf<{
+    safeFetch("/api/vmstat-reclaim-pressure-audit").then(jsonOf<{
       ok: boolean;
       has_prev_snapshot: boolean;
       watermark_scale_factor: number | null;
@@ -5379,7 +5379,7 @@ export const api = {
 
   // ── R&D #92 (UI sprint 83) ──
   iommuDmaStrictAuditStatus: () =>
-    fetch("/api/iommu-dma-strict-audit").then(jsonOf<{
+    safeFetch("/api/iommu-dma-strict-audit").then(jsonOf<{
       ok: boolean;
       strict_intel: string | null;
       strict_amd: string | null;
@@ -5391,7 +5391,7 @@ export const api = {
     }>),
 
   kernelLockupWatchdogAuditStatus: () =>
-    fetch("/api/kernel-lockup-watchdog-audit").then(jsonOf<{
+    safeFetch("/api/kernel-lockup-watchdog-audit").then(jsonOf<{
       ok: boolean;
       watchdog: number | null;
       nmi_watchdog: number | null;
@@ -5401,7 +5401,7 @@ export const api = {
     }>),
 
   khugepagedPressureAuditStatus: () =>
-    fetch("/api/khugepaged-pressure-audit").then(jsonOf<{
+    safeFetch("/api/khugepaged-pressure-audit").then(jsonOf<{
       ok: boolean;
       has_prev_snapshot: boolean;
       khugepaged_present: boolean;
@@ -5411,7 +5411,7 @@ export const api = {
     }>),
 
   drmFdinfoEngineUsageAuditStatus: () =>
-    fetch("/api/drm-fdinfo-engine-usage-audit").then(jsonOf<{
+    safeFetch("/api/drm-fdinfo-engine-usage-audit").then(jsonOf<{
       ok: boolean;
       drm_client_count: number;
       total_vram_bytes: number;
@@ -5422,7 +5422,7 @@ export const api = {
 
   // ── R&D #93 (UI sprint 84) ──
   pipeMqueueLimitsAuditStatus: () =>
-    fetch("/api/pipe-mqueue-limits-audit").then(jsonOf<{
+    safeFetch("/api/pipe-mqueue-limits-audit").then(jsonOf<{
       ok: boolean;
       limits: Record<string, number | null>;
       mem_total: number | null;
@@ -5430,21 +5430,21 @@ export const api = {
     }>),
 
   cgroupV2MemoryPeakAuditStatus: () =>
-    fetch("/api/cgroup-v2-memory-peak-audit").then(jsonOf<{
+    safeFetch("/api/cgroup-v2-memory-peak-audit").then(jsonOf<{
       ok: boolean;
       cgroup_count: number;
       verdict: { verdict: string; reason: string };
     }>),
 
   nfsMountstatsAuditStatus: () =>
-    fetch("/api/nfs-mountstats-audit").then(jsonOf<{
+    safeFetch("/api/nfs-mountstats-audit").then(jsonOf<{
       ok: boolean;
       nfs_mount_count: number;
       verdict: { verdict: string; reason: string };
     }>),
 
   bpfJitXdpBusyPollAuditStatus: () =>
-    fetch("/api/bpf-jit-xdp-busy-poll-audit").then(jsonOf<{
+    safeFetch("/api/bpf-jit-xdp-busy-poll-audit").then(jsonOf<{
       ok: boolean;
       bpf_jit_enable: number | null;
       busy_poll: number | null;
@@ -5454,7 +5454,7 @@ export const api = {
 
   // ── R&D #94 (UI sprint 85) ──
   hwpoisonMemoryFailureAuditStatus: () =>
-    fetch("/api/hwpoison-memory-failure-audit").then(jsonOf<{
+    safeFetch("/api/hwpoison-memory-failure-audit").then(jsonOf<{
       ok: boolean;
       hardware_corrupted_kib: number | null;
       hwpoison_counter_count: number;
@@ -5463,7 +5463,7 @@ export const api = {
     }>),
 
   fsAioFanotifyLimitsAuditStatus: () =>
-    fetch("/api/fs-aio-fanotify-limits-audit").then(jsonOf<{
+    safeFetch("/api/fs-aio-fanotify-limits-audit").then(jsonOf<{
       ok: boolean;
       limits: Record<string, number | null>;
       mem_total: number | null;
@@ -5471,7 +5471,7 @@ export const api = {
     }>),
 
   drmTtmPagePoolAuditStatus: () =>
-    fetch("/api/drm-ttm-page-pool-audit").then(jsonOf<{
+    safeFetch("/api/drm-ttm-page-pool-audit").then(jsonOf<{
       ok: boolean;
       ttm_present: boolean;
       params: Record<string, number | null>;
@@ -5480,7 +5480,7 @@ export const api = {
     }>),
 
   lockdepLockstatAuditStatus: () =>
-    fetch("/api/lockdep-lockstat-audit").then(jsonOf<{
+    safeFetch("/api/lockdep-lockstat-audit").then(jsonOf<{
       ok: boolean;
       lockdep_present: boolean;
       lockdep_dead: boolean;
@@ -5489,21 +5489,21 @@ export const api = {
 
   // ── R&D #95 (UI sprint 86) ──
   mdioPhyEeeAuditStatus: () =>
-    fetch("/api/mdio-phy-eee-audit").then(jsonOf<{
+    safeFetch("/api/mdio-phy-eee-audit").then(jsonOf<{
       ok: boolean;
       phy_iface_count: number;
       verdict: { verdict: string; reason: string };
     }>),
 
   kernelModuleRefcntAuditStatus: () =>
-    fetch("/api/kernel-module-refcnt-audit").then(jsonOf<{
+    safeFetch("/api/kernel-module-refcnt-audit").then(jsonOf<{
       ok: boolean;
       module_count: number;
       verdict: { verdict: string; reason: string };
     }>),
 
   tracingBufferFootprintAuditStatus: () =>
-    fetch("/api/tracing-buffer-footprint-audit").then(jsonOf<{
+    safeFetch("/api/tracing-buffer-footprint-audit").then(jsonOf<{
       ok: boolean;
       buffer_total_size_kb: number | null;
       trace_clock: string;
@@ -5513,7 +5513,7 @@ export const api = {
     }>),
 
   perDeviceWakeupAttributionAuditStatus: () =>
-    fetch("/api/per-device-wakeup-attribution-audit").then(jsonOf<{
+    safeFetch("/api/per-device-wakeup-attribution-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       enabled_count: number;
@@ -5522,28 +5522,28 @@ export const api = {
 
   // ── R&D #96 (UI sprint 87) ──
   blockDiscardCapsAuditStatus: () =>
-    fetch("/api/block-discard-caps-audit").then(jsonOf<{
+    safeFetch("/api/block-discard-caps-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       verdict: { verdict: string; reason: string };
     }>),
 
   cpusetV2PartitionAuditStatus: () =>
-    fetch("/api/cpuset-v2-partition-audit").then(jsonOf<{
+    safeFetch("/api/cpuset-v2-partition-audit").then(jsonOf<{
       ok: boolean;
       non_default_count: number;
       verdict: { verdict: string; reason: string };
     }>),
 
   tracingInstancesAuditStatus: () =>
-    fetch("/api/tracing-instances-audit").then(jsonOf<{
+    safeFetch("/api/tracing-instances-audit").then(jsonOf<{
       ok: boolean;
       instance_count: number;
       verdict: { verdict: string; reason: string };
     }>),
 
   blockHoldersStackAuditStatus: () =>
-    fetch("/api/block-holders-stack-audit").then(jsonOf<{
+    safeFetch("/api/block-holders-stack-audit").then(jsonOf<{
       ok: boolean;
       dm_count: number;
       md_count: number;
@@ -5552,21 +5552,21 @@ export const api = {
 
   // ── R&D #97 (UI sprint 88) ──
   kvmMmuAuditStatus: () =>
-    fetch("/api/kvm-mmu-audit").then(jsonOf<{
+    safeFetch("/api/kvm-mmu-audit").then(jsonOf<{
       ok: boolean;
       kvm_present: boolean;
       verdict: { verdict: string; reason: string };
     }>),
 
   zfsArcAuditStatus: () =>
-    fetch("/api/zfs-arc-audit").then(jsonOf<{
+    safeFetch("/api/zfs-arc-audit").then(jsonOf<{
       ok: boolean;
       zfs_loaded: boolean;
       verdict: { verdict: string; reason: string };
     }>),
 
   cgroupDelegateAuditStatus: () =>
-    fetch("/api/cgroup-delegate-audit").then(jsonOf<{
+    safeFetch("/api/cgroup-delegate-audit").then(jsonOf<{
       ok: boolean;
       slice_count: number;
       delegate_present: boolean;
@@ -5574,7 +5574,7 @@ export const api = {
     }>),
 
   pciD3coldRuntimeAuditStatus: () =>
-    fetch("/api/pci-d3cold-runtime-audit").then(jsonOf<{
+    safeFetch("/api/pci-d3cold-runtime-audit").then(jsonOf<{
       ok: boolean;
       gpu_addr: string | null;
       gpu_d3cold_allowed?: number | null;
@@ -5586,7 +5586,7 @@ export const api = {
 
   // ── R&D #98 (UI sprint 89) ──
   psiIrqFullAuditStatus: () =>
-    fetch("/api/psi-irq-full-audit").then(jsonOf<{
+    safeFetch("/api/psi-irq-full-audit").then(jsonOf<{
       ok: boolean;
       irq_present: boolean;
       cpu_full: { a10?: number; a60?: number; a300?: number; total?: number };
@@ -5595,7 +5595,7 @@ export const api = {
     }>),
 
   fsQuotaProjidAuditStatus: () =>
-    fetch("/api/fs-quota-projid-audit").then(jsonOf<{
+    safeFetch("/api/fs-quota-projid-audit").then(jsonOf<{
       ok: boolean;
       quota_mount_count: number;
       overlay_count: number;
@@ -5605,7 +5605,7 @@ export const api = {
     }>),
 
   fuseConnectionsAuditStatus: () =>
-    fetch("/api/fuse-connections-audit").then(jsonOf<{
+    safeFetch("/api/fuse-connections-audit").then(jsonOf<{
       ok: boolean;
       connection_count: number;
       max_waiting: number;
@@ -5613,7 +5613,7 @@ export const api = {
     }>),
 
   keyringLifecycleAuditStatus: () =>
-    fetch("/api/keyring-lifecycle-audit").then(jsonOf<{
+    safeFetch("/api/keyring-lifecycle-audit").then(jsonOf<{
       ok: boolean;
       gc_delay: number | null;
       persistent_keyring_expiry: number | null;
@@ -5623,7 +5623,7 @@ export const api = {
 
   // ── R&D #99 (UI sprint 90) ──
   umwaitControlAuditStatus: () =>
-    fetch("/api/umwait-control-audit").then(jsonOf<{
+    safeFetch("/api/umwait-control-audit").then(jsonOf<{
       ok: boolean;
       waitpkg: boolean;
       enable_c02: number | null;
@@ -5632,7 +5632,7 @@ export const api = {
     }>),
 
   splitLockDetectAuditStatus: () =>
-    fetch("/api/split-lock-detect-audit").then(jsonOf<{
+    safeFetch("/api/split-lock-detect-audit").then(jsonOf<{
       ok: boolean;
       intel: boolean;
       cmdline_mode: string | null;
@@ -5641,7 +5641,7 @@ export const api = {
     }>),
 
   oomPolicySysctlAuditStatus: () =>
-    fetch("/api/oom-policy-sysctl-audit").then(jsonOf<{
+    safeFetch("/api/oom-policy-sysctl-audit").then(jsonOf<{
       ok: boolean;
       panic_on_oom: number | null;
       oom_kill_allocating_task: number | null;
@@ -5651,7 +5651,7 @@ export const api = {
     }>),
 
   rseqKernelAuditStatus: () =>
-    fetch("/api/rseq-kernel-audit").then(jsonOf<{
+    safeFetch("/api/rseq-kernel-audit").then(jsonOf<{
       ok: boolean;
       uname: string;
       CONFIG_RSEQ: string | null;
@@ -5662,7 +5662,7 @@ export const api = {
 
   // ── R&D #100 (UI sprint 91) ──
   workqueuePowerEfficientAuditStatus: () =>
-    fetch("/api/workqueue-power-efficient-audit").then(jsonOf<{
+    safeFetch("/api/workqueue-power-efficient-audit").then(jsonOf<{
       ok: boolean;
       power_efficient: string | null;
       cpu_intensive_thresh_us: number | null;
@@ -5672,7 +5672,7 @@ export const api = {
     }>),
 
   bqlStallCountersAuditStatus: () =>
-    fetch("/api/bql-stall-counters-audit").then(jsonOf<{
+    safeFetch("/api/bql-stall-counters-audit").then(jsonOf<{
       ok: boolean;
       iface_count: number;
       queue_count: number;
@@ -5680,7 +5680,7 @@ export const api = {
     }>),
 
   perfSamplingLimitsAuditStatus: () =>
-    fetch("/api/perf-sampling-limits-audit").then(jsonOf<{
+    safeFetch("/api/perf-sampling-limits-audit").then(jsonOf<{
       ok: boolean;
       perf_cpu_time_max_percent: number | null;
       perf_event_max_sample_rate: number | null;
@@ -5690,7 +5690,7 @@ export const api = {
     }>),
 
   zswapDeepPoolAuditStatus: () =>
-    fetch("/api/zswap-deep-pool-audit").then(jsonOf<{
+    safeFetch("/api/zswap-deep-pool-audit").then(jsonOf<{
       ok: boolean;
       enabled: string | null;
       exclusive_loads: string | null;
@@ -5702,7 +5702,7 @@ export const api = {
 
   // ── R&D #101 (UI sprint 92) ──
   kfenceRuntimeAuditStatus: () =>
-    fetch("/api/kfence-runtime-audit").then(jsonOf<{
+    safeFetch("/api/kfence-runtime-audit").then(jsonOf<{
       ok: boolean;
       sample_interval: number | null;
       skip_covered_thresh: number | null;
@@ -5711,7 +5711,7 @@ export const api = {
     }>),
 
   netQdiscDefaultAuditStatus: () =>
-    fetch("/api/net-qdisc-default-audit").then(jsonOf<{
+    safeFetch("/api/net-qdisc-default-audit").then(jsonOf<{
       ok: boolean;
       default_qdisc: string | null;
       netdev_budget: number | null;
@@ -5721,7 +5721,7 @@ export const api = {
     }>),
 
   fscacheCachefilesAuditStatus: () =>
-    fetch("/api/fscache-cachefiles-audit").then(jsonOf<{
+    safeFetch("/api/fscache-cachefiles-audit").then(jsonOf<{
       ok: boolean;
       module_loaded: boolean;
       cache_count: number;
@@ -5731,7 +5731,7 @@ export const api = {
     }>),
 
   ksmAdvisorAuditStatus: () =>
-    fetch("/api/ksm-advisor-audit").then(jsonOf<{
+    safeFetch("/api/ksm-advisor-audit").then(jsonOf<{
       ok: boolean;
       run: number | null;
       advisor_mode: string | null;
@@ -5742,7 +5742,7 @@ export const api = {
 
   // ── R&D #102 (UI sprint 93) ──
   intelUncoreFreqAuditStatus: () =>
-    fetch("/api/intel-uncore-freq-audit").then(jsonOf<{
+    safeFetch("/api/intel-uncore-freq-audit").then(jsonOf<{
       ok: boolean;
       die_count: number;
       dies: Array<{
@@ -5756,7 +5756,7 @@ export const api = {
     }>),
 
   modprobeBlacklistDriftAuditStatus: () =>
-    fetch("/api/modprobe-blacklist-drift-audit").then(jsonOf<{
+    safeFetch("/api/modprobe-blacklist-drift-audit").then(jsonOf<{
       ok: boolean;
       conf_file_count: number;
       blacklist_count: number;
@@ -5765,7 +5765,7 @@ export const api = {
     }>),
 
   moduleSigEnforceAuditStatus: () =>
-    fetch("/api/module-sig-enforce-audit").then(jsonOf<{
+    safeFetch("/api/module-sig-enforce-audit").then(jsonOf<{
       ok: boolean;
       sig_enforce: string | null;
       lockdown: string | null;
@@ -5774,7 +5774,7 @@ export const api = {
     }>),
 
   bpfJitHardenAuditStatus: () =>
-    fetch("/api/bpf-jit-harden-audit").then(jsonOf<{
+    safeFetch("/api/bpf-jit-harden-audit").then(jsonOf<{
       ok: boolean;
       bpf_jit_harden: number | null;
       bpf_jit_kallsyms: number | null;
@@ -5785,7 +5785,7 @@ export const api = {
 
   // ── R&D #103 (UI sprint 94) ──
   kernelOopsWarnCounterAuditStatus: () =>
-    fetch("/api/kernel-oops-warn-counter-audit").then(jsonOf<{
+    safeFetch("/api/kernel-oops-warn-counter-audit").then(jsonOf<{
       ok: boolean;
       oops_count: number | null;
       warn_count: number | null;
@@ -5794,7 +5794,7 @@ export const api = {
     }>),
 
   ephemeralPortRangeAuditStatus: () =>
-    fetch("/api/ephemeral-port-range-audit").then(jsonOf<{
+    safeFetch("/api/ephemeral-port-range-audit").then(jsonOf<{
       ok: boolean;
       port_range_lo: number | null;
       port_range_hi: number | null;
@@ -5806,7 +5806,7 @@ export const api = {
     }>),
 
   zramWritebackRecompressAuditStatus: () =>
-    fetch("/api/zram-writeback-recompress-audit").then(jsonOf<{
+    safeFetch("/api/zram-writeback-recompress-audit").then(jsonOf<{
       ok: boolean;
       zram_count: number;
       zrams: Array<{
@@ -5821,7 +5821,7 @@ export const api = {
     }>),
 
   cgroupV2UclampAuditStatus: () =>
-    fetch("/api/cgroup-v2-uclamp-audit").then(jsonOf<{
+    safeFetch("/api/cgroup-v2-uclamp-audit").then(jsonOf<{
       ok: boolean;
       slice_count: number;
       slices: Array<{
@@ -5836,7 +5836,7 @@ export const api = {
 
   // ── R&D #104 (UI sprint 95) ──
   hwpDynamicBoostAuditStatus: () =>
-    fetch("/api/hwp-dynamic-boost-audit").then(jsonOf<{
+    safeFetch("/api/hwp-dynamic-boost-audit").then(jsonOf<{
       ok: boolean;
       intel_pstate_status: string | null;
       hwp_dynamic_boost: number | null;
@@ -5845,7 +5845,7 @@ export const api = {
     }>),
 
   hungTaskDriftAuditStatus: () =>
-    fetch("/api/hung-task-drift-audit").then(jsonOf<{
+    safeFetch("/api/hung-task-drift-audit").then(jsonOf<{
       ok: boolean;
       hung_task_warnings: number | null;
       hung_task_check_interval_secs: number | null;
@@ -5854,7 +5854,7 @@ export const api = {
     }>),
 
   firmwareLoaderPolicyAuditStatus: () =>
-    fetch("/api/firmware-loader-policy-audit").then(jsonOf<{
+    safeFetch("/api/firmware-loader-policy-audit").then(jsonOf<{
       ok: boolean;
       timeout_s: number | null;
       force_sysfs_fallback: number | null;
@@ -5863,7 +5863,7 @@ export const api = {
     }>),
 
   imaMeasurementFreshnessAuditStatus: () =>
-    fetch("/api/ima-measurement-freshness-audit").then(jsonOf<{
+    safeFetch("/api/ima-measurement-freshness-audit").then(jsonOf<{
       ok: boolean;
       runtime_measurements_count: number | null;
       log_line_count: number;
@@ -5873,7 +5873,7 @@ export const api = {
 
   // ── R&D #105 (UI sprint 96) ──
   imaDigestListsAuditStatus: () =>
-    fetch("/api/ima-digest-lists-audit").then(jsonOf<{
+    safeFetch("/api/ima-digest-lists-audit").then(jsonOf<{
       ok: boolean;
       digest_lists_loaded: number | null;
       digest_list_file_count: number;
@@ -5883,7 +5883,7 @@ export const api = {
     }>),
 
   drmGtLoadStatusAuditStatus: () =>
-    fetch("/api/drm-gt-load-status-audit").then(jsonOf<{
+    safeFetch("/api/drm-gt-load-status-audit").then(jsonOf<{
       ok: boolean;
       card_count: number;
       intel_present: boolean;
@@ -5895,7 +5895,7 @@ export const api = {
     }>),
 
   powerAsyncSuspendAuditStatus: () =>
-    fetch("/api/power-async-suspend-audit").then(jsonOf<{
+    safeFetch("/api/power-async-suspend-audit").then(jsonOf<{
       ok: boolean;
       pm_async: number | null;
       pm_freeze_timeout_ms: number | null;
@@ -5905,7 +5905,7 @@ export const api = {
     }>),
 
   vmCompactionProactiveAuditStatus: () =>
-    fetch("/api/vm-compaction-proactive-audit").then(jsonOf<{
+    safeFetch("/api/vm-compaction-proactive-audit").then(jsonOf<{
       ok: boolean;
       compaction_proactiveness: number | null;
       compact_unevictable_allowed: number | null;
@@ -5916,14 +5916,14 @@ export const api = {
 
   // ── R&D #106 (UI sprint 97) ──
   ioDelayTypeAuditStatus: () =>
-    fetch("/api/io-delay-type-audit").then(jsonOf<{
+    safeFetch("/api/io-delay-type-audit").then(jsonOf<{
       ok: boolean;
       io_delay_type: number | null;
       verdict: { verdict: string; reason: string };
     }>),
 
   printkPacingAuditStatus: () =>
-    fetch("/api/printk-pacing-audit").then(jsonOf<{
+    safeFetch("/api/printk-pacing-audit").then(jsonOf<{
       ok: boolean;
       printk_delay_ms: number | null;
       printk_devkmsg: string | null;
@@ -5932,7 +5932,7 @@ export const api = {
     }>),
 
   cacheL2ImbalanceAuditStatus: () =>
-    fetch("/api/cache-l2-imbalance-audit").then(jsonOf<{
+    safeFetch("/api/cache-l2-imbalance-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       l2_sizes_kib: number[];
@@ -5940,7 +5940,7 @@ export const api = {
     }>),
 
   cpufreqSetspeedDriftAuditStatus: () =>
-    fetch("/api/cpufreq-setspeed-drift-audit").then(jsonOf<{
+    safeFetch("/api/cpufreq-setspeed-drift-audit").then(jsonOf<{
       ok: boolean;
       cpu_count: number;
       cpufreq_present: boolean;
@@ -5949,7 +5949,7 @@ export const api = {
 
   // ── R&D #107 (UI sprint 98) ──
   vmNumaPolicyAuditStatus: () =>
-    fetch("/api/vm-numa-policy-audit").then(jsonOf<{
+    safeFetch("/api/vm-numa-policy-audit").then(jsonOf<{
       ok: boolean;
       numa_stat: number | null;
       numa_zonelist_order: string | null;
@@ -5958,7 +5958,7 @@ export const api = {
     }>),
 
   sysrqCadPoweroffAuditStatus: () =>
-    fetch("/api/sysrq-cad-poweroff-audit").then(jsonOf<{
+    safeFetch("/api/sysrq-cad-poweroff-audit").then(jsonOf<{
       ok: boolean;
       ctrl_alt_del: number | null;
       poweroff_cmd: string | null;
@@ -5966,7 +5966,7 @@ export const api = {
     }>),
 
   vmDirtyBytesDriftAuditStatus: () =>
-    fetch("/api/vm-dirty-bytes-drift-audit").then(jsonOf<{
+    safeFetch("/api/vm-dirty-bytes-drift-audit").then(jsonOf<{
       ok: boolean;
       dirty_bytes: number | null;
       dirty_background_bytes: number | null;
@@ -5976,7 +5976,7 @@ export const api = {
     }>),
 
   numaBalancingScanTuningAuditStatus: () =>
-    fetch("/api/numa-balancing-scan-tuning-audit").then(jsonOf<{
+    safeFetch("/api/numa-balancing-scan-tuning-audit").then(jsonOf<{
       ok: boolean;
       numa_balancing: number | null;
       scan_delay_ms: number | null;
@@ -5988,7 +5988,7 @@ export const api = {
 
   // ── R&D #108 (UI sprint 99) ──
   nvidiaDrmParamsAuditStatus: () =>
-    fetch("/api/nvidia-drm-params-audit").then(jsonOf<{
+    safeFetch("/api/nvidia-drm-params-audit").then(jsonOf<{
       ok: boolean;
       modeset: boolean | null;
       fbdev: boolean | null;
@@ -5996,7 +5996,7 @@ export const api = {
     }>),
 
   overlayModuleParamsAuditStatus: () =>
-    fetch("/api/overlay-module-params-audit").then(jsonOf<{
+    safeFetch("/api/overlay-module-params-audit").then(jsonOf<{
       ok: boolean;
       metacopy: boolean | null;
       redirect_dir: boolean | null;
@@ -6005,7 +6005,7 @@ export const api = {
     }>),
 
   dmModParamsAuditStatus: () =>
-    fetch("/api/dm-mod-params-audit").then(jsonOf<{
+    safeFetch("/api/dm-mod-params-audit").then(jsonOf<{
       ok: boolean;
       use_blk_mq: boolean | null;
       dm_numa_node: number | null;
@@ -6013,7 +6013,7 @@ export const api = {
     }>),
 
   cgroupTreeLimitsAuditStatus: () =>
-    fetch("/api/cgroup-tree-limits-audit").then(jsonOf<{
+    safeFetch("/api/cgroup-tree-limits-audit").then(jsonOf<{
       ok: boolean;
       max_depth: number | null;
       max_descendants: number | null;
@@ -6023,7 +6023,7 @@ export const api = {
 
   // ── R&D #109 (UI sprint 100) ──
   numaDemotionEnabledAuditStatus: () =>
-    fetch("/api/numa-demotion-enabled-audit").then(jsonOf<{
+    safeFetch("/api/numa-demotion-enabled-audit").then(jsonOf<{
       ok: boolean;
       demotion_enabled: boolean | null;
       multi_node: boolean;
@@ -6031,7 +6031,7 @@ export const api = {
     }>),
 
   acpiBootAssetsAuditStatus: () =>
-    fetch("/api/acpi-boot-assets-audit").then(jsonOf<{
+    safeFetch("/api/acpi-boot-assets-audit").then(jsonOf<{
       ok: boolean;
       bgrt_present: boolean;
       bgrt_status: number | null;
@@ -6041,7 +6041,7 @@ export const api = {
     }>),
 
   acpiTablesInventoryAuditStatus: () =>
-    fetch("/api/acpi-tables-inventory-audit").then(jsonOf<{
+    safeFetch("/api/acpi-tables-inventory-audit").then(jsonOf<{
       ok: boolean;
       table_count: number;
       dsdt_size: number | null;
@@ -6053,7 +6053,7 @@ export const api = {
     }>),
 
   pciNumaPinningAuditStatus: () =>
-    fetch("/api/pci-numa-pinning-audit").then(jsonOf<{
+    safeFetch("/api/pci-numa-pinning-audit").then(jsonOf<{
       ok: boolean;
       device_count: number;
       multi_node: boolean;
@@ -6063,7 +6063,7 @@ export const api = {
 
   // ── R&D #110 (UI sprint 101) ──
   swapPriorityTieringAuditStatus: () =>
-    fetch("/api/swap-priority-tiering-audit").then(jsonOf<{
+    safeFetch("/api/swap-priority-tiering-audit").then(jsonOf<{
       ok: boolean;
       swap_count: number;
       swaps: Array<{
@@ -6075,7 +6075,7 @@ export const api = {
     }>),
 
   xfsLogActivityAuditStatus: () =>
-    fetch("/api/xfs-log-activity-audit").then(jsonOf<{
+    safeFetch("/api/xfs-log-activity-audit").then(jsonOf<{
       ok: boolean;
       filesystem_count: number;
       filesystems: Array<{
