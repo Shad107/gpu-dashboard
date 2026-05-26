@@ -394,6 +394,7 @@ def handle_alerts_test(ctx: dict) -> Response:
         return 400, {"ok": False, "error": "token or chat_id missing"}
 
     import datetime
+    from ..modules import telegram_alerts as tg
     ok, msg = tg.send_message(
         token=token, chat_id=chat_id,
         text=f"🧪 *Test alert* from gpu-dashboard at {datetime.datetime.now().strftime('%H:%M:%S')}",
