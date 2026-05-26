@@ -2508,6 +2508,8 @@
   "witness.computing": "Calcul du diff...",
   "witness.changes": "changement(s)",
   "witness.no_changes": "Aucune différence détectée. Le système est identique.",
+  "witness.top_suspects": "Suspects prioritaires",
+  "witness.hide_noise": "Masquer le bruit (refcounts, etc.)",
   "install.title": "Installation",
   "install.password": "Mot de passe sudo",
   "install.running": "Installation...",

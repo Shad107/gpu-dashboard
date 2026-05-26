@@ -13,6 +13,9 @@
     kind: "added" | "removed" | "changed";
     before?: unknown;
     after?: unknown;
+    score?: number;
+    severity?: "critical" | "high" | "medium" | "low" | "info";
+    reason?: string;
   };
   type DiffResult = {
     ok: boolean;
@@ -34,6 +37,7 @@
 
   let result = $state<DiffResult | null>(null);
   let loading = $state(false);
+  let hideNoise = $state(true); // hide score=0 (refcount drift, etc.)
 
   $effect(() => {
     if (open && beforeId && afterId) {
@@ -53,17 +57,28 @@
     result = null;
   }
 
-  // Group changes by their top-level section.
+  // Filter + group changes by their top-level section.
+  const filtered = $derived.by(() => {
+    if (!result?.changes) return [] as Change[];
+    if (!hideNoise) return result.changes;
+    return result.changes.filter((c) => (c.score ?? 5) > 0);
+  });
   const grouped = $derived.by(() => {
-    if (!result?.changes) return new Map<string, Change[]>();
     const m = new Map<string, Change[]>();
-    for (const c of result.changes) {
+    for (const c of filtered) {
       const section = c.path.split(".")[0];
       if (!m.has(section)) m.set(section, []);
       m.get(section)!.push(c);
     }
     return m;
   });
+  const hiddenCount = $derived(
+    (result?.change_count ?? 0) - filtered.length,
+  );
+
+  // Top-N changes summary at the top of the modal — the value
+  // prop of the whole feature.
+  const topN = $derived(filtered.slice(0, 5));
 
   function fmtVal(v: unknown): string {
     if (v === null || v === undefined) return "—";
@@ -126,6 +141,32 @@
             "Aucune différence détectée. Le système est identique."}
         </p>
       {:else}
+        {#if topN.length > 0}
+          <section class="top-suspects">
+            <h4>🎯 {i18n.t("witness.top_suspects") ?? "Suspects prioritaires"}</h4>
+            <ol>
+              {#each topN as c}
+                <li class="suspect sev-{c.severity ?? 'info'}">
+                  <span class="sev-tag">{c.severity ?? "info"}</span>
+                  <code class="path">{c.path}</code>
+                  <div class="reason muted small">{c.reason ?? ""}</div>
+                </li>
+              {/each}
+            </ol>
+          </section>
+        {/if}
+
+        <div class="filter-row">
+          <label class="muted small">
+            <input type="checkbox" bind:checked={hideNoise} />
+            {i18n.t("witness.hide_noise") ??
+              "Masquer le bruit (refcounts, etc.)"}
+            {#if hideNoise && hiddenCount > 0}
+              <span class="muted">({hiddenCount} masqué(s))</span>
+            {/if}
+          </label>
+        </div>
+
         {#each sortedSections as section}
           {@const items = grouped.get(section) ?? []}
           <details open class="section">
@@ -271,5 +312,59 @@
   }
   .after {
     color: var(--ok, #22c55e);
+  }
+
+  .top-suspects {
+    background: rgba(56, 189, 248, 0.06);
+    border-left: 3px solid var(--accent, #38bdf8);
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 0 0 14px;
+  }
+  .top-suspects h4 {
+    margin: 0 0 6px;
+  }
+  .top-suspects ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .suspect {
+    padding: 4px 0;
+    line-height: 1.45;
+  }
+  .suspect .sev-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .sev-critical .sev-tag {
+    background: rgba(239, 68, 68, 0.18);
+    color: var(--err, #ef4444);
+  }
+  .sev-high .sev-tag {
+    background: rgba(234, 179, 8, 0.18);
+    color: var(--warn, #eab308);
+  }
+  .sev-medium .sev-tag {
+    background: rgba(56, 189, 248, 0.18);
+    color: var(--accent, #38bdf8);
+  }
+  .sev-low .sev-tag, .sev-info .sev-tag {
+    background: rgba(120, 120, 120, 0.18);
+    color: var(--text-dim, #8a93a3);
+  }
+  .suspect .reason {
+    margin-left: 0.2em;
+  }
+  .filter-row {
+    margin: 4px 0 12px;
+  }
+  .filter-row label {
+    cursor: pointer;
   }
 </style>

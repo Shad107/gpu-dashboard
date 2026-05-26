@@ -203,7 +203,13 @@ def _collect_pcie() -> Dict[str, Any]:
     gpus = _gpu_pci_devices()
     out: Dict[str, Any] = {"gpus": {}}
     for bdf in gpus:
-        out["gpus"][bdf] = _collect_pcie_for(bdf)
+        # The raw BDF (0000:01:00.0) contains a dot which would
+        # collide with the dot-separated diff path. Sanitize for
+        # use as a dict key; expose the original BDF as a field.
+        key = bdf.replace(":", "_").replace(".", "_")
+        entry = _collect_pcie_for(bdf)
+        entry["bdf"] = bdf
+        out["gpus"][key] = entry
     return out
 
 
@@ -442,7 +448,14 @@ def _walk(prefix: str, before: Any, after: Any,
                 _walk(sub_prefix, before[k], after[k], out)
         return
     if isinstance(before, list):
-        if before != after:
+        # Walk lists by index when lengths match — order is stable
+        # in practice (NVML device index, sorted module names). If
+        # lengths differ, fall back to a single 'changed' record so
+        # the ranker can score the section.
+        if len(before) == len(after):
+            for i, (bv, av) in enumerate(zip(before, after)):
+                _walk(f"{prefix}.{i}", bv, av, out)
+        elif before != after:
             out.append({"path": prefix, "kind": "changed",
                          "before": before, "after": after})
         return
@@ -454,7 +467,9 @@ def _walk(prefix: str, before: Any, after: Any,
 def diff_snapshots(before_id: str, after_id: str) -> Dict[str, Any]:
     """Diff two snapshots by id. Returns {ok, error?, changes: [...]}.
 
-    Each change has {path, kind: added|removed|changed, before?, after?}."""
+    Each change has {path, kind: added|removed|changed, before?, after?,
+    score?, reason?, severity?} with the score field populated by
+    rank_changes() so the UI can sort by likely cause-of-regression."""
     a = load_snapshot(before_id)
     b = load_snapshot(after_id)
     if a is None:
@@ -470,6 +485,8 @@ def diff_snapshots(before_id: str, after_id: str) -> Dict[str, Any]:
     keys = (set(a.keys()) | set(b.keys())) - skip
     for k in sorted(keys):
         _walk(k, a.get(k), b.get(k), changes)
+    rank_changes(changes)
+    changes.sort(key=lambda c: c.get("score", 0), reverse=True)
     return {
         "ok": True,
         "before": {"id": before_id, "taken_at": a.get("taken_at")},
@@ -477,3 +494,119 @@ def diff_snapshots(before_id: str, after_id: str) -> Dict[str, Any]:
         "changes": changes,
         "change_count": len(changes),
     }
+
+
+# ------------------------------------------------------------------ ranker
+
+
+# Heuristic weights — calibrated against the bisect-stuck threads
+# from the R&D survey (vLLM/llama.cpp/Ollama/ROCm/RTX 5090).
+#
+# The single highest-signal change is a driver version bump: the
+# nvidia 570→580 → 115→5 tok/s regression is the canonical
+# example. Kernel image bumps come second (DKMS rebuilds, module
+# ABI shifts). Module parameter changes are extremely high signal
+# because they hide behaviour switches (nvidia NVreg_*).
+#
+# Mapping is (path_predicate, score, severity, reason_template).
+# Higher score = more likely to be the cause of an inference
+# regression. Severity is one of: critical/high/medium/low/info.
+
+def _path_re(pat: str):
+    return re.compile(pat)
+
+
+_RANKER_RULES = [
+    # Driver version — the elephant in the room
+    (_path_re(r"^driver\.driver_version$"), 100, "critical",
+     "Driver NVIDIA changed — primary suspect for tok/s regressions"),
+    (_path_re(r"^driver\.proc_driver_nvidia$"), 95, "critical",
+     "Kernel NVRM string changed — driver rebuild or major bump"),
+    (_path_re(r"^driver\.nvml_available$"), 90, "critical",
+     "NVML availability flipped — driver/runtime broken"),
+
+    # Kernel
+    (_path_re(r"^kernel\.uname_r$"), 90, "critical",
+     "Kernel version changed — module ABI may have shifted"),
+    (_path_re(r"^kernel\.cmdline$"), 80, "high",
+     "Kernel cmdline changed — IOMMU/passthrough/ASPM flags may differ"),
+
+    # Module parameters (nvidia + vfio especially)
+    (_path_re(r"^modules\.params\.nvidia(_uvm|_modeset|_drm)?\."), 85, "high",
+     "Kernel module parameter changed — behaviour-altering flag"),
+    (_path_re(r"^modules\.params\.vfio.*\."), 75, "high",
+     "VFIO parameter changed — passthrough behaviour affected"),
+    (_path_re(r"^modules\.params\.pcieport\."), 70, "high",
+     "pcieport parameter changed — ASPM/link policy affected"),
+
+    # Module refcounts shift between any two snapshots as workloads
+    # come and go — pure noise. Score 0 hides them.
+    # MUST come before the broader nvidia/nouveau/vfio rule.
+    (_path_re(r"^modules\.loaded\.[^.]+\.refcount$"), 0, "info",
+     "Module refcount drift (load activity)"),
+
+    # Modules loaded/unloaded (only matches when a module appears
+    # or disappears entirely, since refcount changes are filtered
+    # above).
+    (_path_re(r"^modules\.loaded\.(nvidia|nouveau|vfio)"), 80, "high",
+     "GPU-related module add/remove"),
+
+    # PCIe link health
+    (_path_re(r"^pcie\.gpus\.[^.]+\.current_link_speed$"), 85, "critical",
+     "PCIe link speed changed — bandwidth degradation"),
+    (_path_re(r"^pcie\.gpus\.[^.]+\.current_link_width$"), 85, "critical",
+     "PCIe link width changed — lanes lost"),
+    (_path_re(r"^pcie\.gpus\.[^.]+\.aer_dev_fatal$"), 70, "high",
+     "AER fatal counter changed — link errors detected"),
+    (_path_re(r"^pcie\.gpus\.[^.]+\.aer_dev_nonfatal$"), 50, "medium",
+     "AER non-fatal counter changed"),
+    (_path_re(r"^pcie\.gpus\.[^.]+\.power_state$"), 60, "medium",
+     "PCIe device power state changed"),
+
+    # GPU NVML
+    (_path_re(r"^gpu\.[0-9]+\.power_limit_w$"), 75, "high",
+     "GPU power limit changed — thermal/power throttling shift"),
+    (_path_re(r"^gpu\.[0-9]+\.persistence_mode$"), 55, "medium",
+     "GPU persistence mode changed"),
+    (_path_re(r"^gpu\.[0-9]+\.compute_mode$"), 50, "medium",
+     "GPU compute mode changed"),
+    (_path_re(r"^gpu\.[0-9]+\.uuid$"), 95, "critical",
+     "GPU UUID changed — different physical card"),
+
+    # Packages — nvidia/cuda/cudnn/nccl bumps are common culprits
+    (_path_re(r"^packages\.(nvidia|libnvidia|libcuda|libcudnn|libnccl|cuda-)"), 70, "high",
+     "NVIDIA/CUDA package changed"),
+    (_path_re(r"^packages\.linux-(image|headers|modules)-"), 65, "high",
+     "Kernel package changed"),
+    (_path_re(r"^packages\."), 30, "low",
+     "Package changed"),
+
+    # Systemd
+    (_path_re(r"^systemd\.nvidia-persistenced\.active$"), 60, "medium",
+     "nvidia-persistenced active state flipped"),
+    (_path_re(r"^systemd\.nvidia-fabricmanager\.active$"), 60, "medium",
+     "nvidia-fabricmanager active state flipped"),
+    (_path_re(r"^systemd\.[^.]+\.active$"), 35, "low",
+     "systemd unit state flipped"),
+    (_path_re(r"^systemd\."), 20, "info",
+     "systemd unit metadata changed"),
+]
+
+
+def rank_changes(changes: List[Dict[str, Any]]) -> None:
+    """Annotate each change in-place with score/severity/reason.
+
+    Scoring is purely heuristic but calibrated against the
+    bisect-stuck threads from the R&D survey. We don't pretend
+    causation; we just sort the most likely suspects first."""
+    for c in changes:
+        path = c.get("path", "")
+        c["score"] = 5  # default — surface unknown changes faintly
+        c["severity"] = "info"
+        c["reason"] = "Other change"
+        for pattern, score, sev, msg in _RANKER_RULES:
+            if pattern.match(path):
+                c["score"] = score
+                c["severity"] = sev
+                c["reason"] = msg
+                break

@@ -2503,6 +2503,8 @@
   "witness.computing": "Computing diff...",
   "witness.changes": "change(s)",
   "witness.no_changes": "No differences detected. The system is identical.",
+  "witness.top_suspects": "Top suspects",
+  "witness.hide_noise": "Hide noise (refcounts, etc.)",
   "install.title": "Install",
   "install.password": "sudo password",
   "install.running": "Installing...",
