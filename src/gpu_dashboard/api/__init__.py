@@ -661,3 +661,4 @@ from .witness import (  # noqa: F401,F811
     handle_witness_diff,
 )
 from .shadow import handle_shadow_telemetry  # noqa: F401,F811
+from .health import handle_health_strip  # noqa: F401,F811

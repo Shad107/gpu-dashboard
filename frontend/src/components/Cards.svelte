@@ -11,6 +11,7 @@
   import InstallPromptModal from "./InstallPromptModal.svelte";
   import WitnessCard from "./WitnessCard.svelte";
   import ShadowTelemetryCard from "./ShadowTelemetryCard.svelte";
+  import HealthStrip from "./HealthStrip.svelte";
 
   // F6 — track which scripts are installed (poll at mount + after
   // each successful install) so cards know what install CTAs to show.
@@ -222,6 +223,9 @@
      (user : 'fleche a gauche et a droite quand nécessaire plutot que
      la scrollbar horizontal'). -->
 
+{#if layout.visible("health_strip")}
+  <HealthStrip />
+{/if}
 <div class="strip-container">
   <button class="strip-arrow strip-arrow-left"
     class:visible={canScrollLeft}
