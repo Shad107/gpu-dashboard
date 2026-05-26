@@ -17,11 +17,26 @@
   type ScriptInfo = {
     id: string;
     label: string;
+    label_key?: string | null;
     description: string;
+    description_key?: string | null;
     installed: boolean;
     script_path: string | null;
     script_exists: boolean;
   };
+
+  // Resolve an i18n key with a fallback to the backend-provided
+  // English string. The English string IS the fallback baked into
+  // the i18n.t call (the runtime falls back to en.json then to the
+  // key itself if neither has a translation), so we explicitly
+  // override with the spec value when the lookup returned the raw
+  // key.
+  function trWithFallback(key: string | null | undefined,
+                          fallback: string): string {
+    if (!key) return fallback;
+    const v = i18n.t(key as any);
+    return (v === key) ? fallback : v;
+  }
 
   let scripts = $state<ScriptInfo[]>([]);
   let password = $state("");
@@ -97,9 +112,9 @@
     </header>
     {#if spec}
       <p>
-        <b>{spec.label}</b>
+        <b>{trWithFallback(spec.label_key, spec.label)}</b>
       </p>
-      <p class="muted small">{spec.description}</p>
+      <p class="muted small">{trWithFallback(spec.description_key, spec.description)}</p>
       {#if spec.script_path}
         <p class="muted small" style="font-family:monospace">
           {spec.script_path}

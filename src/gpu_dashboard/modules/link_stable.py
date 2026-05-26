@@ -39,6 +39,18 @@ DEFAULT_MAX_MHZ = 1500
 SAFE_MIN_MHZ = 200
 SAFE_MAX_MHZ = 3000
 
+# Empirical clock-floor → expected link Gen mapping. The
+# relationship is "clock-lock keeps firmware in active state, which
+# determines what speed the firmware negotiates with the retimer".
+# Actual achieved Gen depends on whether the retimer can sustain
+# the negotiated speed. Calibrated on RTX 3090 + F9G-BK7 testbed.
+GEN_PRESETS: Dict[int, Optional[Dict[str, int]]] = {
+    1: None,  # idle / no lock → firmware lets link drop to Gen 1
+    2: {"min_mhz": 900,  "max_mhz": 1500},  # gentle lock → Gen 2
+    3: {"min_mhz": 1500, "max_mhz": 2000},  # medium lock → Gen 3
+    4: {"min_mhz": 2000, "max_mhz": 2400},  # heavy lock → Gen 4
+}
+
 WRAPPER_PATH = "/usr/local/bin/gpu-dashboard-link-stable"
 
 
@@ -171,6 +183,9 @@ def status(cfg=None) -> Dict[str, Any]:
         "clocks": clocks,
         "defaults": {"min_mhz": DEFAULT_MIN_MHZ,
                       "max_mhz": DEFAULT_MAX_MHZ},
+        "gen_presets": {
+            str(g): preset for g, preset in GEN_PRESETS.items()
+        },
     }
 
 
@@ -185,18 +200,37 @@ def _validate_mhz(name: str, v) -> int:
     return n
 
 
-def enable(min_mhz: int = DEFAULT_MIN_MHZ,
-            max_mhz: int = DEFAULT_MAX_MHZ) -> Dict[str, Any]:
-    """Enable Link Stable Mode: persistence on + lock GPU clocks."""
-    try:
-        lo = _validate_mhz("min_mhz", min_mhz)
-        hi = _validate_mhz("max_mhz", max_mhz)
-    except ValueError as e:
-        return {"ok": False, "error": "invalid_input",
-                 "message": str(e)}
-    if lo > hi:
-        return {"ok": False, "error": "invalid_range",
-                 "message": f"min ({lo}) > max ({hi})"}
+def enable(min_mhz: Optional[int] = None,
+            max_mhz: Optional[int] = None,
+            target_gen: Optional[int] = None) -> Dict[str, Any]:
+    """Enable Link Stable Mode at a given Gen preset OR an explicit
+    clock-floor range.
+
+    If `target_gen` is provided (1-4), the matching GEN_PRESETS
+    entry is used. Gen 1 = no lock (= disable). Otherwise explicit
+    min_mhz/max_mhz win (with the legacy default range).
+    """
+    if target_gen is not None:
+        if target_gen == 1:
+            # Gen 1 = no lock → equivalent to disable.
+            return disable()
+        preset = GEN_PRESETS.get(int(target_gen))
+        if preset is None:
+            return {"ok": False, "error": "invalid_gen",
+                     "message": f"Unsupported target Gen: {target_gen}"}
+        lo, hi = preset["min_mhz"], preset["max_mhz"]
+    else:
+        try:
+            lo = _validate_mhz("min_mhz", min_mhz
+                                if min_mhz is not None else DEFAULT_MIN_MHZ)
+            hi = _validate_mhz("max_mhz", max_mhz
+                                if max_mhz is not None else DEFAULT_MAX_MHZ)
+        except ValueError as e:
+            return {"ok": False, "error": "invalid_input",
+                     "message": str(e)}
+        if lo > hi:
+            return {"ok": False, "error": "invalid_range",
+                     "message": f"min ({lo}) > max ({hi})"}
     if not wrapper_available():
         return {"ok": False, "error": "wrapper_missing",
                  "message": "Install the sudoers wrapper first"}
@@ -207,6 +241,7 @@ def enable(min_mhz: int = DEFAULT_MIN_MHZ,
                  "message": r.get("stderr") or r.get("error")
                               or f"exit {r.get('rc')}"}
     return {"ok": True, "min_mhz": lo, "max_mhz": hi,
+             "target_gen": target_gen,
              "stdout": r.get("stdout")}
 
 

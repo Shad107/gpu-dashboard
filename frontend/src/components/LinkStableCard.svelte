@@ -32,6 +32,7 @@
       max_clock_mhz: number | null;
     };
     defaults: { min_mhz: number; max_mhz: number };
+    gen_presets?: Record<string, { min_mhz: number; max_mhz: number } | null>;
   };
 
   let s = $state<Status | null>(null);
@@ -62,20 +63,21 @@
     if (timer !== null) clearInterval(timer);
   });
 
-  async function enable() {
+  async function enableAt(targetGen: number) {
     if (busy || !s) return;
     busy = true;
     try {
       const r = await fetch("/api/link-stable/enable", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          min_mhz: s.defaults.min_mhz,
-          max_mhz: s.defaults.max_mhz,
-        }),
+        body: JSON.stringify({ target_gen: targetGen }),
       }).then((x) => x.json());
       if (r.ok) {
-        toast.emit("🔒 " + (i18n.t("link_stable.enabled") ?? "Mode stable activé"), "ok");
+        const label = targetGen === 1
+          ? (i18n.t("link_stable.disabled") ?? "Mode stable désactivé")
+          : (i18n.t("link_stable.try_gen") ?? "Verrouiller Gen {n}")
+              .replace("{n}", String(targetGen));
+        toast.emit((targetGen === 1 ? "🔓 " : "🔒 ") + label, "ok");
         await refresh();
       } else {
         toast.emit("✗ " + (r.message ?? r.error ?? "enable failed"), "err");
@@ -160,7 +162,7 @@
     <div class="sub muted small" style="margin:.3em 0">
       {linkBadge ? `Gen ${linkBadge.gen}` : "—"}
       {#if linkBadge?.downgraded}
-        <span class="warn">⚠ downgraded</span>
+        <span class="warn">⚠ {i18n.t("link_stable.downgraded") ?? "rétrogradé"}</span>
       {/if}
     </div>
     <button class="btn btn-small"
@@ -190,20 +192,21 @@
       </div>
     {/if}
 
-    <button class="btn btn-small"
-            style="width:100%;margin-top:.4em"
-            class:active={isActive}
-            disabled={busy}
-            onclick={isActive ? disable : enable}>
-      {#if busy}
-        ⏳
-      {:else if isActive}
-        🔓 {i18n.t("link_stable.btn_off") ?? "Désactiver"}
-      {:else}
-        🔒 {i18n.t("link_stable.btn_on") ?? "Verrouiller"}
-        {s.defaults.min_mhz}–{s.defaults.max_mhz}
-      {/if}
-    </button>
+    <div class="gen-row">
+      {#each [1, 2, 3, 4] as g}
+        {@const currentGen = parseInt(linkBadge?.gen ?? "0")}
+        <button class="btn-gen"
+                class:current={currentGen === g && isActive}
+                disabled={busy}
+                title={i18n.t(`link_stable.gen_${g}_hint` as any) ?? ""}
+                onclick={() => enableAt(g)}>
+          {currentGen === g && isActive ? "✓" : ""} Gen {g}
+        </button>
+      {/each}
+    </div>
+    {#if busy}
+      <div class="sub muted small" style="text-align:center;margin-top:.2em">⏳ ...</div>
+    {/if}
   {/if}
 </div>
 
@@ -214,9 +217,34 @@
     align-items: baseline;
     gap: 6px;
   }
-  .btn.active {
+  .gen-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-top: .4em;
+  }
+  .btn-gen {
+    padding: 4px 2px;
+    font-size: 0.75em;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 100ms, border-color 100ms;
+  }
+  .btn-gen:hover:not(:disabled) {
+    background: var(--bg-2);
+    border-color: var(--accent);
+  }
+  .btn-gen.current {
     background: var(--accent);
     color: var(--bg-1);
+    border-color: var(--accent);
     font-weight: 600;
+  }
+  .btn-gen:disabled {
+    opacity: 0.5;
+    cursor: progress;
   }
 </style>

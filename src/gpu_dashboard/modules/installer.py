@@ -64,53 +64,65 @@ SCRIPT_REGISTRY: Dict[str, dict] = {
     "pcie_recovery_wrapper": {
         "filename": "install-pcie-recovery-wrapper.sh",
         "label": "PCIe Recovery wrapper",
+        "label_key": "installer.pcie_recovery_wrapper.label",
         "description": ("Sudoers wrapper for the PCIe recovery "
                          "wizard. Allows execute-mode recovery "
                          "from the OcuLink card."),
+        "description_key": "installer.pcie_recovery_wrapper.description",
         "needs_user_flag": True,  # script accepts --user <name>
     },
     "oculink_watchdog": {
         "filename": "install-oculink-watchdog.sh",
         "label": "OcuLink watchdog daemon",
+        "label_key": "installer.oculink_watchdog.label",
         "description": ("systemd service that polls the GPU link "
                          "and logs drops/recoveries. Source of "
                          "truth for the OcuLink card's history."),
+        "description_key": "installer.oculink_watchdog.description",
         "needs_user_flag": False,
     },
     "power_limit_wrapper": {
         "filename": "install-power-limit-wrapper.sh",
         "label": "Power limit wrapper",
+        "label_key": "installer.power_limit_wrapper.label",
         "description": ("Sudoers wrapper for `nvidia-smi -pl`. "
                          "Required by the power_limit module's "
                          "live TDP slider."),
+        "description_key": "installer.power_limit_wrapper.description",
         "needs_user_flag": True,
     },
     "coolbits_xorg": {
         "filename": "install-coolbits-xorg.sh",
         "label": "Xorg CoolBits",
+        "label_key": "installer.coolbits_xorg.label",
         "description": ("Adds the CoolBits option to xorg.conf so "
                          "nvidia-settings can drive fan curves "
                          "and clock offsets."),
+        "description_key": "installer.coolbits_xorg.description",
         "needs_user_flag": False,
     },
     "link_stable_wrapper": {
         "filename": "install-link-stable-wrapper.sh",
         "label": "Link Stable Mode wrapper",
+        "label_key": "installer.link_stable_wrapper.label",
         "description": ("Sudoers wrapper that lets the dashboard "
                          "clock-lock the GPU. Used to keep the PCIe "
                          "link at sustained Gen 2 instead of "
                          "flapping Gen 1 / Gen 4 on cheap OcuLink "
                          "retimers."),
+        "description_key": "installer.link_stable_wrapper.description",
         "needs_user_flag": True,
     },
     "witness_dpkg_hook": {
         "filename": "install-witness-dpkg-hook.sh",
         "label": "Witness — auto-snapshot on apt",
+        "label_key": "installer.witness_dpkg_hook.label",
         "description": ("Installs an apt dpkg hook that takes a "
                          "Witness snapshot before AND after every "
                          "apt operation. Gives you a guaranteed "
                          "'before upgrade' baseline to diff against "
                          "if tok/s tanks after the next reboot."),
+        "description_key": "installer.witness_dpkg_hook.description",
         "needs_user_flag": False,
     },
 }
@@ -136,7 +148,9 @@ def list_available() -> List[dict]:
         out.append({
             "id": script_id,
             "label": spec["label"],
+            "label_key": spec.get("label_key"),
             "description": spec["description"],
+            "description_key": spec.get("description_key"),
             "script_path": str(path) if path else None,
             "script_exists": path is not None,
             "installed": check_installed(script_id) if path else False,
