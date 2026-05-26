@@ -58,6 +58,13 @@ export type Watchdog =
       dropped_since_s: number | null;   // time since last DROP (null if currently up)
       held_for: string | null;          // formatted XhYYm / YYmZZs / ZZs
       dropped_since: string | null;
+      // F5.5 — cross-check with NVML live state. The watchdog log
+      // can be stale (daemon stopped, never installed, lagging);
+      // gpu_live_ok is the real-time truth from libnvidia-ml.so.
+      gpu_live_ok: boolean | null;
+      // "nvml_live" = card flipped to up via NVML override
+      // "watchdog_log" = card reflects the log directly
+      state_source: "nvml_live" | "watchdog_log";
       // Back-compat: still surfaced. Reflects whichever clock is
       // currently primary (dropped_since when down, held_for when up).
       last_uptime: string;

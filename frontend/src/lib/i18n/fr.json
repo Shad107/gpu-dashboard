@@ -33,6 +33,7 @@
   "oculink.held_for": "a tenu",
   "oculink.dropped_since": "tombé depuis",
   "oculink.recover_button": "Récupérer le lien",
+  "oculink.live_source": "via NVML live (watchdog log obsolète)",
   "pcierec.modal_title": "Récupération du lien PCIe",
   "pcierec.verdict": "verdict",
   "pcierec.signals": "signaux",

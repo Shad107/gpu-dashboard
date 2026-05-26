@@ -33,6 +33,7 @@
   "oculink.held_for": "held for",
   "oculink.dropped_since": "dropped since",
   "oculink.recover_button": "Recover link",
+  "oculink.live_source": "via NVML live (watchdog log stale)",
   "pcierec.modal_title": "PCIe link recovery",
   "pcierec.verdict": "verdict",
   "pcierec.signals": "signals",

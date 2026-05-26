@@ -39,6 +39,14 @@
   let autoRunStepIdx = $state(0);
   let autoRunStepTotal = $state(0);
 
+  // F5.4 — pre-warning banner before destructive steps. The
+  // browser tab running the dashboard may freeze when /dev/nvidia*
+  // consumers are killed; the user needs an out-of-band channel
+  // (a terminal tailing the log file) to know what's happening.
+  let preWarningOpen = $state(false);
+  const RECOVERY_LOG_PATH = "/tmp/gpu-dashboard-recovery.log";
+  const TAIL_CMD = `tail -f ${RECOVERY_LOG_PATH}`;
+
   // tick the elapsed clock every 200ms while auto-running
   let nowTick = $state(Date.now());
   $effect(() => {
@@ -120,19 +128,25 @@
   // the last step fails. Asks ONCE upfront if the user accepts
   // kills_workloads steps (instead of confirming each one).
   let autoRunning = $state(false);
-  async function runAll() {
+  function onClickRunAll() {
     if (!advisor?.plan || autoRunning) return;
     const executable = advisor.plan.filter((s: Step) => EXECUTABLE_STEPS.has(s.id));
     if (!executable.length) return;
     const hasKills = executable.some((s) => s.safety === "kills_workloads");
     if (hasKills) {
-      const ok = confirm(
-        "Auto-run va escalader jusqu'à FLR si nécessaire.\n\n" +
-          "Certaines étapes (module reload, PCIe rescan, FLR) tuent les workloads GPU " +
-          "(Chrome, VS Code, ollama, etc.). Continuer ?",
-      );
-      if (!ok) return;
+      // F5.4 — show the pre-warning panel inside the modal instead
+      // of a browser confirm(), so the user can copy the tail
+      // command and open a terminal BEFORE we kill anything.
+      preWarningOpen = true;
+    } else {
+      void runAll();
     }
+  }
+  async function runAll() {
+    if (!advisor?.plan || autoRunning) return;
+    preWarningOpen = false;
+    const executable = advisor.plan.filter((s: Step) => EXECUTABLE_STEPS.has(s.id));
+    if (!executable.length) return;
     autoRunning = true;
     autoRunStartedAt = Date.now();
     autoRunStepIdx = 0;
@@ -312,7 +326,7 @@
           <button
             class="btn auto-run-btn"
             disabled={running}
-            onclick={runAll}
+            onclick={onClickRunAll}
           >
             ▶▶ {i18n.t("pcierec.run_all") ?? "Tout essayer (auto-escalade)"}
           </button>

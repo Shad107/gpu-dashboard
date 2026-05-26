@@ -396,6 +396,11 @@
             {d.watchdog.held_for ?? d.watchdog.last_uptime}
           </div>
           <div class="sub">{i18n.t("oculink.held_for")}</div>
+          {#if d.watchdog.state_source === "nvml_live"}
+            <div class="sub muted" style="margin-top:.2em;font-size:.75em">
+              📡 {i18n.t("oculink.live_source") ?? "via NVML live (watchdog log obsolète)"}
+            </div>
+          {/if}
           <div class="sub muted" style="margin-top:.3em">
             {d.watchdog.drops} {i18n.t("oculink.drops")}
           </div>

@@ -52,6 +52,18 @@ set -e
 STEP="${1:-}"
 BDF="${2:-}"
 
+# F5.4 — tee everything to a persistent log file so the operator
+# can `tail -f /tmp/gpu-dashboard-recovery.log` from a terminal
+# and follow progress even if the step kills the browser running
+# the dashboard.
+LOG=/tmp/gpu-dashboard-recovery.log
+{
+  printf '\n──────── %s — step=%s bdf=%s ────────\n' \
+    "$(date +'%Y-%m-%d %H:%M:%S')" "$STEP" "${BDF:-—}"
+} | tee -a "$LOG" >/dev/null
+exec > >(tee -a "$LOG") 2>&1
+chmod 666 "$LOG" 2>/dev/null || true
+
 die() { echo "ERROR: $*" >&2; exit 2; }
 
 # Validate BDF if provided: must be a real NVIDIA device under /sys.

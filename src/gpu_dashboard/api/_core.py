@@ -308,6 +308,44 @@ def _watchdog_state(cfg) -> dict:
         current_state = "up"
         held_for_s = (now - last_up_ts).total_seconds()
 
+    # F5.5 — Cross-check with NVML LIVE state. The watchdog daemon
+    # may be uninstalled / stopped / lagging behind; the log can
+    # show "down" while the GPU is actually healthy. NVML is the
+    # authoritative real-time signal — when it reports an active
+    # device handle, the link is up regardless of what the log says.
+    gpu_live_ok = None
+    try:
+        from gpu_dashboard.modules import _nvml
+        if _nvml.init():
+            count = _nvml.device_count()
+            if count > 0:
+                # Try to get a real handle on at least one device.
+                # Handle acquisition fails (rc=999) when the GPU is
+                # PCI-visible but driver state is stuck.
+                sample = _nvml.sample_device(0)
+                gpu_live_ok = sample is not None
+            else:
+                gpu_live_ok = False
+    except Exception:  # noqa: BLE001 — best-effort cross-check
+        gpu_live_ok = None
+    log_says_down = (current_state == "down")
+    if gpu_live_ok is True and log_says_down:
+        # Reality wins. Flip to "up" but remember the watchdog said
+        # otherwise — surfaced via `state_source` so the UI can
+        # show a subtle "live" hint instead of pretending nothing
+        # happened.
+        current_state = "up"
+        # We don't know exactly when the GPU came back — best
+        # estimate is "since this dashboard process started seeing
+        # NVML report healthy". Use a small held_for so the UI
+        # shows "tenu depuis quelques secondes" not "tenu depuis 0".
+        held_for_s = held_for_s if (held_for_s is not None
+                                      and current_state == "up") else 5.0
+        # The drop event still happened historically — surface
+        # dropped_since for the log timeline but mark it past.
+        # Keep dropped_since_s populated so the UI can show
+        # "down for X earlier, back since".
+
     out = {"available": True,
            "drops": drops,
            "current_state": current_state,
@@ -316,7 +354,11 @@ def _watchdog_state(cfg) -> dict:
            "held_for": (_fmt_duration(held_for_s)
                           if held_for_s is not None else None),
            "dropped_since": (_fmt_duration(dropped_since_s)
-                             if dropped_since_s is not None else None)}
+                             if dropped_since_s is not None else None),
+           "gpu_live_ok": gpu_live_ok,
+           "state_source": ("nvml_live" if (gpu_live_ok is True
+                                              and log_says_down)
+                              else "watchdog_log")}
     # Back-compat alias: old field name still surfaced so any
     # external consumer doesn't break, but it now reflects the
     # current state (down → time since drop; up → up duration).
