@@ -22,7 +22,7 @@ from gpu_dashboard.modules import telegram_alerts as tg
 class TestValidateTokenFormat:
     def test_valid_token(self):
         # Format Telegram réel : <bot_id>:<token>
-        assert tg.validate_token_format("8289742567:AAHyAobsTKun7KBJ8ihwTToKqH6-I9wMmAg") is True
+        assert tg.validate_token_format("1111111111:FAKE-test-only-do-not-use-xyz_AbCdEfG") is True
 
     def test_valid_short_bot_id(self):
         assert tg.validate_token_format("12345:AAHyAobsTKun7KBJ8ihwTToKqH6-I9wMm__") is True
@@ -48,14 +48,14 @@ class TestValidateTokenFormat:
 
 class TestValidateChatIdFormat:
     def test_positive_int_string(self):
-        assert tg.validate_chat_id_format("8394766664") is True
+        assert tg.validate_chat_id_format("1234567890") is True
 
     def test_negative_int_string_group_chat(self):
         # Les chats de groupe Telegram ont un ID négatif
         assert tg.validate_chat_id_format("-100123456789") is True
 
     def test_integer_directly(self):
-        assert tg.validate_chat_id_format(8394766664) is True
+        assert tg.validate_chat_id_format(1234567890) is True
 
     def test_alpha_invalid(self):
         assert tg.validate_chat_id_format("not-a-number") is False
@@ -73,8 +73,8 @@ class TestValidateChatIdFormat:
 class TestCanEnable:
     def test_both_present_valid(self):
         ok, reason = tg.can_enable(
-            token="8289742567:AAHyAobsTKun7KBJ8ihwTToKqH6-I9wMmAg",
-            chat_id="8394766664",
+            token="1111111111:FAKE-test-only-do-not-use-xyz_AbCdEfG",
+            chat_id="1234567890",
         )
         assert ok is True
 
@@ -85,7 +85,7 @@ class TestCanEnable:
 
     def test_chat_id_missing(self):
         ok, reason = tg.can_enable(
-            token="8289742567:AAHyAobsTKun7KBJ8ihwTToKqH6-I9wMmAg",
+            token="1111111111:FAKE-test-only-do-not-use-xyz_AbCdEfG",
             chat_id="",
         )
         assert ok is False
@@ -98,7 +98,7 @@ class TestCanEnable:
 
     def test_chat_id_malformed(self):
         ok, reason = tg.can_enable(
-            token="8289742567:AAHyAobsTKun7KBJ8ihwTToKqH6-I9wMmAg",
+            token="1111111111:FAKE-test-only-do-not-use-xyz_AbCdEfG",
             chat_id="not-numeric",
         )
         assert ok is False
@@ -133,17 +133,17 @@ class TestSendMessage:
 
         monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
         ok, result = tg.send_message(
-            token="8289742567:AAHyAobsTKun7KBJ8ihwTToKqH6-I9wMmAg",
-            chat_id="8394766664",
+            token="1111111111:FAKE-test-only-do-not-use-xyz_AbCdEfG",
+            chat_id="1234567890",
             text="hello",
         )
         assert ok is True
         # URL contient le token et l'endpoint
-        assert "bot8289742567:" in captured["url"]
+        assert "bot1111111111:" in captured["url"]
         assert "/sendMessage" in captured["url"]
         # Payload contient chat_id + text
         payload = captured["data"].decode()
-        assert "chat_id=8394766664" in payload
+        assert "chat_id=1234567890" in payload
         assert "text=hello" in payload
 
     def test_includes_parse_mode(self, monkeypatch):
