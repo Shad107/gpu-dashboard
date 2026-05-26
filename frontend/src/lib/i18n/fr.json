@@ -2526,6 +2526,8 @@
   "alerts.then_detect": "re-clique Détecter",
   "alerts.open_web": "Web",
   "alerts.open_app": "App native",
+  "alerts.botfather_btn": "Créer un bot",
+  "alerts.botfather_tooltip": "Ouvre @BotFather dans Telegram pour créer un nouveau bot (commande /newbot)",
   "installer.pcie_recovery_wrapper.label": "Wrapper PCIe Recovery",
   "installer.pcie_recovery_wrapper.description": "Wrapper sudoers pour le wizard de récupération PCIe. Permet l'exécution des étapes de recovery depuis la carte OcuLink.",
   "installer.oculink_watchdog.label": "Démon watchdog OcuLink",

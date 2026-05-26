@@ -4164,10 +4164,22 @@
             <span class="form-lbl">{i18n.t("alerts.enable_label")}</span>
             <span class="form-val"><input type="checkbox" bind:checked={alEnabled} /> {i18n.t("alerts.enable_help")}</span>
           </label>
-          <label class="form-row">
+          <div class="form-row">
             <span class="form-lbl">{i18n.t("alerts.bot_token")}</span>
-            <input class="al-input" type="text" placeholder="123456789:ABC..." autocomplete="off" spellcheck="false" bind:value={alToken} />
-          </label>
+            <span class="form-val" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <input class="al-input" type="text"
+                     placeholder="123456789:ABC..."
+                     style="flex:1;min-width:140px"
+                     autocomplete="off" spellcheck="false"
+                     bind:value={alToken} />
+              <a class="btn btn-small"
+                 href="https://web.telegram.org/k/#@BotFather"
+                 target="_blank" rel="noopener"
+                 title={i18n.t("alerts.botfather_tooltip") ?? "Ouvre @BotFather dans Telegram pour créer un bot (commande /newbot)"}>
+                🤖 {i18n.t("alerts.botfather_btn") ?? "Créer un bot"}
+              </a>
+            </span>
+          </div>
           <div class="form-row">
             <span class="form-lbl">{i18n.t("alerts.chat_id")}</span>
             <span class="form-val" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
