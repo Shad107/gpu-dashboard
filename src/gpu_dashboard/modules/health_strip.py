@@ -112,8 +112,8 @@ def _classify_trim(raw):
     ssd_no_discard = [a for a in audits
                        if a.get("on_ssd") and not a.get("has_discard_mount")]
     if ssd_no_discard:
-        return "warn", f"{len(ssd_no_discard)} SSD(s) sans discard"
-    return "ok", f"{len(audits)} chemins audités"
+        return "warn", f"{len(ssd_no_discard)} SSD(s) without discard"
+    return "ok", f"{len(audits)} paths audited"
 
 
 CHECKS: List[Tuple[str, str, str, str, Callable[[Any], Tuple[str, Any]]]] = [
