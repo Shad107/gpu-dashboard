@@ -6,6 +6,7 @@
   import FanCurveEditor from "./FanCurveEditor.svelte";
   import { i18n, type Lang } from "../lib/i18n/index.svelte";
   import { api, type HistorySample, type StoredEvent } from "../lib/api";
+  import { CATEGORIES as INTEGRATION_CATEGORIES, type CategoryId } from "../lib/integrations-taxonomy";
   import { perfEstimate, colorFan } from "../lib/charts";
   import HistoryChart from "./HistoryChart.svelte";
   import { dndzone } from "svelte-dnd-action";
@@ -3106,6 +3107,37 @@
     finally { collectionProfileAuditLoading = false; }
   }
 
+  // ── F5 — Integrations category filter ──────────────────────────────
+  // 377 audit cards split across 13 named categories. The user
+  // picks one; everything else is hidden via a DOM walk effect
+  // (the per-card data-cat attribute was added by the build-time
+  // script — see scripts/build-integrations-taxonomy.py).
+  let activeIntegrationCategory = $state<CategoryId>("all");
+  let integrationsCounts = $state<Partial<Record<CategoryId, number>>>({});
+  let integrationsTotal = $state(0);
+
+  // Apply the category filter to the DOM whenever it changes,
+  // OR when the integrations section becomes active.
+  $effect(() => {
+    if (modal.section !== "integrations") return;
+    const cat = activeIntegrationCategory;
+    const cards = document.querySelectorAll<HTMLElement>(".card-form[data-cat]");
+    let total = 0;
+    const counts: Partial<Record<CategoryId, number>> = {};
+    cards.forEach((el) => {
+      const cardCat = (el.getAttribute("data-cat") || "misc") as CategoryId;
+      total += 1;
+      counts[cardCat] = (counts[cardCat] ?? 0) + 1;
+      if (cat === "all" || cardCat === cat) {
+        el.style.removeProperty("display");
+      } else {
+        el.style.display = "none";
+      }
+    });
+    integrationsTotal = total;
+    integrationsCounts = counts;
+  });
+
   // ── F4 — PCIe Recovery Wizard ──
   let pcieRecoveryData = $state<Awaited<ReturnType<typeof api.pcieRecoveryAdvisorStatus>> | null>(null);
   let pcieWrapperInstalled = $state<boolean | null>(null);
@@ -4511,6 +4543,38 @@
         </h3>
         <p class="muted">{i18n.t("integrations.description")}</p>
 
+        <!-- F5 — category navigation -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px;
+                    padding:8px;background:var(--bg-2);border-radius:6px;">
+          <button
+            type="button"
+            class="btn btn-small"
+            style:font-weight={activeIntegrationCategory === "all" ? "600" : "400"}
+            style:background={activeIntegrationCategory === "all" ? "var(--accent)" : ""}
+            style:color={activeIntegrationCategory === "all" ? "var(--bg-1)" : ""}
+            onclick={() => (activeIntegrationCategory = "all")}
+          >
+            {i18n.t("integrations.cat.all") ?? "Tout"}
+            <span class="muted" style="font-size:0.85em">({integrationsTotal})</span>
+          </button>
+          {#each INTEGRATION_CATEGORIES as cat}
+            {@const n = integrationsCounts[cat.id] ?? 0}
+            {#if n > 0}
+              <button
+                type="button"
+                class="btn btn-small"
+                style:font-weight={activeIntegrationCategory === cat.id ? "600" : "400"}
+                style:background={activeIntegrationCategory === cat.id ? "var(--accent)" : ""}
+                style:color={activeIntegrationCategory === cat.id ? "var(--bg-1)" : ""}
+                onclick={() => (activeIntegrationCategory = cat.id)}
+              >
+                {cat.emoji} {i18n.t("integrations.cat." + cat.id) ?? cat.label}
+                <span class="muted" style="font-size:0.85em">({n})</span>
+              </button>
+            {/if}
+          {/each}
+        </div>
+
         <!-- 🐕 Watchdog -->
         <div class="card-form">
           <h4>{i18n.t("integrations.watchdog.title")}</h4>
@@ -4660,7 +4724,7 @@
       </div>
 
       <!-- Card 4 — 🔔 Notification channels (lives inside Integrations) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="notif" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.notif.title")}</h4>
         <p class="muted">{i18n.t("integrations.notif.desc")}</p>
         {#if notifLoading}
@@ -4788,7 +4852,7 @@
       </div>
 
       <!-- Card 5 — 🔐 Auth tokens & share-links -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="auth" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.auth.title")}</h4>
         <p class="muted">{i18n.t("integrations.auth.desc")}</p>
 
@@ -4907,7 +4971,7 @@
       </div>
 
       <!-- UI sprint cycle 3 — R&D #12 features (inline cards within Integrations) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="disk" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.disk.title")}</h4>
         <p class="muted">{i18n.t("integrations.disk.desc")}</p>
         <div class="form-row">
@@ -4948,7 +5012,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="airgap" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.airgap.title")}</h4>
         <p class="muted">{i18n.t("integrations.airgap.desc")}</p>
         {#if airgapStat}
@@ -4995,7 +5059,7 @@
         </p>
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="wall" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wall.title")}</h4>
         <p class="muted">{i18n.t("integrations.wall.desc")}</p>
         {#if wallMeter && wallMeter.available}
@@ -5016,7 +5080,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="peers" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.peers.title")}</h4>
         <p class="muted">{i18n.t("integrations.peers.desc")}</p>
         {#if peersData && peersData.peers && peersData.peers.length > 0}
@@ -5042,7 +5106,7 @@
       </div>
 
       <!-- UI sprint cycle 4 — R&D #13 cards -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="wizard" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wizard.title")}</h4>
         <p class="muted">{i18n.t("integrations.wizard.desc")}</p>
         <div class="form-row">
@@ -5083,7 +5147,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="vram" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vram.title")}</h4>
         <p class="muted">{i18n.t("integrations.vram.desc")}</p>
         <div class="form-row">
@@ -5142,7 +5206,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="carbon" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.carbon.title")}</h4>
         <p class="muted">{i18n.t("integrations.carbon.desc")}</p>
         {#if carbonData && carbonData.available}
@@ -5181,7 +5245,7 @@
 
       <!-- UI sprint cycle 5 — R&D #14 cards (rendered before best-GPU so they
            appear higher in the Integrations stack ; visually grouped with #13) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="xid" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.xid.title")}</h4>
         <p class="muted">{i18n.t("integrations.xid.desc")}</p>
         <div class="form-row">
@@ -5223,7 +5287,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="hotswap" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.hotswap.title")}</h4>
         <p class="muted">{i18n.t("integrations.hotswap.desc")}</p>
         {#if hotSwapData && hotSwapData.current && hotSwapData.current.pci}
@@ -5272,7 +5336,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="cost" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cost.title")}</h4>
         <p class="muted">{i18n.t("integrations.cost.desc")}</p>
         {#if costData && costData.available}
@@ -5321,7 +5385,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="usage" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.usage.title")}</h4>
         <p class="muted">{i18n.t("integrations.usage.desc")}</p>
         {#if labUsageData}
@@ -5360,7 +5424,7 @@
 
       <!-- UI sprint cycle 6 — R&D #15 cards (rendered before bestgpu so they
            appear in document order with the R&D #14 cards) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="boot" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.boot.title")}</h4>
         <p class="muted">{i18n.t("integrations.boot.desc")}</p>
         {#if bootProfileData}
@@ -5411,7 +5475,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="tariff" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.tariff.title")}</h4>
         <p class="muted">{i18n.t("integrations.tariff.desc")}</p>
         {#if tariffData && tariffData.available}
@@ -5451,7 +5515,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="dedup" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dedup.title")}</h4>
         <p class="muted">{i18n.t("integrations.dedup.desc")}</p>
         <div class="form-row">
@@ -5489,7 +5553,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="discord" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.discord.title")}</h4>
         <p class="muted">{i18n.t("integrations.discord.desc")}</p>
         {#if discordData}
@@ -5527,7 +5591,7 @@
       </div>
 
       <!-- UI sprint cycle 7 — R&D #16 cards (rendered before bestgpu) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="noc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.noc.title")}</h4>
         <p class="muted">{i18n.t("integrations.noc.desc")}</p>
         <div class="form-row">
@@ -5541,7 +5605,7 @@
         </p>
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="dr" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dr.title")}</h4>
         <p class="muted">{i18n.t("integrations.dr.desc")}</p>
         <div class="form-row">
@@ -5576,7 +5640,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="lmstudio" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.lmstudio.title")}</h4>
         <p class="muted">{i18n.t("integrations.lmstudio.desc")}</p>
         {#if lmStudioData}
@@ -5625,7 +5689,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="driver" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.driver.title")}</h4>
         <p class="muted">{i18n.t("integrations.driver.desc")}</p>
         {#if driverVaultData?.current}
@@ -5697,7 +5761,7 @@
         {/if}
       </div>
 
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="bestgpu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bestgpu.title")}</h4>
         <p class="muted">{i18n.t("integrations.bestgpu.desc")}</p>
         <div class="form-row">
@@ -5743,7 +5807,7 @@
       </div>
 
       <!-- R&D #17.5 LLM hot-swap orchestrator (UI sprint 8) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="llmswap" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.llmswap.title")}</h4>
         <p class="muted">{i18n.t("integrations.llmswap.desc")}</p>
         <div class="form-row">
@@ -5853,7 +5917,7 @@
       </div>
 
       <!-- R&D #18.3 CUDA_VISIBLE_DEVICES advisor (UI sprint 9) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="cudaadvisor" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cudaadvisor.title")}</h4>
         <p class="muted">{i18n.t("integrations.cudaadvisor.desc")}</p>
         <div class="form-row">
@@ -5905,7 +5969,7 @@
       </div>
 
       <!-- R&D #18.1 NVMe-as-VRAM-swap monitor (UI sprint 9) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nvmeswap" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nvmeswap.title")}</h4>
         <p class="muted">{i18n.t("integrations.nvmeswap.desc")}</p>
         <div class="form-row">
@@ -5978,7 +6042,7 @@
       </div>
 
       <!-- R&D #18.2 CUDA / cuDNN / driver matrix (UI sprint 9) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="cudamatrix" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cudamatrix.title")}</h4>
         <p class="muted">{i18n.t("integrations.cudamatrix.desc")}</p>
         <div class="form-row">
@@ -6013,7 +6077,7 @@
       </div>
 
       <!-- R&D #18.6 PCIe link-state thrasher histogram (UI sprint 9) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="pciehist" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pciehist.title")}</h4>
         <p class="muted">{i18n.t("integrations.pciehist.desc")}</p>
         <div class="form-row">
@@ -6061,7 +6125,7 @@
       </div>
 
       <!-- R&D #19.2 Throttle classifier (UI sprint 10) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="throttle" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.throttle.title")}</h4>
         <p class="muted">{i18n.t("integrations.throttle.desc")}</p>
         <div class="form-row">
@@ -6096,7 +6160,7 @@
       </div>
 
       <!-- R&D #19.6 MPS daemon health (UI sprint 10) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="mps" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.mps.title")}</h4>
         <p class="muted">{i18n.t("integrations.mps.desc")}</p>
         <div class="form-row">
@@ -6135,7 +6199,7 @@
       </div>
 
       <!-- R&D #19.1 GPU process nice advisor (UI sprint 10) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="nice" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nice.title")}</h4>
         <p class="muted">{i18n.t("integrations.nice.desc")}</p>
         <div class="form-row">
@@ -6188,7 +6252,7 @@
       </div>
 
       <!-- R&D #19.4 Warmup profile (UI sprint 10) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="warmup" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.warmup.title")}</h4>
         <p class="muted">{i18n.t("integrations.warmup.desc")}</p>
         <div class="form-row">
@@ -6232,7 +6296,7 @@
       </div>
 
       <!-- R&D #20.5 Suspend safety preflight (UI sprint 11) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="suspend" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.suspend.title")}</h4>
         <p class="muted">{i18n.t("integrations.suspend.desc")}</p>
         <div class="form-row">
@@ -6269,7 +6333,7 @@
       </div>
 
       <!-- R&D #20.1 Container GPU audit (UI sprint 11) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="containers" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.containers.title")}</h4>
         <p class="muted">{i18n.t("integrations.containers.desc")}</p>
         <div class="form-row">
@@ -6320,7 +6384,7 @@
       </div>
 
       <!-- R&D #20.7 UPS runtime estimator (UI sprint 11) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="ups" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ups.title")}</h4>
         <p class="muted">{i18n.t("integrations.ups.desc")}</p>
         <div class="form-row">
@@ -6370,7 +6434,7 @@
       </div>
 
       <!-- R&D #20.2 VBIOS drift tracker (UI sprint 11) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="vbios" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vbios.title")}</h4>
         <p class="muted">{i18n.t("integrations.vbios.desc")}</p>
         <div class="form-row">
@@ -6418,7 +6482,7 @@
       </div>
 
       <!-- R&D #21.1 P-state pinning advisor (UI sprint 12) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="pstate" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pstate.title")}</h4>
         <p class="muted">{i18n.t("integrations.pstate.desc")}</p>
         <div class="form-row">
@@ -6463,7 +6527,7 @@
       </div>
 
       <!-- R&D #21.2 nvidia-persistenced check (UI sprint 12) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="persistence" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.persistence.title")}</h4>
         <p class="muted">{i18n.t("integrations.persistence.desc")}</p>
         <div class="form-row">
@@ -6511,7 +6575,7 @@
       </div>
 
       <!-- R&D #21.3 GSP-RM surfacer (UI sprint 12) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="gsp" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.gsp.title")}</h4>
         <p class="muted">{i18n.t("integrations.gsp.desc")}</p>
         <div class="form-row">
@@ -6561,7 +6625,7 @@
       </div>
 
       <!-- R&D #21.5 SD / ComfyUI cache janitor (UI sprint 12) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="sdcache" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sdcache.title")}</h4>
         <p class="muted">{i18n.t("integrations.sdcache.desc")}</p>
         <div class="form-row">
@@ -6623,7 +6687,7 @@
       </div>
 
       <!-- R&D #22.3 VRAM leak detector (UI sprint 13) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="leak" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.leak.title")}</h4>
         <p class="muted">{i18n.t("integrations.leak.desc")}</p>
         <div class="form-row">
@@ -6679,7 +6743,7 @@
       </div>
 
       <!-- R&D #22.1 GPU reset counter (UI sprint 13) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="reset" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.reset.title")}</h4>
         <p class="muted">{i18n.t("integrations.reset.desc")}</p>
         <div class="form-row">
@@ -6724,7 +6788,7 @@
       </div>
 
       <!-- R&D #22.5 CUDA toolkit inventory (UI sprint 13) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="cudainv" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cudainv.title")}</h4>
         <p class="muted">{i18n.t("integrations.cudainv.desc")}</p>
         <div class="form-row">
@@ -6776,7 +6840,7 @@
       </div>
 
       <!-- R&D #22.2 Open vs proprietary driver advisor (UI sprint 13) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="flavor" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.flavor.title")}</h4>
         <p class="muted">{i18n.t("integrations.flavor.desc")}</p>
         <div class="form-row">
@@ -6841,7 +6905,7 @@
       </div>
 
       <!-- R&D #23.6 procfs deep-state (UI sprint 14) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="procdeep" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.procdeep.title")}</h4>
         <p class="muted">{i18n.t("integrations.procdeep.desc")}</p>
         <div class="form-row">
@@ -6886,7 +6950,7 @@
       </div>
 
       <!-- R&D #23.4 PCIe ASPM audit (UI sprint 14) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="aspm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.aspm.title")}</h4>
         <p class="muted">{i18n.t("integrations.aspm.desc")}</p>
         <div class="form-row">
@@ -6925,7 +6989,7 @@
       </div>
 
       <!-- R&D #23.2 FS mount audit (UI sprint 14) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="fsaudit" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fsaudit.title")}</h4>
         <p class="muted">{i18n.t("integrations.fsaudit.desc")}</p>
         <div class="form-row">
@@ -6976,7 +7040,7 @@
       </div>
 
       <!-- R&D #23.1 Batch / ctx-length advisor (UI sprint 14) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="batch" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.batch.title")}</h4>
         <p class="muted">{i18n.t("integrations.batch.desc")}</p>
         <div class="form-row">
@@ -7015,7 +7079,7 @@
       </div>
 
       <!-- R&D #24.3 DKMS rebuild status (UI sprint 15) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="dkms" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dkms.title")}</h4>
         <p class="muted">{i18n.t("integrations.dkms.desc")}</p>
         <div class="form-row">
@@ -7060,7 +7124,7 @@
       </div>
 
       <!-- R&D #24.2 PCIe AER counter (UI sprint 15) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="aer" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.aer.title")}</h4>
         <p class="muted">{i18n.t("integrations.aer.desc")}</p>
         <div class="form-row">
@@ -7111,7 +7175,7 @@
       </div>
 
       <!-- R&D #24.4 VRAM thermal-pad drift (UI sprint 15) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="memtemp" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.memtemp.title")}</h4>
         <p class="muted">{i18n.t("integrations.memtemp.desc")}</p>
         <div class="form-row">
@@ -7159,7 +7223,7 @@
       </div>
 
       <!-- R&D #24.1 NVML accounting harvester (UI sprint 15) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="acc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.acc.title")}</h4>
         <p class="muted">{i18n.t("integrations.acc.desc")}</p>
         <div class="form-row">
@@ -7216,7 +7280,7 @@
       </div>
 
       <!-- R&D #25.2 TRIM/discard auditor (UI sprint 16) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="trim" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.trim.title")}</h4>
         <p class="muted">{i18n.t("integrations.trim.desc")}</p>
         <div class="form-row">
@@ -7271,7 +7335,7 @@
       </div>
 
       <!-- R&D #25.5 Throttle bits decoder (UI sprint 16) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="tbits" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.tbits.title")}</h4>
         <p class="muted">{i18n.t("integrations.tbits.desc")}</p>
         <div class="form-row">
@@ -7317,7 +7381,7 @@
       </div>
 
       <!-- R&D #25.1 Retired-page trend (UI sprint 16) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="retire" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.retire.title")}</h4>
         <p class="muted">{i18n.t("integrations.retire.desc")}</p>
         <div class="form-row">
@@ -7359,7 +7423,7 @@
       </div>
 
       <!-- R&D #25.3 NVIDIA bug-report prepper (UI sprint 16) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="bugrep" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bugrep.title")}</h4>
         <p class="muted">{i18n.t("integrations.bugrep.desc")}</p>
         <div class="form-row">
@@ -7404,7 +7468,7 @@
       </div>
 
       <!-- R&D #26.5 PCIe link-width watcher (UI sprint 17) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="pwidth" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pwidth.title")}</h4>
         <p class="muted">{i18n.t("integrations.pwidth.desc")}</p>
         <div class="form-row">
@@ -7447,7 +7511,7 @@
       </div>
 
       <!-- R&D #26.2 CUDA context-leak detector (UI sprint 17) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="ctxleak" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ctxleak.title")}</h4>
         <p class="muted">{i18n.t("integrations.ctxleak.desc")}</p>
         <div class="form-row">
@@ -7488,7 +7552,7 @@
       </div>
 
       <!-- R&D #26.1 procfs static-asset auditor (UI sprint 17) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="staticaud" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.staticaud.title")}</h4>
         <p class="muted">{i18n.t("integrations.staticaud.desc")}</p>
         <div class="form-row">
@@ -7530,7 +7594,7 @@
       </div>
 
       <!-- R&D #26.8 mem-bw saturation gauge (UI sprint 17) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="bwgauge" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bwgauge.title")}</h4>
         <p class="muted">{i18n.t("integrations.bwgauge.desc")}</p>
         <div class="form-row">
@@ -7563,7 +7627,7 @@
       </div>
 
       <!-- R&D #27.4 Power-envelope drift (UI sprint 18) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="pwrenv" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pwrenv.title")}</h4>
         <p class="muted">{i18n.t("integrations.pwrenv.desc")}</p>
         <div class="form-row">
@@ -7603,7 +7667,7 @@
       </div>
 
       <!-- R&D #27.1 ReBAR auditor (UI sprint 18) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="rebar" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rebar.title")}</h4>
         <p class="muted">{i18n.t("integrations.rebar.desc")}</p>
         <div class="form-row">
@@ -7650,7 +7714,7 @@
       </div>
 
       <!-- R&D #27.3 CPU-RAPL harvester (UI sprint 18) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="rapl" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rapl.title")}</h4>
         <p class="muted">{i18n.t("integrations.rapl.desc")}</p>
         <div class="form-row">
@@ -7679,7 +7743,7 @@
       </div>
 
       <!-- R&D #27.7 Clock-gap detector (UI sprint 18) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="clockgap" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.clockgap.title")}</h4>
         <p class="muted">{i18n.t("integrations.clockgap.desc")}</p>
         <div class="form-row">
@@ -7718,7 +7782,7 @@
       </div>
 
       <!-- R&D #28.1 PCIe runtime-PM auditor (UI sprint 19) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="rpm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rpm.title")}</h4>
         <p class="muted">{i18n.t("integrations.rpm.desc")}</p>
         <div class="form-row">
@@ -7765,7 +7829,7 @@
       </div>
 
       <!-- R&D #28.5 Thermal-zone correlator (UI sprint 19) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="thermzones" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.thermzones.title")}</h4>
         <p class="muted">{i18n.t("integrations.thermzones.desc")}</p>
         <div class="form-row">
@@ -7813,7 +7877,7 @@
       </div>
 
       <!-- R&D #28.7 NVRM log tailer (UI sprint 19) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nvrmtail" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nvrmtail.title")}</h4>
         <p class="muted">{i18n.t("integrations.nvrmtail.desc")}</p>
         <div class="form-row">
@@ -7860,7 +7924,7 @@
       </div>
 
       <!-- R&D #28.4 NVLink health (UI sprint 19) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nvlink" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nvlink.title")}</h4>
         <p class="muted">{i18n.t("integrations.nvlink.desc")}</p>
         <div class="form-row">
@@ -7895,7 +7959,7 @@
       </div>
 
       <!-- R&D #29.1 nvidia kmod params (UI sprint 20) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="kmod" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kmod.title")}</h4>
         <p class="muted">{i18n.t("integrations.kmod.desc")}</p>
         <div class="form-row">
@@ -7979,7 +8043,7 @@
       </div>
 
       <!-- R&D #29.7 Thermal slowdown kind (UI sprint 20) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="tslow" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.tslow.title")}</h4>
         <p class="muted">{i18n.t("integrations.tslow.desc")}</p>
         <div class="form-row">
@@ -8013,7 +8077,7 @@
       </div>
 
       <!-- R&D #29.8 rlimit auditor (UI sprint 20) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="rlimit" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rlimit.title")}</h4>
         <p class="muted">{i18n.t("integrations.rlimit.desc")}</p>
         <div class="form-row">
@@ -8069,7 +8133,7 @@
       </div>
 
       <!-- R&D #30.5 DMI/BIOS revision tracker (UI sprint 21) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="dmi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dmi.title")}</h4>
         <p class="muted">{i18n.t("integrations.dmi.desc")}</p>
         <div class="form-row">
@@ -8125,7 +8189,7 @@
       </div>
 
       <!-- R&D #30.3 NVMe I/O scheduler tuner (UI sprint 21) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nvme" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nvme.title")}</h4>
         <p class="muted">{i18n.t("integrations.nvme.desc")}</p>
         <div class="form-row">
@@ -8174,7 +8238,7 @@
       </div>
 
       <!-- R&D #30.2 IOMMU group auditor (UI sprint 21) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="iommu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.iommu.title")}</h4>
         <p class="muted">{i18n.t("integrations.iommu.desc")}</p>
         <div class="form-row">
@@ -8236,7 +8300,7 @@
       </div>
 
       <!-- R&D #39.1 cmdline audit (UI sprint 30) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="cmd" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cmd.title")}</h4>
         <p class="muted">{i18n.t("integrations.cmd.desc")}</p>
         <div class="form-row">
@@ -8277,7 +8341,7 @@
       </div>
 
       <!-- R&D #39.3 coredump readiness (UI sprint 30) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="core" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.core.title")}</h4>
         <p class="muted">{i18n.t("integrations.core.desc")}</p>
         <div class="form-row">
@@ -8320,7 +8384,7 @@
       </div>
 
       <!-- R&D #39.4 host class (UI sprint 30) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="host" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.host.title")}</h4>
         <p class="muted">{i18n.t("integrations.host.desc")}</p>
         <div class="form-row">
@@ -8363,7 +8427,7 @@
       </div>
 
       <!-- R&D #39.2 sysctl.d drift (UI sprint 30) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="sysd" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sysd.title")}</h4>
         <p class="muted">{i18n.t("integrations.sysd.desc")}</p>
         <div class="form-row">
@@ -8411,7 +8475,7 @@
       </div>
 
       <!-- R&D #40.2 KSM advisor (UI sprint 31) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="ksm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ksm.title")}</h4>
         <p class="muted">{i18n.t("integrations.ksm.desc")}</p>
         <div class="form-row">
@@ -8452,7 +8516,7 @@
       </div>
 
       <!-- R&D #40.3 deeper VM tuning (UI sprint 31) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="vmd" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vmd.title")}</h4>
         <p class="muted">{i18n.t("integrations.vmd.desc")}</p>
         <div class="form-row">
@@ -8498,7 +8562,7 @@
       </div>
 
       <!-- R&D #40.1 GPU PCIe driver-binding (UI sprint 31) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="gpb" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.gpb.title")}</h4>
         <p class="muted">{i18n.t("integrations.gpb.desc")}</p>
         <div class="form-row">
@@ -8555,7 +8619,7 @@
       </div>
 
       <!-- R&D #40.4 NIC queue affinity (UI sprint 31) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="nic" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nic.title")}</h4>
         <p class="muted">{i18n.t("integrations.nic.desc")}</p>
         <div class="form-row">
@@ -8599,7 +8663,7 @@
       </div>
 
       <!-- R&D #41.3 panic policy (UI sprint 32) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="pan" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pan.title")}</h4>
         <p class="muted">{i18n.t("integrations.pan.desc")}</p>
         <div class="form-row">
@@ -8644,7 +8708,7 @@
       </div>
 
       <!-- R&D #41.2 EDAC RAM ECC (UI sprint 32) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="ecc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ecc.title")}</h4>
         <p class="muted">{i18n.t("integrations.ecc.desc")}</p>
         <div class="form-row">
@@ -8701,7 +8765,7 @@
       </div>
 
       <!-- R&D #41.4 inotify audit (UI sprint 32) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="ino" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ino.title")}</h4>
         <p class="muted">{i18n.t("integrations.ino.desc")}</p>
         <div class="form-row">
@@ -8751,7 +8815,7 @@
       </div>
 
       <!-- R&D #41.1 zswap + zram (UI sprint 32) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="zsw" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.zsw.title")}</h4>
         <p class="muted">{i18n.t("integrations.zsw.desc")}</p>
         <div class="form-row">
@@ -8795,7 +8859,7 @@
       </div>
 
       <!-- R&D #42.4 CPU EPB (UI sprint 33) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="epb" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.epb.title")}</h4>
         <p class="muted">{i18n.t("integrations.epb.desc")}</p>
         <div class="form-row">
@@ -8842,7 +8906,7 @@
       </div>
 
       <!-- R&D #42.3 cooling devices (UI sprint 33) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="cdev" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cdev.title")}</h4>
         <p class="muted">{i18n.t("integrations.cdev.desc")}</p>
         <div class="form-row">
@@ -8889,7 +8953,7 @@
       </div>
 
       <!-- R&D #42.2 hybrid CPU topology (UI sprint 33) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="hcpu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.hcpu.title")}</h4>
         <p class="muted">{i18n.t("integrations.hcpu.desc")}</p>
         <div class="form-row">
@@ -8930,7 +8994,7 @@
       </div>
 
       <!-- R&D #42.1 file locks (UI sprint 33) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="lock" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.lock.title")}</h4>
         <p class="muted">{i18n.t("integrations.lock.desc")}</p>
         <div class="form-row">
@@ -8999,7 +9063,7 @@
       </div>
 
       <!-- R&D #43.4 NIC ring-buffer drops (UI sprint 34) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="ring" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ring.title")}</h4>
         <p class="muted">{i18n.t("integrations.ring.desc")}</p>
         <div class="form-row">
@@ -9042,7 +9106,7 @@
       </div>
 
       <!-- R&D #43.1 IRQ rates (UI sprint 34) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="irq" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.irq.title")}</h4>
         <p class="muted">{i18n.t("integrations.irq.desc")}</p>
         <div class="form-row">
@@ -9085,7 +9149,7 @@
       </div>
 
       <!-- R&D #43.3 zoneinfo + vmstat (UI sprint 34) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="zi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.zi.title")}</h4>
         <p class="muted">{i18n.t("integrations.zi.desc")}</p>
         <div class="form-row">
@@ -9135,7 +9199,7 @@
       </div>
 
       <!-- R&D #43.2 block queue (UI sprint 34) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="bq" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bq.title")}</h4>
         <p class="muted">{i18n.t("integrations.bq.desc")}</p>
         <div class="form-row">
@@ -9178,7 +9242,7 @@
       </div>
 
       <!-- R&D #44.3 watchdog inventory (UI sprint 35) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="wd" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wd.title")}</h4>
         <p class="muted">{i18n.t("integrations.wd.desc")}</p>
         <div class="form-row">
@@ -9220,7 +9284,7 @@
       </div>
 
       <!-- R&D #44.1 disk I/O latency (UI sprint 35) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="dio" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dio.title")}</h4>
         <p class="muted">{i18n.t("integrations.dio.desc")}</p>
         <div class="form-row">
@@ -9261,7 +9325,7 @@
       </div>
 
       <!-- R&D #44.4 net proto counters (UI sprint 35) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="npc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.npc.title")}</h4>
         <p class="muted">{i18n.t("integrations.npc.desc")}</p>
         <div class="form-row">
@@ -9307,7 +9371,7 @@
       </div>
 
       <!-- R&D #44.2 slab audit (UI sprint 35) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="slab" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.slab.title")}</h4>
         <p class="muted">{i18n.t("integrations.slab.desc")}</p>
         <div class="form-row">
@@ -9352,7 +9416,7 @@
       </div>
 
       <!-- R&D #45.4 entropy + hwrng (UI sprint 36) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="ent" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ent.title")}</h4>
         <p class="muted">{i18n.t("integrations.ent.desc")}</p>
         <div class="form-row">
@@ -9393,7 +9457,7 @@
       </div>
 
       <!-- R&D #45.1 conntrack (UI sprint 36) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="ct" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ct.title")}</h4>
         <p class="muted">{i18n.t("integrations.ct.desc")}</p>
         <div class="form-row">
@@ -9435,7 +9499,7 @@
       </div>
 
       <!-- R&D #45.3 SysV IPC (UI sprint 36) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="ipc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ipc.title")}</h4>
         <p class="muted">{i18n.t("integrations.ipc.desc")}</p>
         <div class="form-row">
@@ -9471,7 +9535,7 @@
       </div>
 
       <!-- R&D #45.2 mdraid (UI sprint 36) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="md" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.md.title")}</h4>
         <p class="muted">{i18n.t("integrations.md.desc")}</p>
         <div class="form-row">
@@ -9513,7 +9577,7 @@
       </div>
 
       <!-- R&D #46.4 keyring audit (UI sprint 37) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="kr" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kr.title")}</h4>
         <p class="muted">{i18n.t("integrations.kr.desc")}</p>
         <div class="form-row">
@@ -9562,7 +9626,7 @@
       </div>
 
       <!-- R&D #46.2 security posture (UI sprint 37) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="sec" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sec.title")}</h4>
         <p class="muted">{i18n.t("integrations.sec.desc")}</p>
         <div class="form-row">
@@ -9604,7 +9668,7 @@
       </div>
 
       <!-- R&D #46.3 VFS limits (UI sprint 37) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="vfs" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vfs.title")}</h4>
         <p class="muted">{i18n.t("integrations.vfs.desc")}</p>
         <div class="form-row">
@@ -9645,7 +9709,7 @@
       </div>
 
       <!-- R&D #47.3 nvidia RM (UI sprint 38) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nv" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nv.title")}</h4>
         <p class="muted">{i18n.t("integrations.nv.desc")}</p>
         <div class="form-row">
@@ -9699,7 +9763,7 @@
       </div>
 
       <!-- R&D #47.4 MCE audit (UI sprint 38) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="mce" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.mce.title")}</h4>
         <p class="muted">{i18n.t("integrations.mce.desc")}</p>
         <div class="form-row">
@@ -9743,7 +9807,7 @@
       </div>
 
       <!-- R&D #47.2 ACPI audit (UI sprint 38) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="acpi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.acpi.title")}</h4>
         <p class="muted">{i18n.t("integrations.acpi.desc")}</p>
         <div class="form-row">
@@ -9792,7 +9856,7 @@
       </div>
 
       <!-- R&D #47.1 sched audit (UI sprint 38) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="sched" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sched.title")}</h4>
         <p class="muted">{i18n.t("integrations.sched.desc")}</p>
         <div class="form-row">
@@ -9841,7 +9905,7 @@
       </div>
 
       <!-- R&D #48.3 DMA + SWIOTLB (UI sprint 39) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="dma" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dma.title")}</h4>
         <p class="muted">{i18n.t("integrations.dma.desc")}</p>
         <div class="form-row">
@@ -9883,7 +9947,7 @@
       </div>
 
       <!-- R&D #48.1 ftrace audit (UI sprint 39) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="ftr" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ftr.title")}</h4>
         <p class="muted">{i18n.t("integrations.ftr.desc")}</p>
         <div class="form-row">
@@ -9927,7 +9991,7 @@
       </div>
 
       <!-- R&D #48.2 USB topology (UI sprint 39) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="usb" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.usb.title")}</h4>
         <p class="muted">{i18n.t("integrations.usb.desc")}</p>
         <div class="form-row">
@@ -9972,7 +10036,7 @@
       </div>
 
       <!-- R&D #48.4 journal audit (UI sprint 39) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="jr" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.jr.title")}</h4>
         <p class="muted">{i18n.t("integrations.jr.desc")}</p>
         <div class="form-row">
@@ -10013,7 +10077,7 @@
       </div>
 
       <!-- R&D #49.4 RTC clock (UI sprint 40) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="rtc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rtc.title")}</h4>
         <p class="muted">{i18n.t("integrations.rtc.desc")}</p>
         <div class="form-row">
@@ -10055,7 +10119,7 @@
       </div>
 
       <!-- R&D #49.2 TPM (UI sprint 40) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="tpm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.tpm.title")}</h4>
         <p class="muted">{i18n.t("integrations.tpm.desc")}</p>
         <div class="form-row">
@@ -10100,7 +10164,7 @@
       </div>
 
       <!-- R&D #49.3 WMI + vendor (UI sprint 40) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="wmi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wmi.title")}</h4>
         <p class="muted">{i18n.t("integrations.wmi.desc")}</p>
         <div class="form-row">
@@ -10142,7 +10206,7 @@
       </div>
 
       <!-- R&D #49.1 kmsg (UI sprint 40) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="kmsg" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kmsg.title")}</h4>
         <p class="muted">{i18n.t("integrations.kmsg.desc")}</p>
         <div class="form-row">
@@ -10186,7 +10250,7 @@
       </div>
 
       <!-- R&D #50.4 sock_pool (UI sprint 41) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="sock" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sock.title")}</h4>
         <p class="muted">{i18n.t("integrations.sock.desc")}</p>
         <div class="form-row">
@@ -10228,7 +10292,7 @@
       </div>
 
       <!-- R&D #50.3 IIO sensors (UI sprint 41) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="iio" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.iio.title")}</h4>
         <p class="muted">{i18n.t("integrations.iio.desc")}</p>
         <div class="form-row">
@@ -10270,7 +10334,7 @@
       </div>
 
       <!-- R&D #50.1 DRM (UI sprint 41) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="drm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.drm.title")}</h4>
         <p class="muted">{i18n.t("integrations.drm.desc")}</p>
         <div class="form-row">
@@ -10315,7 +10379,7 @@
       </div>
 
       <!-- R&D #50.2 cgroup memevents (UI sprint 41) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="cmem" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cmem.title")}</h4>
         <p class="muted">{i18n.t("integrations.cmem.desc")}</p>
         <div class="form-row">
@@ -10360,7 +10424,7 @@
       </div>
 
       <!-- R&D #51.1 power supply (UI sprint 42) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="psu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.psu.title")}</h4>
         <p class="muted">{i18n.t("integrations.psu.desc")}</p>
         <div class="form-row">
@@ -10410,7 +10474,7 @@
       </div>
 
       <!-- R&D #51.4 typec (UI sprint 42) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="typec" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.typec.title")}</h4>
         <p class="muted">{i18n.t("integrations.typec.desc")}</p>
         <div class="form-row">
@@ -10455,7 +10519,7 @@
       </div>
 
       <!-- R&D #51.3 perf PMU (UI sprint 42) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="pmu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pmu.title")}</h4>
         <p class="muted">{i18n.t("integrations.pmu.desc")}</p>
         <div class="form-row">
@@ -10496,7 +10560,7 @@
       </div>
 
       <!-- R&D #51.2 IOMEM + PCI (UI sprint 42) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="iomempci" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.iomempci.title")}</h4>
         <p class="muted">{i18n.t("integrations.iomempci.desc")}</p>
         <div class="form-row">
@@ -10541,7 +10605,7 @@
       </div>
 
       <!-- R&D #52.1 KSM + THP (UI sprint 43) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="ksm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ksm.title")}</h4>
         <p class="muted">{i18n.t("integrations.ksm.desc")}</p>
         <div class="form-row">
@@ -10632,7 +10696,7 @@
       </div>
 
       <!-- R&D #52.3 Module integrity (UI sprint 43) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="modint" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.modint.title")}</h4>
         <p class="muted">{i18n.t("integrations.modint.desc")}</p>
         <div class="form-row">
@@ -10682,7 +10746,7 @@
       </div>
 
       <!-- R&D #53.1 PSI pressure (UI sprint 44) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="psi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.psi.title")}</h4>
         <p class="muted">{i18n.t("integrations.psi.desc")}</p>
         <div class="form-row">
@@ -10731,7 +10795,7 @@
       </div>
 
       <!-- R&D #53.2 CPU vulnerabilities (UI sprint 44) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="cpuvuln" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cpuvuln.title")}</h4>
         <p class="muted">{i18n.t("integrations.cpuvuln.desc")}</p>
         <div class="form-row">
@@ -10775,7 +10839,7 @@
       </div>
 
       <!-- R&D #53.3 IMA / SecureBoot (UI sprint 44) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="ima" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ima.title")}</h4>
         <p class="muted">{i18n.t("integrations.ima.desc")}</p>
         <div class="form-row">
@@ -10818,7 +10882,7 @@
       </div>
 
       <!-- R&D #53.4 RAPL + cpufreq (UI sprint 44) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="rapl" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rapl.title")}</h4>
         <p class="muted">{i18n.t("integrations.rapl.desc")}</p>
         <div class="form-row">
@@ -10873,7 +10937,7 @@
       </div>
 
       <!-- R&D #54.2 Swap tunables (UI sprint 45) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="swaptun" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.swaptun.title")}</h4>
         <p class="muted">{i18n.t("integrations.swaptun.desc")}</p>
         <div class="form-row">
@@ -10923,7 +10987,7 @@
       </div>
 
       <!-- R&D #54.1 Hugepages (UI sprint 45) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="hugep" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.hugep.title")}</h4>
         <p class="muted">{i18n.t("integrations.hugep.desc")}</p>
         <div class="form-row">
@@ -10966,7 +11030,7 @@
       </div>
 
       <!-- R&D #54.3 KVM misc (UI sprint 45) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="kvm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kvm.title")}</h4>
         <p class="muted">{i18n.t("integrations.kvm.desc")}</p>
         <div class="form-row">
@@ -11012,7 +11076,7 @@
       </div>
 
       <!-- R&D #54.4 io_uring runtime (UI sprint 45) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="iouring" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.iouring.title")}</h4>
         <p class="muted">{i18n.t("integrations.iouring.desc")}</p>
         <div class="form-row">
@@ -11053,7 +11117,7 @@
       </div>
 
       <!-- R&D #55.1 EDAC ECC (UI sprint 46) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="edac" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.edac.title")}</h4>
         <p class="muted">{i18n.t("integrations.edac.desc")}</p>
         <div class="form-row">
@@ -11104,7 +11168,7 @@
       </div>
 
       <!-- R&D #55.2 NUMA topology (UI sprint 46) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="numa" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.numa.title")}</h4>
         <p class="muted">{i18n.t("integrations.numa.desc")}</p>
         <div class="form-row">
@@ -11147,7 +11211,7 @@
       </div>
 
       <!-- R&D #55.3 hwmon (UI sprint 46) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="hwmon" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.hwmon.title")}</h4>
         <p class="muted">{i18n.t("integrations.hwmon.desc")}</p>
         <div class="form-row">
@@ -11190,7 +11254,7 @@
       </div>
 
       <!-- R&D #55.4 EFI boot order (UI sprint 46) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="efiboot" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.efiboot.title")}</h4>
         <p class="muted">{i18n.t("integrations.efiboot.desc")}</p>
         <div class="form-row">
@@ -11238,7 +11302,7 @@
       </div>
 
       <!-- R&D #56.1 SATA ALPM (UI sprint 47) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="satapm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.satapm.title")}</h4>
         <p class="muted">{i18n.t("integrations.satapm.desc")}</p>
         <div class="form-row">
@@ -11281,7 +11345,7 @@
       </div>
 
       <!-- R&D #56.2 BDI writeback (UI sprint 47) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="bdi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bdi.title")}</h4>
         <p class="muted">{i18n.t("integrations.bdi.desc")}</p>
         <div class="form-row">
@@ -11325,7 +11389,7 @@
       </div>
 
       <!-- R&D #56.3 /proc/crypto (UI sprint 47) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="crypto" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.crypto.title")}</h4>
         <p class="muted">{i18n.t("integrations.crypto.desc")}</p>
         <div class="form-row">
@@ -11361,7 +11425,7 @@
       </div>
 
       <!-- R&D #56.4 wakeup_sources (UI sprint 47) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="wakeup" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wakeup.title")}</h4>
         <p class="muted">{i18n.t("integrations.wakeup.desc")}</p>
         <div class="form-row">
@@ -11405,7 +11469,7 @@
       </div>
 
       <!-- R&D #57.1 Live patches (UI sprint 48) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="livepatch" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.livepatch.title")}</h4>
         <p class="muted">{i18n.t("integrations.livepatch.desc")}</p>
         <div class="form-row">
@@ -11450,7 +11514,7 @@
       </div>
 
       <!-- R&D #57.2 pagetypeinfo (UI sprint 48) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="pageti" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pageti.title")}</h4>
         <p class="muted">{i18n.t("integrations.pageti.desc")}</p>
         <div class="form-row">
@@ -11486,7 +11550,7 @@
       </div>
 
       <!-- R&D #57.3 Backlight + PWM (UI sprint 48) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="blpwm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.blpwm.title")}</h4>
         <p class="muted">{i18n.t("integrations.blpwm.desc")}</p>
         <div class="form-row">
@@ -11534,7 +11598,7 @@
       </div>
 
       <!-- R&D #57.4 Loadavg pressure (UI sprint 48) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="loadavg" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.loadavg.title")}</h4>
         <p class="muted">{i18n.t("integrations.loadavg.desc")}</p>
         <div class="form-row">
@@ -11574,7 +11638,7 @@
       </div>
 
       <!-- R&D #58.1 cgroup v2 root (UI sprint 49) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="cgroot" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cgroot.title")}</h4>
         <p class="muted">{i18n.t("integrations.cgroot.desc")}</p>
         <div class="form-row">
@@ -11618,7 +11682,7 @@
       </div>
 
       <!-- R&D #58.2 Kernel build config (UI sprint 49) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="kcfg" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kcfg.title")}</h4>
         <p class="muted">{i18n.t("integrations.kcfg.desc")}</p>
         <div class="form-row">
@@ -11661,7 +11725,7 @@
       </div>
 
       <!-- R&D #58.3 SCSI transport (UI sprint 49) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="scsi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.scsi.title")}</h4>
         <p class="muted">{i18n.t("integrations.scsi.desc")}</p>
         <div class="form-row">
@@ -11709,7 +11773,7 @@
       </div>
 
       <!-- R&D #58.4 ALSA cards (UI sprint 49) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="alsa" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.alsa.title")}</h4>
         <p class="muted">{i18n.t("integrations.alsa.desc")}</p>
         <div class="form-row">
@@ -11756,7 +11820,7 @@
       </div>
 
       <!-- R&D #59.1 DMI / SMBIOS (UI sprint 50) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="dmi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dmi.title")}</h4>
         <p class="muted">{i18n.t("integrations.dmi.desc")}</p>
         <div class="form-row">
@@ -11797,7 +11861,7 @@
       </div>
 
       <!-- R&D #59.2 IOMMU groups (UI sprint 50) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="iommu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.iommu.title")}</h4>
         <p class="muted">{i18n.t("integrations.iommu.desc")}</p>
         <div class="form-row">
@@ -11838,7 +11902,7 @@
       </div>
 
       <!-- R&D #59.4 PID rlimits (UI sprint 50) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="rlim" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rlim.title")}</h4>
         <p class="muted">{i18n.t("integrations.rlim.desc")}</p>
         <div class="form-row">
@@ -11885,7 +11949,7 @@
       </div>
 
       <!-- R&D #60.4 Virt guest detection (UI sprint 51) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="virt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.virt.title")}</h4>
         <p class="muted">{i18n.t("integrations.virt.desc")}</p>
         <div class="form-row">
@@ -11930,7 +11994,7 @@
       </div>
 
       <!-- R&D #61.3 Voltage regulator (UI sprint 52) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="regul" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.regul.title")}</h4>
         <p class="muted">{i18n.t("integrations.regul.desc")}</p>
         <div class="form-row">
@@ -11975,7 +12039,7 @@
       </div>
 
       <!-- R&D #61.4 ALSA codec deep (UI sprint 52) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="codec" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.codec.title")}</h4>
         <p class="muted">{i18n.t("integrations.codec.desc")}</p>
         <div class="form-row">
@@ -12022,7 +12086,7 @@
       </div>
 
       <!-- R&D #62.1 devfreq (UI sprint 53) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="devfreq" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.devfreq.title")}</h4>
         <p class="muted">{i18n.t("integrations.devfreq.desc")}</p>
         <div class="form-row">
@@ -12067,7 +12131,7 @@
       </div>
 
       <!-- R&D #62.2 Intel ME / MEI (UI sprint 53) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="mei" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.mei.title")}</h4>
         <p class="muted">{i18n.t("integrations.mei.desc")}</p>
         <div class="form-row">
@@ -12112,7 +12176,7 @@
       </div>
 
       <!-- R&D #62.3 Memory hotplug (UI sprint 53) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="memhp" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.memhp.title")}</h4>
         <p class="muted">{i18n.t("integrations.memhp.desc")}</p>
         <div class="form-row">
@@ -12153,7 +12217,7 @@
       </div>
 
       <!-- R&D #62.4 Task affinity (UI sprint 53) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="taskaff" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.taskaff.title")}</h4>
         <p class="muted">{i18n.t("integrations.taskaff.desc")}</p>
         <div class="form-row">
@@ -12199,7 +12263,7 @@
       </div>
 
       <!-- R&D #63.1 rfkill + Bluetooth (UI sprint 54) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="rfkill" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rfkill.title")}</h4>
         <p class="muted">{i18n.t("integrations.rfkill.desc")}</p>
         <div class="form-row">
@@ -12234,7 +12298,7 @@
       </div>
 
       <!-- R&D #63.3 LEDs (UI sprint 54) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="leds" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.leds.title")}</h4>
         <p class="muted">{i18n.t("integrations.leds.desc")}</p>
         <div class="form-row">
@@ -12279,7 +12343,7 @@
       </div>
 
       <!-- R&D #63.4 binfmt_misc (UI sprint 54) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="binfmt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.binfmt.title")}</h4>
         <p class="muted">{i18n.t("integrations.binfmt.desc")}</p>
         <div class="form-row">
@@ -12324,7 +12388,7 @@
       </div>
 
       <!-- R&D #63.2 PTP clocks (UI sprint 54) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="ptp" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ptp.title")}</h4>
         <p class="muted">{i18n.t("integrations.ptp.desc")}</p>
         <div class="form-row">
@@ -12404,7 +12468,7 @@
       </div>
 
       <!-- R&D #64.4 EDD + MMC (UI sprint 55) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="eddmmc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.eddmmc.title")}</h4>
         <p class="muted">{i18n.t("integrations.eddmmc.desc")}</p>
         <div class="form-row">
@@ -12439,7 +12503,7 @@
       </div>
 
       <!-- R&D #64.1 devlink (UI sprint 55) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="devlink" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.devlink.title")}</h4>
         <p class="muted">{i18n.t("integrations.devlink.desc")}</p>
         <div class="form-row">
@@ -12475,7 +12539,7 @@
       </div>
 
       <!-- R&D #64.3 proc_ns_mountinfo (UI sprint 55) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="procns" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.procns.title")}</h4>
         <p class="muted">{i18n.t("integrations.procns.desc")}</p>
         <div class="form-row">
@@ -12518,7 +12582,7 @@
       </div>
 
       <!-- R&D #65.1 cpuidle residency (UI sprint 56) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="idleres" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.idleres.title")}</h4>
         <p class="muted">{i18n.t("integrations.idleres.desc")}</p>
         <div class="form-row">
@@ -12553,7 +12617,7 @@
       </div>
 
       <!-- R&D #65.2 cpufreq residency (UI sprint 56) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="freqres" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.freqres.title")}</h4>
         <p class="muted">{i18n.t("integrations.freqres.desc")}</p>
         <div class="form-row">
@@ -12588,7 +12652,7 @@
       </div>
 
       <!-- R&D #65.3 EFI runtime-map (UI sprint 56) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="efirt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.efirt.title")}</h4>
         <p class="muted">{i18n.t("integrations.efirt.desc")}</p>
         <div class="form-row">
@@ -12623,7 +12687,7 @@
       </div>
 
       <!-- R&D #65.4 devfreq event PMU (UI sprint 56) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="devfreqevt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.devfreqevt.title")}</h4>
         <p class="muted">{i18n.t("integrations.devfreqevt.desc")}</p>
         <div class="form-row">
@@ -12658,7 +12722,7 @@
       </div>
 
       <!-- R&D #66.1 MTD flash (UI sprint 57) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="mtdflash" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.mtdflash.title")}</h4>
         <p class="muted">{i18n.t("integrations.mtdflash.desc")}</p>
         <div class="form-row">
@@ -12693,7 +12757,7 @@
       </div>
 
       <!-- R&D #66.4 SPI + firmware loader (UI sprint 57) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="spifw" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.spifw.title")}</h4>
         <p class="muted">{i18n.t("integrations.spifw.desc")}</p>
         <div class="form-row">
@@ -12728,7 +12792,7 @@
       </div>
 
       <!-- R&D #66.3 /proc/<pid> syscall + auxv + timerslack (UI sprint 57) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="procsysauxv" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.procsysauxv.title")}</h4>
         <p class="muted">{i18n.t("integrations.procsysauxv.desc")}</p>
         <div class="form-row">
@@ -12768,7 +12832,7 @@
       </div>
 
       <!-- R&D #66.2 BTF + BPF (UI sprint 57) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="btfbpf" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.btfbpf.title")}</h4>
         <p class="muted">{i18n.t("integrations.btfbpf.desc")}</p>
         <div class="form-row">
@@ -12803,7 +12867,7 @@
       </div>
 
       <!-- R&D #67.1 UEFI ESRT (UI sprint 58) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="esrt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.esrt.title")}</h4>
         <p class="muted">{i18n.t("integrations.esrt.desc")}</p>
         <div class="form-row">
@@ -12840,7 +12904,7 @@
       </div>
 
       <!-- R&D #67.3 vmallocinfo (UI sprint 58) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="vmallocinfo" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vmallocinfo.title")}</h4>
         <p class="muted">{i18n.t("integrations.vmallocinfo.desc")}</p>
         <div class="form-row">
@@ -12876,7 +12940,7 @@
       </div>
 
       <!-- R&D #67.2 fdinfo anon_inode kinds (UI sprint 58) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="fdinfokinds" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fdinfokinds.title")}</h4>
         <p class="muted">{i18n.t("integrations.fdinfokinds.desc")}</p>
         <div class="form-row">
@@ -12912,7 +12976,7 @@
       </div>
 
       <!-- R&D #67.4 /proc/timer_list hrtimers (UI sprint 58) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="timerlist" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.timerlist.title")}</h4>
         <p class="muted">{i18n.t("integrations.timerlist.desc")}</p>
         <div class="form-row">
@@ -12947,7 +13011,7 @@
       </div>
 
       <!-- R&D #68.1 pstore crash logs (UI sprint 59) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="pstore" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pstore.title")}</h4>
         <p class="muted">{i18n.t("integrations.pstore.desc")}</p>
         <div class="form-row">
@@ -12984,7 +13048,7 @@
       </div>
 
       <!-- R&D #68.2 MGLRU (UI sprint 59) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="mglru" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.mglru.title")}</h4>
         <p class="muted">{i18n.t("integrations.mglru.desc")}</p>
         <div class="form-row">
@@ -13021,7 +13085,7 @@
       </div>
 
       <!-- R&D #68.3 per-FS tunables (UI sprint 59) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="fsspec" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fsspec.title")}</h4>
         <p class="muted">{i18n.t("integrations.fsspec.desc")}</p>
         <div class="form-row">
@@ -13058,7 +13122,7 @@
       </div>
 
       <!-- R&D #68.4 devicetree + memmap + vmcoreinfo (UI sprint 59) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="dtmem" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dtmem.title")}</h4>
         <p class="muted">{i18n.t("integrations.dtmem.desc")}</p>
         <div class="form-row">
@@ -13093,7 +13157,7 @@
       </div>
 
       <!-- R&D #69.1 NVMEM inventory (UI sprint 60) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nvmem" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nvmem.title")}</h4>
         <p class="muted">{i18n.t("integrations.nvmem.desc")}</p>
         <div class="form-row">
@@ -13132,7 +13196,7 @@
       </div>
 
       <!-- R&D #69.3 DAMON + CMA (UI sprint 60) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="damoncma" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.damoncma.title")}</h4>
         <p class="muted">{i18n.t("integrations.damoncma.desc")}</p>
         <div class="form-row">
@@ -13169,7 +13233,7 @@
       </div>
 
       <!-- R&D #69.2 /proc/kpageflags (UI sprint 60) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="kpageflags" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kpageflags.title")}</h4>
         <p class="muted">{i18n.t("integrations.kpageflags.desc")}</p>
         <div class="form-row">
@@ -13206,7 +13270,7 @@
       </div>
 
       <!-- R&D #69.4 /proc kernel registry (UI sprint 60) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="procregistry" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.procregistry.title")}</h4>
         <p class="muted">{i18n.t("integrations.procregistry.desc")}</p>
         <div class="form-row">
@@ -13241,7 +13305,7 @@
       </div>
 
       <!-- R&D #70.1 remoteproc (UI sprint 61) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="remoteproc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.remoteproc.title")}</h4>
         <p class="muted">{i18n.t("integrations.remoteproc.desc")}</p>
         <div class="form-row">
@@ -13278,7 +13342,7 @@
       </div>
 
       <!-- R&D #70.3 UIO + GPIO userland (UI sprint 61) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="uiogpio" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.uiogpio.title")}</h4>
         <p class="muted">{i18n.t("integrations.uiogpio.desc")}</p>
         <div class="form-row">
@@ -13313,7 +13377,7 @@
       </div>
 
       <!-- R&D #70.4 devcoredump (UI sprint 61) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="devcd" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.devcd.title")}</h4>
         <p class="muted">{i18n.t("integrations.devcd.desc")}</p>
         <div class="form-row">
@@ -13350,7 +13414,7 @@
       </div>
 
       <!-- R&D #70.2 CXL + DAX + nvdimm (UI sprint 61) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="cxldax" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cxldax.title")}</h4>
         <p class="muted">{i18n.t("integrations.cxldax.desc")}</p>
         <div class="form-row">
@@ -13387,7 +13451,7 @@
       </div>
 
       <!-- R&D #71.2 USB role switch (UI sprint 62) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="usbrole" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.usbrole.title")}</h4>
         <p class="muted">{i18n.t("integrations.usbrole.desc")}</p>
         <div class="form-row">
@@ -13422,7 +13486,7 @@
       </div>
 
       <!-- R&D #71.3 page_idle tracking (UI sprint 62) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="pageidle" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pageidle.title")}</h4>
         <p class="muted">{i18n.t("integrations.pageidle.desc")}</p>
         <div class="form-row">
@@ -13457,7 +13521,7 @@
       </div>
 
       <!-- R&D #71.4 EDAC per-DIMM CE trend (UI sprint 62) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="edacdimm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.edacdimm.title")}</h4>
         <p class="muted">{i18n.t("integrations.edacdimm.desc")}</p>
         <div class="form-row">
@@ -13494,7 +13558,7 @@
       </div>
 
       <!-- R&D #71.1 ATA + SATA links (UI sprint 62) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="ataport" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ataport.title")}</h4>
         <p class="muted">{i18n.t("integrations.ataport.desc")}</p>
         <div class="form-row">
@@ -13529,7 +13593,7 @@
       </div>
 
       <!-- R&D #72.1 QEMU fw_cfg blob (UI sprint 63) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="fwcfg" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fwcfg.title")}</h4>
         <p class="muted">{i18n.t("integrations.fwcfg.desc")}</p>
         <div class="form-row">
@@ -13564,7 +13628,7 @@
       </div>
 
       <!-- R&D #72.4 uevent helper (UI sprint 63) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="uevent" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.uevent.title")}</h4>
         <p class="muted">{i18n.t("integrations.uevent.desc")}</p>
         <div class="form-row">
@@ -13599,7 +13663,7 @@
       </div>
 
       <!-- R&D #72.2 DMI raw entries (UI sprint 63) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="dmientries" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dmientries.title")}</h4>
         <p class="muted">{i18n.t("integrations.dmientries.desc")}</p>
         <div class="form-row">
@@ -13634,7 +13698,7 @@
       </div>
 
       <!-- R&D #72.3 ftrace events per-subsys (UI sprint 63) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="tracingevt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.tracingevt.title")}</h4>
         <p class="muted">{i18n.t("integrations.tracingevt.desc")}</p>
         <div class="form-row">
@@ -13671,7 +13735,7 @@
       </div>
 
       <!-- R&D #73.1 PID/threads/mmap limits (UI sprint 64) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="pidlimits" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pidlimits.title")}</h4>
         <p class="muted">{i18n.t("integrations.pidlimits.desc")}</p>
         <div class="form-row">
@@ -13706,7 +13770,7 @@
       </div>
 
       <!-- R&D #73.2 /proc/sys/dev knobs (UI sprint 64) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="sysctldev" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sysctldev.title")}</h4>
         <p class="muted">{i18n.t("integrations.sysctldev.desc")}</p>
         <div class="form-row">
@@ -13741,7 +13805,7 @@
       </div>
 
       <!-- R&D #73.4 kdump/vmcoreinfo readiness (UI sprint 64) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="kexecprep" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kexecprep.title")}</h4>
         <p class="muted">{i18n.t("integrations.kexecprep.desc")}</p>
         <div class="form-row">
@@ -13778,7 +13842,7 @@
       </div>
 
       <!-- R&D #73.3 BIOS firmware-attributes (UI sprint 64) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="fwattr" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fwattr.title")}</h4>
         <p class="muted">{i18n.t("integrations.fwattr.desc")}</p>
         <div class="form-row">
@@ -13815,7 +13879,7 @@
       </div>
 
       <!-- R&D #74.1 CPU isolation (UI sprint 65) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="cpuiso" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cpuiso.title")}</h4>
         <p class="muted">{i18n.t("integrations.cpuiso.desc")}</p>
         <div class="form-row">
@@ -13852,7 +13916,7 @@
       </div>
 
       <!-- R&D #74.2 dma-buf heaps (UI sprint 65) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="dmaheap" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dmaheap.title")}</h4>
         <p class="muted">{i18n.t("integrations.dmaheap.desc")}</p>
         <div class="form-row">
@@ -13889,7 +13953,7 @@
       </div>
 
       <!-- R&D #74.3 ABI compat (UI sprint 65) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="abicompat" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.abicompat.title")}</h4>
         <p class="muted">{i18n.t("integrations.abicompat.desc")}</p>
         <div class="form-row">
@@ -13961,7 +14025,7 @@
       </div>
 
       <!-- R&D #75.2 misc chardev (UI sprint 66) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="miscchar" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.miscchar.title")}</h4>
         <p class="muted">{i18n.t("integrations.miscchar.desc")}</p>
         <div class="form-row">
@@ -13998,7 +14062,7 @@
       </div>
 
       <!-- R&D #75.3 Intel SGX (UI sprint 66) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="sgx" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sgx.title")}</h4>
         <p class="muted">{i18n.t("integrations.sgx.desc")}</p>
         <div class="form-row">
@@ -14035,7 +14099,7 @@
       </div>
 
       <!-- R&D #75.1 LSM subtree (UI sprint 66) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="lsmsub" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.lsmsub.title")}</h4>
         <p class="muted">{i18n.t("integrations.lsmsub.desc")}</p>
         <div class="form-row">
@@ -14109,7 +14173,7 @@
       </div>
 
       <!-- R&D #76.4 input device (UI sprint 67) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="inputdev" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.inputdev.title")}</h4>
         <p class="muted">{i18n.t("integrations.inputdev.desc")}</p>
         <div class="form-row">
@@ -14181,7 +14245,7 @@
       </div>
 
       <!-- R&D #76.1 WMI bus (UI sprint 67) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="wmibus" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wmibus.title")}</h4>
         <p class="muted">{i18n.t("integrations.wmibus.desc")}</p>
         <div class="form-row">
@@ -14216,7 +14280,7 @@
       </div>
 
       <!-- R&D #76.3 NUMA HMAT (UI sprint 67) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="numahmat" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.numahmat.title")}</h4>
         <p class="muted">{i18n.t("integrations.numahmat.desc")}</p>
         <div class="form-row">
@@ -14253,7 +14317,7 @@
       </div>
 
       <!-- R&D #77.2 CPU thermal throttle (UI sprint 68) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="cputhrottle" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cputhrottle.title")}</h4>
         <p class="muted">{i18n.t("integrations.cputhrottle.desc")}</p>
         <div class="form-row">
@@ -14290,7 +14354,7 @@
       </div>
 
       <!-- R&D #77.4 PCI SR-IOV (UI sprint 68) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="sriov" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sriov.title")}</h4>
         <p class="muted">{i18n.t("integrations.sriov.desc")}</p>
         <div class="form-row">
@@ -14327,7 +14391,7 @@
       </div>
 
       <!-- R&D #77.1 CPU CPPC (UI sprint 68) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="cppc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cppc.title")}</h4>
         <p class="muted">{i18n.t("integrations.cppc.desc")}</p>
         <div class="form-row">
@@ -14364,7 +14428,7 @@
       </div>
 
       <!-- R&D #77.3 PCIe AER fleet (UI sprint 68) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="aerfleet" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.aerfleet.title")}</h4>
         <p class="muted">{i18n.t("integrations.aerfleet.desc")}</p>
         <div class="form-row">
@@ -14401,7 +14465,7 @@
       </div>
 
       <!-- R&D #78.1 NIC error counters (UI sprint 69) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="netcounters" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.netcounters.title")}</h4>
         <p class="muted">{i18n.t("integrations.netcounters.desc")}</p>
         <div class="form-row">
@@ -14448,7 +14512,7 @@
       </div>
 
       <!-- R&D #78.2 net stacking topology (UI sprint 69) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="netstacking" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.netstacking.title")}</h4>
         <p class="muted">{i18n.t("integrations.netstacking.desc")}</p>
         <div class="form-row">
@@ -14495,7 +14559,7 @@
       </div>
 
       <!-- R&D #78.4 /proc/pid/maps anomaly (UI sprint 69) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="procmaps" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.procmaps.title")}</h4>
         <p class="muted">{i18n.t("integrations.procmaps.desc")}</p>
         <div class="form-row">
@@ -14548,7 +14612,7 @@
       </div>
 
       <!-- R&D #79.1 softnet_stat (UI sprint 70) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="softnet" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.softnet.title")}</h4>
         <p class="muted">{i18n.t("integrations.softnet.desc")}</p>
         <div class="form-row">
@@ -14593,7 +14657,7 @@
       </div>
 
       <!-- R&D #79.2 route table (UI sprint 70) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="routes" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.routes.title")}</h4>
         <p class="muted">{i18n.t("integrations.routes.desc")}</p>
         <div class="form-row">
@@ -14638,7 +14702,7 @@
       </div>
 
       <!-- R&D #79.3 fb / vtconsole (UI sprint 70) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="fbvtcon" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fbvtcon.title")}</h4>
         <p class="muted">{i18n.t("integrations.fbvtcon.desc")}</p>
         <div class="form-row">
@@ -14683,7 +14747,7 @@
       </div>
 
       <!-- R&D #79.4 sched tunables (UI sprint 70) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="schedtune" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.schedtune.title")}</h4>
         <p class="muted">{i18n.t("integrations.schedtune.desc")}</p>
         <div class="form-row">
@@ -14730,7 +14794,7 @@
       </div>
 
       <!-- R&D #80.1 ARP / neighbor cache (UI sprint 71) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="arp" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.arp.title")}</h4>
         <p class="muted">{i18n.t("integrations.arp.desc")}</p>
         <div class="form-row">
@@ -14820,7 +14884,7 @@
       </div>
 
       <!-- R&D #80.3 btrfs allocator (UI sprint 71) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="btrfs" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.btrfs.title")}</h4>
         <p class="muted">{i18n.t("integrations.btrfs.desc")}</p>
         <div class="form-row">
@@ -14865,7 +14929,7 @@
       </div>
 
       <!-- R&D #80.4 capability / hardening posture (UI sprint 71) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="proccaps" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.proccaps.title")}</h4>
         <p class="muted">{i18n.t("integrations.proccaps.desc")}</p>
         <div class="form-row">
@@ -14908,7 +14972,7 @@
       </div>
 
       <!-- R&D #81.1 xHCI USB 3 companion (UI sprint 72) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="xhci" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.xhci.title")}</h4>
         <p class="muted">{i18n.t("integrations.xhci.desc")}</p>
         <div class="form-row">
@@ -14951,7 +15015,7 @@
       </div>
 
       <!-- R&D #81.2 BPF program inventory (UI sprint 72) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="bpf" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bpf.title")}</h4>
         <p class="muted">{i18n.t("integrations.bpf.desc")}</p>
         <div class="form-row">
@@ -14996,7 +15060,7 @@
       </div>
 
       <!-- R&D #81.3 cgroup io.stat (UI sprint 72) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="cgroupio" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cgroupio.title")}</h4>
         <p class="muted">{i18n.t("integrations.cgroupio.desc")}</p>
         <div class="form-row">
@@ -15041,7 +15105,7 @@
       </div>
 
       <!-- R&D #81.4 thermal trip drift (UI sprint 72) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="thermaltrip" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.thermaltrip.title")}</h4>
         <p class="muted">{i18n.t("integrations.thermaltrip.desc")}</p>
         <div class="form-row">
@@ -15088,7 +15152,7 @@
       </div>
 
       <!-- R&D #82.1 SysRq + kexec hardening (UI sprint 73) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="sysrq" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sysrq.title")}</h4>
         <p class="muted">{i18n.t("integrations.sysrq.desc")}</p>
         <div class="form-row">
@@ -15133,7 +15197,7 @@
       </div>
 
       <!-- R&D #82.2 CPU PM-QoS idle wattage (UI sprint 73) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="cpudmaqos" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cpudmaqos.title")}</h4>
         <p class="muted">{i18n.t("integrations.cpudmaqos.desc")}</p>
         <div class="form-row">
@@ -15180,7 +15244,7 @@
       </div>
 
       <!-- R&D #82.3 RCU expedited / isolation (UI sprint 73) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="rcu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rcu.title")}</h4>
         <p class="muted">{i18n.t("integrations.rcu.desc")}</p>
         <div class="form-row">
@@ -15225,7 +15289,7 @@
       </div>
 
       <!-- R&D #82.4 page fragmentation index (UI sprint 73) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="pageownerfrag" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pageownerfrag.title")}</h4>
         <p class="muted">{i18n.t("integrations.pageownerfrag.desc")}</p>
         <div class="form-row">
@@ -15272,7 +15336,7 @@
       </div>
 
       <!-- R&D #83.1 Block integrity (T10-PI) (UI sprint 74) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="blockintegrity" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.blockintegrity.title")}</h4>
         <p class="muted">{i18n.t("integrations.blockintegrity.desc")}</p>
         <div class="form-row">
@@ -15315,7 +15379,7 @@
       </div>
 
       <!-- R&D #83.2 clk_summary (UI sprint 74) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="clksummary" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.clksummary.title")}</h4>
         <p class="muted">{i18n.t("integrations.clksummary.desc")}</p>
         <div class="form-row">
@@ -15362,7 +15426,7 @@
       </div>
 
       <!-- R&D #83.3 nfsd stats (UI sprint 74) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="nfsd" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nfsd.title")}</h4>
         <p class="muted">{i18n.t("integrations.nfsd.desc")}</p>
         <div class="form-row">
@@ -15407,7 +15471,7 @@
       </div>
 
       <!-- R&D #83.4 DRI debugfs (UI sprint 74) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="dridebugfs" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dridebugfs.title")}</h4>
         <p class="muted">{i18n.t("integrations.dridebugfs.desc")}</p>
         <div class="form-row">
@@ -15454,7 +15518,7 @@
       </div>
 
       <!-- R&D #84.1 Suspend stats (UI sprint 75) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="suspend" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.suspend.title")}</h4>
         <p class="muted">{i18n.t("integrations.suspend.desc")}</p>
         <div class="form-row">
@@ -15497,7 +15561,7 @@
       </div>
 
       <!-- R&D #84.2 Loop device backing (UI sprint 75) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="loopdev" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.loopdev.title")}</h4>
         <p class="muted">{i18n.t("integrations.loopdev.desc")}</p>
         <div class="form-row">
@@ -15540,7 +15604,7 @@
       </div>
 
       <!-- R&D #84.3 Kernel module params drift (UI sprint 75) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="modparams" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.modparams.title")}</h4>
         <p class="muted">{i18n.t("integrations.modparams.desc")}</p>
         <div class="form-row">
@@ -15585,7 +15649,7 @@
       </div>
 
       <!-- R&D #84.4 TTY / serial console (UI sprint 75) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="input_misc" data-prefix="ttyserial" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ttyserial.title")}</h4>
         <p class="muted">{i18n.t("integrations.ttyserial.desc")}</p>
         <div class="form-row">
@@ -15630,7 +15694,7 @@
       </div>
 
       <!-- R&D #85.1 Dynamic debug (UI sprint 76) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="dyndbg" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dyndbg.title")}</h4>
         <p class="muted">{i18n.t("integrations.dyndbg.desc")}</p>
         <div class="form-row">
@@ -15673,7 +15737,7 @@
       </div>
 
       <!-- R&D #85.2 Extcon state (UI sprint 76) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="extcon" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.extcon.title")}</h4>
         <p class="muted">{i18n.t("integrations.extcon.desc")}</p>
         <div class="form-row">
@@ -15714,7 +15778,7 @@
       </div>
 
       <!-- R&D #85.3 Unix socket inventory (UI sprint 76) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="unixsock" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.unixsock.title")}</h4>
         <p class="muted">{i18n.t("integrations.unixsock.desc")}</p>
         <div class="form-row">
@@ -15757,7 +15821,7 @@
       </div>
 
       <!-- R&D #85.4 Sched features debugfs (UI sprint 76) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="schedfeat" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.schedfeat.title")}</h4>
         <p class="muted">{i18n.t("integrations.schedfeat.desc")}</p>
         <div class="form-row">
@@ -15804,7 +15868,7 @@
       </div>
 
       <!-- R&D #86.1 WoL ethtool (UI sprint 77) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="wol" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wol.title")}</h4>
         <p class="muted">{i18n.t("integrations.wol.desc")}</p>
         <div class="form-row">
@@ -15849,7 +15913,7 @@
       </div>
 
       <!-- R&D #86.2 Thunderbolt / USB4 (UI sprint 77) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="thunderbolt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.thunderbolt.title")}</h4>
         <p class="muted">{i18n.t("integrations.thunderbolt.desc")}</p>
         <div class="form-row">
@@ -15892,7 +15956,7 @@
       </div>
 
       <!-- R&D #86.3 NVMe controller state (UI sprint 77) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nvmestate" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nvmestate.title")}</h4>
         <p class="muted">{i18n.t("integrations.nvmestate.desc")}</p>
         <div class="form-row">
@@ -15939,7 +16003,7 @@
       </div>
 
       <!-- R&D #86.4 Workqueue cpumask (UI sprint 77) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="workqueue" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.workqueue.title")}</h4>
         <p class="muted">{i18n.t("integrations.workqueue.desc")}</p>
         <div class="form-row">
@@ -15984,7 +16048,7 @@
       </div>
 
       <!-- R&D #87.1 USB per-hub authorization (UI sprint 78) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="usbauth" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.usbauth.title")}</h4>
         <p class="muted">{i18n.t("integrations.usbauth.desc")}</p>
         <div class="form-row">
@@ -16025,7 +16089,7 @@
       </div>
 
       <!-- R&D #87.2 /proc/locks contention (UI sprint 78) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="proclocks" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.proclocks.title")}</h4>
         <p class="muted">{i18n.t("integrations.proclocks.desc")}</p>
         <div class="form-row">
@@ -16070,7 +16134,7 @@
       </div>
 
       <!-- R&D #87.3 CPU SMT control vs vulns (UI sprint 78) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="smtcontrol" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.smtcontrol.title")}</h4>
         <p class="muted">{i18n.t("integrations.smtcontrol.desc")}</p>
         <div class="form-row">
@@ -16111,7 +16175,7 @@
       </div>
 
       <!-- R&D #87.4 IRQ affinity_hint drift (UI sprint 78) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="irqskew" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.irqskew.title")}</h4>
         <p class="muted">{i18n.t("integrations.irqskew.desc")}</p>
         <div class="form-row">
@@ -16152,7 +16216,7 @@
       </div>
 
       <!-- R&D #88.1 Userspace hardening sysctls (UI sprint 79) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="userspacehard" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.userspacehard.title")}</h4>
         <p class="muted">{i18n.t("integrations.userspacehard.desc")}</p>
         <div class="form-row">
@@ -16201,7 +16265,7 @@
       </div>
 
       <!-- R&D #88.2 Suspend mode selector (UI sprint 79) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="suspendsel" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.suspendsel.title")}</h4>
         <p class="muted">{i18n.t("integrations.suspendsel.desc")}</p>
         <div class="form-row">
@@ -16246,7 +16310,7 @@
       </div>
 
       <!-- R&D #88.3 IOMMU reserved regions (UI sprint 79) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="iommureserved" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.iommureserved.title")}</h4>
         <p class="muted">{i18n.t("integrations.iommureserved.desc")}</p>
         <div class="form-row">
@@ -16293,7 +16357,7 @@
       </div>
 
       <!-- R&D #88.4 timer_migration × nohz_full drift (UI sprint 79) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="timermigration" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.timermigration.title")}</h4>
         <p class="muted">{i18n.t("integrations.timermigration.desc")}</p>
         <div class="form-row">
@@ -16336,7 +16400,7 @@
       </div>
 
       <!-- R&D #89.1 TCP congestion control (UI sprint 80) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="tcpcc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.tcpcc.title")}</h4>
         <p class="muted">{i18n.t("integrations.tcpcc.desc")}</p>
         <div class="form-row">
@@ -16377,7 +16441,7 @@
       </div>
 
       <!-- R&D #89.2 Namespace caps (UI sprint 80) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="nslimits" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nslimits.title")}</h4>
         <p class="muted">{i18n.t("integrations.nslimits.desc")}</p>
         <div class="form-row">
@@ -16418,7 +16482,7 @@
       </div>
 
       <!-- R&D #89.3 SysV IPC limits (UI sprint 80) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="sysvipc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sysvipc.title")}</h4>
         <p class="muted">{i18n.t("integrations.sysvipc.desc")}</p>
         <div class="form-row">
@@ -16465,7 +16529,7 @@
       </div>
 
       <!-- R&D #89.4 PCIe link drift (UI sprint 80) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="pcielink" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pcielink.title")}</h4>
         <p class="muted">{i18n.t("integrations.pcielink.desc")}</p>
         <div class="form-row">
@@ -16506,7 +16570,7 @@
       </div>
 
       <!-- R&D #90.1 resctrl L3/MBA (UI sprint 81) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="resctrl" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.resctrl.title")}</h4>
         <p class="muted">{i18n.t("integrations.resctrl.desc")}</p>
         <div class="form-row">
@@ -16551,7 +16615,7 @@
       </div>
 
       <!-- R&D #90.2 /proc/net protocols (UI sprint 81) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="netproto" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.netproto.title")}</h4>
         <p class="muted">{i18n.t("integrations.netproto.desc")}</p>
         <div class="form-row">
@@ -16590,7 +16654,7 @@
       </div>
 
       <!-- R&D #90.3 cpufreq governor tunables (UI sprint 81) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="cpufreqgovtune" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cpufreqgovtune.title")}</h4>
         <p class="muted">{i18n.t("integrations.cpufreqgovtune.desc")}</p>
         <div class="form-row">
@@ -16633,7 +16697,7 @@
       </div>
 
       <!-- R&D #90.4 PCIe DPC (UI sprint 81) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="pciedpc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pciedpc.title")}</h4>
         <p class="muted">{i18n.t("integrations.pciedpc.desc")}</p>
         <div class="form-row">
@@ -16674,7 +16738,7 @@
       </div>
 
       <!-- R&D #91.1 cgroup pids controller (UI sprint 82) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="cgrouppids" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cgrouppids.title")}</h4>
         <p class="muted">{i18n.t("integrations.cgrouppids.desc")}</p>
         <div class="form-row">
@@ -16719,7 +16783,7 @@
       </div>
 
       <!-- R&D #91.2 dma_buf bufinfo (UI sprint 82) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="dmabufbuf" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dmabufbuf.title")}</h4>
         <p class="muted">{i18n.t("integrations.dmabufbuf.desc")}</p>
         <div class="form-row">
@@ -16764,7 +16828,7 @@
       </div>
 
       <!-- R&D #91.3 NVMe HMB features (UI sprint 82) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nvmehmb" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nvmehmb.title")}</h4>
         <p class="muted">{i18n.t("integrations.nvmehmb.desc")}</p>
         <div class="form-row">
@@ -16809,7 +16873,7 @@
       </div>
 
       <!-- R&D #91.4 vmstat reclaim pressure (UI sprint 82) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="vmstatreclaim" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vmstatreclaim.title")}</h4>
         <p class="muted">{i18n.t("integrations.vmstatreclaim.desc")}</p>
         <div class="form-row">
@@ -16854,7 +16918,7 @@
       </div>
 
       <!-- R&D #92.1 IOMMU strict/lazy DMA (UI sprint 83) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="iommustrict" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.iommustrict.title")}</h4>
         <p class="muted">{i18n.t("integrations.iommustrict.desc")}</p>
         <div class="form-row">
@@ -16899,7 +16963,7 @@
       </div>
 
       <!-- R&D #92.2 kernel lockup detector (UI sprint 83) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="lockupwatchdog" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.lockupwatchdog.title")}</h4>
         <p class="muted">{i18n.t("integrations.lockupwatchdog.desc")}</p>
         <div class="form-row">
@@ -16944,7 +17008,7 @@
       </div>
 
       <!-- R&D #92.3 khugepaged pressure (UI sprint 83) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="khugepaged" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.khugepaged.title")}</h4>
         <p class="muted">{i18n.t("integrations.khugepaged.desc")}</p>
         <div class="form-row">
@@ -16987,7 +17051,7 @@ echo 60000 | sudo tee /sys/kernel/mm/transparent_hugepage/khugepaged/scan_sleep_
       </div>
 
       <!-- R&D #92.4 DRM fdinfo per-client VRAM (UI sprint 83) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="drmfdinfo" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.drmfdinfo.title")}</h4>
         <p class="muted">{i18n.t("integrations.drmfdinfo.desc")}</p>
         <div class="form-row">
@@ -17036,7 +17100,7 @@ sudo kill <PID>`}</pre>
       </div>
 
       <!-- R&D #93.1 pipe / POSIX-mqueue / epoll (UI sprint 84) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="pipemq" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pipemq.title")}</h4>
         <p class="muted">{i18n.t("integrations.pipemq.desc")}</p>
         <div class="form-row">
@@ -17083,7 +17147,7 @@ sudo kill <PID>`}</pre>
       </div>
 
       <!-- R&D #93.2 cgroup v2 memory.peak (UI sprint 84) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="cgmempeak" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cgmempeak.title")}</h4>
         <p class="muted">{i18n.t("integrations.cgmempeak.desc")}</p>
         <div class="form-row">
@@ -17128,7 +17192,7 @@ sudo kill <PID>`}</pre>
       </div>
 
       <!-- R&D #93.3 NFS mountstats (UI sprint 84) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="nfsmountstats" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nfsmountstats.title")}</h4>
         <p class="muted">{i18n.t("integrations.nfsmountstats.desc")}</p>
         <div class="form-row">
@@ -17171,7 +17235,7 @@ sudo kill <PID>`}</pre>
       </div>
 
       <!-- R&D #93.4 BPF JIT + XDP + busy_poll (UI sprint 84) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="bpfjit" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bpfjit.title")}</h4>
         <p class="muted">{i18n.t("integrations.bpfjit.desc")}</p>
         <div class="form-row">
@@ -17216,7 +17280,7 @@ sudo kill <PID>`}</pre>
       </div>
 
       <!-- R&D #94.1 hwpoison / memory failure (UI sprint 85) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="hwpoison" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.hwpoison.title")}</h4>
         <p class="muted">{i18n.t("integrations.hwpoison.desc")}</p>
         <div class="form-row">
@@ -17261,7 +17325,7 @@ sudo kill <PID>`}</pre>
       </div>
 
       <!-- R&D #94.2 fs.aio + fanotify limits (UI sprint 85) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="aiofanotify" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.aiofanotify.title")}</h4>
         <p class="muted">{i18n.t("integrations.aiofanotify.desc")}</p>
         <div class="form-row">
@@ -17302,7 +17366,7 @@ sudo kill <PID>`}</pre>
       </div>
 
       <!-- R&D #94.3 DRM TTM page pool (UI sprint 85) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="ttmpool" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ttmpool.title")}</h4>
         <p class="muted">{i18n.t("integrations.ttmpool.desc")}</p>
         <div class="form-row">
@@ -17342,7 +17406,7 @@ echo 'options ttm pages_limit=524288' | \\
       </div>
 
       <!-- R&D #94.4 lockdep / lock_stat (UI sprint 85) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="lockdep" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.lockdep.title")}</h4>
         <p class="muted">{i18n.t("integrations.lockdep.desc")}</p>
         <div class="form-row">
@@ -17381,7 +17445,7 @@ echo 'options ttm pages_limit=524288' | \\
       </div>
 
       <!-- R&D #95.1 MDIO PHY + EEE (UI sprint 86) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="mdiophy" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.mdiophy.title")}</h4>
         <p class="muted">{i18n.t("integrations.mdiophy.desc")}</p>
         <div class="form-row">
@@ -17426,7 +17490,7 @@ echo 'options ttm pages_limit=524288' | \\
       </div>
 
       <!-- R&D #95.2 kernel module refcnt (UI sprint 86) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="modrefcnt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.modrefcnt.title")}</h4>
         <p class="muted">{i18n.t("integrations.modrefcnt.desc")}</p>
         <div class="form-row">
@@ -17471,7 +17535,7 @@ echo 'options ttm pages_limit=524288' | \\
       </div>
 
       <!-- R&D #95.3 ftrace buffer footprint (UI sprint 86) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="tracingbuf" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.tracingbuf.title")}</h4>
         <p class="muted">{i18n.t("integrations.tracingbuf.desc")}</p>
         <div class="form-row">
@@ -17516,7 +17580,7 @@ echo 'options ttm pages_limit=524288' | \\
       </div>
 
       <!-- R&D #95.4 per-device wakeup attribution (UI sprint 86) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="pdwakeup" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pdwakeup.title")}</h4>
         <p class="muted">{i18n.t("integrations.pdwakeup.desc")}</p>
         <div class="form-row">
@@ -17564,7 +17628,7 @@ done`}</pre>
       </div>
 
       <!-- R&D #96.1 block discard caps (UI sprint 87) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="discardcaps" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.discardcaps.title")}</h4>
         <p class="muted">{i18n.t("integrations.discardcaps.desc")}</p>
         <div class="form-row">
@@ -17654,7 +17718,7 @@ done`}</pre>
       </div>
 
       <!-- R&D #96.3 tracing instances (UI sprint 87) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="traceinst" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.traceinst.title")}</h4>
         <p class="muted">{i18n.t("integrations.traceinst.desc")}</p>
         <div class="form-row">
@@ -17699,7 +17763,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #96.4 block holders/dm-stack (UI sprint 87) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="blockstack" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.blockstack.title")}</h4>
         <p class="muted">{i18n.t("integrations.blockstack.desc")}</p>
         <div class="form-row">
@@ -17744,7 +17808,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #97.1 KVM MMU / NX-huge / EPT/NPT (UI sprint 88) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="kvmmmu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kvmmmu.title")}</h4>
         <p class="muted">{i18n.t("integrations.kvmmmu.desc")}</p>
         <div class="form-row">
@@ -17791,7 +17855,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #97.2 ZFS ARC tuning (UI sprint 88) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="zfsarc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.zfsarc.title")}</h4>
         <p class="muted">{i18n.t("integrations.zfsarc.desc")}</p>
         <div class="form-row">
@@ -17836,7 +17900,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #97.3 cgroup slice delegation (UI sprint 88) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="cgdelegate" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cgdelegate.title")}</h4>
         <p class="muted">{i18n.t("integrations.cgdelegate.desc")}</p>
         <div class="form-row">
@@ -17930,7 +17994,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #98.1 PSI irq + cpu.full (UI sprint 89) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="psiirq" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.psiirq.title")}</h4>
         <p class="muted">{i18n.t("integrations.psiirq.desc")}</p>
         <div class="form-row">
@@ -17975,7 +18039,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #98.2 FS quota / projid (UI sprint 89) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="fsquota" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fsquota.title")}</h4>
         <p class="muted">{i18n.t("integrations.fsquota.desc")}</p>
         <div class="form-row">
@@ -18018,7 +18082,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #98.3 FUSE connections (UI sprint 89) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="fuse" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fuse.title")}</h4>
         <p class="muted">{i18n.t("integrations.fuse.desc")}</p>
         <div class="form-row">
@@ -18063,7 +18127,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #98.4 Keyring lifecycle (UI sprint 89) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="keyringlife" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.keyringlife.title")}</h4>
         <p class="muted">{i18n.t("integrations.keyringlife.desc")}</p>
         <div class="form-row">
@@ -18106,7 +18170,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #99.1 Intel umwait control (UI sprint 90) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="umwait" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.umwait.title")}</h4>
         <p class="muted">{i18n.t("integrations.umwait.desc")}</p>
         <div class="form-row">
@@ -18151,7 +18215,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #99.2 Split-lock detect (UI sprint 90) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="splitlock" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.splitlock.title")}</h4>
         <p class="muted">{i18n.t("integrations.splitlock.desc")}</p>
         <div class="form-row">
@@ -18196,7 +18260,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #99.3 OOM policy sysctl (UI sprint 90) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="oompol" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.oompol.title")}</h4>
         <p class="muted">{i18n.t("integrations.oompol.desc")}</p>
         <div class="form-row">
@@ -18241,7 +18305,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #99.4 rseq kernel posture (UI sprint 90) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="rseq" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.rseq.title")}</h4>
         <p class="muted">{i18n.t("integrations.rseq.desc")}</p>
         <div class="form-row">
@@ -18282,7 +18346,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #100.1 workqueue power_efficient (UI sprint 91) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="wqpe" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wqpe.title")}</h4>
         <p class="muted">{i18n.t("integrations.wqpe.desc")}</p>
         <div class="form-row">
@@ -18327,7 +18391,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #100.2 BQL stall counters (UI sprint 91) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="bql" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bql.title")}</h4>
         <p class="muted">{i18n.t("integrations.bql.desc")}</p>
         <div class="form-row">
@@ -18372,7 +18436,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #100.3 perf sampling limits (UI sprint 91) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="perfsample" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.perfsample.title")}</h4>
         <p class="muted">{i18n.t("integrations.perfsample.desc")}</p>
         <div class="form-row">
@@ -18417,7 +18481,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #100.4 zswap deep pool (UI sprint 91) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="zswapdeep" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.zswapdeep.title")}</h4>
         <p class="muted">{i18n.t("integrations.zswapdeep.desc")}</p>
         <div class="form-row">
@@ -18462,7 +18526,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #101.1 KFENCE runtime (UI sprint 92) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="kfence" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.kfence.title")}</h4>
         <p class="muted">{i18n.t("integrations.kfence.desc")}</p>
         <div class="form-row">
@@ -18503,7 +18567,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #101.2 net qdisc default (UI sprint 92) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="qdisc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.qdisc.title")}</h4>
         <p class="muted">{i18n.t("integrations.qdisc.desc")}</p>
         <div class="form-row">
@@ -18548,7 +18612,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #101.3 fscache cachefiles (UI sprint 92) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="fscache" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fscache.title")}</h4>
         <p class="muted">{i18n.t("integrations.fscache.desc")}</p>
         <div class="form-row">
@@ -18593,7 +18657,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #101.4 KSM advisor (UI sprint 92) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="ksmadv" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ksmadv.title")}</h4>
         <p class="muted">{i18n.t("integrations.ksmadv.desc")}</p>
         <div class="form-row">
@@ -18636,7 +18700,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #102.1 Intel uncore freq (UI sprint 93) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="uncore" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.uncore.title")}</h4>
         <p class="muted">{i18n.t("integrations.uncore.desc")}</p>
         <div class="form-row">
@@ -18681,7 +18745,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #102.2 modprobe blacklist drift (UI sprint 93) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="modprobedrift" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.modprobedrift.title")}</h4>
         <p class="muted">{i18n.t("integrations.modprobedrift.desc")}</p>
         <div class="form-row">
@@ -18726,7 +18790,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #102.3 module sig_enforce (UI sprint 93) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="sigenforce" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sigenforce.title")}</h4>
         <p class="muted">{i18n.t("integrations.sigenforce.desc")}</p>
         <div class="form-row">
@@ -18767,7 +18831,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #102.4 BPF JIT harden (UI sprint 93) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="tracing_bpf" data-prefix="bpfharden" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.bpfharden.title")}</h4>
         <p class="muted">{i18n.t("integrations.bpfharden.desc")}</p>
         <div class="form-row">
@@ -18808,7 +18872,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #103.1 kernel oops/warn counters (UI sprint 94) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="oopswarn" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.oopswarn.title")}</h4>
         <p class="muted">{i18n.t("integrations.oopswarn.desc")}</p>
         <div class="form-row">
@@ -18853,7 +18917,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #103.2 ephemeral port range (UI sprint 94) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="ephport" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.ephport.title")}</h4>
         <p class="muted">{i18n.t("integrations.ephport.desc")}</p>
         <div class="form-row">
@@ -18898,7 +18962,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #103.3 zram writeback (UI sprint 94) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="zramwb" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.zramwb.title")}</h4>
         <p class="muted">{i18n.t("integrations.zramwb.desc")}</p>
         <div class="form-row">
@@ -18943,7 +19007,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #103.4 cgroup v2 uclamp (UI sprint 94) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="uclamp" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.uclamp.title")}</h4>
         <p class="muted">{i18n.t("integrations.uclamp.desc")}</p>
         <div class="form-row">
@@ -18990,7 +19054,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #104.1 HWP dynamic_boost (UI sprint 95) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="hwpboost" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.hwpboost.title")}</h4>
         <p class="muted">{i18n.t("integrations.hwpboost.desc")}</p>
         <div class="form-row">
@@ -19031,7 +19095,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #104.2 hung_task drift (UI sprint 95) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="hungtask" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.hungtask.title")}</h4>
         <p class="muted">{i18n.t("integrations.hungtask.desc")}</p>
         <div class="form-row">
@@ -19074,7 +19138,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #104.3 firmware loader policy (UI sprint 95) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="fwloader" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.fwloader.title")}</h4>
         <p class="muted">{i18n.t("integrations.fwloader.desc")}</p>
         <div class="form-row">
@@ -19117,7 +19181,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #104.4 IMA measurement freshness (UI sprint 95) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="imafresh" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.imafresh.title")}</h4>
         <p class="muted">{i18n.t("integrations.imafresh.desc")}</p>
         <div class="form-row">
@@ -19162,7 +19226,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #105.1 IMA digest_lists (UI sprint 96) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="imadigest" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.imadigest.title")}</h4>
         <p class="muted">{i18n.t("integrations.imadigest.desc")}</p>
         <div class="form-row">
@@ -19205,7 +19269,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #105.2 DRM GT load status (UI sprint 96) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="drmgt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.drmgt.title")}</h4>
         <p class="muted">{i18n.t("integrations.drmgt.desc")}</p>
         <div class="form-row">
@@ -19250,7 +19314,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #105.3 power_async suspend (UI sprint 96) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="pmasync" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pmasync.title")}</h4>
         <p class="muted">{i18n.t("integrations.pmasync.desc")}</p>
         <div class="form-row">
@@ -19295,7 +19359,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #105.4 vm compaction proactive (UI sprint 96) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="vmcompact" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vmcompact.title")}</h4>
         <p class="muted">{i18n.t("integrations.vmcompact.desc")}</p>
         <div class="form-row">
@@ -19340,7 +19404,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #106.1 io_delay_type (UI sprint 97) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="iodelay" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.iodelay.title")}</h4>
         <p class="muted">{i18n.t("integrations.iodelay.desc")}</p>
         <div class="form-row">
@@ -19381,7 +19445,7 @@ sudo rmdir /sys/kernel/tracing/instances/<name>`}</pre>
       </div>
 
       <!-- R&D #106.2 printk pacing (UI sprint 97) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="printkpace" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.printkpace.title")}</h4>
         <p class="muted">{i18n.t("integrations.printkpace.desc")}</p>
         <div class="form-row">
@@ -19464,7 +19528,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #106.4 cpufreq setspeed drift (UI sprint 97) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="setspeed" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.setspeed.title")}</h4>
         <p class="muted">{i18n.t("integrations.setspeed.desc")}</p>
         <div class="form-row">
@@ -19505,7 +19569,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #107.1 vm numa policy (UI sprint 98) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="vmnuma" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vmnuma.title")}</h4>
         <p class="muted">{i18n.t("integrations.vmnuma.desc")}</p>
         <div class="form-row">
@@ -19546,7 +19610,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #107.2 sysrq CAD poweroff (UI sprint 98) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="sysrqcad" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sysrqcad.title")}</h4>
         <p class="muted">{i18n.t("integrations.sysrqcad.desc")}</p>
         <div class="form-row">
@@ -19587,7 +19651,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #107.3 vm dirty_bytes drift (UI sprint 98) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="dirtybytes" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dirtybytes.title")}</h4>
         <p class="muted">{i18n.t("integrations.dirtybytes.desc")}</p>
         <div class="form-row">
@@ -19626,7 +19690,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #107.4 numa balancing scan tuning (UI sprint 98) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="numascan" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.numascan.title")}</h4>
         <p class="muted">{i18n.t("integrations.numascan.desc")}</p>
         <div class="form-row">
@@ -19671,7 +19735,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #108.1 nvidia_drm params (UI sprint 99) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="nvdrm" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nvdrm.title")}</h4>
         <p class="muted">{i18n.t("integrations.nvdrm.desc")}</p>
         <div class="form-row">
@@ -19712,7 +19776,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #108.2 overlay module params (UI sprint 99) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="overlay" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.overlay.title")}</h4>
         <p class="muted">{i18n.t("integrations.overlay.desc")}</p>
         <div class="form-row">
@@ -19755,7 +19819,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #108.3 dm_mod params (UI sprint 99) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="dmmod" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.dmmod.title")}</h4>
         <p class="muted">{i18n.t("integrations.dmmod.desc")}</p>
         <div class="form-row">
@@ -19794,7 +19858,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #108.4 cgroup tree limits (UI sprint 99) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="cgtree" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cgtree.title")}</h4>
         <p class="muted">{i18n.t("integrations.cgtree.desc")}</p>
         <div class="form-row">
@@ -19835,7 +19899,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #109.1 numa demotion_enabled (UI sprint 100) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="numademo" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.numademo.title")}</h4>
         <p class="muted">{i18n.t("integrations.numademo.desc")}</p>
         <div class="form-row">
@@ -19876,7 +19940,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #109.2 ACPI boot assets (UI sprint 100) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="acpiboot" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.acpiboot.title")}</h4>
         <p class="muted">{i18n.t("integrations.acpiboot.desc")}</p>
         <div class="form-row">
@@ -19917,7 +19981,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #109.3 ACPI tables inventory (UI sprint 100) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="acpitbl" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.acpitbl.title")}</h4>
         <p class="muted">{i18n.t("integrations.acpitbl.desc")}</p>
         <div class="form-row">
@@ -19960,7 +20024,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #109.4 PCI NUMA pinning (UI sprint 100) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="pcinuma" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pcinuma.title")}</h4>
         <p class="muted">{i18n.t("integrations.pcinuma.desc")}</p>
         <div class="form-row">
@@ -20001,7 +20065,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #110.1 swap priority tiering (UI sprint 101) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="swappri" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.swappri.title")}</h4>
         <p class="muted">{i18n.t("integrations.swappri.desc")}</p>
         <div class="form-row">
@@ -20042,7 +20106,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #110.2 XFS log activity (UI sprint 101) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="storage_fs" data-prefix="xfslog" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.xfslog.title")}</h4>
         <p class="muted">{i18n.t("integrations.xfslog.desc")}</p>
         <div class="form-row">
@@ -20075,7 +20139,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- Hardening #2 / UI sprint 103 — collection_profile_audit (lazy load only) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="collprof" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.collprof.title")}</h4>
         <p class="muted">{i18n.t("integrations.collprof.desc")}</p>
         <div class="form-row" style="gap: 6px; align-items: center; flex-wrap: wrap;">
@@ -20157,7 +20221,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- F4 — PCIe Recovery Wizard -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="pcierec" hidden={modal.section !== "integrations"}>
         <h4>🔧 {i18n.t("integrations.pcierec.title")}</h4>
         <p class="muted">{i18n.t("integrations.pcierec.desc")}</p>
 
@@ -20274,7 +20338,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #38.1 PCIe AER trend (UI sprint 29) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="aer" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.aer.title")}</h4>
         <p class="muted">{i18n.t("integrations.aer.desc")}</p>
         <div class="form-row">
@@ -20325,7 +20389,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #38.4 GPU IRQ affinity (UI sprint 29) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="irqaff" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.irqaff.title")}</h4>
         <p class="muted">{i18n.t("integrations.irqaff.desc")}</p>
         <div class="form-row">
@@ -20369,7 +20433,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #38.2 modprobe drift (UI sprint 29) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="mprb" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.mprb.title")}</h4>
         <p class="muted">{i18n.t("integrations.mprb.desc")}</p>
         <div class="form-row">
@@ -20420,7 +20484,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #38.3 /proc/<pid>/maps (deleted) shared libs (UI sprint 29) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="maps" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.maps.title")}</h4>
         <p class="muted">{i18n.t("integrations.maps.desc")}</p>
         <div class="form-row">
@@ -20476,7 +20540,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #37.1 CPU vulnerabilities mitigation cost (UI sprint 28) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="cpvulns" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cpvulns.title")}</h4>
         <p class="muted">{i18n.t("integrations.cpvulns.desc")}</p>
         <div class="form-row">
@@ -20542,7 +20606,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #37.3 Hardware watchdog (UI sprint 28) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="boot_firmware" data-prefix="wdog" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wdog.title")}</h4>
         <p class="muted">{i18n.t("integrations.wdog.desc")}</p>
         <div class="form-row">
@@ -20591,7 +20655,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #37.2 GPU↔CPU affinity (UI sprint 28) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="gpu_driver" data-prefix="gpuaff" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.gpuaff.title")}</h4>
         <p class="muted">{i18n.t("integrations.gpuaff.desc")}</p>
         <div class="form-row">
@@ -20636,7 +20700,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #37.4 L3 cache topology (UI sprint 28) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="cache" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cache.title")}</h4>
         <p class="muted">{i18n.t("integrations.cache.desc")}</p>
         <div class="form-row">
@@ -20682,7 +20746,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- PAM memlock audit (bonus — UI sprint 28) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="pam" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.pam.title")}</h4>
         <p class="muted">{i18n.t("integrations.pam.desc")}</p>
         <div class="form-row">
@@ -20733,7 +20797,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #36.3 Kernel taint audit (UI sprint 27) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="taint" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.taint.title")}</h4>
         <p class="muted">{i18n.t("integrations.taint.desc")}</p>
         <div class="form-row">
@@ -20786,7 +20850,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #36.1 CPU microcode audit (UI sprint 27) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="uc" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.uc.title")}</h4>
         <p class="muted">{i18n.t("integrations.uc.desc")}</p>
         <div class="form-row">
@@ -20833,7 +20897,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #36.4 HWP EPP audit (UI sprint 27) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="epp" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.epp.title")}</h4>
         <p class="muted">{i18n.t("integrations.epp.desc")}</p>
         <div class="form-row">
@@ -20879,7 +20943,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #36.2 cpuidle audit (UI sprint 27) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="cpuidle" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cpuidle.title")}</h4>
         <p class="muted">{i18n.t("integrations.cpuidle.desc")}</p>
         <div class="form-row">
@@ -20931,7 +20995,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #35.1 CPU turbo/boost audit (UI sprint 26) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="boost" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.boost.title")}</h4>
         <p class="muted">{i18n.t("integrations.boost.desc")}</p>
         <div class="form-row">
@@ -20977,7 +21041,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #35.2 LAN socket-buffer audit (UI sprint 26) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="netsysctl" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.netsysctl.title")}</h4>
         <p class="muted">{i18n.t("integrations.netsysctl.desc")}</p>
         <div class="form-row">
@@ -21026,7 +21090,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #35.4 SMT / offline-core audit (UI sprint 26) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="security_lsm" data-prefix="smt" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.smt.title")}</h4>
         <p class="muted">{i18n.t("integrations.smt.desc")}</p>
         <div class="form-row">
@@ -21076,7 +21140,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #35.3 NUMA placement audit (UI sprint 26) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="numa" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.numa.title")}</h4>
         <p class="muted">{i18n.t("integrations.numa.desc")}</p>
         <div class="form-row">
@@ -21123,7 +21187,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #34.1 Transparent Hugepage audit (UI sprint 25) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="thp" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.thp.title")}</h4>
         <p class="muted">{i18n.t("integrations.thp.desc")}</p>
         <div class="form-row">
@@ -21172,7 +21236,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #34.2 Memory fragmentation (UI sprint 25) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="buddy" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.buddy.title")}</h4>
         <p class="muted">{i18n.t("integrations.buddy.desc")}</p>
         <div class="form-row">
@@ -21217,7 +21281,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #34.4 Per-daemon scheduler stats (UI sprint 25) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="sched" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.sched.title")}</h4>
         <p class="muted">{i18n.t("integrations.sched.desc")}</p>
         <div class="form-row">
@@ -21275,7 +21339,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #34.3 systemd-oomd correlator (UI sprint 25) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="oomd" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.oomd.title")}</h4>
         <p class="muted">{i18n.t("integrations.oomd.desc")}</p>
         <div class="form-row">
@@ -21325,7 +21389,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #33.4 clocksource audit (UI sprint 24) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="clock" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.clock.title")}</h4>
         <p class="muted">{i18n.t("integrations.clock.desc")}</p>
         <div class="form-row">
@@ -21374,7 +21438,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #33.1 LAN NIC health (UI sprint 24) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="network" data-prefix="nic" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.nic.title")}</h4>
         <p class="muted">{i18n.t("integrations.nic.desc")}</p>
         <div class="form-row">
@@ -21433,7 +21497,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #33.2 Per-daemon IO accounting (UI sprint 24) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="procio" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.procio.title")}</h4>
         <p class="muted">{i18n.t("integrations.procio.desc")}</p>
         <div class="form-row">
@@ -21490,7 +21554,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #33.6 cgroup CPU/IO priority (UI sprint 24) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="containers" data-prefix="cgcpuio" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cgcpuio.title")}</h4>
         <p class="muted">{i18n.t("integrations.cgcpuio.desc")}</p>
         <div class="form-row">
@@ -21543,7 +21607,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #32.4 VM sysctl audit (UI sprint 23) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="vmsysctl" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.vmsysctl.title")}</h4>
         <p class="muted">{i18n.t("integrations.vmsysctl.desc")}</p>
         <div class="form-row">
@@ -21592,7 +21656,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #32.1 PSI pressure-stall correlator (UI sprint 23) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="psi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.psi.title")}</h4>
         <p class="muted">{i18n.t("integrations.psi.desc")}</p>
         <div class="form-row">
@@ -21648,7 +21712,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #32.3 wchan + stack stuck debugger (UI sprint 23) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="meta_diag" data-prefix="wchan" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.wchan.title")}</h4>
         <p class="muted">{i18n.t("integrations.wchan.desc")}</p>
         <div class="form-row">
@@ -21703,7 +21767,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #32.5 cgroup memory-cap scanner (UI sprint 23) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="cgmemcap" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cgmemcap.title")}</h4>
         <p class="muted">{i18n.t("integrations.cgmemcap.desc")}</p>
         <div class="form-row">
@@ -21763,7 +21827,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #31.4 OOM-priority for inference daemons (UI sprint 22) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="oom" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.oom.title")}</h4>
         <p class="muted">{i18n.t("integrations.oom.desc")}</p>
         <div class="form-row">
@@ -21811,7 +21875,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #31.3 CPU topology + governor advisor (UI sprint 22) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="irq_sched" data-prefix="cpu" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.cpu.title")}</h4>
         <p class="muted">{i18n.t("integrations.cpu.desc")}</p>
         <div class="form-row">
@@ -21861,7 +21925,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #31.2 smaps_rollup residence breakdown (UI sprint 22) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="memory_swap" data-prefix="smaps" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.smaps.title")}</h4>
         <p class="muted">{i18n.t("integrations.smaps.desc")}</p>
         <div class="form-row">
@@ -21916,7 +21980,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #31.1 hwmon NVMe + chipset parity (UI sprint 22) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="power_thermal" data-prefix="hwmon" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.hwmon.title")}</h4>
         <p class="muted">{i18n.t("integrations.hwmon.desc")}</p>
         <div class="form-row">
@@ -21969,7 +22033,7 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       </div>
 
       <!-- R&D #30.1 MSI-X vector inventory (UI sprint 21) -->
-      <div class="card-form" hidden={modal.section !== "integrations"}>
+      <div class="card-form" data-cat="pcie_bus" data-prefix="msi" hidden={modal.section !== "integrations"}>
         <h4>{i18n.t("integrations.msi.title")}</h4>
         <p class="muted">{i18n.t("integrations.msi.desc")}</p>
         <div class="form-row">
