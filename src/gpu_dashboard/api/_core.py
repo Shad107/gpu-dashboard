@@ -282,8 +282,16 @@ def _watchdog_state(cfg) -> dict:
     log = _resolve_watchdog_log(cfg)
     import re, datetime
     drops = 0
+    # `last_up_ts`: timestamp of the most recent UP transition (NOT a
+    # heartbeat). Anchors `held_for` so it grows linearly while the
+    # link is healthy. Was previously bumped by every heartbeat line,
+    # which made held_for always read 0-60s (interval between
+    # heartbeats) instead of "duration since the link came back".
     last_up_ts = None
     last_drop_ts = None
+    last_heartbeat_up_ts = None  # so we still notice fresh-install
+                                  # cases where the log has only
+                                  # heartbeats and no transition
     # Track ordered events to know the *current* state from the
     # most recent transition.
     last_event_kind = None  # 'up' | 'down' | None
@@ -301,20 +309,58 @@ def _watchdog_state(cfg) -> dict:
                         ts = None
                 is_drop = ("DROP" in line.upper() or
                            "DÉCROCHAGE" in line)
-                is_up = bool(re.search(
-                    r"state.*up|GPU recovered|recover",
+                # A heartbeat just confirms the previous state — it's
+                # not a transition. The watchdog daemon writes these
+                # every ~60s while the link is healthy, and they
+                # would otherwise drag last_up_ts forward.
+                is_heartbeat = "heartbeat" in line.lower()
+                is_up_transition = bool(re.search(
+                    r"GPU recovered|recover|state.*restored",
                     line, re.IGNORECASE))
+                is_up_any = is_up_transition or (
+                    is_heartbeat and "state=up" in line.lower())
                 if is_drop:
                     drops += 1
                     if ts:
                         last_drop_ts = ts
                         last_event_kind = "down"
-                if is_up:
+                elif is_up_transition:
                     if ts:
+                        # Only a real transition resets last_up_ts.
+                        # If this is the first transition after a
+                        # DROP, the held_for clock starts here.
                         last_up_ts = ts
                         last_event_kind = "up"
+                elif is_heartbeat and is_up_any:
+                    # Heartbeat confirming UP: just remember it as a
+                    # fallback anchor; don't overwrite last_up_ts.
+                    if ts:
+                        last_heartbeat_up_ts = ts
+                        if last_event_kind is None:
+                            last_event_kind = "up"
     except FileNotFoundError:
         return {"available": False}
+
+    # Fallback: if we never saw an UP transition (fresh install where
+    # the watchdog has only been writing heartbeats since startup),
+    # use the *earliest* heartbeat we saw as the held_for anchor.
+    # Walking the log again would be wasteful, so we use the first
+    # entry's timestamp via a second pass only when needed.
+    if last_up_ts is None and last_heartbeat_up_ts is not None:
+        try:
+            with open(log) as f:
+                for line in f:
+                    if "heartbeat" in line.lower() and "state=up" in line.lower():
+                        m_ts = _TS_RE.match(line)
+                        if m_ts:
+                            try:
+                                last_up_ts = datetime.datetime.strptime(
+                                    m_ts.group(1), "%Y-%m-%d %H:%M:%S")
+                                break
+                            except ValueError:
+                                continue
+        except FileNotFoundError:
+            pass
 
     now = datetime.datetime.now()
     held_for_s = None
