@@ -39,11 +39,32 @@
   let busy = $state(false);
   let installedScripts = $state<Record<string, boolean>>({});
   let timer: number | null = null;
+  // F7.3 — "stable for X" anchor. Reset whenever the negotiated
+  // speed changes; ticks forward otherwise. Lives in JS state
+  // because the backend doesn't track historical speed transitions
+  // (yet).
+  let lastSpeed = $state<string | null>(null);
+  let stableSinceMs = $state<number | null>(null);
+  let nowTick = $state(Date.now());
 
   async function refresh() {
     try {
       s = await fetch("/api/link-stable/status").then((x) => x.json());
+      const cur = s?.link?.current_link_speed ?? null;
+      if (cur !== lastSpeed) {
+        lastSpeed = cur;
+        stableSinceMs = Date.now();
+      }
     } catch {}
+  }
+
+  function fmtStable(ms: number): string {
+    const s = Math.floor(ms / 1000);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m${(s % 60).toString().padStart(2, "0")}s`;
+    const h = Math.floor(m / 60);
+    return `${h}h${(m % 60).toString().padStart(2, "0")}m`;
   }
   async function refreshInstalled() {
     try {
@@ -58,9 +79,18 @@
     refresh();
     refreshInstalled();
     timer = window.setInterval(refresh, 4000);
+    // tick the "stable for" clock every 500ms so the badge ages
+    // smoothly without waiting for the 4s status poll.
+    const t2 = window.setInterval(() => (nowTick = Date.now()), 500);
+    return () => clearInterval(t2);
   });
   onDestroy(() => {
     if (timer !== null) clearInterval(timer);
+  });
+
+  const stableFor = $derived.by(() => {
+    if (stableSinceMs === null) return null;
+    return fmtStable(nowTick - stableSinceMs);
   });
 
   async function enableAt(targetGen: number) {
@@ -197,6 +227,11 @@
         <span class="warn">↓</span>
       {/if}
     </div>
+    {#if stableFor}
+      <div class="sub muted small" style="font-size:.75em">
+        ⏱ {i18n.t("link_stable.stable_for") ?? "stable depuis"} {stableFor}
+      </div>
+    {/if}
     {#if s.clocks.current_clock_mhz != null}
       <div class="sub muted small">
         {s.pstate ?? "?"} · {s.clocks.current_clock_mhz} MHz

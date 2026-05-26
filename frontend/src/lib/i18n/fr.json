@@ -2515,6 +2515,7 @@
   "link_stable.gen_3_hint": "Lock moyen 1500-2000 MHz — peut tenir Gen 3",
   "link_stable.gen_4_hint": "Lock heavy 2000+ MHz — refusé par retimer cheap",
   "link_stable.refused": "Retimer a refusé Gen",
+  "link_stable.stable_for": "stable depuis",
   "installer.pcie_recovery_wrapper.label": "Wrapper PCIe Recovery",
   "installer.pcie_recovery_wrapper.description": "Wrapper sudoers pour le wizard de récupération PCIe. Permet l'exécution des étapes de recovery depuis la carte OcuLink.",
   "installer.oculink_watchdog.label": "Démon watchdog OcuLink",

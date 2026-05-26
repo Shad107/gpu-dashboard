@@ -2510,6 +2510,7 @@
   "link_stable.gen_3_hint": "Medium lock 1500-2000 MHz — Gen 3 maybe",
   "link_stable.gen_4_hint": "Heavy lock 2000+ MHz — rejected by cheap retimers",
   "link_stable.refused": "Retimer refused Gen",
+  "link_stable.stable_for": "stable for",
   "installer.pcie_recovery_wrapper.label": "PCIe Recovery wrapper",
   "installer.pcie_recovery_wrapper.description": "Sudoers wrapper for the PCIe recovery wizard. Allows execute-mode recovery from the OcuLink card.",
   "installer.oculink_watchdog.label": "OcuLink watchdog daemon",
