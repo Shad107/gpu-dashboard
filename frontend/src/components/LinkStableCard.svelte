@@ -46,14 +46,30 @@
   let lastSpeed = $state<string | null>(null);
   let stableSinceMs = $state<number | null>(null);
   let nowTick = $state(Date.now());
+  // F7.3 debug: count anchor resets so we can distinguish "real
+  // link flapping" from "component remount" if the badge keeps
+  // resetting. First reset (null→value) is normal init.
+  let resetCount = $state(0);
+  let observedHistory = $state<string[]>([]);  // last 5 observed values
 
   async function refresh() {
     try {
       s = await fetch("/api/link-stable/status").then((x) => x.json());
-      const cur = s?.link?.current_link_speed ?? null;
+      // Defensive: trim + nullish-coalesce so any cosmetic
+      // whitespace from sysfs/JSON serialization can't cause a
+      // false-positive transition.
+      const raw = s?.link?.current_link_speed;
+      const cur = (typeof raw === "string" ? raw.trim() : null) || null;
+      // Maintain a small rolling history so the user can see
+      // exactly what values the backend is reporting if the
+      // stable-for badge keeps resetting unexpectedly.
+      if (cur !== null) {
+        observedHistory = [...observedHistory, cur].slice(-5);
+      }
       if (cur !== lastSpeed) {
         lastSpeed = cur;
         stableSinceMs = Date.now();
+        resetCount += 1;
       }
     } catch {}
   }
@@ -228,8 +244,14 @@
       {/if}
     </div>
     {#if stableFor}
-      <div class="sub muted small" style="font-size:.75em">
+      <div class="sub muted small" style="font-size:.75em"
+           title={observedHistory.length > 0
+             ? `${observedHistory.length} polls — last: ${observedHistory.join(" | ")}\nresets: ${resetCount}`
+             : ""}>
         ⏱ {i18n.t("link_stable.stable_for") ?? "stable depuis"} {stableFor}
+        {#if resetCount > 2}
+          <span class="warn">· {resetCount} {i18n.t("link_stable.transitions") ?? "transitions"}</span>
+        {/if}
       </div>
     {/if}
     {#if s.clocks.current_clock_mhz != null}

@@ -276,8 +276,13 @@
             VRAM <b style="color:var(--text-muted)">{(g.mem_used_mib / 1024).toFixed(1)}</b> / {(g.mem_total_mib / 1024).toFixed(1)} GiB
           </div>
         {/if}
-        <!-- PCIe folded into GPU card (cycle 144d, 'pareil pour le pcie') -->
-        {#if layout.visible("pcie") && g.pcie_gen != null && g.pcie_width != null}
+        <!-- PCIe line removed F7.3: now lives in LinkStableCard
+             with full context (Gen selector, stable-for timer,
+             retimer-refused feedback). Keep this block as a fallback
+             only when the user has explicitly hidden LinkStableCard
+             AND the GPU is reporting PCIe info. -->
+        {#if layout.visible("pcie") && !layout.visible("link_stable")
+              && g.pcie_gen != null && g.pcie_width != null}
           {@const pcieDowngrade = (g.pcie_gen_max != null && g.pcie_gen < g.pcie_gen_max)
                                || (g.pcie_width_max != null && g.pcie_width < g.pcie_width_max)}
           <div class="sub" style="margin-top:.2em">

@@ -71,29 +71,27 @@
     return (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
   }
 
-  // Show the card always so users discover the feature, but
-  // collapse to a "Setup" CTA when nothing is configured.
+  // Hide the card entirely when no external source is configured.
+  // User feedback: "si pas configuré, à ne pas afficher". The card
+  // only adds value when there's actually data to reconcile against
+  // nvidia-smi; an empty-state CTA was clutter for the 95% of users
+  // without a Shelly/DS18B20 wired up. Discoverability moves to the
+  // README + the Settings → Integrations long-tail.
   const empty = $derived(
-    !sample?.shelly?.available && !sample?.w1?.available,
+    sample !== null
+      && !sample.shelly.available
+      && !sample.w1.available,
   );
 </script>
 
+{#if !empty}
 <div class="card shadow-card">
   <h2 title={i18n.t("shadow.tooltip") ??
     "Cross-check nvidia-smi (échantillonné) avec un wattmètre Shelly et une sonde DS18B20. Repère les pertes PSU, la conso fans, et les pics manqués par NVML."}>
     🔭 {i18n.t("card.shadow") ?? "Shadow"}
   </h2>
 
-  {#if empty}
-    <div class="sub muted small" style="text-align:center;padding:.4em 0">
-      {i18n.t("shadow.empty") ??
-        "Aucune source externe configurée."}
-    </div>
-    <div class="sub muted small" style="font-size:.78em;line-height:1.4">
-      {i18n.t("shadow.empty_help") ??
-        "Ajoute SHADOW_SHELLY_URL=http://… et/ou SHADOW_W1_DEVICE=auto dans config.env."}
-    </div>
-  {:else}
+  {#if sample}
     {#if sample?.shelly?.available}
       <div class="big" class:warn={(sample.delta?.non_gpu_pct ?? 0) > 25}>
         {fmtW(sample.shelly.power_w)}
@@ -134,6 +132,7 @@
     {/if}
   {/if}
 </div>
+{/if}
 
 <style>
   .shadow-card h2 { cursor: help; }
