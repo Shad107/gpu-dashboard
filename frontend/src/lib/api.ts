@@ -6120,4 +6120,35 @@ export const api = {
       verdict: { verdict: string; reason: string; recommendation: string };
     }>);
   },
+
+  // ── F4 — PCIe Recovery Wizard ──
+  pcieRecoveryAdvisorStatus: () =>
+    safeFetch("/api/pcie-recovery-advisor").then(jsonOf<{
+      ok: boolean;
+      bdf?: string;
+      virt?: string;
+      pci_state?: {
+        current_link_speed: string | null;
+        max_link_speed: string | null;
+        current_link_width: string | null;
+        max_link_width: string | null;
+        power_state: string | null;
+        flr_supported: boolean;
+        aer: { aer_dev_correctable: number; aer_dev_fatal: number; aer_dev_nonfatal: number };
+      };
+      diagnosis?: {
+        broken: boolean;
+        severity: "ok" | "warn" | "err";
+        signals: string[];
+      };
+      plan?: Array<{
+        id: string;
+        label: string;
+        command: string;
+        scope: "guest" | "host" | "physical";
+        safety: "safe" | "kills_workloads" | "needs_host_access" | "manual";
+        why: string;
+      }>;
+      verdict: { verdict: string; reason: string; recommendation: string };
+    }>),
 };

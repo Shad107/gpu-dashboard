@@ -642,3 +642,4 @@ from .pci_numa_pinning_audit import handle_pci_numa_pinning_audit_status  # noqa
 from .swap_priority_tiering_audit import handle_swap_priority_tiering_audit_status  # noqa: F401,F811
 from .xfs_log_activity_audit import handle_xfs_log_activity_audit_status  # noqa: F401,F811
 from .collection_profile_audit import handle_collection_profile_audit_status  # noqa: F401,F811
+from .pcie_recovery_advisor import handle_pcie_recovery_advisor_status  # noqa: F401,F811

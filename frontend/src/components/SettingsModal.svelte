@@ -3106,6 +3106,18 @@
     finally { collectionProfileAuditLoading = false; }
   }
 
+  // ── F4 — PCIe Recovery Wizard ──
+  let pcieRecoveryData = $state<Awaited<ReturnType<typeof api.pcieRecoveryAdvisorStatus>> | null>(null);
+  async function loadPcieRecovery() {
+    try { pcieRecoveryData = await api.pcieRecoveryAdvisorStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
+  }
+  function copyToClipboardSafe(text: string) {
+    navigator.clipboard.writeText(text).then(
+      () => toast.emit("✓ copied", "ok"),
+      () => toast.emit("✗ clipboard blocked", "err"));
+  }
+
   async function loadDkmsStatus() {
     try { dkmsStatusData = await api.dkmsStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
@@ -20122,6 +20134,79 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
                              border-radius: 4px; overflow-x: auto;">{collectionProfileAuditData.verdict.recommendation}</pre>
                 <button class="btn btn-small"
                         onclick={() => copyToClipboard(collectionProfileAuditData!.verdict.recommendation)}>📋 Copy</button>
+              </details>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- F4 — PCIe Recovery Wizard -->
+      <div class="card-form" hidden={modal.section !== "integrations"}>
+        <h4>🔧 {i18n.t("integrations.pcierec.title")}</h4>
+        <p class="muted">{i18n.t("integrations.pcierec.desc")}</p>
+        <div class="form-row">
+          <button class="btn" onclick={loadPcieRecovery}>
+            {i18n.t("integrations.pcierec.refresh")}
+          </button>
+          {#if pcieRecoveryData}
+            <span class="kv" style="margin-left: 12px;"
+                  style:color={pcieRecoveryData.diagnosis?.severity === 'err' ? 'var(--err)' :
+                             pcieRecoveryData.diagnosis?.severity === 'warn' ? 'var(--warn)' :
+                             pcieRecoveryData.verdict.verdict === 'ok' ? 'var(--ok)' :
+                             'var(--text-dim)'}>
+              {pcieRecoveryData.bdf ?? '—'} ·
+              virt={pcieRecoveryData.virt ?? '—'} ·
+              <b>{pcieRecoveryData.verdict.verdict}</b>
+            </span>
+          {/if}
+        </div>
+        {#if pcieRecoveryData?.ok}
+          <div style="margin-top: 8px; padding: 8px;
+                      border-left: 3px solid {
+                        pcieRecoveryData.diagnosis?.severity === 'err' ? 'var(--err)' :
+                        pcieRecoveryData.diagnosis?.severity === 'warn' ? 'var(--warn)' :
+                        'var(--ok)'};">
+            <p style="margin: 4px 0;">{pcieRecoveryData.verdict.reason}</p>
+            {#if pcieRecoveryData.pci_state}
+              <p class="muted" style="margin: 4px 0; font-size: 0.85em;">
+                link: {pcieRecoveryData.pci_state.current_link_speed ?? '?'} × {pcieRecoveryData.pci_state.current_link_width ?? '?'}
+                (max: {pcieRecoveryData.pci_state.max_link_speed ?? '?'} × {pcieRecoveryData.pci_state.max_link_width ?? '?'})
+                · power: {pcieRecoveryData.pci_state.power_state ?? '?'}
+                · FLR: {pcieRecoveryData.pci_state.flr_supported ? 'yes' : 'no'}
+                · AER: c={pcieRecoveryData.pci_state.aer.aer_dev_correctable}/f={pcieRecoveryData.pci_state.aer.aer_dev_fatal}/n={pcieRecoveryData.pci_state.aer.aer_dev_nonfatal}
+              </p>
+            {/if}
+            {#if pcieRecoveryData.diagnosis?.signals && pcieRecoveryData.diagnosis.signals.length > 0}
+              <p class="muted" style="margin: 4px 0; font-size: 0.85em;">
+                signals: {pcieRecoveryData.diagnosis.signals.join(', ')}
+              </p>
+            {/if}
+            {#if pcieRecoveryData.plan && pcieRecoveryData.plan.length > 0}
+              <details style="margin-top: 8px;" open={pcieRecoveryData.diagnosis?.broken}>
+                <summary class="muted">
+                  {i18n.t("integrations.pcierec.plan")} ({pcieRecoveryData.plan.length})
+                </summary>
+                <ol style="padding-left: 20px; margin: 8px 0;">
+                  {#each pcieRecoveryData.plan as step, i}
+                    <li style="margin-bottom: 10px;">
+                      <div>
+                        <b>{step.label}</b>
+                        <span class="muted" style="font-size: 0.75em; margin-left: 6px;">
+                          [{step.scope}]
+                          [{step.safety === 'safe' ? '✓ safe' :
+                              step.safety === 'kills_workloads' ? '⚠ kills workloads' :
+                              step.safety === 'needs_host_access' ? '🔑 host access' :
+                              '✋ manual'}]
+                        </span>
+                      </div>
+                      <div class="muted" style="font-size: 0.85em; margin: 2px 0;">{step.why}</div>
+                      <pre style="font-size: 0.78em; padding: 6px; background: var(--bg-2);
+                                  border-radius: 4px; overflow-x: auto; margin: 4px 0;">{step.command}</pre>
+                      <button class="btn btn-small"
+                              onclick={() => copyToClipboardSafe(step.command)}>📋 Copy</button>
+                    </li>
+                  {/each}
+                </ol>
               </details>
             {/if}
           </div>
