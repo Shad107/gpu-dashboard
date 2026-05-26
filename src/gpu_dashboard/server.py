@@ -2453,6 +2453,16 @@ def make_handler(ctx: dict):
                 code, body = api.handle_pcie_recovery_advisor_status(ctx)
                 self._send_json(code, body)
                 return
+            if path == "/api/pcie-recovery/check-wrapper":
+                # F4.2 — does sudoers wrapper allow execution?
+                code, body = api.handle_pcie_recovery_check_wrapper(ctx)
+                self._send_json(code, body)
+                return
+            if path == "/api/pcie-recovery/check-link":
+                # F4.2 — re-run advisor, post-recovery polling
+                code, body = api.handle_pcie_recovery_check_link(ctx)
+                self._send_json(code, body)
+                return
             if path == "/api/tdp-auto/evaluate":
                 code, body = api.handle_tdp_auto_evaluate(ctx, params)
                 self._send_json(code, body)
@@ -2839,6 +2849,11 @@ def make_handler(ctx: dict):
 
             if self.path == "/api/set-power-limit":
                 code, body = api.handle_set_power_limit(ctx, payload)
+                self._send_json(code, body)
+                return
+            if self.path == "/api/pcie-recovery/run-step":
+                # F4.2 — execute one whitelisted recovery step via sudoers wrapper
+                code, body = api.handle_pcie_recovery_run_step(ctx, payload)
                 self._send_json(code, body)
                 return
             if self.path == "/api/set-offsets":

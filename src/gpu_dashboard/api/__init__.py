@@ -643,3 +643,8 @@ from .swap_priority_tiering_audit import handle_swap_priority_tiering_audit_stat
 from .xfs_log_activity_audit import handle_xfs_log_activity_audit_status  # noqa: F401,F811
 from .collection_profile_audit import handle_collection_profile_audit_status  # noqa: F401,F811
 from .pcie_recovery_advisor import handle_pcie_recovery_advisor_status  # noqa: F401,F811
+from .pcie_recovery_runner import (  # noqa: F401,F811
+    handle_pcie_recovery_check_wrapper,
+    handle_pcie_recovery_run_step,
+    handle_pcie_recovery_check_link,
+)

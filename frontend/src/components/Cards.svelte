@@ -7,6 +7,17 @@
   import { api } from "../lib/api";
   import { gpu } from "../lib/gpu.svelte";
   import Sparkline from "./Sparkline.svelte";
+  import PcieRecoveryModal from "./PcieRecoveryModal.svelte";
+
+  // F4.2 — recovery modal state. Lazy-loaded when user clicks the
+  // OcuLink "🔧 Récupérer le lien" button.
+  let recoveryModalOpen = $state(false);
+  let recoveryAdvisor = $state<Awaited<ReturnType<typeof api.pcieRecoveryAdvisorStatus>> | null>(null);
+  async function openRecoveryModal() {
+    try { recoveryAdvisor = await api.pcieRecoveryAdvisorStatus(); }
+    catch (e) { toast.emit("✗ " + (e as Error).message, "err"); return; }
+    recoveryModalOpen = true;
+  }
 
   // Electricity widget — polled every minute (independent from live data)
   let elec = $state<Awaited<ReturnType<typeof api.electricity>> | null>(null);
@@ -371,7 +382,7 @@
           </div>
           <button class="btn btn-small"
                   style="margin-top:.5em;width:100%"
-                  onclick={() => modal.show("integrations")}>
+                  onclick={openRecoveryModal}>
             🔧 {i18n.t("oculink.recover_button")}
           </button>
         {:else}
@@ -542,3 +553,6 @@
   </div></div>  <!-- /.strip-cards /.strip-group COST -->
 </div>  <!-- /.strip-merged -->
 </div>  <!-- /.strip-container -->
+
+<!-- F4.2 — recovery modal, mounted at root so it overlays everything -->
+<PcieRecoveryModal bind:open={recoveryModalOpen} bind:advisor={recoveryAdvisor} />
