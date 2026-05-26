@@ -66,6 +66,59 @@ jobs:
           test -d src/gpu_dashboard/static/assets
           ls -la src/gpu_dashboard/static/assets/
 
+  # ────────────────────────── Secret scan ───────────────────────────────────
+  # Defense-in-depth on top of GitHub's native push protection. Catches
+  # bot tokens / API keys / AWS keys that slipped past local review.
+  # The "FAKE|placeholder|example" exclude list lets tests use
+  # format-valid synthetic tokens without tripping the scan.
+  secret-scan:
+    name: Secret leak scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for known secret patterns
+        shell: bash
+        run: |
+          set -uo pipefail
+          # Patterns to flag:
+          #   Telegram bot token:  <8-12 digits>:<35+ url-safe chars>
+          #   GitHub PAT / fine-grained:  gh[pousr]_<36 chars>
+          #   AWS access key:  AKIA + 16 uppercase/digits
+          #   Slack bot/user/app token:  xox[baprs]-<digits>-...
+          #   Stripe live key:  sk_live_<chars>
+          PATTERNS=(
+            '\b[0-9]{8,12}:[A-Za-z0-9_-]{35,}\b'
+            'gh[pousr]_[A-Za-z0-9]{36}'
+            'AKIA[0-9A-Z]{16}'
+            'xox[baprs]-[0-9A-Za-z-]{10,}'
+            'sk_live_[0-9a-zA-Z]{24,}'
+          )
+          # Filenames + tokens that legitimately match (test placeholders).
+          # If a match line contains any of these, it's ignored.
+          EXCLUDE='FAKE|fake|placeholder|EXAMPLE|example|node_modules|static/assets|pnpm-lock\.yaml|\.git/'
+          FOUND=0
+          for pat in "${PATTERNS[@]}"; do
+            echo "Scanning pattern: $pat"
+            HITS=$(grep -rnE "$pat" . 2>/dev/null \
+              | grep -vE "$EXCLUDE" \
+              | head -20 || true)
+            if [ -n "$HITS" ]; then
+              echo "::error::Potential leaked secret found:"
+              echo "$HITS"
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -ne 0 ]; then
+            echo
+            echo "If this is a known test placeholder, add FAKE/EXAMPLE"
+            echo "to the literal so the scan ignores it. If it's a real"
+            echo "secret, revoke it immediately and replace with a"
+            echo "synthetic value."
+            exit 1
+          fi
+          echo "OK: no leak patterns detected."
+
   # ────────────────────────── Shell scripts smoke ───────────────────────────
   scripts-smoke:
     name: Sudo scripts smoke (--print / --check)
