@@ -73,12 +73,23 @@
         body: JSON.stringify({ target_gen: targetGen }),
       }).then((x) => x.json());
       if (r.ok) {
-        const label = targetGen === 1
-          ? (i18n.t("link_stable.disabled") ?? "Mode stable désactivé")
-          : (i18n.t("link_stable.try_gen") ?? "Verrouiller Gen {n}")
-              .replace("{n}", String(targetGen));
-        toast.emit((targetGen === 1 ? "🔓 " : "🔒 ") + label, "ok");
+        // Give the firmware ~1.5s to re-negotiate then verify what
+        // we actually got. If the retimer refused the requested
+        // speed, the link will stay at a lower Gen and we surface
+        // that honestly instead of pretending the click succeeded.
+        await new Promise((res) => setTimeout(res, 1500));
         await refresh();
+        const got = parseInt(linkBadge?.gen ?? "0");
+        if (targetGen === 1) {
+          toast.emit("🔓 " + (i18n.t("link_stable.disabled")
+            ?? "Mode stable désactivé"), "ok");
+        } else if (got === targetGen) {
+          toast.emit(`🔒 Gen ${targetGen} OK`, "ok");
+        } else if (got > 0 && got < targetGen) {
+          toast.emit(`⚠ ${(i18n.t("link_stable.refused") ?? "Retimer refused Gen")} ${targetGen} → Gen ${got}`, "warn");
+        } else {
+          toast.emit(`🔒 ${(i18n.t("link_stable.try_gen") ?? "Verrouiller Gen {n}").replace("{n}", String(targetGen))}`, "ok");
+        }
       } else {
         toast.emit("✗ " + (r.message ?? r.error ?? "enable failed"), "err");
       }
