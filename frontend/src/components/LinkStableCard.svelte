@@ -33,44 +33,28 @@
     };
     defaults: { min_mhz: number; max_mhz: number };
     gen_presets?: Record<string, { min_mhz: number; max_mhz: number } | null>;
+    stable?: {
+      since_ts: number | null;
+      for_seconds: number;
+      transitions: number;
+    };
   };
 
   let s = $state<Status | null>(null);
   let busy = $state(false);
   let installedScripts = $state<Record<string, boolean>>({});
   let timer: number | null = null;
-  // F7.3 — "stable for X" anchor. Reset whenever the negotiated
-  // speed changes; ticks forward otherwise. Lives in JS state
-  // because the backend doesn't track historical speed transitions
-  // (yet).
-  let lastSpeed = $state<string | null>(null);
-  let stableSinceMs = $state<number | null>(null);
+  // F7.4 — the stable-for clock now lives on the backend, which
+  // survives browser refreshes. We just tick a `nowTick` locally so
+  // the displayed seconds count smoothly between the 4s status
+  // polls (instead of jumping in 4s steps).
   let nowTick = $state(Date.now());
-  // F7.3 debug: count anchor resets so we can distinguish "real
-  // link flapping" from "component remount" if the badge keeps
-  // resetting. First reset (null→value) is normal init.
-  let resetCount = $state(0);
-  let observedHistory = $state<string[]>([]);  // last 5 observed values
+  let pollAt = $state(Date.now());  // wall-clock when last poll landed
 
   async function refresh() {
     try {
       s = await fetch("/api/link-stable/status").then((x) => x.json());
-      // Defensive: trim + nullish-coalesce so any cosmetic
-      // whitespace from sysfs/JSON serialization can't cause a
-      // false-positive transition.
-      const raw = s?.link?.current_link_speed;
-      const cur = (typeof raw === "string" ? raw.trim() : null) || null;
-      // Maintain a small rolling history so the user can see
-      // exactly what values the backend is reporting if the
-      // stable-for badge keeps resetting unexpectedly.
-      if (cur !== null) {
-        observedHistory = [...observedHistory, cur].slice(-5);
-      }
-      if (cur !== lastSpeed) {
-        lastSpeed = cur;
-        stableSinceMs = Date.now();
-        resetCount += 1;
-      }
+      pollAt = Date.now();
     } catch {}
   }
 
@@ -104,10 +88,17 @@
     if (timer !== null) clearInterval(timer);
   });
 
+  // F7.4 — derived from the backend's authoritative timer. We add
+  // a local elapsed-since-poll delta so the displayed seconds tick
+  // smoothly between the 4s polls (otherwise it would jump in
+  // 4-second steps).
   const stableFor = $derived.by(() => {
-    if (stableSinceMs === null) return null;
-    return fmtStable(nowTick - stableSinceMs);
+    if (!s?.stable) return null;
+    const baseSec = s.stable.for_seconds;
+    const driftSec = (nowTick - pollAt) / 1000;
+    return fmtStable((baseSec + driftSec) * 1000);
   });
+  const transitions = $derived(s?.stable?.transitions ?? 0);
 
   async function enableAt(targetGen: number) {
     if (busy || !s) return;
@@ -244,13 +235,10 @@
       {/if}
     </div>
     {#if stableFor}
-      <div class="sub muted small" style="font-size:.75em"
-           title={observedHistory.length > 0
-             ? `${observedHistory.length} polls — last: ${observedHistory.join(" | ")}\nresets: ${resetCount}`
-             : ""}>
+      <div class="sub muted small" style="font-size:.75em">
         ⏱ {i18n.t("link_stable.stable_for") ?? "stable depuis"} {stableFor}
-        {#if resetCount > 2}
-          <span class="warn">· {resetCount} {i18n.t("link_stable.transitions") ?? "transitions"}</span>
+        {#if transitions > 0}
+          <span class="muted">· {transitions} {i18n.t("link_stable.transitions") ?? "transitions"}</span>
         {/if}
       </div>
     {/if}

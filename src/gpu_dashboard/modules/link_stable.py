@@ -25,7 +25,17 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import time
 from typing import Any, Dict, List, Optional
+
+# F7.4 — stable-for tracking lives at module scope so a browser
+# refresh (or a second tab) doesn't reset the clock. We only update
+# the anchor when status() observes a different speed than the
+# previous call, so the anchor reflects the actual link transition
+# moment, not the moment the user first opened the dashboard.
+_LAST_OBSERVED_SPEED: Optional[str] = None
+_STABLE_SINCE_TS: Optional[float] = None
+_TRANSITION_COUNT: int = 0  # cumulative since dashboard startup
 
 # Default clock floor range. 900 MHz is a safe gpu-clocks floor on
 # 3090/4090/5090 — high enough to keep the firmware out of P8, low
@@ -172,9 +182,21 @@ def _read_clock_lock_state() -> Dict[str, Any]:
 
 def status(cfg=None) -> Dict[str, Any]:
     """Full status dict for the Link Stable Mode UI."""
+    global _LAST_OBSERVED_SPEED, _STABLE_SINCE_TS, _TRANSITION_COUNT
     link = _read_link_state()
     pstate = _read_pstate_via_nvml()
     clocks = _read_clock_lock_state()
+    # F7.4 — server-side stable-for tracking. Updates the anchor
+    # only when the observed speed actually changes; survives
+    # browser refresh and multi-tab access.
+    now = time.time()
+    cur_speed = link.get("current_link_speed")
+    if cur_speed != _LAST_OBSERVED_SPEED:
+        if _LAST_OBSERVED_SPEED is not None:
+            _TRANSITION_COUNT += 1
+        _LAST_OBSERVED_SPEED = cur_speed
+        _STABLE_SINCE_TS = now
+    stable_for_s = (now - _STABLE_SINCE_TS) if _STABLE_SINCE_TS else 0.0
     return {
         "wrapper_available": wrapper_available(),
         "wrapper_path": WRAPPER_PATH,
@@ -185,6 +207,11 @@ def status(cfg=None) -> Dict[str, Any]:
                       "max_mhz": DEFAULT_MAX_MHZ},
         "gen_presets": {
             str(g): preset for g, preset in GEN_PRESETS.items()
+        },
+        "stable": {
+            "since_ts": _STABLE_SINCE_TS,
+            "for_seconds": round(stable_for_s, 1),
+            "transitions": _TRANSITION_COUNT,
         },
     }
 
