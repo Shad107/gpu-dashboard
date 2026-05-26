@@ -3116,6 +3116,19 @@
   let integrationsCounts = $state<Partial<Record<CategoryId, number>>>({});
   let integrationsTotal = $state(0);
 
+  // F5.2 — sidebar sub-menu is collapsible to keep the rest of
+  // the sidebar visible (14 sub-items push other sections offscreen
+  // on shorter viewports).
+  let integrationsSidebarExpanded = $state(false);
+
+  // Auto-expand when the user navigates INTO Integrations from
+  // elsewhere. Manual toggle still works via the parent button.
+  $effect(() => {
+    if (modal.section === "integrations") {
+      integrationsSidebarExpanded = true;
+    }
+  });
+
   // Apply the category filter to the DOM whenever it changes,
   // OR when the integrations section becomes active.
   $effect(() => {
@@ -3843,13 +3856,25 @@
         <button
           class="sidebar-item"
           class:active={modal.section === s.id}
-          onclick={() => modal.setSection(s.id)}
+          onclick={() => {
+            if (s.id === "integrations" && modal.section === "integrations") {
+              // Already here — toggle the sub-menu visibility.
+              integrationsSidebarExpanded = !integrationsSidebarExpanded;
+            } else {
+              modal.setSection(s.id);
+            }
+          }}
         >
           <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={s.icon} /></svg>
           <span>{i18n.t(s.labelKey)}</span>
+          {#if s.id === "integrations" && modal.section === "integrations"}
+            <span class="chev" aria-hidden="true">
+              {integrationsSidebarExpanded ? "▾" : "▸"}
+            </span>
+          {/if}
         </button>
         <!-- F5 — Integrations sub-menu: nested category list -->
-        {#if s.id === "integrations" && modal.section === "integrations"}
+        {#if s.id === "integrations" && modal.section === "integrations" && integrationsSidebarExpanded}
           <div class="sidebar-subitems">
             <button
               class="sidebar-subitem"

@@ -15,26 +15,11 @@
   let recoveryAdvisor = $state<Awaited<ReturnType<typeof api.pcieRecoveryAdvisorStatus>> | null>(null);
 
   async function openRecoveryModal() {
-    // Pre-check the sudoers wrapper. If installed → open modal.
-    // If not installed → route to Settings → Integrations where
-    // the PCIe Recovery card handles install/status as proper
-    // config UI (not a confirm() popup).
-    let check: { available: boolean };
-    try {
-      check = await fetch("/api/pcie-recovery/check-wrapper").then((x) => x.json());
-    } catch (e) {
-      toast.emit("✗ " + (e as Error).message, "err");
-      return;
-    }
-    if (!check.available) {
-      toast.emit(
-        "⚠ " + (i18n.t("pcierec.wrapper_missing_short") ?? "Wrapper non installé") +
-          " — " + (i18n.t("pcierec.see_settings") ?? "voir Settings → Integrations"),
-        "warn",
-      );
-      modal.show("integrations");
-      return;
-    }
+    // Open the diagnostic modal directly. The modal handles the
+    // wrapper-missing case internally (shows install CTA at top,
+    // Run buttons disabled). This keeps the user in the recovery
+    // flow instead of dumping them into Settings → Integrations
+    // and forcing them to find the right card.
     try { recoveryAdvisor = await api.pcieRecoveryAdvisorStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); return; }
     recoveryModalOpen = true;

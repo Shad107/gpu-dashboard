@@ -522,6 +522,12 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
   flex-direction: column;
   gap: 0.15em;
   flex-shrink: 0;
+  overflow-y: auto;  /* F5.2 — scroll when integrations sub-menu expands */
+}
+.modal-sidebar::-webkit-scrollbar { width: 6px; }
+.modal-sidebar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
 }
 .modal-sidebar h3 {
   margin: 0 0.7em 1em;
@@ -563,6 +569,11 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
 }
 .sidebar-item.active .icon { color: var(--accent); }
 .sidebar-item .icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-dim); transition: color 0.15s; }
+.sidebar-item .chev {
+  margin-left: auto;
+  font-size: 0.8em;
+  color: var(--text-dim);
+}
 
 /* F5 — Integrations sub-menu in the sidebar */
 .sidebar-subitems {
