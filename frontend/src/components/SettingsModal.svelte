@@ -4199,23 +4199,56 @@
             </span>
           </div>
           {#if botWebLink || botAppLink}
-            <div class="form-row" style="margin-top:-.4em">
+            <div class="form-row" style="margin-top:.2em">
               <span class="form-lbl"></span>
-              <span class="form-val" style="font-size:.85em;display:flex;flex-wrap:wrap;gap:.6em;align-items:center">
-                {#if botWebLink}
-                  <a href={botWebLink} target="_blank" rel="noopener"
-                     style="color:var(--accent);font-weight:600">
-                    🌐 {i18n.t("alerts.open_web") ?? "Web"} @{botUsername}
-                  </a>
-                {/if}
-                {#if botAppLink}
-                  <a href={botAppLink} target="_blank" rel="noopener"
-                     style="color:var(--text-dim);font-size:.95em">
-                    📱 {i18n.t("alerts.open_app") ?? "App native"}
-                  </a>
-                {/if}
-                <span class="muted small">
-                  → /start → {i18n.t("alerts.then_detect") ?? "re-clique Détecter"}
+              <span class="form-val"
+                    style="display:flex;flex-direction:column;gap:.4em;
+                           padding:.6em .8em;
+                           background:rgba(56,189,248,0.06);
+                           border-left:3px solid var(--accent);
+                           border-radius:4px;font-size:.86em">
+                <span style="display:flex;align-items:baseline;gap:.5em">
+                  <b style="display:inline-block;width:1.4em;height:1.4em;
+                             border-radius:50%;background:var(--accent);
+                             color:var(--bg-1);text-align:center;
+                             line-height:1.4em;font-size:.8em;flex:none">1</b>
+                  <span>
+                    {#if botWebLink}
+                      <a href={botWebLink} target="_blank" rel="noopener"
+                         style="color:var(--accent);font-weight:600">
+                        🌐 {i18n.t("alerts.open_web") ?? "Web"} @{botUsername}
+                      </a>
+                    {/if}
+                    {#if botAppLink}
+                      <span class="muted" style="margin-left:.4em">
+                        {i18n.t("alerts.or") ?? "ou"}
+                        <a href={botAppLink} target="_blank" rel="noopener"
+                           style="color:var(--text-dim)">
+                          📱 {i18n.t("alerts.open_app") ?? "App native"}
+                        </a>
+                      </span>
+                    {/if}
+                  </span>
+                </span>
+                <span style="display:flex;align-items:baseline;gap:.5em">
+                  <b style="display:inline-block;width:1.4em;height:1.4em;
+                             border-radius:50%;background:var(--warn);
+                             color:var(--bg-1);text-align:center;
+                             line-height:1.4em;font-size:.8em;flex:none">2</b>
+                  <span style="font-weight:600;color:var(--warn)">
+                    {i18n.t("alerts.step2") ??
+                      "Dans la conv, clique ▶ DÉMARRER ou tape un message + Enter"}
+                  </span>
+                </span>
+                <span style="display:flex;align-items:baseline;gap:.5em">
+                  <b style="display:inline-block;width:1.4em;height:1.4em;
+                             border-radius:50%;background:var(--accent);
+                             color:var(--bg-1);text-align:center;
+                             line-height:1.4em;font-size:.8em;flex:none">3</b>
+                  <span>
+                    {i18n.t("alerts.step3") ??
+                      "Reviens ici et re-clique 🔍 Détecter"}
+                  </span>
                 </span>
               </span>
             </div>
