@@ -3848,6 +3848,34 @@
           <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d={s.icon} /></svg>
           <span>{i18n.t(s.labelKey)}</span>
         </button>
+        <!-- F5 — Integrations sub-menu: nested category list -->
+        {#if s.id === "integrations" && modal.section === "integrations"}
+          <div class="sidebar-subitems">
+            <button
+              class="sidebar-subitem"
+              class:active={activeIntegrationCategory === "all"}
+              onclick={() => (activeIntegrationCategory = "all")}
+            >
+              <span class="emoji">📋</span>
+              <span>{i18n.t("integrations.cat.all") ?? "Tout"}</span>
+              <span class="count">{integrationsTotal}</span>
+            </button>
+            {#each INTEGRATION_CATEGORIES as cat}
+              {@const n = integrationsCounts[cat.id] ?? 0}
+              {#if n > 0}
+                <button
+                  class="sidebar-subitem"
+                  class:active={activeIntegrationCategory === cat.id}
+                  onclick={() => (activeIntegrationCategory = cat.id)}
+                >
+                  <span class="emoji">{cat.emoji}</span>
+                  <span>{i18n.t("integrations.cat." + cat.id) ?? cat.label}</span>
+                  <span class="count">{n}</span>
+                </button>
+              {/if}
+            {/each}
+          </div>
+        {/if}
       {/each}
     </div>
     <div class="modal-content">
@@ -4543,37 +4571,19 @@
         </h3>
         <p class="muted">{i18n.t("integrations.description")}</p>
 
-        <!-- F5 — category navigation -->
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px;
-                    padding:8px;background:var(--bg-2);border-radius:6px;">
-          <button
-            type="button"
-            class="btn btn-small"
-            style:font-weight={activeIntegrationCategory === "all" ? "600" : "400"}
-            style:background={activeIntegrationCategory === "all" ? "var(--accent)" : ""}
-            style:color={activeIntegrationCategory === "all" ? "var(--bg-1)" : ""}
-            onclick={() => (activeIntegrationCategory = "all")}
-          >
-            {i18n.t("integrations.cat.all") ?? "Tout"}
-            <span class="muted" style="font-size:0.85em">({integrationsTotal})</span>
-          </button>
-          {#each INTEGRATION_CATEGORIES as cat}
-            {@const n = integrationsCounts[cat.id] ?? 0}
-            {#if n > 0}
-              <button
-                type="button"
-                class="btn btn-small"
-                style:font-weight={activeIntegrationCategory === cat.id ? "600" : "400"}
-                style:background={activeIntegrationCategory === cat.id ? "var(--accent)" : ""}
-                style:color={activeIntegrationCategory === cat.id ? "var(--bg-1)" : ""}
-                onclick={() => (activeIntegrationCategory = cat.id)}
-              >
-                {cat.emoji} {i18n.t("integrations.cat." + cat.id) ?? cat.label}
-                <span class="muted" style="font-size:0.85em">({n})</span>
-              </button>
-            {/if}
-          {/each}
-        </div>
+        <!-- F5 — category navigation moved to sidebar sub-items.
+             Active category label surfaces here for context. -->
+        {#if activeIntegrationCategory !== "all"}
+          {@const activeCat = INTEGRATION_CATEGORIES.find((c) => c.id === activeIntegrationCategory)}
+          <div class="muted" style="margin: 4px 0 12px; font-size: 0.9em;">
+            {activeCat?.emoji} {i18n.t("integrations.cat." + activeIntegrationCategory) ?? activeCat?.label}
+            <span style="opacity: 0.7;">({integrationsCounts[activeIntegrationCategory] ?? 0})</span>
+            <button class="btn btn-small" style="margin-left: 8px;"
+                    onclick={() => (activeIntegrationCategory = "all")}>
+              ✕ {i18n.t("integrations.cat.all") ?? "Tout afficher"}
+            </button>
+          </div>
+        {/if}
 
         <!-- 🐕 Watchdog -->
         <div class="card-form">

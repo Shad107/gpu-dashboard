@@ -563,6 +563,44 @@ td:nth-child(2) { text-align: right; color: var(--text-muted); }
 }
 .sidebar-item.active .icon { color: var(--accent); }
 .sidebar-item .icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-dim); transition: color 0.15s; }
+
+/* F5 — Integrations sub-menu in the sidebar */
+.sidebar-subitems {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0.2em 0 0.5em 0.5em;
+  padding-left: 0.7em;
+  border-left: 2px solid var(--border);
+}
+.sidebar-subitem {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.35em 0.6em;
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.78em;
+  transition: background 0.12s, color 0.12s;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+.sidebar-subitem:hover { background: var(--bg-card); color: var(--text-strong); }
+.sidebar-subitem.active { background: var(--bg-card); color: var(--accent); font-weight: 600; }
+.sidebar-subitem .emoji { width: 1.2em; text-align: center; flex-shrink: 0; }
+.sidebar-subitem .count {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: var(--text-quiet);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 768px) {
+  .sidebar-subitems { display: none; }
+}
 .modal-content { flex: 1; padding: 1.3em 1.7em; overflow-y: auto; position: relative; }
 .modal-content::-webkit-scrollbar { width: 8px; }
 .modal-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
