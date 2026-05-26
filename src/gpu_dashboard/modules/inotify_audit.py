@@ -42,17 +42,12 @@ from typing import Optional
 
 NAME = "inotify_audit"
 
-# Honored by collection_profile_audit (hardening #13): walks
-# /proc/<pid>/fdinfo/* for every PID and reads each fd to extract
-# `inotify wd:N` / `fanotify ino:` lines. Cost is O(processes ×
-# fds-per-process) — ~500 ms on a small VM, multiple seconds on
-# desktops with many open files. There is no way to surface
-# per-process watch-count without this walk; not optimizable in
-# isolation. Shares the same intrinsic cost as
-# bpf_program_inventory_audit / drm_fdinfo_engine_usage_audit /
-# fdinfo_kinds_audit — a future shared /proc fdinfo cache could
-# amortize across all four (deferred).
-EXPECTED_SLOW = True
+# Hardening #13 originally marked this module EXPECTED_SLOW because
+# walking /proc/<pid>/fdinfo/* costs ~500 ms. Hardening #15.2
+# moved the walk into the shared `_proc_fd_cache`, so this module's
+# measured cost dropped to ~48 ms on a warm cache and ~478 ms on
+# cold cache — both at or under the 500 ms per-module budget. The
+# EXPECTED_SLOW marker is no longer needed.
 
 
 _PROC_SYS_INOTIFY = "/proc/sys/fs/inotify"
