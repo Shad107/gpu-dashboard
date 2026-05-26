@@ -3108,10 +3108,26 @@
 
   // ── F4 — PCIe Recovery Wizard ──
   let pcieRecoveryData = $state<Awaited<ReturnType<typeof api.pcieRecoveryAdvisorStatus>> | null>(null);
+  let pcieWrapperInstalled = $state<boolean | null>(null);
   async function loadPcieRecovery() {
     try { pcieRecoveryData = await api.pcieRecoveryAdvisorStatus(); }
     catch (e) { toast.emit("✗ " + (e as Error).message, "err"); }
   }
+  async function checkPcieWrapper() {
+    try {
+      const r = await fetch("/api/pcie-recovery/check-wrapper").then((x) => x.json());
+      pcieWrapperInstalled = !!r.available;
+    } catch {
+      pcieWrapperInstalled = false;
+    }
+  }
+  // Auto-check on integrations open so the install status is
+  // visible the moment the user lands here.
+  $effect(() => {
+    if (modal.open && modal.section === "integrations" && pcieWrapperInstalled === null) {
+      checkPcieWrapper();
+    }
+  });
   function copyToClipboardSafe(text: string) {
     navigator.clipboard.writeText(text).then(
       () => toast.emit("✓ copied", "ok"),
@@ -20144,6 +20160,50 @@ taskset -c 0-7 python -m llama_cpp.server`}</pre>
       <div class="card-form" hidden={modal.section !== "integrations"}>
         <h4>🔧 {i18n.t("integrations.pcierec.title")}</h4>
         <p class="muted">{i18n.t("integrations.pcierec.desc")}</p>
+
+        <!-- F4.3 — Wrapper install/status section (the "config" half) -->
+        <div style="padding: 8px; margin-bottom: 8px;
+                    border-left: 3px solid {pcieWrapperInstalled === true ? 'var(--ok)' :
+                                            pcieWrapperInstalled === false ? 'var(--warn)' :
+                                            'var(--text-dim)'};
+                    background: var(--bg-2); border-radius: 4px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <b>{i18n.t("integrations.pcierec.wrapper_status") ?? "Wrapper sudoers"} :</b>
+            {#if pcieWrapperInstalled === true}
+              <span style="color: var(--ok);">
+                ✓ {i18n.t("integrations.pcierec.wrapper_installed") ?? "installé"}
+              </span>
+            {:else if pcieWrapperInstalled === false}
+              <span style="color: var(--warn);">
+                ❌ {i18n.t("integrations.pcierec.wrapper_not_installed") ?? "non installé"}
+              </span>
+            {:else}
+              <span class="muted">⏳ ...</span>
+            {/if}
+            <button class="btn btn-small" onclick={checkPcieWrapper}>
+              {i18n.t("integrations.pcierec.wrapper_recheck") ?? "Re-vérifier"}
+            </button>
+          </div>
+          {#if pcieWrapperInstalled === false}
+            <p class="muted" style="font-size: 0.85em; margin: 6px 0 4px;">
+              {i18n.t("integrations.pcierec.wrapper_install_help") ??
+                "Lance cette commande dans un terminal sur le host, puis re-vérifie :"}
+            </p>
+            <pre style="font-size: 0.8em; padding: 6px; background: var(--bg-1);
+                        border-radius: 4px; overflow-x: auto;">sudo bash scripts/install-pcie-recovery-wrapper.sh --user $USER</pre>
+            <button class="btn btn-small"
+                    onclick={() => copyToClipboardSafe("sudo bash scripts/install-pcie-recovery-wrapper.sh --user $USER")}>
+              📋 Copy
+            </button>
+          {/if}
+          {#if pcieWrapperInstalled === true}
+            <p class="muted" style="font-size: 0.85em; margin: 6px 0 0;">
+              {i18n.t("integrations.pcierec.wrapper_ready") ??
+                "Recovery exécutable depuis la carte OcuLink (bouton 🔧 Récupérer le lien)."}
+            </p>
+          {/if}
+        </div>
+
         <div class="form-row">
           <button class="btn" onclick={loadPcieRecovery}>
             {i18n.t("integrations.pcierec.refresh")}
