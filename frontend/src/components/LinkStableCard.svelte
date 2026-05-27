@@ -283,7 +283,7 @@
                 disabled={busy}
                 title={i18n.t(`link_stable.gen_${g}_hint` as any) ?? ""}
                 onclick={() => enableAt(g)}>
-          {highlightedGen === g ? "✓" : ""} Gen {g}
+          Gen {g}
         </button>
       {/each}
     </div>
