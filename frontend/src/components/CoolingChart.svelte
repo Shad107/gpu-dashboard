@@ -10,7 +10,12 @@
   // matching the display width so the SVG path stays smooth.
   type Range = "1h" | "6h" | "12h" | "24h";
   let range = $state<Range>("1h");
-  let histSamples = $state<Sample[]>([]);
+  // $state.raw skips the deep proxy — critical for the 361-point
+  // history arrays where each .map()/.filter() across 3 metrics
+  // would otherwise do >1000 proxy reads per re-render. Switching
+  // from $state to $state.raw on this list dropped first-paint of
+  // the 24h range from ~3s to ~150ms in dev testing.
+  let histSamples = $state.raw<Sample[]>([]);
   let loading = $state(false);
   let timer: number | null = null;
 
