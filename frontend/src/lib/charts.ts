@@ -92,14 +92,18 @@ export function renderCoolingChart(hist: Sample[], samplingText: string): string
   }).join("");
 
   // Clip-path so any peak that overshoots the y-axis cap (rare
-  // but happens when fan RPM > 3000 or temp > 90°C) gets cleanly
+  // but happens when fan RPM > rpmMax or temp > tMax) gets cleanly
   // clipped to the chart's inner rectangle instead of leaking
-  // above/below the card edge.
+  // above/below the card edge. Expanded by 4px on top/bottom so
+  // strokes that touch the boundary (data points exactly at tMin
+  // or rpmMax) stay fully visible — strict clipping cut them in
+  // half.
+  const clipPad = 4;
   const clipId = `cool-clip-${Math.random().toString(36).slice(2, 8)}`;
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     <defs>
       <clipPath id="${clipId}">
-        <rect x="${PAD_L}" y="${PAD_T}" width="${innerW}" height="${innerH}"/>
+        <rect x="${PAD_L}" y="${PAD_T - clipPad}" width="${innerW}" height="${innerH + clipPad * 2}"/>
       </clipPath>
     </defs>
     ${gridRpm}${gridTemp}
