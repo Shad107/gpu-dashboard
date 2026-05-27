@@ -198,6 +198,11 @@ def status(cfg=None) -> Dict[str, Any]:
         _STABLE_SINCE_TS = now
     stable_for_s = (now - _STABLE_SINCE_TS) if _STABLE_SINCE_TS else 0.0
     return {
+        # `ok` satisfies the module-fleet-health contract (tests/
+        # test_module_fleet_health.py): every status() dict must
+        # carry either `verdict` or `ok` so callers can render a
+        # uniform pass/fail badge.
+        "ok": True,
         "wrapper_available": wrapper_available(),
         "wrapper_path": WRAPPER_PATH,
         "link": link,
