@@ -208,43 +208,28 @@ h1 { margin: 0 0 0.1em; font-size: 0.95em; }
 .row, .strip-block { display: contents; }
 .group-label { display: none; }
 
-/* Sticky top + sticky bottom — middle (charts) scrolls vertically.
- * Cycle 144e (user : 'sticky de la partie card en haut et pareil pour
- * la version en fait seul les graph doivent avoir un scroll vertical'). */
-.header, .top-nav, .strip-container {
+/* Sticky top stack — single wrapper, self-computing height.
+ * Previous setup had Header/Cards/TopNav each individually
+ * sticky with hardcoded top offsets (0 / 2.5em / 14em). Drifted
+ * every time the cards strip grew (Health Strip added → TopNav
+ * overlapped Cards). Now the whole wrapper is one sticky block
+ * and the inner stickies are dropped. */
+.top-stack {
   position: sticky;
-  /* z-index bumped to 50 (cycle 151b user : 'les courbes passe au dessus
-   * des fan0 rpm') — SVG charts were rendering ABOVE the sticky stack. */
+  top: 0;
   z-index: 50;
-  /* Cycle 151 user fb : 'sur les espace quand on scroll on voit un bout
-   * des graphiques etc' — sticky elements MUST have opaque background
-   * + extra padding to cover the content scrolling beneath. var(--bg-page)
-   * was already set but the gap between sticky-stack items leaked. */
   background: var(--bg-page);
-}
-/* Sticky stack order (cycle 148) : Header(0) → Cards(2.5em) → TopNav(under cards). */
-.header { top: 0; padding-bottom: 0.3em; }
-.strip-container {
-  top: 2.5em;
-  padding-top: 0.3em;
+  /* Tiny bottom padding so the shadow/transition between the
+     sticky stack and the scrolling content is clean. */
   padding-bottom: 0.3em;
-  /* opaque cover — extend beyond intrinsic content height */
-  background: var(--bg-page);
 }
-.top-nav {
-  top: 14em;
-  background: var(--bg-page);
-  padding-top: 0.2em;
-  padding-bottom: 0.2em;
-}
-/* Force a solid backdrop behind the whole sticky stack so partial
- * transparency anywhere won't leak the scrolling content. */
-.strip-container::before {
-  content: "";
-  position: absolute;
-  top: -0.3em; left: -0.5em; right: -0.5em; bottom: -0.3em;
-  background: var(--bg-page);
-  z-index: -1;
+.strip-container { position: relative; }
+/* The scroll container that holds the dashboard's chart stack.
+ * Inherits height from the viewport minus the sticky top + footer. */
+.app-scroll {
+  min-height: 0;
+  /* No explicit overflow-y: with the sticky top-stack pinned, body
+     scroll naturally moves only this region into view. */
 }
 /* Cycle 151b : SVG / chart elements must NOT outrank the sticky stack. */
 .chart-card svg, .chart-svg, svg.cooling-chart, svg.power-chart {

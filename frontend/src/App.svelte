@@ -108,23 +108,29 @@
   <SetupWizard dismissable={!setupRequired} />
   <Toast />
 {:else}
-  <Header />
-  <!-- Cycle 147 user fb : 'sous les tab → a mettre au dessus'.
-       Cards strip BEFORE TopNav so it sits between Header and tabs. -->
-  <Cards />
-  <TopNav />
-  <IdleBanner />
-  {#if view.current === "dashboard"}
-    <div class="dash-scroll-y">
+  <!-- Whole top stack pinned: brand header + cards strip + tabs.
+       Wrapping in a single sticky div makes the offsets self-
+       computing — previous individual sticky offsets (top:0, 2.5em,
+       14em) drifted out of sync whenever the cards strip grew (e.g.
+       Health Strip got added). User: "tout le header soit sticky
+       du titre jusqu'au tab qui elle doivent être overflow-y". -->
+  <div class="top-stack">
+    <Header />
+    <Cards />
+    <TopNav />
+    <IdleBanner />
+  </div>
+  <main class="app-scroll">
+    {#if view.current === "dashboard"}
       <CoolingChart />
       <PowerChart />
       <LatestAlertFooter />
-    </div>
-  {:else if view.current === "history"}
-    <HistoryView />
-  {:else if view.current === "stats"}
-    <StatsView />
-  {/if}
+    {:else if view.current === "history"}
+      <HistoryView />
+    {:else if view.current === "stats"}
+      <StatsView />
+    {/if}
+  </main>
   <SettingsModal />
   <Toast />
 
