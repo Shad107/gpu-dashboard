@@ -142,21 +142,42 @@ export function renderPowerChart(hist: Sample[], plimit: number | undefined, sam
   const W = 1200, H = 180, PAD_L = 50, PAD_R = 22, PAD_T = 20, PAD_B = 28;
   const innerW = W - PAD_L - PAD_R, innerH = H - PAD_T - PAD_B;
   const x = (i: number) => PAD_L + (hist.length > 1 ? (i / (hist.length - 1)) * innerW : innerW / 2);
-  const yPow = (w: number) => PAD_T + (1 - w / 350) * innerH;
+
+  // Auto-scale Y so RTX 3060 (~170W) and RTX 5090 (~600W) both
+  // render cleanly without hardcoded 0-350W cap. Include the
+  // power_limit in the max so the dashed limit line is always
+  // visible inside the chart. 8/5% breathing room top/bottom so
+  // peaks and the area baseline don't glue to the chart edges.
+  const ceilTo = (v: number, step: number) =>
+    Math.max(step, Math.ceil(v / step) * step);
+  const dataMaxPow = Math.max(
+    ...hist.map((h) => h.power || 0),
+    plimit ?? 0,
+  );
+  const powMax = ceilTo(dataMaxPow * 1.1, 50);
+  const yPadTop = 0.08;
+  const yPadBot = 0.05;
+  const yPow = (w: number) =>
+    PAD_T + yPadTop * innerH +
+    (1 - w / powMax) * (1 - yPadTop - yPadBot) * innerH;
   const powPts = hist.map((h, i) => ({ x: x(i), y: yPow(h.power || 0) }));
   const powD = smoothPath(powPts);
   const lastX = powPts[powPts.length - 1].x.toFixed(1);
   const firstX = powPts[0].x.toFixed(1);
-  const bottomY = (PAD_T + innerH).toFixed(1);
+  const bottomY = yPow(0).toFixed(1);
   const areaD = powD + ` L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
 
-  const gridPow = [0, 50, 100, 150, 200, 250, 300, 350].map(v => {
+  // 5 nice ticks (50W steps for ≤500W; 100W for higher caps)
+  const powStep = powMax <= 500 ? 50 : 100;
+  const gridVals: number[] = [];
+  for (let v = 0; v <= powMax + 1; v += powStep) gridVals.push(v);
+  const gridPow = gridVals.map(v => {
     const yy = yPow(v);
     return `<line x1="${PAD_L}" x2="${W - PAD_R}" y1="${yy}" y2="${yy}" stroke="#22262e" stroke-width="0.5"/>`
       + `<text x="${PAD_L - 6}" y="${yy + 3.5}" fill="#7c8aa3" font-size="10" text-anchor="end">${v}W</text>`;
   }).join("");
 
-  const limitY = yPow(plimit || 350).toFixed(1);
+  const limitY = yPow(plimit || powMax).toFixed(1);
   const limitLine = `<line x1="${PAD_L}" x2="${W - PAD_R}" y1="${limitY}" y2="${limitY}" stroke="#f87171" stroke-width="1.2" stroke-dasharray="5 4" opacity="0.7"/>`
     + `<text x="${W - PAD_R - 6}" y="${(parseFloat(limitY) - 4).toFixed(1)}" fill="#f87171" font-size="10" text-anchor="end" opacity="0.85">${capText} ${plimit || "?"} W</text>`;
 
@@ -176,12 +197,25 @@ export function renderPowerChart(hist: Sample[], plimit: number | undefined, sam
     return `<circle class="pt" cx="${xx}" cy="${yPow(h.power || 0).toFixed(1)}" r="1.6" fill="#22d3ee" opacity="0.25"><title>${tt}</title></circle>`;
   }).join("");
 
+  // Same clipPath trick as renderCoolingChart so peaks above
+  // powMax (rare after autoscale, but possible in transient bursts
+  // between polls) get clipped to the inner box instead of leaking
+  // into the legend.
+  const clipPad = 4;
+  const clipId = `pow-clip-${Math.random().toString(36).slice(2, 8)}`;
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs>
+      <clipPath id="${clipId}">
+        <rect x="${PAD_L}" y="${PAD_T - clipPad}" width="${innerW}" height="${innerH + clipPad * 2}"/>
+      </clipPath>
+    </defs>
     ${gridPow}
+    <g clip-path="url(#${clipId})">
     <path d="${areaD}" fill="#22d3ee" opacity="0.10"/>
     ${limitLine}
     <path d="${powD}" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
     ${dots}
+    </g>
     ${ticks}
     <g font-size="11">
       <rect x="${W - PAD_R - 200}" y="${PAD_T - 12}" width="14" height="2.5" fill="#22d3ee"/>
