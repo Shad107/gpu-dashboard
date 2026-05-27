@@ -45,8 +45,14 @@ export function renderCoolingChart(hist: Sample[], samplingText: string): string
   const dataMinTemp = Math.min(...hist.map((h) => h.temp ?? 100));
   const tMin = Math.max(0, Math.floor(dataMinTemp / 10) * 10 - 5);
   const tMax = Math.max(tMin + 20, Math.ceil(dataMaxTemp / 10) * 10 + 5);
-  const yTemp = (v: number) => PAD_T + (1 - (v - tMin) / (tMax - tMin)) * innerH;
-  const yRpm = (r: number) => PAD_T + (1 - r / rpmMax) * innerH;
+  // 5% top + bottom breathing room so a value sitting at the
+  // scale's min/max (e.g. fan = 0 RPM during deep idle) doesn't
+  // glue itself to the chart edge and look "cut off".
+  const yPad = 0.05;
+  const yTemp = (v: number) =>
+    PAD_T + yPad * innerH + (1 - (v - tMin) / (tMax - tMin)) * (1 - 2 * yPad) * innerH;
+  const yRpm = (r: number) =>
+    PAD_T + yPad * innerH + (1 - r / rpmMax) * (1 - 2 * yPad) * innerH;
 
   const tempPts = hist.map((h, i) => ({ x: x(i), y: yTemp(h.temp) }));
   const f0Pts = hist.map((h, i) => ({ x: x(i), y: yRpm(h.fan0_rpm || 0) }));
