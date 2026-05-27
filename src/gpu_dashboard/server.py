@@ -3115,8 +3115,14 @@ def main(argv: Optional[list] = None) -> int:
     port = cfg.get_int("DASHBOARD_PORT", default=9999)
     bind = cfg.get("DASHBOARD_BIND", "0.0.0.0")
 
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer((bind, port), make_handler(ctx)) as httpd:
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    # ThreadingTCPServer handles each request in its own thread so a
+    # slow handler (e.g. /api/update/check stuck on `git fetch` when
+    # GitHub is unreachable) can't queue up the live data endpoints
+    # behind it. Daemon-threads so they don't block process exit.
+    socketserver.ThreadingTCPServer.daemon_threads = True
+    with socketserver.ThreadingTCPServer((bind, port),
+                                           make_handler(ctx)) as httpd:
         print(f"gpu-dashboard listening on http://{bind}:{port}")
         try:
             httpd.serve_forever()

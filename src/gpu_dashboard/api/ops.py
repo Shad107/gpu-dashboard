@@ -466,6 +466,12 @@ def handle_stop(ctx: dict) -> Response:
     threading.Thread(target=_stop, daemon=False).start()
     return 200, {"ok": True, "message": "stopping"}
 
+_UPDATE_CHECK_CACHE: dict = {"ts": 0, "payload": None}
+_UPDATE_CHECK_TTL_S = 300  # 5 min — long enough to not hammer git on
+                            # every page load, short enough that a
+                            # fresh release is noticed within 5 min
+
+
 def handle_update_check(ctx: dict) -> Response:
     """Check if the repo is behind the remote. Runs `git fetch` then computes
     behind count via `git rev-list HEAD..@{u} --count`.
@@ -476,7 +482,16 @@ def handle_update_check(ctx: dict) -> Response:
       remote_sha: str (origin/main) — None if no remote
       behind: int — commits behind. None if no upstream tracking.
       last_remote_msg: str — subject line of the remote HEAD
+
+    Result is cached for 5 minutes so a flaky GitHub doesn't block
+    page loads every refresh.
     """
+    import time as _time
+    now = _time.time()
+    if (_UPDATE_CHECK_CACHE["payload"] is not None
+            and (now - _UPDATE_CHECK_CACHE["ts"]) < _UPDATE_CHECK_TTL_S):
+        return 200, _UPDATE_CHECK_CACHE["payload"]
+
     repo_path = ctx.get("repo_path") or ""
     if not repo_path or not os.path.isdir(os.path.join(repo_path, ".git")):
         return 400, {"ok": False, "error": "not a git repo"}
@@ -485,20 +500,27 @@ def handle_update_check(ctx: dict) -> Response:
     r_head = _git(repo_path, "rev-parse", "--short", "HEAD")
     current_sha = r_head.stdout.strip() if r_head.returncode == 0 else None
 
-    # Try to fetch (silent on network failure)
-    _git(repo_path, "fetch", "--quiet", timeout=15)
+    # Try to fetch (silent on network failure). 5s timeout — anything
+    # longer just blocks the user on a flaky network for no benefit;
+    # the cached result from the previous successful fetch is shown
+    # instead.
+    _git(repo_path, "fetch", "--quiet", timeout=5)
 
     # Get upstream SHA (may not exist if no tracking branch)
     r_up = _git(repo_path, "rev-parse", "--short", "@{u}")
     if r_up.returncode != 0:
-        # No upstream — can't compute behind
-        return 200, {
+        # No upstream — can't compute behind. Cache the negative
+        # result too so we don't re-probe every page load.
+        no_upstream_payload = {
             "ok": True,
             "current_sha": current_sha,
             "remote_sha": None,
             "behind": None,
             "last_remote_msg": None,
         }
+        _UPDATE_CHECK_CACHE["ts"] = now
+        _UPDATE_CHECK_CACHE["payload"] = no_upstream_payload
+        return 200, no_upstream_payload
     remote_sha = r_up.stdout.strip()
 
     r_behind = _git(repo_path, "rev-list", "HEAD..@{u}", "--count")
@@ -507,13 +529,16 @@ def handle_update_check(ctx: dict) -> Response:
     r_log = _git(repo_path, "log", "-1", "--format=%s", "@{u}")
     last_msg = r_log.stdout.strip() if r_log.returncode == 0 else None
 
-    return 200, {
+    payload = {
         "ok": True,
         "current_sha": current_sha,
         "remote_sha": remote_sha,
         "behind": behind,
         "last_remote_msg": last_msg,
     }
+    _UPDATE_CHECK_CACHE["ts"] = now
+    _UPDATE_CHECK_CACHE["payload"] = payload
+    return 200, payload
 
 def handle_update_pull(ctx: dict) -> Response:
     """Run `git pull --ff-only`. Refuses if the working tree is dirty."""

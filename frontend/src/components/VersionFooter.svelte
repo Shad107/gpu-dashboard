@@ -53,11 +53,16 @@
   }
 
   onMount(() => {
-    reload();
+    // Defer the version+update fetch by 1.5s so the dashboard's
+    // critical-path data (state, history, link-stable, ...) get
+    // their first responses uncontested. The footer is non-essential
+    // for the first paint.
+    const t0 = setTimeout(reload, 1500);
     // Re-check every 10 min — quick enough to catch a push without
-    // hammering GitHub's rate limit.
+    // hammering GitHub's rate limit. The backend caches for 5 min
+    // so two consecutive front-end polls actually share data.
     const t = setInterval(reload, 600_000);
-    return () => clearInterval(t);
+    return () => { clearTimeout(t0); clearInterval(t); };
   });
 
   const updateAvailable = $derived(info?.behind != null && info.behind > 0);
