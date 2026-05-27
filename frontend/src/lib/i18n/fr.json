@@ -2519,6 +2519,8 @@
   "link_stable.refused": "Retimer a refusé Gen",
   "link_stable.stable_for": "stable depuis",
   "link_stable.transitions": "transitions",
+  "link_stable.settling": "négociation",
+  "link_stable.settling_tip": "Le lien vient de se renégocier, attends 3-5s pour la valeur stable",
   "alerts.detect_btn": "Détecter",
   "alerts.detect_tooltip": "Envoie d'abord un message à ton bot (ex: /start), puis clique ici pour récupérer ton chat_id automatiquement",
   "alerts.detect_need_token": "Saisis d'abord le token du bot",

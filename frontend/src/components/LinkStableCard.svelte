@@ -92,13 +92,21 @@
   // a local elapsed-since-poll delta so the displayed seconds tick
   // smoothly between the 4s polls (otherwise it would jump in
   // 4-second steps).
+  const stableForSec = $derived.by(() => {
+    if (!s?.stable) return 0;
+    return s.stable.for_seconds + (nowTick - pollAt) / 1000;
+  });
   const stableFor = $derived.by(() => {
     if (!s?.stable) return null;
-    const baseSec = s.stable.for_seconds;
-    const driftSec = (nowTick - pollAt) / 1000;
-    return fmtStable((baseSec + driftSec) * 1000);
+    return fmtStable(stableForSec * 1000);
   });
   const transitions = $derived(s?.stable?.transitions ?? 0);
+  // Settling = the link just transitioned and the firmware is still
+  // letting the LTSSM converge. On flaky retimers the speed shown
+  // RIGHT after a page reload (or after a manual Gen change) often
+  // briefly displays the firmware's preferred speed before
+  // auto-downgrading. < 3s means "this value isn't yet trustworthy".
+  const settling = $derived(stableForSec < 3);
 
   async function enableAt(targetGen: number) {
     if (busy || !s) return;
@@ -223,10 +231,18 @@
   {:else}
     <div class="link-line">
       <span class="big" class:warn={linkBadge?.downgraded}
-            class:ok={isActive}>
+            class:ok={isActive && !settling}
+            class:settling>
         Gen {linkBadge?.gen ?? "?"}
       </span>
       <span class="muted small">/ {linkBadge?.maxGen ?? "?"}</span>
+      {#if settling}
+        <span class="settling-tag"
+              title={i18n.t("link_stable.settling_tip") ??
+                "Le lien vient de se renégocier, attends 3-5s pour la valeur stable"}>
+          📡 {i18n.t("link_stable.settling") ?? "négociation"}
+        </span>
+      {/if}
     </div>
     <div class="sub muted small">
       {s.link.current_link_speed} · x{s.link.current_link_width}
@@ -268,6 +284,19 @@
 
 <style>
   .link-stable-card h2 { cursor: help; }
+  .big.settling {
+    color: var(--text-dim, #8a93a3);
+    font-style: italic;
+  }
+  .settling-tag {
+    font-size: .7em;
+    padding: 1px 5px;
+    background: rgba(234, 179, 8, 0.18);
+    color: var(--warn, #eab308);
+    border-radius: 3px;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
   .link-line {
     display: flex;
     align-items: baseline;

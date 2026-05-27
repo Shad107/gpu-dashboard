@@ -29,9 +29,24 @@ export function renderCoolingChart(hist: Sample[], samplingText: string): string
   const W = 1200, H = 280, PAD_L = 50, PAD_R = 56, PAD_T = 20, PAD_B = 30;
   const innerW = W - PAD_L - PAD_R, innerH = H - PAD_T - PAD_B;
   const x = (i: number) => PAD_L + (hist.length > 1 ? (i / (hist.length - 1)) * innerW : innerW / 2);
-  const tMin = 30, tMax = 90;
+
+  // Auto-scale Y axes against the actual data + 10% headroom,
+  // rounded to nice values, so peaks never clip outside the chart
+  // area. Static 0-3000 / 30-90 floors were leaking the top of
+  // 24h-range curves past the legend labels when fans/temp briefly
+  // exceeded the static caps.
+  const ceilTo = (v: number, step: number) =>
+    Math.max(step, Math.ceil(v / step) * step);
+  const dataMaxRpm = Math.max(
+    ...hist.map((h) => Math.max(h.fan0_rpm || 0, h.fan1_rpm || 0)),
+  );
+  const rpmMax = ceilTo(dataMaxRpm * 1.1, 1000);
+  const dataMaxTemp = Math.max(...hist.map((h) => h.temp ?? 0));
+  const dataMinTemp = Math.min(...hist.map((h) => h.temp ?? 100));
+  const tMin = Math.max(0, Math.floor(dataMinTemp / 10) * 10 - 5);
+  const tMax = Math.max(tMin + 20, Math.ceil(dataMaxTemp / 10) * 10 + 5);
   const yTemp = (v: number) => PAD_T + (1 - (v - tMin) / (tMax - tMin)) * innerH;
-  const yRpm = (r: number) => PAD_T + (1 - r / 3000) * innerH;
+  const yRpm = (r: number) => PAD_T + (1 - r / rpmMax) * innerH;
 
   const tempPts = hist.map((h, i) => ({ x: x(i), y: yTemp(h.temp) }));
   const f0Pts = hist.map((h, i) => ({ x: x(i), y: yRpm(h.fan0_rpm || 0) }));
@@ -40,12 +55,22 @@ export function renderCoolingChart(hist: Sample[], samplingText: string): string
   const f0D = smoothPath(f0Pts);
   const f1D = smoothPath(f1Pts);
 
-  const gridRpm = [0, 1000, 2000, 3000].map(v => {
+  // Dynamic grid ticks — 4-5 nice steps across the y range so the
+  // labels line up with the curves regardless of dataMaxRpm.
+  const rpmStep = rpmMax / 4;
+  const rpmGridVals: number[] = [];
+  for (let v = 0; v <= rpmMax + 1; v += rpmStep) rpmGridVals.push(Math.round(v));
+  const tempStep = Math.max(10, Math.round((tMax - tMin) / 4 / 5) * 5);
+  const tempGridVals: number[] = [];
+  for (let v = Math.ceil(tMin / tempStep) * tempStep;
+       v <= tMax; v += tempStep) tempGridVals.push(v);
+
+  const gridRpm = rpmGridVals.map(v => {
     const yy = yRpm(v);
     return `<line x1="${PAD_L}" x2="${W - PAD_R}" y1="${yy}" y2="${yy}" stroke="#22262e" stroke-width="0.5"/>`
       + `<text x="${PAD_L - 6}" y="${yy + 3.5}" fill="#a3e635" font-size="10" text-anchor="end" opacity="0.75">${v}rpm</text>`;
   }).join("");
-  const gridTemp = [40, 60, 80].map(v => {
+  const gridTemp = tempGridVals.map(v => {
     const yy = yTemp(v);
     return `<text x="${W - PAD_R + 5}" y="${yy + 3.5}" fill="#fbbf24" font-size="10" opacity="0.7">${v}°C</text>`;
   }).join("");
