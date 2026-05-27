@@ -97,15 +97,11 @@
 
 <div class="chart-row chart-cool">
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;
-                  flex-wrap:wrap;gap:.4em">
-      <h2 style="margin:0">{i18n.t("chart.cooling")}</h2>
-      <div style="display:flex;gap:4px;align-items:center;font-size:.85em">
+    <div class="cool-head">
+      <h2>{i18n.t("chart.cooling")}</h2>
+      <div class="cool-range">
         <span class="muted small">{i18n.t("chart.range") ?? "Plage"}</span>
-        <select bind:value={range}
-                style="background:var(--bg-2);color:var(--text);
-                       border:1px solid var(--border);padding:2px 6px;
-                       border-radius:4px;font-size:.9em;cursor:pointer">
+        <select bind:value={range}>
           <option value="1h">1h (live)</option>
           <option value="6h">6h</option>
           <option value="12h">12h</option>
@@ -118,3 +114,50 @@
     <div class="sub">{info}</div>
   </div>
 </div>
+
+<style>
+  /* All scoped so we can't accidentally bleed into other charts. */
+  .chart-row.chart-cool > .card { overflow: hidden; min-width: 0; }
+  .cool-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: .4em;
+    width: 100%;
+    min-width: 0;
+  }
+  .cool-head h2 { margin: 0; }
+  .cool-range {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-size: .85em;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .cool-range select {
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: .9em;
+    cursor: pointer;
+    max-width: 100%;
+  }
+  :global(.chart-cool .hist) {
+    /* hist already has flex:1 globally, but make sure SVG content
+       can never push its parent wider than the card. */
+    min-width: 0;
+    overflow: hidden;
+  }
+  :global(.chart-cool .hist svg) {
+    /* Defensive: cap SVG to the actual container width. The
+       global rule already says width:100% but `display:block`
+       prevents inline-baseline padding from leaking. */
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+</style>
