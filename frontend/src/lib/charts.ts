@@ -66,12 +66,24 @@ export function renderCoolingChart(hist: Sample[], samplingText: string): string
     return `<circle class="pt" cx="${xx}" cy="${yRpm(h.fan0_rpm || 0).toFixed(1)}" r="1.6" fill="#4ade80" opacity="0.22"><title>${tt}</title></circle>`;
   }).join("");
 
+  // Clip-path so any peak that overshoots the y-axis cap (rare
+  // but happens when fan RPM > 3000 or temp > 90°C) gets cleanly
+  // clipped to the chart's inner rectangle instead of leaking
+  // above/below the card edge.
+  const clipId = `cool-clip-${Math.random().toString(36).slice(2, 8)}`;
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs>
+      <clipPath id="${clipId}">
+        <rect x="${PAD_L}" y="${PAD_T}" width="${innerW}" height="${innerH}"/>
+      </clipPath>
+    </defs>
     ${gridRpm}${gridTemp}
+    <g clip-path="url(#${clipId})">
     <path d="${tempD}" fill="none" stroke="#fbbf24" stroke-width="1.6" stroke-dasharray="5 3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
     <path d="${f1D}" fill="none" stroke="#a3e635" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="0.85"/>
     <path d="${f0D}" fill="none" stroke="#4ade80" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
     ${dots}
+    </g>
     ${ticks}
     <g font-size="11">
       <rect x="${W - PAD_R - 260}" y="${PAD_T - 12}" width="14" height="2.5" fill="#4ade80"/>
