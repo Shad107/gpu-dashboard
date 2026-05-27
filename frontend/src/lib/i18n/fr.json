@@ -11,6 +11,8 @@
   "header.gear_title": "Réglages avancés",
   "footer.refresh": "rafraîchissement 5s",
   "chart.cooling": "Refroidissement — ventilos (RPM) + température",
+  "chart.range": "Plage",
+  "chart.loading": "chargement...",
   "chart.power": "Puissance — conso live + plafond power-limit",
   "chart.sampling": "échantillonnage en cours…",
   "chart.buffer_filling": "buffer en cours de remplissage (1 échantillon / 5s)…",

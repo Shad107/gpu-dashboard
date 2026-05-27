@@ -11,6 +11,8 @@
   "header.gear_title": "Advanced settings",
   "footer.refresh": "refresh 5s",
   "chart.cooling": "Cooling — fans (RPM) + temperature",
+  "chart.range": "Range",
+  "chart.loading": "loading...",
   "chart.power": "Power — live draw + power-limit cap",
   "chart.sampling": "sampling…",
   "chart.buffer_filling": "buffer filling (one sample every 5s)…",
