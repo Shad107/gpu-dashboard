@@ -37,6 +37,16 @@ _LAST_OBSERVED_SPEED: Optional[str] = None
 _STABLE_SINCE_TS: Optional[float] = None
 _TRANSITION_COUNT: int = 0  # cumulative since dashboard startup
 
+# F7.5 — track what target Gen the user explicitly enabled. The
+# `current_clock_mhz` heuristic was unreliable (clock can dip
+# momentarily even with lock-clocks active, flipping the UI from
+# "locked" to "not locked" every few seconds). Storing what we
+# ourselves set gives a stable source of truth: lock state is
+# whatever the user last asked for via the dashboard.
+_LOCKED_TARGET_GEN: Optional[int] = None
+_LOCKED_MIN_MHZ: Optional[int] = None
+_LOCKED_MAX_MHZ: Optional[int] = None
+
 # Default clock floor range. 900 MHz is a safe gpu-clocks floor on
 # 3090/4090/5090 — high enough to keep the firmware out of P8, low
 # enough to not waste real power. 1500 MHz ceiling lets the
@@ -218,6 +228,11 @@ def status(cfg=None) -> Dict[str, Any]:
             "for_seconds": round(stable_for_s, 1),
             "transitions": _TRANSITION_COUNT,
         },
+        "locked": {
+            "target_gen": _LOCKED_TARGET_GEN,
+            "min_mhz": _LOCKED_MIN_MHZ,
+            "max_mhz": _LOCKED_MAX_MHZ,
+        },
     }
 
 
@@ -272,6 +287,13 @@ def enable(min_mhz: Optional[int] = None,
         return {"ok": False, "error": "wrapper_failed",
                  "message": r.get("stderr") or r.get("error")
                               or f"exit {r.get('rc')}"}
+    # Record what we asked for so the UI can highlight the right
+    # Gen button even when current_clock_mhz briefly dips below the
+    # lock floor between firmware boosts.
+    global _LOCKED_TARGET_GEN, _LOCKED_MIN_MHZ, _LOCKED_MAX_MHZ
+    _LOCKED_TARGET_GEN = target_gen
+    _LOCKED_MIN_MHZ = lo
+    _LOCKED_MAX_MHZ = hi
     return {"ok": True, "min_mhz": lo, "max_mhz": hi,
              "target_gen": target_gen,
              "stdout": r.get("stdout")}
@@ -287,4 +309,8 @@ def disable() -> Dict[str, Any]:
         return {"ok": False, "error": "wrapper_failed",
                  "message": r.get("stderr") or r.get("error")
                               or f"exit {r.get('rc')}"}
+    global _LOCKED_TARGET_GEN, _LOCKED_MIN_MHZ, _LOCKED_MAX_MHZ
+    _LOCKED_TARGET_GEN = 1  # Gen 1 = idle mode (no lock)
+    _LOCKED_MIN_MHZ = None
+    _LOCKED_MAX_MHZ = None
     return {"ok": True, "stdout": r.get("stdout")}

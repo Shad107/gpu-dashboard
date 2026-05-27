@@ -38,6 +38,11 @@
       for_seconds: number;
       transitions: number;
     };
+    locked?: {
+      target_gen: number | null;
+      min_mhz: number | null;
+      max_mhz: number | null;
+    };
   };
 
   let s = $state<Status | null>(null);
@@ -182,16 +187,23 @@
     return "?";
   }
 
-  // The mode is "on" when the GPU is being kept awake by a clock-lock.
-  // We don't have a direct "is_locked" signal from nvidia-smi on older
-  // drivers, so we infer: persistence mode on AND current_clock_mhz
-  // is well above the typical idle floor (~210MHz on Ampere).
+  // The mode is "on" when the backend recorded a locked target Gen
+  // from a previous enable() call. Using the backend-tracked lock
+  // state instead of a current_clock_mhz heuristic is reliable —
+  // the actual GPU clock can briefly dip below the lock floor
+  // between firmware boost cycles and used to flip isActive false
+  // intermittently, hiding the ✓ on the right Gen button.
   const isActive = $derived.by(() => {
-    if (!s?.clocks) return false;
-    if (!s.clocks.persistence_mode) return false;
-    if (s.clocks.current_clock_mhz === null) return false;
-    return s.clocks.current_clock_mhz >= (s.defaults.min_mhz - 100);
+    const lockedGen = s?.locked?.target_gen;
+    return lockedGen != null && lockedGen >= 2;
   });
+  // The Gen highlighted as "current" is whatever the user last
+  // chose via the Lock buttons. If never locked, fall back to the
+  // observed link Gen (for users who just opened the dashboard
+  // without ever touching the buttons).
+  const highlightedGen = $derived(
+    s?.locked?.target_gen ?? parseInt(linkBadge?.gen ?? "0"),
+  );
 
   const linkBadge = $derived.by(() => {
     if (!s?.link) return null;
@@ -266,13 +278,12 @@
 
     <div class="gen-row">
       {#each [1, 2, 3, 4] as g}
-        {@const currentGen = parseInt(linkBadge?.gen ?? "0")}
         <button class="btn-gen"
-                class:current={currentGen === g && isActive}
+                class:current={highlightedGen === g}
                 disabled={busy}
                 title={i18n.t(`link_stable.gen_${g}_hint` as any) ?? ""}
                 onclick={() => enableAt(g)}>
-          {currentGen === g && isActive ? "✓" : ""} Gen {g}
+          {highlightedGen === g ? "✓" : ""} Gen {g}
         </button>
       {/each}
     </div>
