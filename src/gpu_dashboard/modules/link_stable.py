@@ -1,4 +1,4 @@
-"""F7 — Link Stable Mode.
+"""F7.6 — Link Stable Mode (with state persistence).
 
 Keeps the GPU clock-locked so its PCIe link negotiates and SUSTAINS
 a higher speed (typically Gen 2 instead of Gen 1) on flaky OcuLink
@@ -22,11 +22,15 @@ goes through the firmware's blessed path.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
 import time
 from typing import Any, Dict, List, Optional
+
+STATE_FILE = os.path.expanduser(
+    "~/.config/gpu-dashboard/link_stable_state.json")
 
 # F7.4 — stable-for tracking lives at module scope so a browser
 # refresh (or a second tab) doesn't reset the clock. We only update
@@ -43,9 +47,70 @@ _TRANSITION_COUNT: int = 0  # cumulative since dashboard startup
 # "locked" to "not locked" every few seconds). Storing what we
 # ourselves set gives a stable source of truth: lock state is
 # whatever the user last asked for via the dashboard.
+# F7.6 — persisted to disk so a dashboard restart (or reboot) doesn't
+# silently undo the user's intent. Re-applied on module import via
+# _ensure_lock_applied() below.
 _LOCKED_TARGET_GEN: Optional[int] = None
 _LOCKED_MIN_MHZ: Optional[int] = None
 _LOCKED_MAX_MHZ: Optional[int] = None
+_LOAD_DONE = False  # one-shot guard so multiple status() calls don't
+                     # repeatedly re-apply
+
+
+def _load_state() -> None:
+    """Load persisted lock state from disk. No-op if file missing or
+    malformed."""
+    global _LOCKED_TARGET_GEN, _LOCKED_MIN_MHZ, _LOCKED_MAX_MHZ
+    if not os.path.isfile(STATE_FILE):
+        return
+    try:
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return
+    _LOCKED_TARGET_GEN = data.get("target_gen")
+    _LOCKED_MIN_MHZ = data.get("min_mhz")
+    _LOCKED_MAX_MHZ = data.get("max_mhz")
+
+
+def _save_state() -> None:
+    """Atomic write the lock state to disk."""
+    try:
+        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+        tmp = STATE_FILE + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump({
+                "target_gen": _LOCKED_TARGET_GEN,
+                "min_mhz": _LOCKED_MIN_MHZ,
+                "max_mhz": _LOCKED_MAX_MHZ,
+                "saved_at": time.time(),
+            }, f)
+        os.replace(tmp, STATE_FILE)
+    except OSError:
+        pass  # best-effort — UI keeps working even if disk is RO
+
+
+def _ensure_lock_applied() -> None:
+    """First call after import: load the persisted lock and re-apply
+    it via the sudoers wrapper if needed. Subsequent calls are no-ops.
+
+    Re-applying is safe: nvidia-smi --lock-gpu-clocks is idempotent.
+    If the wrapper isn't installed yet (fresh install), we just
+    populate the in-memory state from disk so the UI shows the
+    intended Gen even though nothing is actually locked."""
+    global _LOAD_DONE
+    if _LOAD_DONE:
+        return
+    _LOAD_DONE = True
+    _load_state()
+    if (_LOCKED_TARGET_GEN
+            and _LOCKED_TARGET_GEN >= 2
+            and _LOCKED_MIN_MHZ
+            and _LOCKED_MAX_MHZ
+            and wrapper_available()):
+        _run(["sudo", "-n", WRAPPER_PATH, "enable",
+              str(_LOCKED_MIN_MHZ), str(_LOCKED_MAX_MHZ)],
+             timeout=10.0)
 
 # Default clock floor range. 900 MHz is a safe gpu-clocks floor on
 # 3090/4090/5090 — high enough to keep the firmware out of P8, low
@@ -193,6 +258,11 @@ def _read_clock_lock_state() -> Dict[str, Any]:
 def status(cfg=None) -> Dict[str, Any]:
     """Full status dict for the Link Stable Mode UI."""
     global _LAST_OBSERVED_SPEED, _STABLE_SINCE_TS, _TRANSITION_COUNT
+    # Lazy-load persisted lock state on first call; re-apply if the
+    # wrapper is available. This makes a dashboard restart (or a
+    # system reboot, since nvidia-smi lock-gpu-clocks also doesn't
+    # persist) silently restore the user's chosen Gen.
+    _ensure_lock_applied()
     link = _read_link_state()
     pstate = _read_pstate_via_nvml()
     clocks = _read_clock_lock_state()
@@ -294,6 +364,7 @@ def enable(min_mhz: Optional[int] = None,
     _LOCKED_TARGET_GEN = target_gen
     _LOCKED_MIN_MHZ = lo
     _LOCKED_MAX_MHZ = hi
+    _save_state()  # persist so a restart restores this Gen
     return {"ok": True, "min_mhz": lo, "max_mhz": hi,
              "target_gen": target_gen,
              "stdout": r.get("stdout")}
@@ -313,4 +384,6 @@ def disable() -> Dict[str, Any]:
     _LOCKED_TARGET_GEN = 1  # Gen 1 = idle mode (no lock)
     _LOCKED_MIN_MHZ = None
     _LOCKED_MAX_MHZ = None
+    _save_state()  # persist the disable so a restart doesn't
+                    # auto-re-enable a previous lock
     return {"ok": True, "stdout": r.get("stdout")}
